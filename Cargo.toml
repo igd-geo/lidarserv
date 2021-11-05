@@ -1,0 +1,3 @@
+
+[workspace]
+members = ["lidarserv-server", "lidarserv-common", "velodyne-csv-replay", "experiments"]

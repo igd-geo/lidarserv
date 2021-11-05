@@ -1,0 +1,21 @@
+[package]
+name = "lidarserv-server"
+version = "0.1.0"
+edition = "2018"
+default-run = "lidarserv-server"
+authors = ["Tobias Dorra <mail@tobiasdorra.de>"]
+
+[dependencies]
+structopt = { version = "0.3.23", features = ["paw", "wrap_help", "color", "suggestions"]}
+paw = "1.0.0"
+log = "0.4.14"
+simple_logger = "1.13.0"
+human-panic = "1.0.3"
+anyhow = "1.0.44"
+lidarserv-common = { path = "../lidarserv-common" }
+tokio = { version = "1.12.0", features = ["full"] }
+bytes = "1.1.0"
+thiserror = "1.0.30"
+serde = { version = "1.0.126", features = ["derive"] }
+serde_json = "1.0.64"
+ciborium = "0.1.0"
