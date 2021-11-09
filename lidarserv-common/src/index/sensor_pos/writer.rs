@@ -2,15 +2,20 @@ use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
-use crate::geometry::sampling::{Sampling, SamplingFactory};
+use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::{BinDataPage, PageManager};
+use crate::index::sensor_pos::partitioned_node::{
+    node_select_child, PartitionedNode, PartitionedPoints,
+};
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::{Inner, Update};
 use crate::index::Writer;
 use crate::las::{Las, LasReadWrite, ReadLasError, WriteLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
 use crate::nalgebra::Scalar;
+use crate::span;
+use crate::utils::thread_pool::Threads;
 use crossbeam_channel::{Receiver, Sender};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -27,11 +32,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum IndexError {
-    #[error("Could not read or write page '{key_name}': {source}")]
+    #[error("Could not read or write page: {source}")]
     PageIo {
-        #[source]
+        #[from]
         source: CacheLoadError,
-        key_name: String,
     },
 
     #[error(transparent)]
@@ -53,7 +57,6 @@ pub enum IndexError {
 impl<K: Debug, V> From<CacheCleanupError<K, V>> for IndexError {
     fn from(e: CacheCleanupError<K, V>) -> Self {
         IndexError::PageIo {
-            key_name: format!("{:?}", e.key),
             source: CacheLoadError::IO { source: e.source },
         }
     }
@@ -65,10 +68,7 @@ trait WithKey<OkValue> {
 
 impl<OkValue> WithKey<OkValue> for Result<OkValue, CacheLoadError> {
     fn with_key<K: Debug>(self, key: &K) -> Result<OkValue, IndexError> {
-        self.map_err(|e| IndexError::PageIo {
-            source: e,
-            key_name: format!("{:?}", key),
-        })
+        self.map_err(|e| IndexError::PageIo { source: e })
     }
 }
 
@@ -82,16 +82,21 @@ impl<Point, Pos, Comp, CSys> SensorPosWriter<Point, CSys>
 where
     Point:
         PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>> + Send + Sync + 'static,
-    Pos: Position<Component = Comp> + Clone,
+    Pos: Position<Component = Comp> + Clone + Sync,
     Comp: Component + Send + Sync + Serialize + DeserializeOwned,
     CSys: PartialEq + Send + Sync + 'static + Clone,
 {
-    pub(super) fn new<GridH, SamplF, LasL>(
+    pub(super) fn new<GridH, SamplF, LasL, Sampl, Raw>(
         index_inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
     ) -> Self
     where
         GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
-        SamplF: SamplingFactory<Point = Point, Param = LodLevel> + Sync + Send + 'static,
+        SamplF: SamplingFactory<Point = Point, Param = LodLevel, Sampling = Sampl>
+            + Sync
+            + Send
+            + 'static,
+        Sampl: Sampling<Point = Point, Raw = Raw> + Send,
+        Raw: RawSamplingEntry<Point = Point> + Send,
         LasL: LasReadWrite<Point, CSys> + Send + Sync + 'static,
     {
         let (new_points_sender, new_points_receiver) = crossbeam_channel::unbounded();
@@ -147,17 +152,20 @@ struct Node<Sampl, Comp: Scalar, Point> {
     bogus_points: Vec<Point>,
 }
 
-fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys>(
+fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys, Raw>(
     inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
     new_points_receiver: Receiver<Vec<Point>>,
     mut meta_tree: MetaTree<GridH, Comp>,
 ) -> Result<(), IndexError>
 where
     Comp: Component + Send + Sync + Serialize + DeserializeOwned,
-    SamplF: SamplingFactory<Sampling = Sampl, Param = LodLevel> + Send + Sync + 'static,
-    Sampl: Sampling<Point = Point>,
-    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>>,
-    Pos: Position<Component = Comp> + Clone,
+    SamplF:
+        SamplingFactory<Sampling = Sampl, Param = LodLevel, Point = Point> + Send + Sync + 'static,
+    Sampl: Sampling<Point = Point, Raw = Raw> + Send,
+    Raw: RawSamplingEntry<Point = Point>,
+    Sampl::Raw: Send,
+    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>> + Send,
+    Pos: Position<Component = Comp> + Clone + Sync,
     GridH: GridHierarchy<Component = Comp, Position = Pos> + Send + Sync + 'static,
     LasL: LasReadWrite<Point, CSys> + Send + Sync + 'static,
     CSys: Clone + PartialEq + Send + Sync + 'static,
@@ -168,11 +176,13 @@ where
     let notify_thread = spawn(move || notify_readers_thread(changes_receiver, inner_clone));
 
     let mut new_points = VecDeque::new();
-    let mut loaded_nodes = Vec::<Node<Sampl, Comp, Point>>::new();
+    let mut loaded_nodes = Vec::<PartitionedNode<Sampl, Point, Comp>>::new();
     let nr_threads = inner.nr_threads;
+    let mut threads = Threads::new(nr_threads);
 
     'main: loop {
         // make sure we have points to insert
+        let s1 = span!("coordinator_thread: receive points");
         while new_points.is_empty() {
             let received = match new_points_receiver.recv() {
                 Ok(p) => p,
@@ -191,6 +201,8 @@ where
         }
 
         // find the nodes to insert points into based on the current sensor position
+        drop(s1);
+        let s1 = span!("coordinator_thread: choose nodes");
         let first_point = &new_points[0][0];
         let sensor_pos = first_point
             .attribute::<SensorPositionAttribute<_>>()
@@ -200,6 +212,8 @@ where
 
         // get the points from the head of new_points,
         // that can be inserted into the same nodes.
+        drop(s1);
+        let s1 = span!("coordinator_thread: how many points");
         let bounds = nodes.min_bounds();
         let mut nr_points = 0;
         'blocks: for block in new_points.iter() {
@@ -212,8 +226,11 @@ where
             }
             nr_points += block.len();
         }
+        s1.emit_value(nr_points as u64);
 
         // transfer points into buffers for individual worker threads
+        drop(s1);
+        let s1 = span!("coordinator_thread: copy points");
         let mut worker_buffers = Vec::new();
         let points_per_thread = nr_points / nr_threads;
         for thread_id in 0..nr_threads {
@@ -241,75 +258,52 @@ where
             // use for thread `thread_id`
             worker_buffers.push(points);
         }
+        let mut worker_buffers = PartitionedPoints::from_partitions(worker_buffers);
 
         // insert points into each lod, top-to-bottom
         // until no points are left in all worker buffers.
         let mut lod = LodLevel::base();
-        while worker_buffers.iter().any(|b| !b.is_empty()) {
+        drop(s1);
+        while !worker_buffers.is_empty() {
+            let s1 = span!("coordinator_thread: insert lod");
+            s1.emit_value(lod.level() as u64);
+
             // get sampling for this node
             let node_id = nodes.node_for_lod(&lod);
             let lod_level = lod.level() as usize;
 
             // load from disk, if needed
-            if lod_level >= loaded_nodes.len() || loaded_nodes[lod_level].node_id != node_id {
-                // load node data
-                let mut pages = Vec::new();
-                for thread_id in 0..nr_threads {
-                    let file = node_id.file(thread_id);
-                    let page = inner.page_manager.load(&file).with_key(&file)?;
-                    pages.push(page);
-                }
-
-                // read laz
-                let node_points: Vec<Vec<Point>> = pages
-                    .iter()
-                    .map(|page| read_laz(&page.data, &inner.las_loader, &inner.coordinate_system))
-                    .collect::<Result<_, IndexError>>()?;
-
-                // create node
-                let mut sampling = inner.sampling_factory.build(&lod);
-                let mut aabb = OptionAABB::empty();
-                let mut bogus_points = Vec::new();
-                for mut points in node_points {
-                    for point in &points {
-                        aabb.extend(point.position());
-                    }
-                    if lod == inner.max_lod {
-                        bogus_points.append(&mut points)
-                    } else {
-                        let rejected = sampling.insert(points, |_, _| ());
-                        assert!(rejected.is_empty()) // should not reject points, that were part of the node.
-                    }
-                }
-                let node = Node {
-                    node_id: node_id.clone(),
-                    sampling,
-                    aabb,
-                    bogus_points,
-                };
+            let s2 = span!("coordinator_thread:: load to/from disk");
+            if lod_level >= loaded_nodes.len() || *loaded_nodes[lod_level].node_id() != node_id {
+                let s3 = span!("coordinator_thread::: parallel_load");
+                let node = PartitionedNode::parallel_load(
+                    nr_threads,
+                    node_id.clone(),
+                    &inner.sampling_factory,
+                    &inner.page_manager,
+                    &inner.las_loader,
+                    &inner.coordinate_system,
+                    &mut threads,
+                )?;
+                drop(s3);
 
                 // keep around in loaded_nodes, so we can re-use it in the following iterations.
                 match lod_level.cmp(&loaded_nodes.len()) {
                     Ordering::Less => {
                         // if the newly loaded node replaces a previous one, we  also need to
                         // write that to disk.
+                        let s3 = span!("coordinator_thread::: save old node");
                         let mut old_node = mem::replace(&mut loaded_nodes[lod_level], node);
-                        if let Some(aabb) = old_node.aabb.clone().into_aabb() {
-                            meta_tree.set_node_aabb(&old_node.node_id, &aabb)
+                        if let Some(aabb) = old_node.bounds().clone().into_aabb() {
+                            meta_tree.set_node_aabb(old_node.node_id(), &aabb)
                         }
-                        write_node_to_cache(
-                            {
-                                let mut points = old_node.sampling.into_points();
-                                points.append(&mut old_node.bogus_points);
-                                points
-                            },
-                            old_node.aabb,
+                        old_node.parallel_store(
+                            &inner.page_manager,
                             &inner.las_loader,
                             &inner.coordinate_system,
-                            nr_threads,
-                            old_node.node_id,
-                            &inner.page_manager,
+                            &mut threads,
                         )?;
+                        drop(s3);
                     }
                     Ordering::Equal => {
                         loaded_nodes.push(node);
@@ -320,115 +314,145 @@ where
                 };
 
                 // make sure we do not overfill the cache while loading nodes
-                inner.page_manager.cleanup_one()?;
+                let s3 = span!("coordinator_thread::: cache cleanup");
+                threads
+                    .execute(|_| inner.page_manager.cleanup())
+                    .join()
+                    .into_iter()
+                    .collect::<Result<Vec<_>, _>>()?;
+                drop(s3);
             }
             let node = &mut loaded_nodes[lod_level];
 
             // add new points
-            for points in &mut worker_buffers {
-                for point in &*points {
-                    node.aabb.extend(point.position());
-                }
-                if lod == inner.max_lod {
-                    node.bogus_points.append(points);
-                } else {
-                    let points_owned = mem::take(points);
-                    *points = node.sampling.insert(points_owned, |p, q| {
+            drop(s2);
+            let s2 = span!("coordinator_thread:: add new points");
+            if lod == inner.max_lod {
+                // At the max lod level, we keep all points.
+                // So no sampling needs to be performed.
+                // We will use the bogus points as a simple "flat points buffer"
+                node.parallel_insert_bogus(worker_buffers, &mut threads);
+                worker_buffers = PartitionedPoints::new(nr_threads);
+            } else {
+                node.parallel_insert(
+                    worker_buffers,
+                    &inner.sampling_factory,
+                    |p, q| {
                         *q.attribute_mut::<SensorPositionAttribute<Pos>>() =
                             p.attribute::<SensorPositionAttribute<Pos>>().clone()
-                    });
-                }
+                    },
+                    &mut threads,
+                );
+                worker_buffers = node.drain_bogus_points();
             }
 
             // check, if we need to split the node
-            if node.sampling.len() > inner.max_node_size {
-                let mut queue = Vec::new();
-                write_node_to_cache(
-                    Vec::<Point>::new(),
-                    OptionAABB::empty(),
-                    &inner.las_loader,
-                    &inner.coordinate_system,
-                    nr_threads,
-                    node_id.clone(),
-                    &inner.page_manager,
-                )?;
-                meta_tree.set_node_aabb(&node_id, &node.aabb.clone().into_aabb().unwrap()); // unwrap: the node cannot be empty, because it exceeded the max node size.
-                let mut node_to_split = node_id.clone();
-                let mut split_points = node.sampling.drain_points();
-                split_points.append(&mut node.bogus_points);
-                let mut split_aabb = node.aabb.clone();
-                while split_points.len() > inner.max_node_size {
-                    let (children, center) =
-                        split_node(&mut meta_tree, node_to_split, split_points);
-                    let replacement = node_select_child(&center, &sensor_pos);
-                    let mut children = Vec::from(children);
-                    let (replacement_node_id, replacement_points, replacement_aabb) =
-                        children.swap_remove(replacement);
-                    node_to_split = replacement_node_id;
-                    split_points = replacement_points;
-                    split_aabb = replacement_aabb;
-                    for (node, points, aabb) in children {
-                        queue.push((node, points, aabb))
-                    }
-                }
-                node.node_id = node_to_split;
-                node.aabb = split_aabb;
-                if lod == inner.max_lod {
-                    node.bogus_points.append(&mut split_points)
-                } else {
-                    node.sampling.insert(split_points, |_, _| ());
-                }
+            drop(s2);
+            if node.nr_points() > inner.max_node_size {
+                let s2 = span!("coordinator_thread:: split");
 
-                while let Some((node_to_split, split_points, aabb)) = queue.pop() {
-                    // no need to split further, if below the max node size
-                    if split_points.len() <= inner.max_node_size {
-                        write_node_to_cache(
-                            split_points,
-                            aabb,
+                // queue of nodes, that still need to be split
+                let mut queue = Vec::new();
+
+                // keep refining node at current sensor position
+                // until small enough
+                let s3 = span!("coordinator_thread::: Phase 1");
+                while node.nr_points() > inner.max_node_size {
+                    // split node
+
+                    let s4 = span!("coordinator_thread:::: Parallel split");
+                    let mut children = Vec::from(node.parallel_split(
+                        &meta_tree,
+                        &inner.sampling_factory,
+                        &mut threads,
+                    ));
+                    drop(s4);
+
+                    // replace with newly created child node at current sensor position
+                    let node_center = meta_tree.node_center(node.node_id());
+                    let replace_with = node_select_child(&node_center, &sensor_pos);
+                    let mut replacement_node = children.swap_remove(replace_with);
+                    let old_node = mem::replace(node, replacement_node);
+
+                    // node is now empty. save.
+                    let s4 = span!("coordinator_thread:::: Parallel store");
+                    meta_tree.set_node_aabb(
+                        old_node.node_id(),
+                        &old_node.bounds().clone().into_aabb().unwrap(),
+                    ); // unwrap: the node cannot be empty, because it exceeded the max node size.
+                    old_node.parallel_store(
+                        &inner.page_manager,
+                        &inner.las_loader,
+                        &inner.coordinate_system,
+                        &mut threads,
+                    )?;
+                    drop(s4);
+
+                    // add remaining children to queue - we will deal with them in the next step
+                    queue.append(&mut children);
+                }
+                drop(s3);
+
+                // process remaining child nodes
+                let s3 = span!("Phase 2");
+                while !queue.is_empty() {
+                    // get node from queue to process
+                    // unwrap: queue is not empty due to loop condition
+                    let mut node = queue.pop().unwrap();
+
+                    // if the node is still to large we need to split it further.
+                    if node.nr_points() > inner.max_node_size {
+                        let mut children =
+                            node.parallel_split(&meta_tree, &inner.sampling_factory, &mut threads);
+                        queue.extend(children);
+                    }
+
+                    // save node
+                    if !node.bounds().is_empty() {
+                        meta_tree.set_node_aabb(
+                            node.node_id(),
+                            &node.bounds().clone().into_aabb().unwrap(), // unwrap: we just checked, that the aabb is not empty
+                        );
+                        node.parallel_store(
+                            &inner.page_manager,
                             &inner.las_loader,
                             &inner.coordinate_system,
-                            nr_threads,
-                            node_to_split,
-                            &inner.page_manager,
+                            &mut threads,
                         )?;
-                    } else {
-                        let (children, _) = split_node(&mut meta_tree, node_to_split, split_points);
-                        for (node, points, aabb) in IntoIter::new(children) {
-                            queue.push((node, points, aabb));
-                        }
                     }
                 }
+                drop(s3);
+
+                drop(s2);
             }
 
             // next lod level in next loop iteration
             lod = lod.finer();
+            drop(s1);
         }
     }
 
     // write remaining nodes to disk
+    let s1 = span!("coordinator_thread: unload loaded nodes");
     for mut node in loaded_nodes {
-        if let Some(aabb) = node.aabb.clone().into_aabb() {
-            meta_tree.set_node_aabb(&node.node_id, &aabb)
+        if let Some(aabb) = node.bounds().clone().into_aabb() {
+            meta_tree.set_node_aabb(node.node_id(), &aabb)
         }
-        write_node_to_cache(
-            {
-                let mut points = node.sampling.into_points();
-                points.append(&mut node.bogus_points);
-                points
-            },
-            node.aabb,
+        node.parallel_store(
+            &inner.page_manager,
             &inner.las_loader,
             &inner.coordinate_system,
-            nr_threads,
-            node.node_id,
-            &inner.page_manager,
-        )?;
+            &mut threads,
+        )?
     }
 
     // dump metatree to disk
+    drop(s1);
+    let s1 = span!("coordinator_thread: dump meta tree");
     meta_tree
         .write_to_file(&inner.meta_tree_file)
         .map_err(|e| IndexError::Other(Box::new(e)))?;
+    drop(s1);
 
     // stop notify thread
     drop(changes_sender);
@@ -465,133 +489,4 @@ fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys>(
             }
         }
     }
-}
-
-type FilledNode<Point, Comp> = (MetaTreeNodeId, Vec<Point>, OptionAABB<Comp>);
-
-fn split_node<GridH, Comp, Point, Pos>(
-    meta_tree: &mut MetaTree<GridH, Comp>,
-    split_node: MetaTreeNodeId,
-    points: Vec<Point>,
-) -> ([FilledNode<Point, Comp>; 8], Pos)
-where
-    Comp: Component,
-    GridH: GridHierarchy<Component = Comp, Position = Pos>,
-    Pos: Position<Component = Comp>,
-    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>>,
-{
-    meta_tree.split_node(&split_node);
-    let node_center = meta_tree.node_center(&split_node);
-    let mut children = split_node
-        .children()
-        .map(|child| (child, Vec::new(), OptionAABB::empty()));
-    for point in points {
-        let sensor_pos = point.attribute::<SensorPositionAttribute<Pos>>();
-        let child_num = node_select_child(&node_center, &sensor_pos.0);
-        children[child_num].2.extend(point.position());
-        children[child_num].1.push(point);
-    }
-    for (node, _points, aabb) in &children {
-        if let Some(aabb) = aabb.clone().into_aabb() {
-            meta_tree.set_node_aabb(node, &aabb);
-        }
-    }
-
-    (children, node_center)
-}
-
-fn node_select_child<Pos>(node_center: &Pos, sensor_pos: &Pos) -> usize
-where
-    Pos: Position,
-{
-    let mut child_num = 0;
-    if sensor_pos.x() >= node_center.x() {
-        child_num += 1;
-    }
-    if sensor_pos.y() >= node_center.y() {
-        child_num += 2;
-    }
-    if sensor_pos.z() >= node_center.z() {
-        child_num += 4;
-    }
-    child_num
-}
-
-fn write_node_to_cache<Point, LasL, CSys>(
-    points: Vec<Point>,
-    bounds: OptionAABB<<Point::Position as Position>::Component>,
-    loader: &LasL,
-    coordinate_system: &CSys,
-    nr_threads: usize,
-    node_id: MetaTreeNodeId,
-    page_manager: &PageManager,
-) -> Result<(), IndexError>
-where
-    Point: PointType,
-    LasL: LasReadWrite<Point, CSys>,
-    CSys: Clone,
-{
-    let mut page = Vec::<u8>::new();
-    let write = Cursor::new(&mut page);
-    loader.write_las(
-        Las {
-            points: &points,
-            bounds: bounds.clone(),
-            bogus_points: None,
-            coordinate_system: coordinate_system.clone(),
-        },
-        write,
-    )?;
-    let mut empty_page = Vec::<u8>::new();
-    let write = Cursor::new(&mut empty_page);
-    loader.write_las(
-        Las {
-            points: &[],
-            bounds,
-            bogus_points: None,
-            coordinate_system: coordinate_system.clone(),
-        },
-        write,
-    )?;
-
-    for thread_id in 0..nr_threads {
-        let file_id = node_id.file(thread_id);
-        let data = if thread_id == 0 {
-            mem::take(&mut page)
-        } else {
-            empty_page.clone()
-        };
-        page_manager.store(&file_id, BinDataPage { data });
-    }
-
-    Ok(())
-}
-
-fn read_laz<Point, CSys, LasL>(
-    data: &[u8],
-    loader: &LasL,
-    coordinate_system: &CSys,
-) -> Result<Vec<Point>, IndexError>
-where
-    LasL: LasReadWrite<Point, CSys>,
-    Point: PointType,
-    CSys: PartialEq,
-{
-    if data.is_empty() {
-        return Ok(Vec::new());
-    }
-    let read = Cursor::new(data);
-    let Las {
-        points,
-        coordinate_system: las_coordinate_system,
-        ..
-    } = loader.read_las(read)?;
-    if las_coordinate_system != *coordinate_system {
-        return Err(IndexError::ReadLas {
-            source: ReadLasError::FileFormat {
-                desc: "Wrong coordinate system transform".to_string(),
-            },
-        });
-    }
-    Ok(points)
 }

@@ -7,11 +7,12 @@ use crate::lru_cache::pager::{
 use crate::nalgebra::Scalar;
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::path::PathBuf;
 
 #[derive(Default, Debug)]
 pub struct BinDataPage {
+    pub exists: bool,
     pub data: Vec<u8>,
 }
 
@@ -66,16 +67,45 @@ impl PageFileHandle for BinDataFileHandle {
     type Data = BinDataPage;
 
     fn load(&mut self) -> Result<Self::Data, CacheLoadError> {
-        let mut file = File::open(&self.file_name)?;
-        let mut result = BinDataPage::default();
+        let mut file = match File::open(&self.file_name) {
+            Ok(f) => f,
+            Err(e) => {
+                return if e.kind() == ErrorKind::NotFound {
+                    Ok(BinDataPage {
+                        exists: false,
+                        data: Vec::new(),
+                    })
+                } else {
+                    Err(CacheLoadError::IO { source: e.into() })
+                }
+            }
+        };
+        let mut result = BinDataPage {
+            exists: true,
+            data: vec![],
+        };
         file.read_to_end(&mut result.data)?;
         Ok(result)
     }
 
     fn store(&mut self, data: &Self::Data) -> Result<(), IoError> {
-        let mut file = File::create(&self.file_name)?;
-        file.write_all(&data.data)?;
-        file.sync_all()?;
+        if data.exists {
+            let mut file = File::create(&self.file_name)?;
+            file.write_all(&data.data)?;
+            file.sync_all()?;
+        } else {
+            match std::fs::remove_file(&self.file_name) {
+                Ok(_) => (),
+                Err(e) => {
+                    return if e.kind() == ErrorKind::NotFound {
+                        // if the file did not exist to begin with, it is OK.
+                        Ok(())
+                    } else {
+                        Err(e.into())
+                    };
+                }
+            }
+        }
         Ok(())
     }
 }

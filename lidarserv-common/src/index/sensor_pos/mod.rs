@@ -1,5 +1,6 @@
 pub mod meta_tree;
 pub mod page_manager;
+pub mod partitioned_node;
 pub mod point;
 pub mod reader;
 pub mod writer;
@@ -8,7 +9,7 @@ use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
-use crate::geometry::sampling::SamplingFactory;
+use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::PageManager;
 use crate::index::sensor_pos::point::SensorPositionAttribute;
@@ -106,17 +107,20 @@ where
     }
 }
 
-impl<GridH, SamplF, Point, Pos, Comp, LasL, CSys> Index<Point>
+impl<GridH, SamplF, Point, Pos, Comp, LasL, CSys, Sampl, Raw> Index<Point>
     for SensorPosIndex<GridH, SamplF, Comp, LasL, CSys>
 where
     GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
-    SamplF: SamplingFactory<Point = Point, Param = LodLevel> + Send + Sync + 'static,
+    SamplF:
+        SamplingFactory<Point = Point, Param = LodLevel, Sampling = Sampl> + Send + Sync + 'static,
     Point:
         PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>> + Send + Sync + 'static,
-    Pos: Position<Component = Comp> + Clone,
+    Pos: Position<Component = Comp> + Clone + Sync,
     Comp: Component + Serialize + DeserializeOwned + Send + Sync,
     LasL: LasReadWrite<Point, CSys> + Send + Sync + 'static,
     CSys: Clone + PartialEq + Send + Sync + 'static,
+    Sampl: Sampling<Point = Point, Raw = Raw> + Send,
+    Raw: RawSamplingEntry<Point = Point> + Send,
 {
     type Writer = SensorPosWriter<Point, CSys>;
     type Reader = SensorPosReader<Point>;

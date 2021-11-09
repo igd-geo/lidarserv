@@ -287,6 +287,10 @@ impl MetaTreeNodeId {
             node,
         })
     }
+
+    pub fn lod(&self) -> &LodLevel {
+        &self.lod
+    }
 }
 
 #[cfg(test)]

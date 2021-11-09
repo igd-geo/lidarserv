@@ -1,8 +1,10 @@
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::geometry::points::PointType;
 use crate::geometry::position::Component;
+use crate::span;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::mem;
 
@@ -20,6 +22,7 @@ pub trait SamplingFactory {
 /// Samples incoming points and stores the selected ones.
 pub trait Sampling {
     type Point;
+    type Raw: RawSamplingEntry;
 
     /// Return the number of points, that have been selected by the sampling.
     fn len(&self) -> usize;
@@ -34,6 +37,9 @@ pub trait Sampling {
     where
         F: FnMut(&Self::Point, &mut Self::Point);
 
+    /// Deletes all points in the sampling.
+    fn clear(&mut self);
+
     /// Returns the list of sampled points.
     fn into_points(self) -> Vec<Self::Point>;
 
@@ -44,6 +50,30 @@ pub trait Sampling {
     fn clone_points(&self) -> Vec<Self::Point>
     where
         Self::Point: Clone;
+
+    /// Returns the list of entries in this node.
+    fn into_raw(self) -> Vec<Self::Raw>;
+
+    /// Returns the list of entries in this node, leaving the node empty.
+    fn drain_raw(&mut self) -> Vec<Self::Raw>;
+
+    /// Inserts raw entries into the node, that have been obtained from [Self::into_raw] on a
+    /// different node of the same LOD.
+    /// When points are already inserted in a sampling, but have to be re-inserted into a different
+    /// sampling, then using [Self::into_raw] and [Self::insert_raw] can be more efficient than
+    /// [Self::into_points] and [Self::insert], because it can carry over some internal meta-data,
+    /// that does not need to be re-calculated.
+    fn insert_raw<F>(&mut self, entries: Vec<Self::Raw>, patch_rejected: F) -> Vec<Self::Point>
+    where
+        F: FnMut(&Self::Point, &mut Self::Point);
+}
+
+pub trait RawSamplingEntry {
+    type Cell: Hash;
+    type Point;
+
+    fn cell(&self) -> &Self::Cell;
+    fn point(&self) -> &Self::Point;
 }
 
 #[derive(Clone)]
@@ -51,6 +81,12 @@ pub struct GridCenterEntry<Point, Position, Distance> {
     point: Point,
     center: Position,
     center_distance: Distance,
+}
+
+#[derive(Clone)]
+pub struct GridCenterRawEntry<Point, Position, Distance> {
+    cell: GridCell,
+    entry: GridCenterEntry<Point, Position, Distance>,
 }
 
 #[derive(Clone)]
@@ -65,6 +101,19 @@ pub struct GridCenterSamplingFactory<GridHierarchy, Point, Position, Distance> {
 
     #[allow(clippy::type_complexity)]
     _phantom: PhantomData<fn() -> (Point, Position, Distance)>,
+}
+
+impl<Point, Position, Distance> RawSamplingEntry for GridCenterRawEntry<Point, Position, Distance> {
+    type Cell = GridCell;
+    type Point = Point;
+
+    fn cell(&self) -> &Self::Cell {
+        &self.cell
+    }
+
+    fn point(&self) -> &Self::Point {
+        &self.entry.point
+    }
 }
 
 impl<GridHierarchy, Point, Position, Distance>
@@ -110,6 +159,7 @@ where
     Grid: super::grid::Grid<Position = Position, Component = Position::Component>,
 {
     type Point = Point;
+    type Raw = GridCenterRawEntry<Point, Position, Distance>;
 
     fn len(&self) -> usize {
         self.points.len()
@@ -162,6 +212,10 @@ where
         rejected
     }
 
+    fn clear(&mut self) {
+        self.points.clear();
+    }
+
     fn into_points(self) -> Vec<Self::Point> {
         self.points.into_values().map(|entry| entry.point).collect()
     }
@@ -179,5 +233,46 @@ where
             .values()
             .map(|entry| entry.point.clone())
             .collect()
+    }
+
+    fn into_raw(self) -> Vec<Self::Raw> {
+        self.points
+            .into_iter()
+            .map(|(k, v)| GridCenterRawEntry { cell: k, entry: v })
+            .collect()
+    }
+
+    fn drain_raw(&mut self) -> Vec<Self::Raw> {
+        let points = mem::take(&mut self.points);
+        points
+            .into_iter()
+            .map(|(k, v)| GridCenterRawEntry { cell: k, entry: v })
+            .collect()
+    }
+
+    fn insert_raw<F>(&mut self, entries: Vec<Self::Raw>, mut patch_rejected: F) -> Vec<Self::Point>
+    where
+        F: FnMut(&Self::Point, &mut Self::Point),
+    {
+        let mut rejected = Vec::new();
+
+        // insert each point
+        for GridCenterRawEntry { cell, mut entry } in entries {
+            // cell that the point belongs to
+            match self.points.entry(cell) {
+                Entry::Occupied(mut o) => {
+                    let existing_entry = o.get_mut();
+                    if entry.center_distance < existing_entry.center_distance {
+                        patch_rejected(&entry.point, &mut existing_entry.point);
+                        std::mem::swap(&mut entry, existing_entry);
+                    }
+                    rejected.push(entry.point);
+                }
+                Entry::Vacant(v) => {
+                    v.insert(entry);
+                }
+            }
+        }
+        rejected
     }
 }

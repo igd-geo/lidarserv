@@ -17,6 +17,7 @@ crossbeam-channel = "0.5.1"
 serde = { version = "1.0.126", features = ["derive"] }
 ciborium = "0.1.0"
 log = "0.4.14"
+crossbeam-utils = "0.8.5"
 
 [features]
 trace = ["tracy-client/enable"]

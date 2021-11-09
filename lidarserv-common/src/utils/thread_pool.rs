@@ -1,3 +1,4 @@
+use crate::span;
 use crossbeam_channel::Select;
 use std::cell::UnsafeCell;
 use std::pin::Pin;
@@ -47,7 +48,7 @@ impl Threads {
             threads: (0..nr_threads)
                 .into_iter()
                 .map(|thread_id| {
-                    let (tasks_sender, tasks_receiver) = crossbeam_channel::unbounded();
+                    let (tasks_sender, tasks_receiver) = crossbeam_channel::bounded(1);
                     let join_handle =
                         thread::spawn(move || Self::thread(thread_id, nr_threads, tasks_receiver));
                     Thread {
@@ -184,7 +185,9 @@ where
 {
     pub fn execute(&self, thread_id: usize) {
         let argument = unsafe { self.args[thread_id].get().as_mut().unwrap().take().unwrap() };
+        let s = span!("thread pool: execute");
         let result = (self.function)(thread_id, argument);
+        drop(s);
         self.done_senders[thread_id].send(result).unwrap();
     }
 

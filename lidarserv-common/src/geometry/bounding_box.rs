@@ -14,6 +14,8 @@ pub trait BaseAABB<C: Scalar>: Debug + Clone + PartialEq {
 
     /// Grow the bounding box, so that it contains the given position.
     fn extend<P: Position<Component = C>>(&mut self, position: &P);
+
+    fn extend_other(&mut self, other: &OptionAABB<C>);
 }
 
 /// An axis aligned bounding box.
@@ -27,10 +29,7 @@ pub struct OptionAABB<C: Scalar> {
     max: Point3<C>,
 }
 
-impl<C> BaseAABB<C> for OptionAABB<C>
-where
-    C: Scalar + PartialOrd,
-{
+impl<C: Component> BaseAABB<C> for OptionAABB<C> {
     fn new(min: Point3<C>, max: Point3<C>) -> Self {
         OptionAABB { min, max }
     }
@@ -64,12 +63,30 @@ where
             self.max.z = position.z();
         }
     }
+
+    fn extend_other(&mut self, other: &OptionAABB<C>) {
+        if other.min.x < self.min.x {
+            self.min.x = other.min.x;
+        }
+        if other.min.y < self.min.y {
+            self.min.y = other.min.y;
+        }
+        if other.min.z < self.min.z {
+            self.min.z = other.min.z;
+        }
+        if other.max.x > self.max.x {
+            self.max.x = other.max.y;
+        }
+        if other.max.y > self.max.y {
+            self.max.y = other.max.y;
+        }
+        if other.max.z > self.max.z {
+            self.max.z = other.max.z;
+        }
+    }
 }
 
-impl<C> OptionAABB<C>
-where
-    C: Scalar,
-{
+impl<C: Component> OptionAABB<C> {
     /// Constructs an empty bounding box.
     pub fn empty() -> Self
     where
@@ -106,10 +123,7 @@ where
     }
 }
 
-impl<C> Default for OptionAABB<C>
-where
-    C: Scalar + Bounded,
-{
+impl<C: Component> Default for OptionAABB<C> {
     fn default() -> Self {
         Self::empty()
     }
@@ -136,7 +150,7 @@ pub struct AABB<C: Scalar> {
     inner: OptionAABB<C>,
 }
 
-impl<C: Scalar + PartialOrd> BaseAABB<C> for AABB<C> {
+impl<C: Component> BaseAABB<C> for AABB<C> {
     /// Create a new AABB from the specified bounds.
     /// Panics, if for any component the min bound is larger than the max bound.
     fn new(min: Point3<C>, max: Point3<C>) -> Self {
@@ -156,6 +170,11 @@ impl<C: Scalar + PartialOrd> BaseAABB<C> for AABB<C> {
     #[inline]
     fn extend<P: Position<Component = C>>(&mut self, position: &P) {
         self.inner.extend(position)
+    }
+
+    #[inline]
+    fn extend_other(&mut self, other: &OptionAABB<C>) {
+        self.inner.extend_other(other)
     }
 }
 

@@ -104,10 +104,7 @@ impl From<std::io::Error> for IoError {
 #[derive(Error, Debug, Clone)]
 pub enum CacheLoadError {
     #[error(transparent)]
-    IO {
-        #[from]
-        source: IoError,
-    },
+    IO { source: IoError },
     #[error("{description}")]
     FileFormat { description: String },
 }

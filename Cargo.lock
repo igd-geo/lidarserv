@@ -355,6 +355,7 @@ version = "0.1.0"
 dependencies = [
  "ciborium",
  "crossbeam-channel",
+ "crossbeam-utils",
  "las",
  "laz 0.6.0",
  "log",
