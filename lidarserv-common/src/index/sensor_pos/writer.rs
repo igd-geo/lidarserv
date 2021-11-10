@@ -1,31 +1,27 @@
-use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
+use crate::geometry::bounding_box::BaseAABB;
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
 use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
-use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
-use crate::index::sensor_pos::page_manager::{BinDataPage, PageManager};
+use crate::index::sensor_pos::meta_tree::MetaTree;
 use crate::index::sensor_pos::partitioned_node::{
     node_select_child, PartitionedNode, PartitionedPoints,
 };
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::{Inner, Replacement, Update};
 use crate::index::Writer;
-use crate::las::{Las, LasReadWrite, ReadLasError, WriteLasError};
+use crate::las::{LasReadWrite, ReadLasError, WriteLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
-use crate::nalgebra::Scalar;
 use crate::span;
 use crate::utils::thread_pool::Threads;
 use crossbeam_channel::{Receiver, Sender};
 use log::trace;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::array::IntoIter;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::error::Error as StdError;
 use std::fmt::Debug;
-use std::io::Cursor;
 use std::mem;
 use std::sync::Arc;
 use std::thread::{spawn, JoinHandle};
@@ -60,16 +56,6 @@ impl<K: Debug, V> From<CacheCleanupError<K, V>> for IndexError {
         IndexError::PageIo {
             source: CacheLoadError::IO { source: e.source },
         }
-    }
-}
-
-trait WithKey<OkValue> {
-    fn with_key<K: Debug>(self, key: &K) -> Result<OkValue, IndexError>;
-}
-
-impl<OkValue> WithKey<OkValue> for Result<OkValue, CacheLoadError> {
-    fn with_key<K: Debug>(self, key: &K) -> Result<OkValue, IndexError> {
-        self.map_err(|e| IndexError::PageIo { source: e })
     }
 }
 
@@ -148,13 +134,6 @@ impl<Point, CSys> Drop for SensorPosWriter<Point, CSys> {
             .expect("Indexing thread crashed.")
             .expect("Indexing thread terminated with error");
     }
-}
-
-struct Node<Sampl, Comp: Scalar, Point> {
-    node_id: MetaTreeNodeId,
-    sampling: Sampl,
-    aabb: OptionAABB<Comp>,
-    bogus_points: Vec<Point>,
 }
 
 fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys, Raw>(
@@ -307,7 +286,7 @@ where
                         // if the newly loaded node replaces a previous one, we  also need to
                         // write that to disk.
                         let s3 = span!("coordinator_thread::: save old node");
-                        let mut old_node = mem::replace(&mut loaded_nodes[lod_level], node);
+                        let old_node = mem::replace(&mut loaded_nodes[lod_level], node);
                         if let Some(aabb) = old_node.bounds().clone().into_aabb() {
                             meta_tree.set_node_aabb(old_node.node_id(), &aabb)
                         }
@@ -385,7 +364,7 @@ where
                     // replace with newly created child node at current sensor position
                     let node_center = meta_tree.node_center(node.node_id());
                     let replace_with = node_select_child(&node_center, &sensor_pos);
-                    let mut replacement_node = children.swap_remove(replace_with);
+                    let replacement_node = children.swap_remove(replace_with);
                     let old_node = mem::replace(node, replacement_node);
 
                     // node is now empty. save.
@@ -416,7 +395,7 @@ where
 
                     // if the node is still to large we need to split it further.
                     if node.nr_points() > inner.max_node_size {
-                        let mut children =
+                        let children =
                             node.parallel_split(&meta_tree, &inner.sampling_factory, &mut threads);
                         queue.extend(children);
                     } else {
@@ -469,7 +448,7 @@ where
 
     // write remaining nodes to disk
     let s1 = span!("coordinator_thread: unload loaded nodes");
-    for mut node in loaded_nodes {
+    for node in loaded_nodes {
         if let Some(aabb) = node.bounds().clone().into_aabb() {
             meta_tree.set_node_aabb(node.node_id(), &aabb)
         }

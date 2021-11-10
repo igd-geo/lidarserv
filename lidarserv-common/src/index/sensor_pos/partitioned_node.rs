@@ -1,27 +1,23 @@
 use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{Component, CoordinateSystem, Position};
+use crate::geometry::position::{Component, Position};
 use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::{BinDataPage, PageManager};
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::writer::IndexError;
 use crate::las::{Las, LasReadWrite, ReadLasError, WriteLasError};
-use crate::lru_cache::pager::CacheLoadError;
 use crate::span;
 use crate::utils::thread_pool::Threads;
 use crossbeam_utils::CachePadded;
 use nalgebra::Scalar;
-use num_traits::Bounded;
 use std::cell::UnsafeCell;
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::io::Cursor;
 use std::mem;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Barrier};
-use thiserror::Error;
+use std::sync::Barrier;
 
 pub struct PartitionedNode<Sampl, Point, Comp: Scalar> {
     hasher: RandomState,
@@ -356,7 +352,7 @@ where
         threads: &mut Threads,
     ) where
         SamplF: SamplingFactory<Point = Point, Sampling = Sampl, Param = LodLevel> + Sync,
-        Patch: Fn(&Point, &mut Point) -> () + Sync,
+        Patch: Fn(&Point, &mut Point) + Sync,
     {
         let s0 = span!("parallel_insert");
         assert_eq!(threads.num_threads(), self.num_partitions());
@@ -525,22 +521,20 @@ where
         let node_center = meta_tree.node_center(&self.node_id);
 
         // prepare children to insert points into
-        let mut children = self.node_id.children().map(|child| {
-            (PartitionedNode {
-                hasher: self.hasher.clone(),
-                bit_mask: self.bit_mask,
-                partitions: (0..self.num_partitions)
-                    .map(|_| {
-                        UnsafeSyncCell::new(Partition {
-                            sampling: sampling_factory.build(child.lod()),
-                            bogus: Vec::new(),
-                        })
+        let mut children = self.node_id.children().map(|child| PartitionedNode {
+            hasher: self.hasher.clone(),
+            bit_mask: self.bit_mask,
+            partitions: (0..self.num_partitions)
+                .map(|_| {
+                    UnsafeSyncCell::new(Partition {
+                        sampling: sampling_factory.build(child.lod()),
+                        bogus: Vec::new(),
                     })
-                    .collect(),
-                num_partitions: self.num_partitions,
-                bounds: OptionAABB::empty(),
-                node_id: child,
-            })
+                })
+                .collect(),
+            num_partitions: self.num_partitions,
+            bounds: OptionAABB::empty(),
+            node_id: child,
         });
 
         // split every partition in parallel
@@ -643,10 +637,7 @@ impl<Point> PartitionedPoints<Point> {
 
     pub fn from_partitions(partitions: Vec<Vec<Point>>) -> PartitionedPoints<Point> {
         PartitionedPoints {
-            partitions: partitions
-                .into_iter()
-                .map(|points| UnsafeSyncCell::new(points))
-                .collect(),
+            partitions: partitions.into_iter().map(UnsafeSyncCell::new).collect(),
         }
     }
 

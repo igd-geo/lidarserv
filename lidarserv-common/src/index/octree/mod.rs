@@ -13,11 +13,8 @@ use crate::index::octree::reader::OctreeReader;
 use crate::index::octree::writer::{OctreeWriter, TaskPriorityFunction};
 use crate::index::Index;
 use crate::las::LasReadWrite;
-use crate::lru_cache::pager::PageDirectory;
 use crate::nalgebra::Scalar;
 use crate::query::Query;
-use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
@@ -28,7 +25,6 @@ struct Inner<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> {
     max_bogus_inner: usize,
     max_bogus_leaf: usize,
     node_hierarchy: GridH,
-    point_hierarchy: GridH,
     subscriptions: Mutex<Vec<crossbeam_channel::Sender<LeveledGridCell>>>,
     page_cache: LasPageManager<LasL, Sampl, Point, Comp, CSys>,
     sample_factory: SamplF,
@@ -61,7 +57,6 @@ where
         max_bogus_inner: usize,
         max_bogus_leaf: usize,
         node_hierarchy: GridH,
-        point_hierarchy: GridH,
         page_loader: OctreePageLoader<LasL, Page<Sampl, Point, Comp, CSys>>,
         page_directory: GridCellDirectory,
         max_cache_size: usize,
@@ -77,7 +72,6 @@ where
                 max_bogus_inner,
                 max_bogus_leaf,
                 node_hierarchy,
-                point_hierarchy,
                 subscriptions: Mutex::new(vec![]),
                 page_cache: LasPageManager::new(page_loader, page_directory, max_cache_size),
                 sample_factory,
@@ -125,7 +119,7 @@ where
         OctreeWriter::new(Arc::clone(&self.inner))
     }
 
-    fn reader<Q>(&self, query: Q) -> Self::Reader
+    fn reader<Q>(&self, _query: Q) -> Self::Reader
     where
         Q: Query<Pos> + 'static,
     {

@@ -1,7 +1,6 @@
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::geometry::points::PointType;
 use crate::geometry::position::Component;
-use crate::span;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;

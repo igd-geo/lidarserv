@@ -33,6 +33,12 @@ unsafe impl Send for TaskPtr {}
 
 #[must_use]
 pub struct ExecuteJoinHandle<Data, Arg, Ret> {
+    // Suppress "field is never read" warning.
+    // This field is indeed never read, it is just here to control, when the Task is dropped.
+    // The thread pool has a pointer to this task. Since the Drop implementation of ExecuteJoinHandle
+    // synchronizes with the end of the task execution, this ensures, that that pointer is valid
+    // until the task is done.
+    #[allow(dead_code)]
     task: Pin<Box<Task<Data, Arg, Ret>>>,
     done_receivers: Vec<crossbeam_channel::Receiver<Ret>>,
 }

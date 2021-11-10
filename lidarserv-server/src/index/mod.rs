@@ -1,6 +1,5 @@
 use crate::common::geometry::sampling::GridCenterSampling;
 use crate::common::index::octree::writer::OctreeWriter;
-use crate::common::index::octree::FlushError;
 use crate::common::index::Index;
 use crate::index::point::LasPoint;
 use lidarserv_common::geometry::grid::{I32Grid, I32GridHierarchy};
@@ -12,7 +11,6 @@ use lidarserv_common::index::sensor_pos::SensorPosIndex;
 use lidarserv_common::index::Writer as CommonWriter;
 use lidarserv_common::las::I32LasReadWrite;
 use std::error::Error;
-use std::fmt::Octal;
 use thiserror::Error;
 
 pub mod builder;

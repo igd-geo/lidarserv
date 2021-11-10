@@ -117,9 +117,10 @@ where
         {
             let read_lock = self.node.read().unwrap();
             if let Some(result) = &*read_lock {
-                return result.as_ref().map_err(|e| e.to_owned()).map_or_else(
-                    |e| Err(e),
-                    |arc| {
+                return result
+                    .as_ref()
+                    .map_err(|e| e.to_owned())
+                    .map_or_else(Err, |arc| {
                         if arc.coordinate_system == *coordinate_system {
                             Ok(Arc::clone(arc))
                         } else {
@@ -127,8 +128,7 @@ where
                                 desc: "Coordinate system mismatch".to_string(),
                             })
                         }
-                    },
-                );
+                    });
             }
         }
 
@@ -266,7 +266,7 @@ where
     }
 }
 
-pub type LasPageManager<LasL, Sampl, Point, Comp: Scalar, CSys> = PageManager<
+pub type LasPageManager<LasL, Sampl, Point, Comp, CSys> = PageManager<
     OctreePageLoader<LasL, Page<Sampl, Point, Comp, CSys>>,
     LeveledGridCell,
     Page<Sampl, Point, Comp, CSys>,

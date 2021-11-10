@@ -13,7 +13,7 @@ mod connection;
 
 pub async fn serve<A>(
     addr: A,
-    mut index: Box<dyn DynIndex>,
+    index: Box<dyn DynIndex>,
     mut shutdown_receiver: Receiver<u32>,
 ) -> Result<(), LidarServerError>
 where
@@ -46,7 +46,7 @@ where
 
                             info!("Server shutdown: Flush to disk.");
                             // unwrap: all connections are closed, so this is the last ARC pointing to the index
-                            let mut index = Arc::get_mut(&mut index).unwrap();
+                            let index = Arc::get_mut(&mut index).unwrap();
                             index.flush().map_err(|_| LidarServerError::IndexError)?;
 
                             info!("Server shutdown: Server stopped.");

@@ -95,8 +95,8 @@ impl<C: Component> OptionAABB<C> {
         let min = C::min_value();
         let max = C::max_value();
         OptionAABB {
-            min: Point3::new(max.clone(), max.clone(), max),
-            max: Point3::new(min.clone(), min.clone(), min),
+            min: Point3::new(max, max, max),
+            max: Point3::new(min, min, min),
         }
     }
 

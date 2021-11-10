@@ -1,4 +1,4 @@
-use crate::geometry::grid::{Grid, GridCell, GridHierarchy, LeveledGridCell, LodLevel};
+use crate::geometry::grid::{GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::PointType;
 use crate::geometry::position::{Component, CoordinateSystem, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
@@ -9,12 +9,11 @@ use crate::las::{LasReadWrite, ReadLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
 use crate::nalgebra::Scalar;
 use log::info;
-use nalgebra::max;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 use std::{mem, thread};
@@ -107,7 +106,6 @@ impl From<WriterTaskError> for IndexingThreadError {
 impl TaskPriorityFunction {
     fn cmp<P>(
         &self,
-        current_generation: u32,
         cell_1: &LeveledGridCell,
         task_1: &InsertionTask<P>,
         cell_2: &LeveledGridCell,
@@ -178,10 +176,7 @@ impl<P> Inboxes<P> {
             .tasks
             .iter()
             .filter(|&(cell, _)| !self.locked.contains_key(cell))
-            .max_by(|&(cell_a, a), &(cell_b, b)| {
-                self.priority_function
-                    .cmp(self.current_gen, cell_a, a, cell_b, b)
-            })
+            .max_by(|&(cell_a, a), &(cell_b, b)| self.priority_function.cmp(cell_a, a, cell_b, b))
             .map(|(&id, _)| id);
 
         let node_id = match node_id {
@@ -290,11 +285,11 @@ where
                 let mut lock = self.inboxes.lock().unwrap();
                 lock.unlock(node_id);
 
-                if let Some(mut tasks) = child_tasks {
-                    for i in 0..8 {
-                        let child_id = tasks[i].0;
-                        let child_points = mem::take(&mut tasks[i].1);
-                        if child_points.len() > 0 {
+                if let Some(tasks) = child_tasks {
+                    for mut task in tasks {
+                        let child_id = task.0;
+                        let child_points = mem::take(&mut task.1);
+                        if !child_points.is_empty() {
                             lock.add(
                                 child_id,
                                 child_points,
@@ -410,7 +405,7 @@ where
             (child_node_ids[6], mem::take(&mut children[6])),
             (child_node_ids[7], mem::take(&mut children[7])),
         ];
-        return Ok(Some(result));
+        Ok(Some(result))
     }
 }
 
@@ -502,5 +497,20 @@ where
 {
     fn insert(&mut self, points: Vec<Point>) {
         self.insert_many(points)
+    }
+}
+
+impl<Point, GridH> Drop for OctreeWriter<Point, GridH> {
+    fn drop(&mut self) {
+        // tell worker threads to stop
+        {
+            let mut lock = self.inboxes.lock().unwrap();
+            lock.drain();
+        }
+
+        // wait for workers to finish
+        for thread in self.threads.drain(..) {
+            thread.join().unwrap().unwrap()
+        }
     }
 }

@@ -45,7 +45,7 @@ fn build_octree_index(
     // tree stuff
     let node_hierarchy = I32GridHierarchy::new(14); // todo config for that
     let point_hierarchy = I32GridHierarchy::new(21); // todo config for that
-    let sample_factory = GridCenterSamplingFactory::new(point_hierarchy.clone());
+    let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
 
     // page loading stuff
     let las_loader = I32LasReadWrite::new(true); // todo config for that (use_compression)
@@ -65,7 +65,6 @@ fn build_octree_index(
         settings.max_bogus_inner,
         settings.max_bogus_leaf,
         node_hierarchy,
-        point_hierarchy,
         page_loader,
         page_directory,
         genaral_settings.max_cache_size,

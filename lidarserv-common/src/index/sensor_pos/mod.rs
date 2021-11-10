@@ -156,7 +156,7 @@ where
     Raw: RawSamplingEntry<Point = Point> + Send,
 {
     type Writer = SensorPosWriter<Point, CSys>;
-    type Reader = SensorPosReader<Point>;
+    type Reader = SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Point>;
 
     fn writer(&self) -> Self::Writer {
         let index_inner = Arc::clone(&self.inner);
@@ -167,7 +167,7 @@ where
     where
         Q: Query<Pos> + 'static,
     {
-        SensorPosReader::new(query)
+        SensorPosReader::new(query, Arc::clone(&self.inner))
     }
 }
 
