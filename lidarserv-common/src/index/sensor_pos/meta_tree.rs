@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::error::Error as StdError;
+use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use std::path::Path;
 use thiserror::Error;
@@ -31,7 +32,7 @@ pub struct Node<Comp: Scalar> {
     bounds: AABB<Comp>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct MetaTreeNodeId {
     lod: LodLevel,
     node: LeveledGridCell,
@@ -590,5 +591,19 @@ mod tests {
                 ]
             }]
         );
+    }
+}
+
+impl Debug for MetaTreeNodeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "MetaTreeNodeId \"{}__{}__{}-{}-{}\"",
+            self.lod.level(),
+            self.node.lod.level(),
+            self.node.pos.x,
+            self.node.pos.y,
+            self.node.pos.z,
+        )
     }
 }

@@ -9,7 +9,7 @@ use crate::index::sensor_pos::partitioned_node::{
     node_select_child, PartitionedNode, PartitionedPoints,
 };
 use crate::index::sensor_pos::point::SensorPositionAttribute;
-use crate::index::sensor_pos::{Inner, Update};
+use crate::index::sensor_pos::{Inner, Replacement, Update};
 use crate::index::Writer;
 use crate::las::{Las, LasReadWrite, ReadLasError, WriteLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
@@ -17,6 +17,7 @@ use crate::nalgebra::Scalar;
 use crate::span;
 use crate::utils::thread_pool::Threads;
 use crossbeam_channel::{Receiver, Sender};
+use log::trace;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::array::IntoIter;
@@ -80,14 +81,18 @@ pub struct SensorPosWriter<Point, CSys> {
 
 impl<Point, Pos, Comp, CSys> SensorPosWriter<Point, CSys>
 where
-    Point:
-        PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>> + Send + Sync + 'static,
+    Point: PointType<Position = Pos>
+        + WithAttr<SensorPositionAttribute<Pos>>
+        + Clone
+        + Send
+        + Sync
+        + 'static,
     Pos: Position<Component = Comp> + Clone + Sync,
     Comp: Component + Send + Sync + Serialize + DeserializeOwned,
     CSys: PartialEq + Send + Sync + 'static + Clone,
 {
     pub(super) fn new<GridH, SamplF, LasL, Sampl, Raw>(
-        index_inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+        index_inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point>>,
     ) -> Self
     where
         GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
@@ -153,7 +158,7 @@ struct Node<Sampl, Comp: Scalar, Point> {
 }
 
 fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys, Raw>(
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point>>,
     new_points_receiver: Receiver<Vec<Point>>,
     mut meta_tree: MetaTree<GridH, Comp>,
 ) -> Result<(), IndexError>
@@ -164,7 +169,12 @@ where
     Sampl: Sampling<Point = Point, Raw = Raw> + Send,
     Raw: RawSamplingEntry<Point = Point>,
     Sampl::Raw: Send,
-    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>> + Send,
+    Point: PointType<Position = Pos>
+        + WithAttr<SensorPositionAttribute<Pos>>
+        + Clone
+        + Send
+        + Sync
+        + 'static,
     Pos: Position<Component = Comp> + Clone + Sync,
     GridH: GridHierarchy<Component = Comp, Position = Pos> + Send + Sync + 'static,
     LasL: LasReadWrite<Point, CSys> + Send + Sync + 'static,
@@ -271,6 +281,10 @@ where
             // get sampling for this node
             let node_id = nodes.node_for_lod(&lod);
             let lod_level = lod.level() as usize;
+            let mut change = Update {
+                node: node_id.clone(),
+                replaced_by: vec![],
+            };
 
             // load from disk, if needed
             let s2 = span!("coordinator_thread:: load to/from disk");
@@ -405,6 +419,16 @@ where
                         let mut children =
                             node.parallel_split(&meta_tree, &inner.sampling_factory, &mut threads);
                         queue.extend(children);
+                    } else {
+                        // When no further splitting needs to be performed for the node,
+                        // we can add it to the changes that will be sent to the connected readers.
+                        if let Some(bounds) = node.bounds().clone().into_aabb() {
+                            change.replaced_by.push(Replacement {
+                                replace_with: node.node_id().clone(),
+                                bounds,
+                                points: Arc::new(node.clone_points()),
+                            });
+                        }
                     }
 
                     // save node
@@ -425,6 +449,17 @@ where
 
                 drop(s2);
             }
+
+            // send changes to connected readers
+            if let Some(bounds) = node.bounds().clone().into_aabb() {
+                change.replaced_by.push(Replacement {
+                    replace_with: node.node_id().clone(),
+                    bounds,
+                    points: Arc::new(node.clone_points()),
+                });
+            }
+            trace!("{:#?}", &change);
+            changes_sender.send(change).unwrap(); // unwrap: notify sender thread will only stop once the changes_sender is dropped.
 
             // next lod level in next loop iteration
             lod = lod.finer();
@@ -461,19 +496,25 @@ where
     Ok(())
 }
 
-fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys>(
-    changes_receiver: crossbeam_channel::Receiver<Update<Comp>>,
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys, Point>(
+    changes_receiver: crossbeam_channel::Receiver<Update<Comp, Point>>,
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point>>,
 ) where
     Comp: Component,
     GridH: GridHierarchy<Component = Comp>,
+    Point: Clone,
 {
     for change in changes_receiver {
         let mut shared = inner.shared.write().unwrap();
 
         // update tree
-        for (node, aabb, _) in &change.replaced_by {
-            shared.meta_tree.set_node_aabb(node, aabb);
+        for Replacement {
+            replace_with,
+            bounds,
+            ..
+        } in &change.replaced_by
+        {
+            shared.meta_tree.set_node_aabb(replace_with, bounds);
         }
 
         // forward to all readers

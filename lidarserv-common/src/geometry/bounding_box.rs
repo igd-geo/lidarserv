@@ -2,7 +2,7 @@ use crate::geometry::position::{Component, Position};
 use nalgebra::{Point3, Scalar};
 use num_traits::Bounded;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 
 /// An axis aligned bounding box
 pub trait BaseAABB<C: Scalar>: Debug + Clone + PartialEq {
@@ -23,7 +23,7 @@ pub trait BaseAABB<C: Scalar>: Debug + Clone + PartialEq {
 /// The bounding box is defined via a minimum and a maximum bound. However, no assertion is made if
 /// `min <= max` actually holds. If the min bound is larger than the max bound, the bounding box
 /// can be thought of as being empty.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct OptionAABB<C: Scalar> {
     min: Point3<C>,
     max: Point3<C>,
@@ -129,6 +129,20 @@ impl<C: Component> Default for OptionAABB<C> {
     }
 }
 
+impl<C: Component> Debug for OptionAABB<C> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.is_empty() {
+            write!(f, "OptionAABB (empty)")
+        } else {
+            write!(
+                f,
+                "OptionAABB ({:?},{:?},{:?} - {:?},{:?},{:?})",
+                self.min.x, self.min.y, self.min.z, self.max.x, self.max.y, self.max.z
+            )
+        }
+    }
+}
+
 /// An axis aligned bounding box, that is guaranteed to be non-empty.
 ///
 /// An [AABB] can be obtained from an [OptionAABB], by checking for its emptiness:
@@ -145,7 +159,7 @@ impl<C: Component> Default for OptionAABB<C> {
 ///     None => panic!("AABB is empty"),
 /// };
 /// ```
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct AABB<C: Scalar> {
     inner: OptionAABB<C>,
 }
@@ -237,6 +251,21 @@ impl<C: Component> AABB<C> {
         if other.inner.max.z > self.inner.max.z {
             self.inner.max.z = other.inner.max.z;
         }
+    }
+}
+
+impl<C: Scalar> Debug for AABB<C> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "AABB ({:?},{:?},{:?} - {:?},{:?},{:?})",
+            self.inner.min.x,
+            self.inner.min.y,
+            self.inner.min.z,
+            self.inner.max.x,
+            self.inner.max.y,
+            self.inner.max.z
+        )
     }
 }
 

@@ -171,6 +171,20 @@ where
     Comp: Component + Send + Sync,
     Raw: RawSamplingEntry<Point = Point> + Send,
 {
+    pub fn clone_points(&self) -> Vec<Point>
+    where
+        Point: Clone,
+    {
+        self.partitions
+            .iter()
+            .flat_map(|p| {
+                let mut points = p.get().bogus.clone();
+                points.append(&mut p.get().sampling.clone_points());
+                points.into_iter()
+            })
+            .collect()
+    }
+
     pub fn parallel_load<LasL, CSys, SamplF>(
         num_partitions: usize,
         node_id: MetaTreeNodeId,
