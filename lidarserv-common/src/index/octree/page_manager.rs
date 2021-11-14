@@ -88,7 +88,7 @@ where
             loader
                 .write_las(
                     Las {
-                        points: points.as_slice(),
+                        points: points.iter(),
                         bounds: node.bounding_box.clone(),
                         bogus_points: Some(node.bogus_points.len() as u32),
                         coordinate_system: node.coordinate_system.clone(),

@@ -9,6 +9,7 @@ use laz::{
     LasZipCompressor, LasZipDecompressor, LasZipError, LazItemRecordBuilder, LazItemType, LazVlr,
 };
 use nalgebra::{Point3, Vector3};
+use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::io;
 use std::io::{Cursor, Error, Read, Seek, SeekFrom, Write};
@@ -74,11 +75,15 @@ pub trait LasReadWrite<Point, CSys>
 where
     Point: PointType,
 {
-    fn write_las<W: Write + Seek + Send>(
+    fn write_las<W, It>(
         &self,
-        las: Las<&[Point], <Point::Position as Position>::Component, CSys>,
+        las: Las<It, <Point::Position as Position>::Component, CSys>,
         wr: W,
-    ) -> Result<(), WriteLasError>;
+    ) -> Result<(), WriteLasError>
+    where
+        W: Write + Seek + Send,
+        It: Iterator + ExactSizeIterator,
+        It::Item: Borrow<Point>;
 
     #[allow(clippy::type_complexity)]
     fn read_las<R: Read + Seek + Send>(
@@ -124,11 +129,16 @@ impl<Point> LasReadWrite<Point, I32CoordinateSystem> for I32LasReadWrite
 where
     Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
 {
-    fn write_las<W: Write + Seek + Send>(
+    fn write_las<W, It>(
         &self,
-        las: Las<&[Point], i32, I32CoordinateSystem>,
+        las: Las<It, i32, I32CoordinateSystem>,
         mut wr: W,
-    ) -> Result<(), WriteLasError> {
+    ) -> Result<(), WriteLasError>
+    where
+        W: Write + Seek + Send,
+        It: Iterator + ExactSizeIterator,
+        It::Item: Borrow<Point>,
+    {
         let Las {
             points,
             bounds,
@@ -141,6 +151,12 @@ where
         let mut format = Format::new(0).unwrap();
         format.extra_bytes = Point::NR_EXTRA_BYTES as u16;
         format.is_compressed = self.compression;
+
+        // encode (uncompressed) point data into buffer
+        let number_of_point_records = points.len() as u32;
+        let mut point_data = Vec::with_capacity(points.len() * format.len() as usize);
+        let number_of_points_by_return =
+            write_point_data_i32(Cursor::new(&mut point_data), points, &format)?;
 
         // string "LIDARSERV" for system identifier and generating software
         let mut lidarserv = [0; 32];
@@ -166,18 +182,8 @@ where
             number_of_variable_length_records: 0,
             point_data_record_format: format.to_u8().unwrap(),
             point_data_record_length: format.len(),
-            number_of_point_records: points.len() as u32,
-            number_of_points_by_return: {
-                let mut number_of_points_by_return = [0; 5];
-                for point in points {
-                    let return_number =
-                        point.attribute::<LasPointAttributes>().return_number & 0x07;
-                    if return_number != 0 && return_number < 6 {
-                        number_of_points_by_return[return_number as usize - 1] += 1;
-                    }
-                }
-                number_of_points_by_return
-            },
+            number_of_point_records,
+            number_of_points_by_return,
             x_scale_factor: coordinate_system.scale().x,
             y_scale_factor: coordinate_system.scale().y,
             z_scale_factor: coordinate_system.scale().z,
@@ -232,12 +238,6 @@ where
             header.offset_to_point_data += vlr.len(false) as u32;
             header.point_data_record_format |= 0x80;
 
-            // encode uncompressed point data into extra buffer
-            let mut point_data =
-                Cursor::new(Vec::with_capacity(points.len() * format.len() as usize));
-            write_point_data_i32(&mut point_data, points, &format)?;
-            let point_data = point_data.into_inner();
-
             // write header
             header.write_to(&mut wr).map_err(|e| match e {
                 las::Error::Io(io_e) => io_e,
@@ -290,7 +290,7 @@ where
             }
 
             // write point data
-            write_point_data_i32(wr, points, &format)?;
+            wr.write_all(point_data.as_slice())?;
         }
         Ok(())
     }
@@ -418,15 +418,28 @@ where
     }
 }
 
-fn write_point_data_i32<W: Write, P>(
+fn write_point_data_i32<W: Write, P, It>(
     mut writer: W,
-    points: &[P],
+    points: It,
     format: &Format,
-) -> Result<(), io::Error>
+) -> Result<[u32; 5], io::Error>
 where
     P: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+    It: Iterator,
+    It::Item: Borrow<P>,
 {
+    let mut number_of_points_by_return = [0; 5];
+
     for point in points {
+        let point = point.borrow();
+
+        // count points by return number
+        let return_number = point.attribute::<LasPointAttributes>().return_number & 0x07;
+        if return_number != 0 && return_number < 6 {
+            number_of_points_by_return[return_number as usize - 1] += 1;
+        }
+
+        // create raw point
         let attributes = point.attribute::<LasPointAttributes>();
         let extra_bytes = point.get_extra_bytes();
         assert_eq!(extra_bytes.len(), P::NR_EXTRA_BYTES);
@@ -448,6 +461,8 @@ where
             extra_bytes,
             ..Default::default()
         };
+
+        // write into given stream
         raw_point
             .write_to(&mut writer, format)
             .map_err(|e| match e {
@@ -456,7 +471,7 @@ where
             })?;
     }
 
-    Ok(())
+    Ok(number_of_points_by_return)
 }
 
 fn read_point_data_i32<R: Read, P>(

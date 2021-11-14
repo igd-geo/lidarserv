@@ -2,10 +2,12 @@ use crate::geometry::bounding_box::BaseAABB;
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
-use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
-use crate::index::sensor_pos::meta_tree::MetaTree;
+use crate::geometry::sampling::{
+    IntoExactSizeIterator, RawSamplingEntry, Sampling, SamplingFactory,
+};
+use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::partitioned_node::{
-    node_select_child, PartitionedNode, PartitionedPoints,
+    PartitionedNode, PartitionedNodeSplitter, PartitionedPoints,
 };
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::{Inner, Replacement, Update};
@@ -16,6 +18,7 @@ use crate::span;
 use crate::utils::thread_pool::Threads;
 use crossbeam_channel::{Receiver, Sender};
 use log::trace;
+use nalgebra::Scalar;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::cmp::Ordering;
@@ -78,7 +81,7 @@ where
     CSys: PartialEq + Send + Sync + 'static + Clone,
 {
     pub(super) fn new<GridH, SamplF, LasL, Sampl, Raw>(
-        index_inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point>>,
+        index_inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
     ) -> Self
     where
         GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
@@ -87,6 +90,7 @@ where
             + Send
             + 'static,
         Sampl: Sampling<Point = Point, Raw = Raw> + Send,
+        for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
         Raw: RawSamplingEntry<Point = Point> + Send,
         LasL: LasReadWrite<Point, CSys> + Send + Sync + 'static,
     {
@@ -137,7 +141,7 @@ impl<Point, CSys> Drop for SensorPosWriter<Point, CSys> {
 }
 
 fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys, Raw>(
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point>>,
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
     new_points_receiver: Receiver<Vec<Point>>,
     mut meta_tree: MetaTree<GridH, Comp>,
 ) -> Result<(), IndexError>
@@ -146,6 +150,7 @@ where
     SamplF:
         SamplingFactory<Sampling = Sampl, Param = LodLevel, Point = Point> + Send + Sync + 'static,
     Sampl: Sampling<Point = Point, Raw = Raw> + Send,
+    for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
     Raw: RawSamplingEntry<Point = Point>,
     Sampl::Raw: Send,
     Point: PointType<Position = Pos>
@@ -260,10 +265,6 @@ where
             // get sampling for this node
             let node_id = nodes.node_for_lod(&lod);
             let lod_level = lod.level() as usize;
-            let mut change = Update {
-                node: node_id.clone(),
-                replaced_by: vec![],
-            };
 
             // load from disk, if needed
             let s2 = span!("coordinator_thread:: load to/from disk");
@@ -286,16 +287,18 @@ where
                         // if the newly loaded node replaces a previous one, we  also need to
                         // write that to disk.
                         let s3 = span!("coordinator_thread::: save old node");
-                        let old_node = mem::replace(&mut loaded_nodes[lod_level], node);
-                        if let Some(aabb) = old_node.bounds().clone().into_aabb() {
-                            meta_tree.set_node_aabb(old_node.node_id(), &aabb)
+                        let mut old_node = mem::replace(&mut loaded_nodes[lod_level], node);
+                        if old_node.is_dirty() {
+                            apply_updates(
+                                old_node.node_id().clone(),
+                                &mut old_node,
+                                vec![],
+                                inner.as_ref(),
+                                &mut threads,
+                                &mut meta_tree,
+                                &changes_sender,
+                            )?;
                         }
-                        old_node.parallel_store(
-                            &inner.page_manager,
-                            &inner.las_loader,
-                            &inner.coordinate_system,
-                            &mut threads,
-                        )?;
                         drop(s3);
                     }
                     Ordering::Equal => {
@@ -345,119 +348,110 @@ where
                 let s2 = span!("coordinator_thread:: split");
 
                 // queue of nodes, that still need to be split
-                let mut queue = Vec::new();
+                let mut queue =
+                    vec![node.parallel_drain_into_splitter(sensor_pos.clone(), &mut threads)];
 
-                // keep refining node at current sensor position
-                // until small enough
-                let s3 = span!("coordinator_thread::: Phase 1");
-                while node.nr_points() > inner.max_node_size {
-                    // split node
+                // nodes that are fully split (nr of points is below the max_node_size)
+                let mut fully_split = Vec::new();
 
-                    let s4 = span!("coordinator_thread:::: Parallel split");
-                    let mut children = Vec::from(node.parallel_split(
-                        &meta_tree,
-                        &inner.sampling_factory,
-                        &mut threads,
-                    ));
-                    drop(s4);
+                // keep processing nodes that are queued for splitting, until queue is empty
+                while let Some(split_node) = queue.pop() {
+                    // split
+                    let children = split_node.parallel_split(&meta_tree, &mut threads);
 
-                    // replace with newly created child node at current sensor position
-                    let node_center = meta_tree.node_center(node.node_id());
-                    let replace_with = node_select_child(&node_center, &sensor_pos);
-                    let replacement_node = children.swap_remove(replace_with);
-                    let old_node = mem::replace(node, replacement_node);
-
-                    // node is now empty. save.
-                    let s4 = span!("coordinator_thread:::: Parallel store");
-                    meta_tree.set_node_aabb(
-                        old_node.node_id(),
-                        &old_node.bounds().clone().into_aabb().unwrap(),
-                    ); // unwrap: the node cannot be empty, because it exceeded the max node size.
-                    old_node.parallel_store(
-                        &inner.page_manager,
-                        &inner.las_loader,
-                        &inner.coordinate_system,
-                        &mut threads,
-                    )?;
-                    drop(s4);
-
-                    // add remaining children to queue - we will deal with them in the next step
-                    queue.append(&mut children);
-                }
-                drop(s3);
-
-                // process remaining child nodes
-                let s3 = span!("Phase 2");
-                while !queue.is_empty() {
-                    // get node from queue to process
-                    // unwrap: queue is not empty due to loop condition
-                    let mut node = queue.pop().unwrap();
-
-                    // if the node is still to large we need to split it further.
-                    if node.nr_points() > inner.max_node_size {
-                        let children =
-                            node.parallel_split(&meta_tree, &inner.sampling_factory, &mut threads);
-                        queue.extend(children);
-                    } else {
-                        // When no further splitting needs to be performed for the node,
-                        // we can add it to the changes that will be sent to the connected readers.
-                        if let Some(bounds) = node.bounds().clone().into_aabb() {
-                            change.replaced_by.push(Replacement {
-                                replace_with: node.node_id().clone(),
-                                bounds,
-                                points: Arc::new(node.clone_points()),
-                            });
+                    // the child nodes, that are small enough are put into `fully_split`, the other
+                    // ones are re-queued.
+                    for child in children {
+                        if child.nr_points() > inner.max_node_size {
+                            queue.push(child)
+                        } else {
+                            fully_split.push(child)
                         }
                     }
-
-                    // save node
-                    if !node.bounds().is_empty() {
-                        meta_tree.set_node_aabb(
-                            node.node_id(),
-                            &node.bounds().clone().into_aabb().unwrap(), // unwrap: we just checked, that the aabb is not empty
-                        );
-                        node.parallel_store(
-                            &inner.page_manager,
-                            &inner.las_loader,
-                            &inner.coordinate_system,
-                            &mut threads,
-                        )?;
-                    }
                 }
-                drop(s3);
+
+                // find the node that replaces the old one
+                // unwrap: node splitting is implemented, such that replaces_base_node() returns true for exactly one node.
+                let (replacement_index, _) = fully_split
+                    .iter()
+                    .enumerate()
+                    .find(|(_, node)| node.replaces_base_node())
+                    .unwrap();
+                let replacement_node = fully_split
+                    .swap_remove(replacement_index)
+                    .parallel_into_node(&inner.sampling_factory, &mut threads);
+                let mut old_node = mem::replace(node, replacement_node);
+
+                // save
+                apply_updates(
+                    old_node.node_id().clone(),
+                    node,
+                    fully_split,
+                    inner.as_ref(),
+                    &mut threads,
+                    &mut meta_tree,
+                    &changes_sender,
+                )?;
+
+                // save the old node (it is now empty)
+                old_node.parallel_store(
+                    &inner.page_manager,
+                    &inner.las_loader,
+                    &inner.coordinate_system,
+                    &mut threads,
+                )?;
 
                 drop(s2);
             }
-
-            // send changes to connected readers
-            if let Some(bounds) = node.bounds().clone().into_aabb() {
-                change.replaced_by.push(Replacement {
-                    replace_with: node.node_id().clone(),
-                    bounds,
-                    points: Arc::new(node.clone_points()),
-                });
-            }
-            trace!("{:#?}", &change);
-            changes_sender.send(change).unwrap(); // unwrap: notify sender thread will only stop once the changes_sender is dropped.
 
             // next lod level in next loop iteration
             lod = lod.finer();
             drop(s1);
         }
+
+        // Publish the changes to the connected viewers.
+        // (For the indexing itself, this part is irrelevant: A node gets saved when it is "unloaded".)
+        let mut dirty_nodes: Vec<_> = loaded_nodes
+            .iter_mut()
+            .flat_map(|node| node.dirty_since().map(|dirty_since| (dirty_since, node)))
+            .collect();
+        dirty_nodes.sort_by_key(|(dirty_since, _)| *dirty_since);
+        for (dirty_since, node) in dirty_nodes {
+            // if there are more points to insert,
+            // we abort early, so that only the nodes are published, that we really have to.
+            // (Those, that have been dirty for longer than inner.max_delay)
+            if !new_points.is_empty() || !new_points_receiver.is_empty() {
+                let dirty_time = dirty_since.elapsed();
+                if dirty_time <= inner.max_delay {
+                    break;
+                }
+            }
+
+            // save node
+            apply_updates(
+                node.node_id().clone(),
+                node,
+                Vec::new(),
+                inner.as_ref(),
+                &mut threads,
+                &mut meta_tree,
+                &changes_sender,
+            )?;
+        }
     }
 
     // write remaining nodes to disk
     let s1 = span!("coordinator_thread: unload loaded nodes");
-    for node in loaded_nodes {
-        if let Some(aabb) = node.bounds().clone().into_aabb() {
-            meta_tree.set_node_aabb(node.node_id(), &aabb)
-        }
-        node.parallel_store(
-            &inner.page_manager,
-            &inner.las_loader,
-            &inner.coordinate_system,
+    for mut node in loaded_nodes {
+        apply_updates(
+            node.node_id().clone(),
+            &mut node,
+            Vec::new(),
+            inner.as_ref(),
             &mut threads,
-        )?
+            &mut meta_tree,
+            &changes_sender,
+        )?;
     }
 
     // dump metatree to disk
@@ -475,26 +469,90 @@ where
     Ok(())
 }
 
-fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys, Point>(
-    changes_receiver: crossbeam_channel::Receiver<Update<Comp, Point>>,
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point>>,
+fn apply_updates<Point, Sampl, GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Raw>(
+    base_node: MetaTreeNodeId,
+    replace_with: &mut PartitionedNode<Sampl, Point, Comp>,
+    replace_with_split: Vec<PartitionedNodeSplitter<Point, Pos, Raw>>,
+    inner: &Inner<GridH, SamplF, Comp, LasL, CSys>,
+    threads: &mut Threads,
+    meta_tree: &mut MetaTree<GridH, Comp>,
+    notify_sender: &crossbeam_channel::Sender<Update<Comp>>,
+) -> Result<(), IndexError>
+where
+    Sampl: Sampling<Point = Point, Raw = Raw> + Send,
+    for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
+    Point: PointType<Position = Pos> + Send,
+    Comp: Component + Send + Sync,
+    Pos: Position<Component = Comp> + Sync,
+    Raw: RawSamplingEntry<Point = Point> + Send,
+    LasL: LasReadWrite<Point, CSys> + Sync,
+    CSys: Sync + Clone,
+    GridH: GridHierarchy<Component = Comp, Position = Pos>,
+{
+    let mut aabbs = vec![(
+        replace_with.node_id().clone(),
+        replace_with.bounds().clone(),
+    )];
+
+    // store node contents
+    replace_with.parallel_store(
+        &inner.page_manager,
+        &inner.las_loader,
+        &inner.coordinate_system,
+        threads,
+    )?;
+
+    // store split node contents
+    for node in replace_with_split {
+        let node_id = node.node_id().clone();
+        let aabb = node.parallel_store(
+            &inner.coordinate_system,
+            &inner.las_loader,
+            &inner.page_manager,
+            threads,
+        )?;
+        aabbs.push((node_id, aabb))
+    }
+
+    // Publish changes to viewers + global meta tree
+    let update = Update {
+        node: base_node,
+        replaced_by: aabbs
+            .iter()
+            .flat_map(|(node_id, bounds)| {
+                bounds.clone().into_aabb().map(|aabb| Replacement {
+                    replace_with: node_id.clone(),
+                    bounds: aabb,
+                })
+            })
+            .collect(),
+    };
+    trace!("{:#?}", &update);
+    // unwrap: notify_readers_thread will only terminate, once the sender is dropped.
+    notify_sender.send(update).unwrap();
+
+    // update local meta tree
+    for (node_id, aabb) in aabbs {
+        if let Some(aabb) = aabb.into_aabb() {
+            meta_tree.set_node_aabb(&node_id, &aabb);
+        }
+    }
+
+    Ok(())
+}
+
+fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys>(
+    changes_receiver: crossbeam_channel::Receiver<Update<Comp>>,
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
 ) where
     Comp: Component,
     GridH: GridHierarchy<Component = Comp>,
-    Point: Clone,
 {
     for change in changes_receiver {
         let mut shared = inner.shared.write().unwrap();
 
         // update tree
-        for Replacement {
-            replace_with,
-            bounds,
-            ..
-        } in &change.replaced_by
-        {
-            shared.meta_tree.set_node_aabb(replace_with, bounds);
-        }
+        shared.meta_tree.apply_update(&change);
 
         // forward to all readers
         let mut pos = 0;

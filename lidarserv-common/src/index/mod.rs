@@ -1,4 +1,5 @@
 use crate::geometry::points::PointType;
+use crate::index::sensor_pos::writer::IndexError;
 use crate::query::Query;
 
 pub mod octree;
@@ -30,4 +31,14 @@ pub trait Reader<Point>
 where
     Point: PointType,
 {
+    type NodeId;
+    type Node;
+
+    fn update(&mut self);
+
+    fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node)>;
+
+    fn remove_one(&mut self) -> Option<Self::NodeId>;
+
+    fn update_one(&mut self) -> Option<(Self::NodeId, Vec<(Self::NodeId, Self::Node)>)>;
 }

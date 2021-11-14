@@ -1,5 +1,5 @@
 use crate::geometry::grid::{GridCell, LodLevel};
-use crate::index::sensor_pos::meta_tree::MetaTree;
+use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::lru_cache::pager::{
     CacheLoadError, IoError, PageDirectory, PageFileHandle, PageLoader,
     PageManager as GenericPageManager,
@@ -151,6 +151,14 @@ impl PageDirectory for FileIdDirectory {
 
     fn exists(&self, key: &Self::Key) -> bool {
         self.files.contains(key)
+    }
+}
+
+impl FileId {
+    pub fn children(&self) -> [FileId; 8] {
+        let node = MetaTreeNodeId::from_file(self);
+        let children = node.children();
+        children.map(|child| child.file(self.thread_index))
     }
 }
 

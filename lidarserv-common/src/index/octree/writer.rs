@@ -331,7 +331,7 @@ where
         is_max_lod: bool,
     ) -> Result<Option<[(LeveledGridCell, Vec<Point>); 8]>, WriterTaskError> {
         // get points
-        let node_arc = self.inner.page_cache.load(&node_id)?.get_node(
+        let node_arc = self.inner.page_cache.load_or_default(&node_id)?.get_node(
             &self.inner.loader,
             || self.inner.sample_factory.build(&node_id.lod),
             &self.inner.coordinate_system,

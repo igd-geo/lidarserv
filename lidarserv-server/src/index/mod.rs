@@ -44,7 +44,6 @@ impl DynIndex
         i32,
         I32LasReadWrite,
         I32CoordinateSystem,
-        LasPoint,
     >
 {
     fn index_info(&self) -> &I32CoordinateSystem {

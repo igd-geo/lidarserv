@@ -1,9 +1,10 @@
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::geometry::points::PointType;
 use crate::geometry::position::Component;
-use std::collections::hash_map::Entry;
+use std::collections::hash_map::{Entry, Values};
 use std::collections::HashMap;
 use std::hash::Hash;
+
 use std::marker::PhantomData;
 use std::mem;
 
@@ -65,6 +66,13 @@ pub trait Sampling {
     fn insert_raw<F>(&mut self, entries: Vec<Self::Raw>, patch_rejected: F) -> Vec<Self::Point>
     where
         F: FnMut(&Self::Point, &mut Self::Point);
+
+    fn iter<'a>(&'a self) -> <&Self as IntoExactSizeIterator>::IntoIter
+    where
+        &'a Self: IntoExactSizeIterator<Item = &'a Self::Point>,
+    {
+        self.into_iter()
+    }
 }
 
 pub trait RawSamplingEntry {
@@ -274,4 +282,45 @@ where
         }
         rejected
     }
+}
+
+pub trait IntoExactSizeIterator {
+    type Item;
+    type IntoIter: Iterator<Item = Self::Item> + ExactSizeIterator;
+    fn into_iter(self) -> Self::IntoIter;
+}
+
+impl<'a, Grid, Point, Position, Distance> IntoExactSizeIterator
+    for &'a GridCenterSampling<Grid, Point, Position, Distance>
+{
+    type Item = &'a Point;
+    type IntoIter = GridCenterSamplingIter<'a, Point, Position, Distance>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let values = self.points.values();
+        GridCenterSamplingIter { inner: values }
+    }
+}
+
+pub struct GridCenterSamplingIter<'a, Point, Position, Distance> {
+    inner: Values<'a, GridCell, GridCenterEntry<Point, Position, Distance>>,
+}
+
+impl<'a, Point, Position, Distance> Iterator
+    for GridCenterSamplingIter<'a, Point, Position, Distance>
+{
+    type Item = &'a Point;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|e| &e.point)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<'a, Point, Position, Distance> ExactSizeIterator
+    for GridCenterSamplingIter<'a, Point, Position, Distance>
+{
 }

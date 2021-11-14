@@ -234,7 +234,13 @@ where
         drop(s);
     }
 
-    pub fn load(&self, key: &K) -> Result<Arc<V>, CacheLoadError> {
+    #[inline]
+    pub fn load_or_default(&self, key: &K) -> Result<Arc<V>, CacheLoadError> {
+        self.load(key)
+            .map(|maybe_value| maybe_value.unwrap_or_else(|| Arc::new(V::default())))
+    }
+
+    pub fn load(&self, key: &K) -> Result<Option<Arc<V>>, CacheLoadError> {
         let s = span!("load");
 
         // (try to) get the entry from the cache
@@ -242,15 +248,15 @@ where
         let cached = cache_lock.cache.touch(key);
         match cached {
             None => {
-                let file = Arc::new(Mutex::new(File {
-                    version_number: 0,
-                    handle: self.loader.open(key),
-                }));
                 if cache_lock.directory.exists(key) {
                     // The page is not in the cache, but it exists on disk.
                     // Add a new page to the cache, with an yet unresolved Later value, to indicate
                     // that loading this page is still in progress.
 
+                    let file = Arc::new(Mutex::new(File {
+                        version_number: 0,
+                        handle: self.loader.open(key),
+                    }));
                     let sender = LaterSender::new();
                     let later = sender.later();
                     let page = Page {
@@ -280,14 +286,14 @@ where
 
                     // return what we have just loaded
                     drop(s);
-                    value
+                    value.map(Some)
                 } else {
                     // The page is not in the cache, and neither does it exist on disk.
                     // Just return an empty new page.
                     // (Will be created, once store() is called for it for the first time.)
                     drop(cache_lock);
                     drop(s);
-                    Ok(Arc::new(V::default()))
+                    Ok(None)
                 }
             }
 
@@ -307,7 +313,7 @@ where
                 drop(cache_lock);
                 let data = data.into().unwrap();
                 drop(s);
-                data
+                data.map(Some)
             }
         }
     }

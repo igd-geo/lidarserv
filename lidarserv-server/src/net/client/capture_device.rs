@@ -1,5 +1,5 @@
 use crate::common::las::Las;
-use crate::index::point::GlobalPoint;
+use crate::index::point::{GlobalPoint, LasPoint};
 use crate::net::protocol::connection::Connection;
 use crate::net::protocol::messages::{CoordinateSystem, DeviceType, LasPointData, Message};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
@@ -98,20 +98,20 @@ impl CaptureDeviceClient {
                 let mut las_data = Vec::new();
                 let encoder = I32LasReadWrite::new(self.use_compression);
                 let cursor = Cursor::new(&mut las_data);
-                encoder
-                    .write_las(
-                        Las {
-                            points: las_points.as_slice(),
-                            bounds: OptionAABB::empty(), // these bounds are technically wrong, but they do not matter for just sending them to the server.
-                            bogus_points: None,
-                            coordinate_system,
-                        },
-                        cursor,
-                    )
-                    // unwrap: Operation will always succeed.
-                    //  LasError::Io - Impossible, because Cursor does not throw any IO errors
-                    //  LasError::FileFormat - Can only occur, when parsing las data, not when writing las data.
-                    .unwrap();
+                LasReadWrite::<LasPoint, _>::write_las(
+                    &encoder,
+                    Las {
+                        points: las_points.iter(),
+                        bounds: OptionAABB::empty(), // these bounds are technically wrong, but they do not matter for just sending them to the server.
+                        bogus_points: None,
+                        coordinate_system,
+                    },
+                    cursor,
+                )
+                // unwrap: Operation will always succeed.
+                //  LasError::Io - Impossible, because Cursor does not throw any IO errors
+                //  LasError::FileFormat - Can only occur, when parsing las data, not when writing las data.
+                .unwrap();
                 las_data
             }
         };

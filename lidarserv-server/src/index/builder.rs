@@ -15,6 +15,7 @@ use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
 use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::nalgebra::Vector3;
 use std::path::Path;
+use std::time::Duration;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -120,6 +121,7 @@ fn build_sensor_position_index(
         las_loader,
         coordinate_system,
         max_lod: LodLevel::from_level(10), // todo config for this
+        max_delay: Duration::from_secs(5), // todo config for this
     };
     let spi = SensorPosIndex::new(params);
 

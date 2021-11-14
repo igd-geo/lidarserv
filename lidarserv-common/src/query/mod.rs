@@ -24,7 +24,7 @@ where
         Point: PointType<Position = Pos>;
 }
 
-impl<Pos: Position, Q: Query<Pos>> QueryExt<Pos> for Q {
+impl<Pos: Position, Q: Query<Pos> + ?Sized> QueryExt<Pos> for Q {
     fn matches_node(&self, bounds: &AABB<Pos::Component>, lod: &LodLevel) -> bool {
         match self.max_lod_area(bounds) {
             None => false,

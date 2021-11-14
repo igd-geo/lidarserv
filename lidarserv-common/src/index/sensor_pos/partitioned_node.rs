@@ -2,7 +2,9 @@ use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
-use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
+use crate::geometry::sampling::{
+    IntoExactSizeIterator, RawSamplingEntry, Sampling, SamplingFactory,
+};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::{BinDataPage, PageManager};
 use crate::index::sensor_pos::point::SensorPositionAttribute;
@@ -16,8 +18,10 @@ use std::cell::UnsafeCell;
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::io::Cursor;
+use std::iter::ExactSizeIterator;
 use std::mem;
 use std::sync::Barrier;
+use std::time::Instant;
 
 pub struct PartitionedNode<Sampl, Point, Comp: Scalar> {
     hasher: RandomState,
@@ -26,6 +30,16 @@ pub struct PartitionedNode<Sampl, Point, Comp: Scalar> {
     num_partitions: usize,
     bounds: OptionAABB<Comp>,
     node_id: MetaTreeNodeId,
+    dirty_since: Option<Instant>,
+}
+
+pub struct PartitionedNodeSplitter<Point, Pos, Raw> {
+    node_id: MetaTreeNodeId,
+    replaces_base_node_at: Option<Pos>,
+    hasher: RandomState,
+    bit_mask: u64,
+    partitions: Vec<UnsafeSyncCell<SplitterPartition<Point, Raw>>>,
+    num_partitions: usize,
 }
 
 pub struct PartitionedPoints<Point> {
@@ -34,6 +48,11 @@ pub struct PartitionedPoints<Point> {
 
 struct Partition<Sampl, Point> {
     sampling: Sampl,
+    bogus: Vec<Point>,
+}
+
+struct SplitterPartition<Point, Raw> {
+    sampled: Vec<Raw>,
     bogus: Vec<Point>,
 }
 
@@ -83,6 +102,7 @@ where
         num_partitions: usize,
         node_id: MetaTreeNodeId,
         sampling_factory: &SamplF,
+        dirty: bool,
     ) -> Self
     where
         SamplF: SamplingFactory<Sampling = Sampl, Param = LodLevel>,
@@ -100,6 +120,7 @@ where
                 })
             })
             .collect();
+        let dirty_since = if dirty { Some(Instant::now()) } else { None };
         PartitionedNode {
             hasher,
             bit_mask,
@@ -107,6 +128,7 @@ where
             num_partitions,
             bounds: OptionAABB::empty(),
             node_id,
+            dirty_since,
         }
     }
 
@@ -149,19 +171,25 @@ where
         PartitionedPoints::from_partitions(partitions)
     }
 
-    pub fn drain_sampled_points(&mut self) -> PartitionedPoints<Sampl::Raw> {
-        let partitions = self
-            .partitions
-            .iter_mut()
-            .map(|partition| partition.get_mut().sampling.drain_raw())
-            .collect();
-        PartitionedPoints::from_partitions(partitions)
+    pub fn mark_dirty(&mut self) {
+        if self.dirty_since.is_none() {
+            self.dirty_since = Some(Instant::now())
+        }
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.dirty_since.is_some()
+    }
+
+    pub fn dirty_since(&self) -> &Option<Instant> {
+        &self.dirty_since
     }
 }
 
 impl<Sampl, Point, Comp, Pos, Raw> PartitionedNode<Sampl, Point, Comp>
 where
     Sampl: Sampling<Point = Point, Raw = Raw> + Send,
+    for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
     Point: PointType<Position = Pos> + Send,
     Pos: Position<Component = Comp> + Sync,
     Comp: Component + Send + Sync,
@@ -196,7 +224,7 @@ where
         CSys: PartialEq + Sync,
     {
         let s1 = span!("parallel_load: prepare");
-        let mut this = Self::new(num_partitions, node_id, sampling_factory);
+        let mut this = Self::new(num_partitions, node_id, sampling_factory, false);
         assert_eq!(threads.num_threads(), this.num_partitions());
 
         let partitions = &this.partitions;
@@ -207,7 +235,7 @@ where
                 // load page
                 let s1 = span!("parallel_load: load page");
                 let file_id = node_id.file(tid);
-                let file = page_manager.load(&file_id)?;
+                let file = page_manager.load_or_default(&file_id)?;
                 drop(s1);
 
                 // if the file did not exist, we treat it as an empty las file.
@@ -270,7 +298,7 @@ where
     }
 
     pub fn parallel_store<CSys, LasL>(
-        mut self,
+        &mut self,
         page_manager: &PageManager,
         las_loader: &LasL,
         coordinate_system: &CSys,
@@ -283,26 +311,23 @@ where
         let s0 = span!("parallel_store");
         assert_eq!(threads.num_threads(), self.num_partitions());
         let partitions = &self.partitions;
-        let bounds = mem::take(&mut self.bounds);
+        let bounds = self.bounds.clone();
         let node_id = &self.node_id;
 
         let thread_results = threads
             .execute(|thread_id| -> Result<(), IndexError> {
-                // unsafe:
-                //      every thread dereferences a different partition
-                //      (based on each threads thread id).
-                //      So there is exactly one mutable reference for each partition.
-                let partition = unsafe { partitions[thread_id].unsafe_get_mut() };
+                let partition = partitions[thread_id].get();
 
                 // prepare what to write to the las file
                 let s1 = span!("parallel_store: assemble");
+                let bogus_points_iter = partition.bogus.iter();
+                let sampled_points_iter = partition.sampling.iter();
+                let points_iter = IterChain::new(sampled_points_iter, bogus_points_iter);
                 let bogus_points = Some(partition.bogus.len() as u32);
-                let mut points = partition.sampling.drain_points();
-                points.append(&mut partition.bogus);
                 let bounds = bounds.clone();
                 let coordinate_system = coordinate_system.clone();
                 let las = Las {
-                    points: points.as_slice(),
+                    points: points_iter,
                     bogus_points,
                     bounds,
                     coordinate_system,
@@ -310,7 +335,7 @@ where
                 drop(s1);
 
                 // if there are no points, then we can delete the file
-                let exists = !las.points.is_empty();
+                let exists = las.points.len() > 0;
 
                 // encode las
                 let s1 = span!("parallel_store: encode las");
@@ -340,6 +365,10 @@ where
         for result in thread_results {
             result?;
         }
+
+        // update dirtiness
+        self.dirty_since = None;
+
         drop(s0);
         Ok(())
     }
@@ -501,53 +530,129 @@ where
         drop(s0);
     }
 
-    pub fn parallel_split<GridH, SamplF>(
+    pub fn parallel_drain_into_splitter(
         &mut self,
+        sensor_position: Pos,
+        threads: &mut Threads,
+    ) -> PartitionedNodeSplitter<Point, Pos, Raw> {
+        let s0 = span!("parallel_drain_into_splitter");
+        assert_eq!(threads.num_threads(), self.num_partitions());
+
+        // create empty
+        let mut splitter = PartitionedNodeSplitter {
+            node_id: self.node_id.clone(),
+            replaces_base_node_at: Some(sensor_position),
+            hasher: self.hasher.clone(),
+            bit_mask: self.bit_mask,
+            partitions: (0..self.num_partitions)
+                .map(|_| {
+                    UnsafeSyncCell::new(SplitterPartition {
+                        sampled: vec![],
+                        bogus: vec![],
+                    })
+                })
+                .collect(),
+            num_partitions: self.num_partitions,
+        };
+
+        // move over points, in parallel for each partition
+        let partitions = &mut self.partitions;
+        threads
+            .execute(|thread_id| {
+                // unsafe:
+                //      every thread dereferences a different partition
+                //      (based on each threads thread id).
+                //      So there is exactly one mutable reference for each partition.
+                let from_partition = unsafe { partitions[thread_id].unsafe_get_mut() };
+                let target_partition = unsafe { splitter.partitions[thread_id].unsafe_get_mut() };
+
+                // transfer points
+                target_partition.sampled = from_partition.sampling.drain_raw();
+                target_partition.bogus = mem::take(&mut from_partition.bogus);
+            })
+            .join();
+
+        drop(s0);
+        splitter
+    }
+}
+
+impl<Point, Pos, Raw, Comp> PartitionedNodeSplitter<Point, Pos, Raw>
+where
+    Raw: RawSamplingEntry<Point = Point> + Send,
+    Point: PointType<Position = Pos> + Send,
+    Pos: Position<Component = Comp> + Sync,
+    Comp: Component + Send,
+{
+    pub fn node_id(&self) -> &MetaTreeNodeId {
+        &self.node_id
+    }
+
+    pub fn nr_points(&self) -> usize {
+        self.partitions
+            .iter()
+            .map(|p| p.get().bogus.len() + p.get().sampled.len())
+            .sum()
+    }
+
+    pub fn replaces_base_node(&self) -> bool {
+        self.replaces_base_node_at.is_some()
+    }
+
+    pub fn parallel_split<GridH>(
+        mut self,
         meta_tree: &MetaTree<GridH, Comp>,
-        sampling_factory: &SamplF,
         threads: &mut Threads,
     ) -> [Self; 8]
     where
         GridH: GridHierarchy<Position = Pos, Component = Comp>,
-        SamplF: SamplingFactory<Sampling = Sampl, Param = LodLevel>,
         Point: WithAttr<SensorPositionAttribute<Pos>>,
     {
         let s0 = span!("parallel_split");
         let s1 = span!("parallel_split: prepare");
-        assert_eq!(threads.num_threads(), self.num_partitions());
-        let partitions = &self.partitions;
+        assert_eq!(threads.num_threads(), self.num_partitions);
+        let partitions = &mut self.partitions;
 
         // center of the node is where to split
         let node_center = meta_tree.node_center(&self.node_id);
 
         // prepare children to insert points into
-        let mut children = self.node_id.children().map(|child| PartitionedNode {
-            hasher: self.hasher.clone(),
-            bit_mask: self.bit_mask,
-            partitions: (0..self.num_partitions)
-                .map(|_| {
-                    UnsafeSyncCell::new(Partition {
-                        sampling: sampling_factory.build(child.lod()),
-                        bogus: Vec::new(),
+        let mut children = self
+            .node_id
+            .children()
+            .map(|child| PartitionedNodeSplitter {
+                node_id: child,
+                replaces_base_node_at: None,
+                hasher: self.hasher.clone(),
+                bit_mask: self.bit_mask,
+                partitions: (0..self.num_partitions)
+                    .map(|_| {
+                        UnsafeSyncCell::new(SplitterPartition {
+                            sampled: vec![],
+                            bogus: vec![],
+                        })
                     })
-                })
-                .collect(),
-            num_partitions: self.num_partitions,
-            bounds: OptionAABB::empty(),
-            node_id: child,
-        });
+                    .collect(),
+                num_partitions: self.num_partitions,
+            });
+
+        // pass down the sensor position
+        if let Some(sensor_pos) = self.replaces_base_node_at {
+            let replace_child_id = node_select_child(&node_center, &sensor_pos);
+            children[replace_child_id].replaces_base_node_at = Some(sensor_pos);
+        }
 
         // split every partition in parallel
         drop(s1);
-        let partition_child_bounds = threads
+        threads
             .execute(|thread_id| {
                 // partition to split
                 // unsafe:
                 //      every thread dereferences a different partition
                 //      (based on each threads thread id).
                 //      So there is exactly one mutable reference for each partition.
-                let s1 = span!("parallel_split: prepare thread");
                 let partition = unsafe { partitions[thread_id].unsafe_get_mut() };
+                let s1 = span!("parallel_split: prepare thread");
 
                 // partitions of child nodes to insert split points into
                 // unsafe:
@@ -556,25 +661,15 @@ where
                     .map(|i| unsafe { children[i].partitions[thread_id].unsafe_get_mut() })
                     .collect();
 
-                // bounding boxes of all the partitions
-                let mut bounds: Vec<_> = (0..8).map(|_| OptionAABB::empty()).collect();
                 drop(s1);
 
                 // split sampled points
                 let s1 = span!("parallel_split: split sampled points");
-                let raw_points = partition.sampling.drain_raw();
-                let mut raw_points_split: Vec<_> = (0..8).map(|_| Vec::new()).collect();
-                for point in raw_points {
+                let sampled_points = mem::take(&mut partition.sampled);
+                for point in sampled_points {
                     let sensor_pos = point.point().attribute::<SensorPositionAttribute<Pos>>();
                     let child_index = node_select_child(&node_center, &sensor_pos.0);
-                    bounds[child_index].extend(point.point().position());
-                    raw_points_split[child_index].push(point);
-                }
-                for (i, raw_points) in raw_points_split.into_iter().enumerate() {
-                    let rejected = target_partitions[i]
-                        .sampling
-                        .insert_raw(raw_points, |_, _| unreachable!());
-                    assert!(rejected.is_empty())
+                    target_partitions[child_index].sampled.push(point);
                 }
                 drop(s1);
 
@@ -584,28 +679,179 @@ where
                 for point in bogus_points {
                     let sensor_pos = point.attribute::<SensorPositionAttribute<Pos>>();
                     let child_index = node_select_child(&node_center, &sensor_pos.0);
-                    bounds[child_index].extend(point.position());
                     target_partitions[child_index].bogus.push(point);
                 }
                 drop(s1);
-
-                // return bounds so they can be handled by the main thread
-                bounds
             })
             .join();
-
-        for child_bounds in partition_child_bounds {
-            for (child_index, bounds) in child_bounds.into_iter().enumerate() {
-                children[child_index].bounds.extend_other(&bounds);
-            }
-        }
 
         drop(s0);
         children
     }
+
+    pub fn parallel_store<CSys, LasL>(
+        self,
+        coordinate_system: &CSys,
+        las_loader: &LasL,
+        page_manager: &PageManager,
+        threads: &mut Threads,
+    ) -> Result<OptionAABB<Comp>, IndexError>
+    where
+        LasL: LasReadWrite<Point, CSys> + Sync,
+        CSys: Clone + Sync,
+    {
+        let s0 = span!("parallel_store (split)");
+        assert_eq!(threads.num_threads(), self.num_partitions);
+        let partitions = &self.partitions;
+        let node_id = &self.node_id;
+
+        let thread_results = threads
+            .execute(|thread_id| -> Result<_, IndexError> {
+                let partition = partitions[thread_id].get();
+
+                // calculate bounding box for this partition
+                let s1 = span!("parallel_store (split): calculate bounds");
+                let mut bounds = partition.calculate_bounds();
+                drop(s1);
+
+                // prepare what to write to the las file
+                let s1 = span!("parallel_store (split): assemble");
+                let sampled_points_iter = partition.sampled.iter().map(|raw| raw.point());
+                let bogus_points_iter = partition.bogus.iter();
+                let points_iter = IterChain::new(sampled_points_iter, bogus_points_iter);
+                let bogus_points = Some(partition.bogus.len() as u32);
+                let coordinate_system = coordinate_system.clone();
+                let las = Las {
+                    points: points_iter,
+                    bogus_points,
+                    bounds: bounds.clone(),
+                    coordinate_system,
+                };
+                drop(s1);
+
+                // if there are no points, then we can delete the file
+                let exists = las.points.len() > 0;
+
+                // encode las
+                let s1 = span!("parallel_store (split): encode las");
+                let mut data = Vec::new();
+                if exists {
+                    let write = Cursor::new(&mut data);
+                    match las_loader.write_las(las, write) {
+                        Ok(_) => {}
+                        Err(WriteLasError::Io(_)) => {
+                            unreachable!("Cursor as write does not throw IO errors")
+                        }
+                    };
+                }
+                drop(s1);
+
+                // write file
+                let s1 = span!("parallel_store (split): store page");
+                let file_id = node_id.file(thread_id);
+                page_manager.store(&file_id, BinDataPage { exists, data });
+                drop(s1);
+
+                Ok(bounds)
+            })
+            .join();
+
+        // check results, merge aabbs
+        let mut bounds = OptionAABB::empty();
+        for result in thread_results {
+            bounds.extend_other(&result?);
+        }
+
+        drop(s0);
+        Ok(bounds)
+    }
+
+    pub fn parallel_into_node<SamplF, Sampl>(
+        self,
+        sampling_factory: &SamplF,
+        threads: &mut Threads,
+    ) -> PartitionedNode<Sampl, Point, Comp>
+    where
+        SamplF: SamplingFactory<Sampling = Sampl, Param = LodLevel>,
+        Sampl: Sampling<Point = Point, Raw = Raw> + Send,
+    {
+        assert_eq!(threads.num_threads(), self.num_partitions);
+
+        // new empty node
+        let mut node = PartitionedNode {
+            hasher: self.hasher,
+            bit_mask: self.bit_mask,
+            partitions: (0..self.num_partitions)
+                .map(|_| {
+                    UnsafeSyncCell::new(Partition {
+                        sampling: sampling_factory.build(self.node_id.lod()),
+                        bogus: vec![],
+                    })
+                })
+                .collect(),
+            num_partitions: self.num_partitions,
+            bounds: OptionAABB::empty(),
+            node_id: self.node_id,
+            dirty_since: Some(Instant::now()),
+        };
+
+        // fill with points in parallel
+        let partitions = &self.partitions;
+        let thread_results = threads
+            .execute(|thread_id| {
+                // unsafe:
+                //      every thread works on a different partition
+                //      (based on each threads thread id).
+                //      So there is exactly one mutable reference for each partition.
+                let from_partition = unsafe { partitions[thread_id].unsafe_get_mut() };
+                let to_partition = unsafe { node.partitions[thread_id].unsafe_get_mut() };
+
+                // calculate aabb
+                let s1 = span!("parallel_store (split): calculate bounds");
+                let mut bounds = from_partition.calculate_bounds();
+                drop(s1);
+
+                // move over points
+                to_partition.bogus = mem::take(&mut from_partition.bogus);
+                let rejected = to_partition.sampling.insert_raw(
+                    mem::take(&mut from_partition.sampled),
+                    |_, _| unreachable!(),
+                );
+                assert!(rejected.is_empty());
+
+                bounds
+            })
+            .join();
+
+        // merge calculated bounding boxes
+        for aabb in thread_results {
+            node.bounds.extend_other(&aabb);
+        }
+
+        node
+    }
 }
 
-pub fn node_select_child<Pos>(node_center: &Pos, sensor_pos: &Pos) -> usize
+impl<Point, Raw, Pos, Comp> SplitterPartition<Point, Raw>
+where
+    Raw: RawSamplingEntry<Point = Point>,
+    Point: PointType<Position = Pos>,
+    Pos: Position<Component = Comp>,
+    Comp: Component,
+{
+    fn calculate_bounds(&self) -> OptionAABB<Comp> {
+        let mut bounds = OptionAABB::empty();
+        for point in &self.sampled {
+            bounds.extend(point.point().position());
+        }
+        for point in &self.bogus {
+            bounds.extend(point.position());
+        }
+        bounds
+    }
+}
+
+fn node_select_child<Pos>(node_center: &Pos, sensor_pos: &Pos) -> usize
 where
     Pos: Position,
 {
@@ -646,4 +892,57 @@ impl<Point> PartitionedPoints<Point> {
     }
 
     pub fn parallel_split(self) {}
+}
+
+/// Like iter::chain, just that it also works with ExactSizeIterator
+pub struct IterChain<I1, I2> {
+    i1: I1,
+    i2: I2,
+    state: bool,
+}
+
+impl<I1, I2> IterChain<I1, I2> {
+    pub fn new(i1: I1, i2: I2) -> Self {
+        IterChain {
+            i1,
+            i2,
+            state: true,
+        }
+    }
+}
+
+impl<I1, I2, Item> Iterator for IterChain<I1, I2>
+where
+    I1: Iterator<Item = Item>,
+    I2: Iterator<Item = Item>,
+{
+    type Item = Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.state {
+            if let Some(val) = self.i1.next() {
+                return Some(val);
+            }
+            self.state = false;
+        }
+        self.i2.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (min1, max1) = self.i1.size_hint();
+        let (min2, max2) = self.i2.size_hint();
+        let min = min1 + min2;
+        let max = match (max1, max2) {
+            (Some(m1), Some(m2)) => Some(m1 + m2),
+            _ => None,
+        };
+        (min, max)
+    }
+}
+
+impl<I1, I2, Item> ExactSizeIterator for IterChain<I1, I2>
+where
+    I1: ExactSizeIterator + Iterator<Item = Item>,
+    I2: ExactSizeIterator + Iterator<Item = Item>,
+{
 }

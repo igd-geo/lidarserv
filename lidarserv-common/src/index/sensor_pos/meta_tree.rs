@@ -4,6 +4,7 @@ use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::{GridCell, GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::position::{Component, Position};
 use crate::index::sensor_pos::page_manager::FileId;
+use crate::index::sensor_pos::{Replacement, Update};
 use crate::nalgebra::Scalar;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -28,11 +29,11 @@ pub struct MetaTreeLod<Comp: Scalar> {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node<Comp: Scalar> {
-    is_leaf: bool,
-    bounds: AABB<Comp>,
+    pub is_leaf: bool,
+    pub bounds: AABB<Comp>,
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct MetaTreeNodeId {
     lod: LodLevel,
     node: LeveledGridCell,
@@ -84,6 +85,44 @@ impl<GridH, Comp: Scalar> MetaTree<GridH, Comp> {
                         )
                     })
             })
+    }
+
+    pub fn root_nodes(&self) -> impl Iterator<Item = MetaTreeNodeId> + '_ {
+        self.lods
+            .iter()
+            .enumerate()
+            .map(|(lod_level, lod_nodes)| {
+                if lod_nodes.depth.is_empty() {
+                    None
+                } else {
+                    let lod = LodLevel::from_level(lod_level as u16);
+                    Some(
+                        lod_nodes.depth[0]
+                            .iter()
+                            .map(move |(pos, _)| MetaTreeNodeId {
+                                lod,
+                                node: LeveledGridCell {
+                                    lod: LodLevel::base(),
+                                    pos: *pos,
+                                },
+                            }),
+                    )
+                }
+            })
+            .flatten()
+            .flatten()
+    }
+
+    pub fn get(&self, node_id: &MetaTreeNodeId) -> Option<&Node<Comp>> {
+        let lod = match self.lods.get(node_id.lod.level() as usize) {
+            None => return None,
+            Some(v) => v,
+        };
+        let depth = match lod.depth.get(node_id.node.lod.level() as usize) {
+            None => return None,
+            Some(v) => v,
+        };
+        depth.get(&node_id.node.pos)
     }
 }
 
@@ -218,6 +257,17 @@ where
             }
         }
     }
+
+    pub(super) fn apply_update(&mut self, update: &Update<Comp>) {
+        for Replacement {
+            replace_with,
+            bounds,
+            ..
+        } in &update.replaced_by
+        {
+            self.set_node_aabb(replace_with, bounds);
+        }
+    }
 }
 
 impl<Comp> MetaTreeLod<Comp>
@@ -282,8 +332,25 @@ impl MetaTreeNodeId {
         }
     }
 
+    pub fn from_file(file: &FileId) -> Self {
+        MetaTreeNodeId {
+            lod: file.lod,
+            node: LeveledGridCell {
+                lod: file.tree_depth,
+                pos: file.grid_cell,
+            },
+        }
+    }
+
     pub fn children(&self) -> [MetaTreeNodeId; 8] {
         self.node.children().map(|node| MetaTreeNodeId {
+            lod: self.lod,
+            node,
+        })
+    }
+
+    pub fn parent(&self) -> Option<MetaTreeNodeId> {
+        self.node.parent().map(|node| MetaTreeNodeId {
             lod: self.lod,
             node,
         })
@@ -296,7 +363,7 @@ impl MetaTreeNodeId {
 
 #[cfg(test)]
 mod tests {
-    use crate::geometry::bounding_box::{BaseAABB, OptionAABB, AABB};
+    use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
     use crate::geometry::grid::{
         F64GridHierarchy, GridCell, GridHierarchy, LeveledGridCell, LodLevel,
     };
