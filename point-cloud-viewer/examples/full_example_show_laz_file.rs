@@ -1,5 +1,3 @@
-#![feature(total_cmp)]
-
 use crate::mini_mno::GridCell;
 use las::{Read, Reader};
 use pasture_core::containers::InterleavedVecPointStorage;

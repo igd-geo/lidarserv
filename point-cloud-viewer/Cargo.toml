@@ -12,12 +12,7 @@ log = "0.4.14"
 ouroboros = "0.9.3"
 derivative = "2.2.0"
 crossbeam-channel = "0.5.1"
-
-# The multisampling feature needs to blit the depth buffer, which right now is not possible when usaing glium.
-# This has been implemented in glium in this pull request: https://github.com/glium/glium/pull/1952
-# It is already merged into master, as soon as a new version is published on crates.io,
-# we can switch back to an official release.
-glium = { git = "https://github.com/glium/glium", rev = "2c6caf96b309a1f31f56e09b74298585ac1928a0" }
+glium = "0.30.2"
 
 [dev-dependencies]
 pasture-io = "0.1.0"
