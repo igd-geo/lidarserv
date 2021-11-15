@@ -1,10 +1,10 @@
-use glium::glutin::event_loop::{EventLoop as WInitEventLoop, ControlFlow};
-use crate::renderer::renderer_command::{RendererCommand};
-use glium::backend::glutin::glutin::event::Event;
-use log::{ debug, trace };
 use crate::renderer::backends::glium::windows::WindowManager;
-use glium::glutin::event::WindowEvent;
 use crate::renderer::backends::glium::GliumRenderOptions;
+use crate::renderer::renderer_command::RendererCommand;
+use glium::backend::glutin::glutin::event::Event;
+use glium::glutin::event::WindowEvent;
+use glium::glutin::event_loop::{ControlFlow, EventLoop as WInitEventLoop};
+use log::{debug, trace};
 use std::time::Instant;
 
 pub type EventLoop = WInitEventLoop<RendererCommand>;
@@ -14,25 +14,26 @@ pub fn new() -> EventLoop {
 }
 
 pub fn run(event_loop: EventLoop, options: &GliumRenderOptions) {
-
     let mut window_manager = WindowManager::new();
     let options = options.clone();
 
     debug!("Start event loop");
     event_loop.run(move |event, window_target, control_flow| {
-
         *control_flow = ControlFlow::Wait;
 
         match event {
             Event::WindowEvent { window_id, event } => {
-
                 // log
                 trace!("Window event: {:?} - {:?}", window_id, event);
 
                 // handle closed windows
                 match event {
-                    WindowEvent::CloseRequested => { window_manager.close_os(window_id); }
-                    WindowEvent::Destroyed => { window_manager.close_os(window_id); }
+                    WindowEvent::CloseRequested => {
+                        window_manager.close_os(window_id);
+                    }
+                    WindowEvent::Destroyed => {
+                        window_manager.close_os(window_id);
+                    }
                     _ => {}
                 }
 
@@ -45,48 +46,58 @@ pub fn run(event_loop: EventLoop, options: &GliumRenderOptions) {
                 // renderer commands
                 debug!("Command: {:?}", command);
                 match command {
-                    RendererCommand::Terminate => {
-                        *control_flow = ControlFlow::Exit
-                    }
-                    RendererCommand::OpenWindow { closed_notify_sender, response_sender } => {
-                        let result = window_manager.open_window(window_target, closed_notify_sender, options.multisampling);
+                    RendererCommand::Terminate => *control_flow = ControlFlow::Exit,
+                    RendererCommand::OpenWindow {
+                        closed_notify_sender,
+                        response_sender,
+                    } => {
+                        let result = window_manager.open_window(
+                            window_target,
+                            closed_notify_sender,
+                            options.multisampling,
+                        );
                         response_sender.send(result).unwrap();
                     }
-                    RendererCommand::CloseWindow { window_id } => {
-                        window_manager.close(window_id)
-                    }
+                    RendererCommand::CloseWindow { window_id } => window_manager.close(window_id),
                     RendererCommand::UpdateSettings {
                         window_id,
                         new_settings,
-                        result_sender
+                        result_sender,
                     } => {
                         let result = window_manager
                             .window_by_id_mut(window_id)
                             .map(|window| window.update_settings(new_settings))
-                            .flatten();
+                            .unwrap_or_else(Err);
                         result_sender.send(result).unwrap();
                     }
                     RendererCommand::UpdateDefaultPointCloudSettings {
                         window_id,
                         new_settings,
-                        result_sender
+                        result_sender,
                     } => {
                         let result = window_manager
                             .window_by_id_mut(window_id)
-                            .map(|window| window.update_default_point_cloud_render_settings(new_settings))
-                            .flatten();
+                            .map(|window| {
+                                window.update_default_point_cloud_render_settings(new_settings)
+                            })
+                            .unwrap_or_else(Err);
                         result_sender.send(result).unwrap();
                     }
                     RendererCommand::UpdatePointCloudSettings {
                         window_id,
                         point_cloud_id,
                         new_settings,
-                        result_sender
+                        result_sender,
                     } => {
                         let result = window_manager
                             .window_by_id_mut(window_id)
-                            .map(|window| window.update_point_cloud_render_settings(point_cloud_id, new_settings))
-                            .flatten();
+                            .map(|window| {
+                                window.update_point_cloud_render_settings(
+                                    point_cloud_id,
+                                    new_settings,
+                                )
+                            })
+                            .unwrap_or_else(Err);
                         result_sender.send(result).unwrap();
                     }
                     RendererCommand::AddPointCloud {
@@ -94,12 +105,14 @@ pub fn run(event_loop: EventLoop, options: &GliumRenderOptions) {
                         positions,
                         attributes,
                         render_settings,
-                        result_sender
+                        result_sender,
                     } => {
                         let result = window_manager
                             .window_by_id_mut(window_id)
-                            .map(|window| window.add_point_cloud( &positions, &attributes, &render_settings ))
-                            .flatten();
+                            .map(|window| {
+                                window.add_point_cloud(&positions, &attributes, &render_settings)
+                            })
+                            .unwrap_or_else(Err);
                         result_sender.send(result).unwrap();
                     }
                     RendererCommand::UpdatePoints {
@@ -107,35 +120,44 @@ pub fn run(event_loop: EventLoop, options: &GliumRenderOptions) {
                         point_cloud_id,
                         positions,
                         attributes,
-                        result_sender
+                        result_sender,
                     } => {
                         let result = window_manager
                             .window_by_id_mut(window_id)
-                            .map(|window| window.update_points(point_cloud_id, &positions, &attributes))
-                            .flatten();
+                            .map(|window| {
+                                window.update_points(point_cloud_id, &positions, &attributes)
+                            })
+                            .unwrap_or_else(Err);
                         result_sender.send(result).unwrap();
                     }
                     RendererCommand::RemovePointCloud {
                         window_id,
                         point_cloud_id,
-                        result_sender
+                        result_sender,
                     } => {
                         let result = window_manager
                             .window_by_id_mut(window_id)
                             .map(|window| window.remove_point_cloud(point_cloud_id))
-                            .flatten();
+                            .unwrap_or_else(Err);
                         result_sender.send(result).unwrap();
                     }
                     RendererCommand::CameraMovement {
-                        window_id, focus, view, animation, result_sender
+                        window_id,
+                        focus,
+                        view,
+                        animation,
+                        result_sender,
                     } => {
                         let result = window_manager
                             .window_by_id_mut(window_id)
                             .map(|window| window.move_camera(focus, view, animation))
-                            .flatten();
+                            .unwrap_or_else(Err);
                         result_sender.send(result).unwrap();
-                    },
-                    RendererCommand::AddCameraSubscriber {window_id, result_sender } => {
+                    }
+                    RendererCommand::AddCameraSubscriber {
+                        window_id,
+                        result_sender,
+                    } => {
                         let result = window_manager
                             .window_by_id_mut(window_id)
                             .map(|window| window.add_camera_subscriber());
@@ -156,6 +178,5 @@ pub fn run(event_loop: EventLoop, options: &GliumRenderOptions) {
             }
             _ => {}
         }
-
     });
 }
