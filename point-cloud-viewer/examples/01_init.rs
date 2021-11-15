@@ -1,7 +1,6 @@
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 
 fn main() {
-
     // First, we need to choose, which render backend to use.
     // We will select the glium backend here, which is the only available choice at the current
     // state of development.
@@ -16,7 +15,6 @@ fn main() {
     // it will panic. Also, it will never return. This means, that sadly you will need to "give up"
     // your main thread. However, you can continue your work in the provided closure.
     options.run(|render_thread| {
-
         // The closure passed to run() is called as soon as the renderer is fully initialized.
         println!("Initialisation done.");
 
@@ -31,7 +29,5 @@ fn main() {
         // because it is automatically terminated, after this closure returns.
         // However, for the sake of demonstration:
         render_thread.terminate()
-
     });
-
 }

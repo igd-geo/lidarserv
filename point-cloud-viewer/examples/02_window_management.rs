@@ -1,14 +1,12 @@
+use point_cloud_viewer::renderer::error::RendererError;
+use point_cloud_viewer::renderer::settings::{BaseRenderSettings, Color};
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::thread::sleep;
 use std::time::Duration;
-use point_cloud_viewer::renderer::settings::{BaseRenderSettings, Color};
-use point_cloud_viewer::renderer::error::RendererError;
 
 fn main() {
-
-    point_cloud_viewer::renderer::backends::glium::GliumRenderOptions::default()
-        .run(|render_thread| {
-
+    point_cloud_viewer::renderer::backends::glium::GliumRenderOptions::default().run(
+        |render_thread| {
             // The `open_window` function gives us a new window that we could show point clouds in.
             let window = render_thread.open_window().unwrap();
 
@@ -41,11 +39,13 @@ fn main() {
             // of all customizable settings. Here, we just change the title and make the background
             // color green.
             let window = render_thread.open_window().unwrap();
-            window.set_render_settings( BaseRenderSettings {
-                window_title: "Hello, World!".to_string(),
-                bg_color: Color::GREEN,
-                .. Default::default()
-            }).unwrap();
+            window
+                .set_render_settings(BaseRenderSettings {
+                    window_title: "Hello, World!".to_string(),
+                    bg_color: Color::GREEN,
+                    ..Default::default()
+                })
+                .unwrap();
             println!("Close the windows to continue");
             window.join();
 
@@ -60,7 +60,6 @@ fn main() {
             println!("Close the windows to exit the application");
             let mut color = Color::rgb(1.0, 0.0, 0.5);
             loop {
-
                 // next background color to set
                 color.r += 0.02;
                 if color.r > 1.0 {
@@ -70,26 +69,23 @@ fn main() {
                 // update the background color
                 let result = window.set_render_settings(BaseRenderSettings {
                     bg_color: color,
-                    .. Default::default()
+                    ..Default::default()
                 });
 
                 // check result and terminate, if user closed the window.
                 match result {
-
                     // exit, if the window was closed
-                    Err(RendererError::WindowClosed {..}) => break,
+                    Err(RendererError::WindowClosed { .. }) => break,
 
                     // print errors, but continue with the application.
                     Err(e) => {
                         println!("An unexpected error occurred: {}", e)
-                    },
+                    }
 
                     // Just continue normally on success
                     _ => sleep(Duration::from_secs_f64(0.1)),
                 }
             }
-
-
-        });
-
+        },
+    );
 }

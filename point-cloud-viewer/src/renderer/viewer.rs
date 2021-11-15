@@ -1,16 +1,16 @@
 //! The types in this module are the main way of interacting with the renderer.
 
-use crate::renderer::renderer_command::{RendererCommand, WindowId, PointAttribute, FocusTarget};
-pub use crate::renderer::renderer_command::PointCloudId;
+use self::private::{RenderThreadBuilder, RenderThreadHandle};
+use crate::navigation::{Matrices, ViewDirection};
 use crate::renderer::error::RendererResult;
-use std::thread;
-use self::private::{RenderThreadBuilder, RenderThreadHandle };
-use crate::renderer::settings::{BaseRenderSettings, PointCloudRenderSettings, AnimationSettings};
+pub use crate::renderer::renderer_command::PointCloudId;
+use crate::renderer::renderer_command::{FocusTarget, PointAttribute, RendererCommand, WindowId};
+use crate::renderer::settings::{AnimationSettings, BaseRenderSettings, PointCloudRenderSettings};
+use crate::renderer::vertex_data::point_attribute_to_vertex_data;
 use pasture_core::containers::PointBuffer;
 use pasture_core::layout::{attributes, PointAttributeDefinition};
-use crate::renderer::vertex_data::point_attribute_to_vertex_data;
 use pasture_core::math::AABB;
-use crate::navigation::{ViewDirection, Matrices};
+use std::thread;
 
 pub(crate) mod private {
     //! The traits in this module are only meant to be implemented and used by this crate.
@@ -21,29 +21,23 @@ pub(crate) mod private {
     use crate::renderer::vertex_data::VertexDataType;
 
     pub trait RenderThreadBuilder {
-
         type Handle: RenderThreadHandle + 'static;
 
         fn run(&self, handle_sender: crossbeam_channel::Sender<Self::Handle>);
-
     }
 
     pub trait RenderThreadHandle: Send {
-
         fn name(&self) -> &'static str;
 
         fn is_vertex_data_type_supported(&self, data_type: VertexDataType) -> bool;
 
         fn execute_command(&self, command: RendererCommand);
-
     }
-
 }
 
 /// This trait is implemented by each render backend,
 /// allowing to run the render thread with that backend.
 pub trait RenderThreadBuilderExt: private::RenderThreadBuilder {
-
     /// Runs the render thread.
     ///
     /// Once the renderer is fully initialized, the provided callback will be called with
@@ -56,24 +50,20 @@ pub trait RenderThreadBuilderExt: private::RenderThreadBuilder {
     ///
     /// This method needs to be called on the main thread, otherwise it will panic.
     fn run<F>(&self, callback: F)
-        where F: Send + 'static + FnOnce(RenderThread)
+    where
+        F: Send + 'static + FnOnce(RenderThread),
     {
-
         let (handle_sender, handle_receiver) = crossbeam_channel::bounded::<Self::Handle>(1);
 
         thread::spawn(move || {
             let handle = handle_receiver.recv().unwrap();
             let handle = Box::new(handle);
-            let render_thread = RenderThread {
-                handle
-            };
+            let render_thread = RenderThread { handle };
             callback(render_thread);
         });
 
         RenderThreadBuilder::run(self, handle_sender);
-
     }
-
 }
 
 impl<T> RenderThreadBuilderExt for T where T: RenderThreadBuilder {}
@@ -84,10 +74,10 @@ pub struct RenderThread {
 }
 
 impl RenderThread {
-
     /// Closes all point cloud viewer windows and exits the main thread,
     /// which will terminate the application.
-    pub fn terminate(self) { /* Terminating the render thread happens in the Drop impl. */ }
+    pub fn terminate(self) { /* Terminating the render thread happens in the Drop impl. */
+    }
 
     /// Opens a new window.
     pub fn open_window(&self) -> RendererResult<Window> {
@@ -95,7 +85,7 @@ impl RenderThread {
         let (closed_notify_sender, closed_notify_receiver) = crossbeam_channel::bounded(1);
         self.handle.execute_command(RendererCommand::OpenWindow {
             response_sender,
-            closed_notify_sender
+            closed_notify_sender,
         });
         let window_id = response_receiver.recv().unwrap()?;
         let window = Window {
@@ -105,7 +95,6 @@ impl RenderThread {
         };
         Ok(window)
     }
-
 }
 
 impl Drop for RenderThread {
@@ -142,9 +131,9 @@ pub struct Window<'a> {
 }
 
 impl<'a> Window<'a> {
-
     /// Closes the window.
-    pub fn close(self) { /* Closing the window happens in the Drop impl. */ }
+    pub fn close(self) { /* Closing the window happens in the Drop impl. */
+    }
 
     /// Waits for the user to close the window.
     pub fn join(self) {
@@ -154,10 +143,12 @@ impl<'a> Window<'a> {
     /// Changes the render settings affecting the general look of the viewer
     pub fn set_render_settings(&self, new_settings: BaseRenderSettings) -> RendererResult<()> {
         let (result_sender, result_receiver) = crossbeam_channel::bounded(1);
-        self.renderer.execute_command(RendererCommand::UpdateSettings {
-            window_id: self.window_id,
-            new_settings, result_sender
-        });
+        self.renderer
+            .execute_command(RendererCommand::UpdateSettings {
+                window_id: self.window_id,
+                new_settings,
+                result_sender,
+            });
         result_receiver.recv().unwrap()
     }
 
@@ -166,48 +157,51 @@ impl<'a> Window<'a> {
     /// Every point cloud, that does not have custom render settings
     /// (provided via [Self::add_point_cloud_with_attributes_and_settings],
     /// or [Self::set_point_cloud_settings]) will fall back to these default settings.
-    pub fn set_default_point_cloud_settings(&self, new_settings: PointCloudRenderSettings) -> RendererResult<()> {
+    pub fn set_default_point_cloud_settings(
+        &self,
+        new_settings: PointCloudRenderSettings,
+    ) -> RendererResult<()> {
         let (result_sender, result_receiver) = crossbeam_channel::bounded(1);
-        self.renderer.execute_command(RendererCommand::UpdateDefaultPointCloudSettings {
-            window_id: self.window_id,
-            new_settings, result_sender
-        });
+        self.renderer
+            .execute_command(RendererCommand::UpdateDefaultPointCloudSettings {
+                window_id: self.window_id,
+                new_settings,
+                result_sender,
+            });
         result_receiver.recv().unwrap()
     }
 
-    fn add_point_cloud_impl(&self, points: &dyn PointBuffer, attributes: &[&PointAttributeDefinition], settings: Option<PointCloudRenderSettings>) -> RendererResult<PointCloudId> {
-
+    fn add_point_cloud_impl(
+        &self,
+        points: &dyn PointBuffer,
+        attributes: &[&PointAttributeDefinition],
+        settings: Option<PointCloudRenderSettings>,
+    ) -> RendererResult<PointCloudId> {
         // position vertex data
-        let positions = point_attribute_to_vertex_data(
-            points,
-            &attributes::POSITION_3D,
-            self.renderer
-        )?;
+        let positions =
+            point_attribute_to_vertex_data(points, &attributes::POSITION_3D, self.renderer)?;
 
         // vertex data for attributes
         let mut attributes_vertex_data = Vec::new();
         attributes_vertex_data.reserve(attributes.len());
         for &attr in attributes {
-            attributes_vertex_data.push(PointAttribute{
+            attributes_vertex_data.push(PointAttribute {
                 attribute: attr.to_owned(),
-                data: point_attribute_to_vertex_data(
-                    points,
-                    attr,
-                    self.renderer
-                )?
+                data: point_attribute_to_vertex_data(points, attr, self.renderer)?,
             });
         }
 
         // send to renderer
         let (result_sender, result_receiver) = crossbeam_channel::bounded(1);
-        self.renderer.execute_command(RendererCommand::AddPointCloud {
-            window_id: self.window_id,
-            positions,
-            attributes: attributes_vertex_data,
-            render_settings: settings,
-            result_sender
-        });
-        result_receiver.recv().unwrap()     // will always receive exactly one value. (unless there is a bug in the renderer thread)
+        self.renderer
+            .execute_command(RendererCommand::AddPointCloud {
+                window_id: self.window_id,
+                positions,
+                attributes: attributes_vertex_data,
+                render_settings: settings,
+                result_sender,
+            });
+        result_receiver.recv().unwrap() // will always receive exactly one value. (unless there is a bug in the renderer thread)
     }
 
     /// Adds the given points to the renderer.
@@ -222,29 +216,47 @@ impl<'a> Window<'a> {
     ///
     /// The settings that have been set using [Window::set_default_point_cloud_settings] will be used for rendering this point cloud.
     /// You can use [Window::add_point_cloud_with_attributes_and_settings] to create a point cloud with customized render settings.
-    pub fn add_point_cloud_with_attributes(&self, points: &dyn PointBuffer, attributes: &[&PointAttributeDefinition]) -> RendererResult<PointCloudId> {
+    pub fn add_point_cloud_with_attributes(
+        &self,
+        points: &dyn PointBuffer,
+        attributes: &[&PointAttributeDefinition],
+    ) -> RendererResult<PointCloudId> {
         self.add_point_cloud_impl(points, attributes, None)
     }
 
     /// Adds the given points to the renderer, with custom render settings.
-    pub fn add_point_cloud_with_attributes_and_settings(&self, points: &dyn PointBuffer, attributes: &[&PointAttributeDefinition], settings: PointCloudRenderSettings) -> RendererResult<PointCloudId> {
+    pub fn add_point_cloud_with_attributes_and_settings(
+        &self,
+        points: &dyn PointBuffer,
+        attributes: &[&PointAttributeDefinition],
+        settings: PointCloudRenderSettings,
+    ) -> RendererResult<PointCloudId> {
         self.add_point_cloud_impl(points, attributes, Some(settings))
     }
 
-    fn set_point_cloud_settings_impl(&self, point_cloud_id: PointCloudId, new_settings: Option<PointCloudRenderSettings>) -> RendererResult<()> {
+    fn set_point_cloud_settings_impl(
+        &self,
+        point_cloud_id: PointCloudId,
+        new_settings: Option<PointCloudRenderSettings>,
+    ) -> RendererResult<()> {
         let (result_sender, result_receiver) = crossbeam_channel::bounded(1);
-        self.renderer.execute_command(RendererCommand::UpdatePointCloudSettings {
-            window_id: self.window_id,
-            point_cloud_id,
-            result_sender,
-            new_settings,
-        });
+        self.renderer
+            .execute_command(RendererCommand::UpdatePointCloudSettings {
+                window_id: self.window_id,
+                point_cloud_id,
+                result_sender,
+                new_settings,
+            });
         result_receiver.recv().unwrap()
     }
 
     /// Sets the render settings for a specific point cloud.
     /// This will overwrite the default settings for that point cloud.
-    pub fn set_point_cloud_settings(&self, id: PointCloudId, new_settings: PointCloudRenderSettings) -> RendererResult<()> {
+    pub fn set_point_cloud_settings(
+        &self,
+        id: PointCloudId,
+        new_settings: PointCloudRenderSettings,
+    ) -> RendererResult<()> {
         self.set_point_cloud_settings_impl(id, Some(new_settings))
     }
 
@@ -254,49 +266,48 @@ impl<'a> Window<'a> {
     }
 
     /// Replaces the points of an existing point cloud with new point data.
-    pub fn update_point_cloud(&self, id: PointCloudId, points: &dyn PointBuffer, attributes: &[&PointAttributeDefinition]) -> RendererResult<()> {
-
+    pub fn update_point_cloud(
+        &self,
+        id: PointCloudId,
+        points: &dyn PointBuffer,
+        attributes: &[&PointAttributeDefinition],
+    ) -> RendererResult<()> {
         // position vertex data
-        let positions = point_attribute_to_vertex_data(
-            points,
-            &attributes::POSITION_3D,
-            self.renderer
-        )?;
+        let positions =
+            point_attribute_to_vertex_data(points, &attributes::POSITION_3D, self.renderer)?;
 
         // vertex data for attributes
         let mut attributes_vertex_data = Vec::new();
         attributes_vertex_data.reserve(attributes.len());
         for &attr in attributes {
-            attributes_vertex_data.push(PointAttribute{
+            attributes_vertex_data.push(PointAttribute {
                 attribute: attr.to_owned(),
-                data: point_attribute_to_vertex_data(
-                    points,
-                    attr,
-                    self.renderer
-                )?
+                data: point_attribute_to_vertex_data(points, attr, self.renderer)?,
             });
         }
 
         // send to renderer
         let (result_sender, result_receiver) = crossbeam_channel::bounded(1);
-        self.renderer.execute_command(RendererCommand::UpdatePoints {
-            window_id: self.window_id,
-            positions,
-            attributes: attributes_vertex_data,
-            result_sender,
-            point_cloud_id: id
-        });
+        self.renderer
+            .execute_command(RendererCommand::UpdatePoints {
+                window_id: self.window_id,
+                positions,
+                attributes: attributes_vertex_data,
+                result_sender,
+                point_cloud_id: id,
+            });
         result_receiver.recv().unwrap()
     }
 
     /// Removes the point cloud with the given id.
     pub fn remove_point_cloud(&self, id: PointCloudId) -> RendererResult<()> {
         let (result_sender, result_receiver) = crossbeam_channel::bounded(1);
-        self.renderer.execute_command(RendererCommand::RemovePointCloud {
-            window_id: self.window_id,
-            point_cloud_id: id,
-            result_sender
-        });
+        self.renderer
+            .execute_command(RendererCommand::RemovePointCloud {
+                window_id: self.window_id,
+                point_cloud_id: id,
+                result_sender,
+            });
         result_receiver.recv().unwrap()
     }
 
@@ -306,7 +317,7 @@ impl<'a> Window<'a> {
             window: self,
             focus: None,
             view: None,
-            animation: None
+            animation: None,
         }
     }
 
@@ -320,23 +331,21 @@ impl<'a> Window<'a> {
     /// where the camera matrix will always be sent to, whenever the user moves the camera.
     pub fn subscribe_to_camera(&self) -> RendererResult<crossbeam_channel::Receiver<Matrices>> {
         let (result_sender, result_receiver) = crossbeam_channel::bounded(1);
-        self.renderer.execute_command(RendererCommand::AddCameraSubscriber {
-            window_id: self.window_id,
-            result_sender
-        });
+        self.renderer
+            .execute_command(RendererCommand::AddCameraSubscriber {
+                window_id: self.window_id,
+                result_sender,
+            });
         result_receiver.recv().unwrap()
     }
-
 }
 
 impl Drop for Window<'_> {
-
     fn drop(&mut self) {
         self.renderer.execute_command(RendererCommand::CloseWindow {
-            window_id: self.window_id
+            window_id: self.window_id,
         });
     }
-
 }
 
 /// Builder that is used to define and execute a camera movement.
@@ -349,12 +358,11 @@ pub struct CameraMovementBuilder<'a> {
 }
 
 impl<'a> CameraMovementBuilder<'a> {
-
     /// Positions the camera, such that all point clouds are visible.
     pub fn focus_on_all(self) -> Self {
         CameraMovementBuilder {
             focus: Some(FocusTarget::All),
-            .. self
+            ..self
         }
     }
 
@@ -363,7 +371,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn focus_on_bounding_box(self, aabb: AABB<f64>) -> Self {
         CameraMovementBuilder {
             focus: Some(FocusTarget::BoundingBox(aabb)),
-            .. self
+            ..self
         }
     }
 
@@ -371,7 +379,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn focus_on_point_cloud(self, id: PointCloudId) -> Self {
         CameraMovementBuilder {
             focus: Some(FocusTarget::PointCloud(id)),
-            .. self
+            ..self
         }
     }
 
@@ -379,7 +387,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_top(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::Top),
-            .. self
+            ..self
         }
     }
 
@@ -388,7 +396,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_front(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::Front),
-            .. self
+            ..self
         }
     }
 
@@ -397,7 +405,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_left(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::Left),
-            .. self
+            ..self
         }
     }
 
@@ -406,7 +414,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_right(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::Right),
-            .. self
+            ..self
         }
     }
 
@@ -415,7 +423,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_back(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::Back),
-            .. self
+            ..self
         }
     }
 
@@ -423,7 +431,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_topleft(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::TopLeft),
-            .. self
+            ..self
         }
     }
 
@@ -431,7 +439,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_topfront(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::TopFront),
-            .. self
+            ..self
         }
     }
 
@@ -439,7 +447,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_topright(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::TopRight),
-            .. self
+            ..self
         }
     }
 
@@ -447,7 +455,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn view_topback(self) -> Self {
         CameraMovementBuilder {
             view: Some(ViewDirection::TopBack),
-            .. self
+            ..self
         }
     }
 
@@ -455,7 +463,7 @@ impl<'a> CameraMovementBuilder<'a> {
     pub fn animated(self, anim: AnimationSettings) -> Self {
         CameraMovementBuilder {
             animation: Some(anim),
-            .. self
+            ..self
         }
     }
 
@@ -464,14 +472,15 @@ impl<'a> CameraMovementBuilder<'a> {
     /// continue "in the background".
     pub fn execute(self) -> RendererResult<()> {
         let (result_sender, result_receiver) = crossbeam_channel::bounded(1);
-        self.window.renderer.execute_command(RendererCommand::CameraMovement {
-            window_id: self.window.window_id,
-            focus: self.focus,
-            view: self.view,
-            animation: self.animation,
-            result_sender,
-        });
+        self.window
+            .renderer
+            .execute_command(RendererCommand::CameraMovement {
+                window_id: self.window.window_id,
+                focus: self.focus,
+                view: self.view,
+                animation: self.animation,
+                result_sender,
+            });
         result_receiver.recv().unwrap()
     }
-
 }

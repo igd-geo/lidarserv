@@ -1,15 +1,14 @@
 //! A map-like navigation.
 
-use pasture_core::nalgebra::{Matrix4, Vector4, Vector3, Vector2, Rotation3, Unit, Point};
-use crate::navigation::{Navigation, Matrices, ViewDirection};
-use crate::navigation::event::{MouseDragSettings, MouseButton};
+use crate::navigation::event::{MouseButton, MouseDragSettings};
+use crate::navigation::{Matrices, Navigation, ViewDirection};
 use pasture_core::math::AABB;
+use pasture_core::nalgebra::{Matrix4, Point, Rotation3, Unit, Vector2, Vector3, Vector4};
 
 /// A navigation, that behaves similar to services like e.g. Google Maps.
 /// The user can drag the earths surface with the left mouse button and
 /// adjust the viewing angle with the right mouse button.
 pub struct MapNavigation {
-
     /// size of the window in (scaled) pixels
     window_size: Vector2<f64>,
 
@@ -31,7 +30,6 @@ pub struct MapNavigation {
 }
 
 impl MapNavigation {
-
     fn min_render_distance(&self) -> f64 {
         2.0_f64.powf(self.log_camera_distance) * 0.01
     }
@@ -49,14 +47,13 @@ impl MapNavigation {
             view_matrix: Matrix4::identity(),
             projection_matrix: Matrix4::identity(),
             view_matrix_inv: Matrix4::identity(),
-            projection_matrix_inv: Matrix4::identity()
+            projection_matrix_inv: Matrix4::identity(),
         };
         nav.update();
         nav
     }
 
     fn project_window_coord_to_xy_plane(&self, point_window: Vector2<f64>) -> Vector2<f64> {
-
         // window coordinates to clip coordinates
         // (window has origin at top left)
         let clip_x = point_window.x / self.window_size.x * 2.0 - 1.0;
@@ -94,11 +91,9 @@ impl MapNavigation {
 
         Vector2::new(x, y)
     }
-
 }
 
 impl Navigation for MapNavigation {
-
     fn on_window_resized(&mut self, w: f64, h: f64) {
         self.window_size.x = w;
         self.window_size.y = h;
@@ -133,18 +128,31 @@ impl Navigation for MapNavigation {
     fn update(&mut self) -> Matrices {
         let look_at = Vector3::new(self.focus.x, self.focus.y, 0.0);
 
-        let rotation =
-            Rotation3::from_axis_angle( &Unit::new_unchecked(Vector3::new(0.0, 0.0, 1.0)), self.camera_rotation[1]) *
-            Rotation3::from_axis_angle( &Unit::new_unchecked(Vector3::new(0.0, 1.0, 0.0)), self.camera_rotation[0]);
+        let rotation = Rotation3::from_axis_angle(
+            &Unit::new_unchecked(Vector3::new(0.0, 0.0, 1.0)),
+            self.camera_rotation[1],
+        ) * Rotation3::from_axis_angle(
+            &Unit::new_unchecked(Vector3::new(0.0, 1.0, 0.0)),
+            self.camera_rotation[0],
+        );
         let camera_direction = rotation * Vector3::new(1.0, 0.0, 0.0);
         let up_direction = rotation * Vector3::new(0.0, 0.0, 1.0);
         let camera_distance = 2.0_f64.powf(self.log_camera_distance);
         let camera_position = look_at - camera_direction * camera_distance;
 
-        self.view_matrix = Matrix4::look_at_rh(&Point::from(camera_position), &Point::from(look_at), &up_direction);
-        self.view_matrix_inv = self.view_matrix.try_inverse().unwrap();  // view matrix is always invertible, so safe to unwrap.
+        self.view_matrix = Matrix4::look_at_rh(
+            &Point::from(camera_position),
+            &Point::from(look_at),
+            &up_direction,
+        );
+        self.view_matrix_inv = self.view_matrix.try_inverse().unwrap(); // view matrix is always invertible, so safe to unwrap.
 
-        self.projection_matrix = Matrix4::new_perspective(self.window_size.x / self.window_size.y, std::f64::consts::PI / 4.0, self.min_render_distance(), self.max_render_distance());
+        self.projection_matrix = Matrix4::new_perspective(
+            self.window_size.x / self.window_size.y,
+            std::f64::consts::PI / 4.0,
+            self.min_render_distance(),
+            self.max_render_distance(),
+        );
         self.projection_matrix_inv = self.projection_matrix.try_inverse().unwrap(); // same as for the view matrix
 
         Matrices {
@@ -157,13 +165,12 @@ impl Navigation for MapNavigation {
     }
 
     fn focus_on(&mut self, aabb: AABB<f64>) {
-
         // focus at the point under the center
         let center = aabb.center();
         self.focus = center.xy().coords;
 
         // position the camera close to the center
-        let initial_distance = 0.05_f64;    // 5cm
+        let initial_distance = 0.05_f64; // 5cm
         self.log_camera_distance = initial_distance.log2();
         let matrices = self.update();
 
@@ -178,16 +185,15 @@ impl Navigation for MapNavigation {
             Vector3::new(aabb.max().x, aabb.max().y, aabb.min().z),
             Vector3::new(aabb.max().x, aabb.max().y, aabb.max().z),
         ]
-            .iter()
-            .map(|p| Vector4::new(p.x, p.y, p.z, 1.0))
-            .map(|p| matrices.view_matrix * p)
-            .collect::<Vec<_>>();
+        .iter()
+        .map(|p| Vector4::new(p.x, p.y, p.z, 1.0))
+        .map(|p| matrices.view_matrix * p)
+        .collect::<Vec<_>>();
 
         // move the camera back, until all vertices of the aabb are inside the view frustum
         let mut move_back_by = 0.0;
-        let direction_move_back = matrices.projection_matrix * Vector4::new(0.0, 0.0, -1.0, 0.0);  // direction, that points in clip space will move in, when the camera is moved back (by one unit).
+        let direction_move_back = matrices.projection_matrix * Vector4::new(0.0, 0.0, -1.0, 0.0); // direction, that points in clip space will move in, when the camera is moved back (by one unit).
         for point in points {
-
             // transform point from camera- to clip space
             let point_clip = matrices.projection_matrix * point;
 
@@ -207,7 +213,8 @@ impl Navigation for MapNavigation {
             //  =>  a == (- point_clip.z - point_clip.w) / (direction_move_back.z + direction_move_back.w)
             //  =>  a == -(point_clip.z + point_clip.w) / (direction_move_back.z + direction_move_back.w)
             {
-                let a = - (point_clip.z + point_clip.w) / (direction_move_back.z + direction_move_back.w);
+                let a = -(point_clip.z + point_clip.w)
+                    / (direction_move_back.z + direction_move_back.w);
                 if a > move_back_by {
                     move_back_by = a
                 }
@@ -216,7 +223,8 @@ impl Navigation for MapNavigation {
             // right plane
             // equivalent to near plane
             {
-                let a = - (point_clip.x + point_clip.w) / (direction_move_back.x + direction_move_back.w);
+                let a = -(point_clip.x + point_clip.w)
+                    / (direction_move_back.x + direction_move_back.w);
                 if a > move_back_by {
                     move_back_by = a
                 }
@@ -225,7 +233,8 @@ impl Navigation for MapNavigation {
             // bottom plane
             // equivalent to near plane
             {
-                let a = - (point_clip.y + point_clip.w) / (direction_move_back.y + direction_move_back.w);
+                let a = -(point_clip.y + point_clip.w)
+                    / (direction_move_back.y + direction_move_back.w);
                 if a > move_back_by {
                     move_back_by = a
                 }
@@ -240,7 +249,8 @@ impl Navigation for MapNavigation {
             //  =>  a * (direction_move_back.x - direction_move_back.w) == point_clip.w - point_clip.x
             //  =>  a == (point_clip.w - point_clip.x) / (direction_move_back.x - direction_move_back.w)
             {
-                let a = (point_clip.w - point_clip.x) / (direction_move_back.x - direction_move_back.w);
+                let a =
+                    (point_clip.w - point_clip.x) / (direction_move_back.x - direction_move_back.w);
                 if a > move_back_by {
                     move_back_by = a
                 }
@@ -249,28 +259,35 @@ impl Navigation for MapNavigation {
             // top plane
             // equivalent to left plane
             {
-                let a = (point_clip.w - point_clip.y) / (direction_move_back.y - direction_move_back.w);
+                let a =
+                    (point_clip.w - point_clip.y) / (direction_move_back.y - direction_move_back.w);
                 if a > move_back_by {
                     move_back_by = a
                 }
             }
-
-
         }
         self.log_camera_distance = (initial_distance + move_back_by).log2();
     }
 
     fn view_direction(&mut self, view: ViewDirection) {
         self.camera_rotation = match view {
-            ViewDirection::Top => Vector2::new(std::f64::consts::PI / 2.0, std::f64::consts::PI / 2.0),
+            ViewDirection::Top => {
+                Vector2::new(std::f64::consts::PI / 2.0, std::f64::consts::PI / 2.0)
+            }
             ViewDirection::Left => Vector2::new(0.0, 0.0),
             ViewDirection::Front => Vector2::new(0.0, std::f64::consts::PI * 0.5),
             ViewDirection::Right => Vector2::new(0.0, std::f64::consts::PI),
             ViewDirection::Back => Vector2::new(0.0, std::f64::consts::PI * 1.5),
             ViewDirection::TopLeft => Vector2::new(std::f64::consts::PI / 4.0, 0.0),
-            ViewDirection::TopFront => Vector2::new(std::f64::consts::PI / 4.0, std::f64::consts::PI * 0.5),
-            ViewDirection::TopRight => Vector2::new(std::f64::consts::PI / 4.0, std::f64::consts::PI),
-            ViewDirection::TopBack => Vector2::new(std::f64::consts::PI / 4.0, std::f64::consts::PI * 1.5),
+            ViewDirection::TopFront => {
+                Vector2::new(std::f64::consts::PI / 4.0, std::f64::consts::PI * 0.5)
+            }
+            ViewDirection::TopRight => {
+                Vector2::new(std::f64::consts::PI / 4.0, std::f64::consts::PI)
+            }
+            ViewDirection::TopBack => {
+                Vector2::new(std::f64::consts::PI / 4.0, std::f64::consts::PI * 1.5)
+            }
         }
     }
 }

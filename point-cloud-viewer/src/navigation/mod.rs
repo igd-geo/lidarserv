@@ -1,7 +1,7 @@
 //! Implementation of the camera controls.
-use pasture_core::nalgebra::{Matrix4, Vector2};
 use crate::navigation::event::MouseDragSettings;
 use pasture_core::math::AABB;
+use pasture_core::nalgebra::{Matrix4, Vector2};
 
 pub mod event;
 pub mod map_navigation;
@@ -11,7 +11,6 @@ pub mod map_navigation;
 /// It gets passed all input events, and controls the camera (view matrix and projection matrix)
 /// based on the user input.
 pub trait Navigation {
-
     /// Gets called, when the window size changes.
     fn on_window_resized(&mut self, w: f64, h: f64);
 
@@ -70,7 +69,6 @@ pub struct Matrices {
 /// The direction from which the camera looks at the scene
 #[derive(Copy, Clone, Debug)]
 pub enum ViewDirection {
-
     /// Viewed from above, camera looks straight down.
     Top,
 

@@ -15,5 +15,5 @@ pub enum MouseButton {
     Left,
     Middle,
     Right,
-    Other
+    Other,
 }

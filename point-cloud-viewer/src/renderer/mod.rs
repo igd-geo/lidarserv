@@ -5,7 +5,7 @@
 mod renderer_command;
 mod vertex_data;
 
-pub mod error;
 pub mod backends;
-pub mod viewer;
+pub mod error;
 pub mod settings;
+pub mod viewer;

@@ -1,12 +1,11 @@
 //! Settings for how the point clouds should look.
 
-use pasture_core::layout::{PointAttributeDefinition, attributes};
+use pasture_core::layout::{attributes, PointAttributeDefinition};
 use std::time::Duration;
 
 /// Settings for controlling the look of one point cloud viewer window.
 #[derive(Clone, Debug)]
 pub struct BaseRenderSettings {
-
     /// Window title of the renderer window
     pub window_title: String,
 
@@ -19,14 +18,12 @@ pub struct BaseRenderSettings {
 
     /// Enables or disables Eye Dome Lighting.
     pub enable_edl: bool,
-
     // todo: optionally draw a legend (ColorMap...)
 }
 
 /// Settings for how the grid should be rendered.
 #[derive(Clone, Debug)]
 pub struct Grid {
-
     /// Color of the grid lines.
     pub color: Color,
 
@@ -47,7 +44,6 @@ pub struct Grid {
     /// (In logical size units - this number will be multiplied with the screens scale factor to
     /// get the actual line width in pixels.)
     pub line_width: f32,
-
     // todo orientation (xy-plane, yz-plane, xz-plane)
     // todo offset (distance to axis plane)
 }
@@ -55,7 +51,6 @@ pub struct Grid {
 /// Settings for how a single point cloud should be rendered.
 #[derive(Clone, Debug)]
 pub struct PointCloudRenderSettings {
-
     /// The color of the points.
     pub point_color: PointColor,
 
@@ -63,15 +58,12 @@ pub struct PointCloudRenderSettings {
     pub point_shape: PointShape,
 
     /// The size of the points.
-    pub point_size: PointSize
-
-    // todo: optionally draw a bounding box
+    pub point_size: PointSize, // todo: optionally draw a bounding box
 }
 
 /// Defines, how the points of a point cloud should be colored.
 #[derive(Clone, Debug)]
 pub enum PointColor {
-
     /// Draws every point with the same, fixed color.
     Fixed(Color),
 
@@ -89,7 +81,6 @@ pub enum PointColor {
 /// Settings for coloring a point cloud based on a scalar attribute.
 #[derive(Clone, Debug)]
 pub struct ScalarAttributeColoring {
-
     /// The attribute to use for the coloring
     pub attribute: PointAttributeDefinition,
 
@@ -110,7 +101,6 @@ pub struct ScalarAttributeColoring {
 /// Settings for coloring a point cloud based on a categorical attribute.
 #[derive(Clone, Debug)]
 pub struct CategoricalAttributeColoring {
-
     /// The attribute to use for the coloring
     pub attribute: PointAttributeDefinition,
 
@@ -121,20 +111,19 @@ pub struct CategoricalAttributeColoring {
 /// Defines a mapping from an input value between 0.0 and 1.0 to a color.
 #[derive(Clone, Debug)]
 pub struct ColorMap {
-    colors: Vec<(f32, Color)>
+    colors: Vec<(f32, Color)>,
 }
 
 /// Defines a list of colors, that can be used for coloring attributes like classification.
 #[derive(Clone, Debug)]
 pub struct ColorPalette {
     colors: Vec<Color>,
-    default: Color
+    default: Color,
 }
 
 /// Defines the shape of the individual points
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum PointShape {
-
     /// Square points
     Square,
 
@@ -145,7 +134,6 @@ pub enum PointShape {
 /// Defines, how the sizing of the points should be determined
 #[derive(Copy, Clone, Debug)]
 pub enum PointSize {
-
     /// All points will have the same, fixed, size.
     Fixed(f32),
 
@@ -157,7 +145,6 @@ pub enum PointSize {
 /// Each of the three channels should be in between 0.0 and 1.0.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Color {
-
     /// red
     pub r: f32,
 
@@ -171,7 +158,6 @@ pub struct Color {
 /// Settings for animating the transition between two camera positions.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AnimationSettings {
-
     /// Defines, how long the animation will run for.
     pub duration: Duration,
 
@@ -182,7 +168,6 @@ pub struct AnimationSettings {
 /// Defines, if the animation starts or stops smoothly.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum AnimationEasing {
-
     /// The animation will run at constant speed. No smooth starting or stopping.
     Linear,
 
@@ -197,26 +182,21 @@ pub enum AnimationEasing {
 }
 
 impl Default for AnimationSettings {
-
     fn default() -> Self {
         AnimationSettings {
             duration: Duration::from_secs_f64(0.75),
-            easing: Default::default()
+            easing: Default::default(),
         }
     }
-
 }
 
 impl Default for AnimationEasing {
-
     fn default() -> Self {
         AnimationEasing::EaseInOut
     }
-
 }
 
 impl Color {
-
     /// Creates a color from a r, g, b component
     pub const fn rgb(r: f32, g: f32, b: f32) -> Self {
         Color { r, g, b }
@@ -227,7 +207,7 @@ impl Color {
         Color {
             r: self.r.clamp(0.0, 1.0),
             g: self.g.clamp(0.0, 1.0),
-            b: self.b.clamp(0.0, 1.0)
+            b: self.b.clamp(0.0, 1.0),
         }
     }
 
@@ -257,11 +237,10 @@ impl Color {
 }
 
 impl ColorMap {
-
     /// Makes a simple color map, that is a gradient between the two passed in colors.
     pub fn gradient(color_1: Color, color_2: Color) -> Self {
         ColorMap {
-            colors: vec![(0.0, color_1), (1.0, color_2)]
+            colors: vec![(0.0, color_1), (1.0, color_2)],
         }
     }
 
@@ -272,14 +251,13 @@ impl ColorMap {
     pub fn equally_spaced(colors: &[Color]) -> Self {
         assert!(colors.len() >= 2);
         let nr_gradients = colors.len() as f32 - 1.0;
-        let colors = colors.iter()
+        let colors = colors
+            .iter()
             .cloned()
             .enumerate()
             .map(|(i, c)| (i as f32 / nr_gradients, c))
             .collect();
-        ColorMap {
-            colors
-        }
+        ColorMap { colors }
     }
 
     /// Samples the color map at the given position.
@@ -290,7 +268,7 @@ impl ColorMap {
             return min_color;
         }
 
-        for i in 0 .. self.colors.len() - 1 {
+        for i in 0..self.colors.len() - 1 {
             let (left_val, left_color) = self.colors[i];
             let (right_val, right_color) = self.colors[i + 1];
             if left_val < value && value <= right_val {
@@ -300,7 +278,7 @@ impl ColorMap {
                     r: f1 * left_color.r + f2 * right_color.r,
                     g: f1 * left_color.g + f2 * right_color.g,
                     b: f1 * left_color.b + f2 * right_color.b,
-                }
+                };
             }
         }
 
@@ -309,29 +287,107 @@ impl ColorMap {
     }
 
     // simple gradients
-    pub fn red_green() -> ColorMap { ColorMap { colors: vec![(0.0, Color::RED), (1.0, Color::GREEN)] } }
-    pub fn red_blue() -> ColorMap { ColorMap { colors: vec![(0.0, Color::RED), (1.0, Color::BLUE)] } }
-    pub fn green_red() -> ColorMap { ColorMap { colors: vec![(0.0, Color::GREEN), (1.0, Color::RED)] } }
-    pub fn green_blue() -> ColorMap { ColorMap { colors: vec![(0.0, Color::GREEN), (1.0, Color::BLUE)] } }
-    pub fn blue_red() -> ColorMap { ColorMap { colors: vec![(0.0, Color::BLUE), (1.0, Color::RED)] } }
-    pub fn blue_green() -> ColorMap { ColorMap { colors: vec![(0.0, Color::BLUE), (1.0, Color::GREEN)] } }
-    pub fn yellow_cyan() -> ColorMap { ColorMap { colors: vec![(0.0, Color::YELLOW), (1.0, Color::CYAN)] } }
-    pub fn magenta_cyan() -> ColorMap { ColorMap { colors: vec![(0.0, Color::MAGENTA), (1.0, Color::CYAN)] } }
-    pub fn cyan_yellow() -> ColorMap { ColorMap { colors: vec![(0.0, Color::CYAN), (1.0, Color::YELLOW)] } }
-    pub fn magenta_yellow() -> ColorMap { ColorMap { colors: vec![(0.0, Color::MAGENTA), (1.0, Color::YELLOW)] } }
-    pub fn yellow_magenta() -> ColorMap { ColorMap { colors: vec![(0.0, Color::YELLOW), (1.0, Color::MAGENTA)] } }
-    pub fn cyan_magenta() -> ColorMap { ColorMap { colors: vec![(0.0, Color::CYAN), (1.0, Color::MAGENTA)] } }
-    pub fn greyscale() -> ColorMap { ColorMap { colors: vec![(0.0, Color::BLACK), (1.0, Color::WHITE)] } }
-    pub fn greyscale_inverted() -> ColorMap { ColorMap { colors: vec![(0.0, Color::WHITE), (1.0, Color::BLACK)] } }
+    pub fn red_green() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::RED), (1.0, Color::GREEN)],
+        }
+    }
+    pub fn red_blue() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::RED), (1.0, Color::BLUE)],
+        }
+    }
+    pub fn green_red() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::GREEN), (1.0, Color::RED)],
+        }
+    }
+    pub fn green_blue() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::GREEN), (1.0, Color::BLUE)],
+        }
+    }
+    pub fn blue_red() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::BLUE), (1.0, Color::RED)],
+        }
+    }
+    pub fn blue_green() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::BLUE), (1.0, Color::GREEN)],
+        }
+    }
+    pub fn yellow_cyan() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::YELLOW), (1.0, Color::CYAN)],
+        }
+    }
+    pub fn magenta_cyan() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::MAGENTA), (1.0, Color::CYAN)],
+        }
+    }
+    pub fn cyan_yellow() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::CYAN), (1.0, Color::YELLOW)],
+        }
+    }
+    pub fn magenta_yellow() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::MAGENTA), (1.0, Color::YELLOW)],
+        }
+    }
+    pub fn yellow_magenta() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::YELLOW), (1.0, Color::MAGENTA)],
+        }
+    }
+    pub fn cyan_magenta() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::CYAN), (1.0, Color::MAGENTA)],
+        }
+    }
+    pub fn greyscale() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::BLACK), (1.0, Color::WHITE)],
+        }
+    }
+    pub fn greyscale_inverted() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::WHITE), (1.0, Color::BLACK)],
+        }
+    }
 
     // some more fancy presets
-    pub fn fire() -> ColorMap { ColorMap { colors: vec![(0.0, Color::BLACK), (0.33, Color::RED), (1.0, Color::YELLOW)] } }
-    pub fn rainbow() -> ColorMap { ColorMap { colors: vec![(0.0, Color::MAGENTA), (0.2, Color::BLUE), (0.4, Color::CYAN), (0.6, Color::GREEN), (0.8, Color::YELLOW), (1.0, Color::RED), ] } }
-    pub fn sky() -> ColorMap { ColorMap { colors: vec![(0.0, Color::BLACK), (0.5, Color::BLUE), (1.0, Color::WHITE)] } }
+    pub fn fire() -> ColorMap {
+        ColorMap {
+            colors: vec![
+                (0.0, Color::BLACK),
+                (0.33, Color::RED),
+                (1.0, Color::YELLOW),
+            ],
+        }
+    }
+    pub fn rainbow() -> ColorMap {
+        ColorMap {
+            colors: vec![
+                (0.0, Color::MAGENTA),
+                (0.2, Color::BLUE),
+                (0.4, Color::CYAN),
+                (0.6, Color::GREEN),
+                (0.8, Color::YELLOW),
+                (1.0, Color::RED),
+            ],
+        }
+    }
+    pub fn sky() -> ColorMap {
+        ColorMap {
+            colors: vec![(0.0, Color::BLACK), (0.5, Color::BLUE), (1.0, Color::WHITE)],
+        }
+    }
 }
 
 impl ColorPalette {
-
     /// Constructs a new empty color palette.
     /// Use in combination with [Self::with_color] to define the colors in the palette.
     pub fn new(default_color: Color) -> Self {
@@ -382,21 +438,21 @@ impl ColorPalette {
     pub fn las_classification_colors() -> ColorPalette {
         ColorPalette {
             colors: vec![
-                Color::GREY_4,                              // 0: Created, Never Classified
-                Color::GREY_3,                              // 1: Unassigned
-                Color::rgb(0.396, 0.263, 0.129),  // 2: Ground
-                Color::rgb(0.0, 0.6, 0.4),        // 3: Low Vegetation
-                Color::rgb(0.0, 0.8, 0.2),        // 4: Medium Vegetation
-                Color::rgb(0.0, 1.0, 0.0),        // 5: High Vegetation
-                Color::RED,                                 // 6: Building
-                Color::MAGENTA,                             // 7: Low Point (Noise)
-                Color::YELLOW,                              // 8: Model Key-Point (Mass Point)
-                Color::rgb(0.4, 0.8, 1.0),        // 9: Water
-                Color::GREY_5,                              // 10: Reserved for ASPRS Definition
-                Color::GREY_5,                              // 11: Reserved for ASPRS Definition
-                Color::BLUE,                                // 12: Overlap Points
+                Color::GREY_4,                   // 0: Created, Never Classified
+                Color::GREY_3,                   // 1: Unassigned
+                Color::rgb(0.396, 0.263, 0.129), // 2: Ground
+                Color::rgb(0.0, 0.6, 0.4),       // 3: Low Vegetation
+                Color::rgb(0.0, 0.8, 0.2),       // 4: Medium Vegetation
+                Color::rgb(0.0, 1.0, 0.0),       // 5: High Vegetation
+                Color::RED,                      // 6: Building
+                Color::MAGENTA,                  // 7: Low Point (Noise)
+                Color::YELLOW,                   // 8: Model Key-Point (Mass Point)
+                Color::rgb(0.4, 0.8, 1.0),       // 9: Water
+                Color::GREY_5,                   // 10: Reserved for ASPRS Definition
+                Color::GREY_5,                   // 11: Reserved for ASPRS Definition
+                Color::BLUE,                     // 12: Overlap Points
             ],
-            default: Color::GREY_5                          // 13-31: Reserved for ASPRS Definition
+            default: Color::GREY_5, // 13-31: Reserved for ASPRS Definition
         }
     }
 
@@ -414,7 +470,6 @@ impl ColorPalette {
     pub fn get_color(&self, index: usize) -> Color {
         *self.colors.get(index).unwrap_or(&self.default)
     }
-
 }
 
 impl Default for BaseRenderSettings {
@@ -423,7 +478,7 @@ impl Default for BaseRenderSettings {
             window_title: "Point Cloud Viewer".to_string(),
             bg_color: Color::rgb(1.0, 1.0, 1.0),
             grid: None,
-            enable_edl: false
+            enable_edl: false,
         }
     }
 }
@@ -435,7 +490,7 @@ impl Default for Grid {
             opacity: 1.0,
             size: 10.0,
             nr_cells: 100,
-            line_width: 1.0
+            line_width: 1.0,
         }
     }
 }
@@ -456,7 +511,7 @@ impl Default for ScalarAttributeColoring {
             attribute: attributes::INTENSITY.clone(),
             color_map: ColorMap::sky(),
             min: 0.0,
-            max: 1.0
+            max: 1.0,
         }
     }
 }

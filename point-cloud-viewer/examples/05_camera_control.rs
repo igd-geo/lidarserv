@@ -1,22 +1,25 @@
-use point_cloud_viewer::renderer::backends::glium::GliumRenderOptions;
-use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
-use pasture_core::nalgebra::Point3;
 use pasture_core::math::AABB;
+use pasture_core::nalgebra::Point3;
+use point_cloud_viewer::renderer::backends::glium::GliumRenderOptions;
+use point_cloud_viewer::renderer::settings::{
+    AnimationEasing, AnimationSettings, BaseRenderSettings,
+};
+use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::thread::sleep;
 use std::time::Duration;
-use point_cloud_viewer::renderer::settings::{AnimationSettings, AnimationEasing, BaseRenderSettings};
 
 mod utils;
 
 fn main() {
     GliumRenderOptions::default().run(|render_thread| {
-
         // open window
         let window = render_thread.open_window().unwrap();
-        window.set_render_settings(BaseRenderSettings {
-            grid: Some(Default::default()),
-            .. Default::default()
-        }).unwrap();
+        window
+            .set_render_settings(BaseRenderSettings {
+                grid: Some(Default::default()),
+                ..Default::default()
+            })
+            .unwrap();
 
         // add point clouds
         let point_buffer = utils::small_example_point_cloud(Point3::new(0.0, 0.0, 0.0), 30);
@@ -43,11 +46,10 @@ fn main() {
         // It will move the camera, so that everything inside the given bounding box is visible.
         // Here we use it to direct the focus of the user at
         // the second point cloud, the one centered at (10, 10, 0):
-        let bounding_box = AABB::from_min_max(
-            Point3::new(9.0, 9.0, -0.2),
-            Point3::new(11.0, 11.0, 0.2),
-        );
-        window.camera_movement()
+        let bounding_box =
+            AABB::from_min_max(Point3::new(9.0, 9.0, -0.2), Point3::new(11.0, 11.0, 0.2));
+        window
+            .camera_movement()
             .focus_on_bounding_box(bounding_box)
             .execute()
             .unwrap();
@@ -58,21 +60,24 @@ fn main() {
         // point cloud into view.
 
         // focus on point cloud 1
-        window.camera_movement()
+        window
+            .camera_movement()
             .focus_on_point_cloud(point_cloud_id_1)
             .execute()
             .unwrap();
         sleep(Duration::from_secs(1));
 
         // focus on point cloud 2
-        window.camera_movement()
+        window
+            .camera_movement()
             .focus_on_point_cloud(point_cloud_id_2)
             .execute()
             .unwrap();
         sleep(Duration::from_secs(1));
 
         // focus on point cloud 3
-        window.camera_movement()
+        window
+            .camera_movement()
             .focus_on_point_cloud(point_cloud_id_3)
             .execute()
             .unwrap();
@@ -83,10 +88,7 @@ fn main() {
         // A common use case is to call this right at the beginning, just after the initial point
         // clouds have been added to the window,
         // so that the user gets a good overview of the full scene.
-        window.camera_movement()
-            .focus_on_all()
-            .execute()
-            .unwrap();
+        window.camera_movement().focus_on_all().execute().unwrap();
         sleep(Duration::from_secs(3));
 
         // Since this will probably be used at the beginning of most programs, there is also a
@@ -99,7 +101,8 @@ fn main() {
         // rather than being "teleported instantly".
         // We can specify that a camera movement should be animated using the "animated" method.
         // Usually, the default animation settings will produce good results.
-        window.camera_movement()
+        window
+            .camera_movement()
             .focus_on_point_cloud(point_cloud_id_1)
             .animated(Default::default())
             .execute()
@@ -126,7 +129,8 @@ fn main() {
             AnimationEasing::EaseInOut,
         ] {
             // reset camera
-            window.camera_movement()
+            window
+                .camera_movement()
                 .focus_on_point_cloud(point_cloud_id_4)
                 .execute()
                 .unwrap();
@@ -136,9 +140,10 @@ fn main() {
             println!("{:?}", easing);
             let animation = AnimationSettings {
                 duration: Duration::from_secs(2),
-                easing
+                easing,
             };
-            window.camera_movement()
+            window
+                .camera_movement()
                 .focus_on_point_cloud(point_cloud_id_3)
                 .animated(animation)
                 .execute()
@@ -150,26 +155,26 @@ fn main() {
         // When used on its own, the camera will keep looking at the same point, just change its
         // direction from which it is looking.
         // For example, to look down at the point cloud from the top:
-        window.camera_movement()
-            .view_top()
-            .execute()
-            .unwrap();
+        window.camera_movement().view_top().execute().unwrap();
         sleep(Duration::from_secs(3));
 
         // Of cause, also the `view_*` methods work with animations:
-        window.camera_movement()
+        window
+            .camera_movement()
             .view_right()
             .animated(Default::default())
             .execute()
             .unwrap();
         sleep(Duration::from_secs_f64(1.75));
-        window.camera_movement()
+        window
+            .camera_movement()
             .view_topfront()
             .animated(Default::default())
             .execute()
             .unwrap();
         sleep(Duration::from_secs_f64(1.75));
-        window.camera_movement()
+        window
+            .camera_movement()
             .view_left()
             .animated(Default::default())
             .execute()
@@ -180,7 +185,8 @@ fn main() {
         // at the specified focus from the indicated direction.
 
         // Look at all point clouds from the top
-        window.camera_movement()
+        window
+            .camera_movement()
             .view_top()
             .focus_on_all()
             .execute()
@@ -188,7 +194,8 @@ fn main() {
         sleep(Duration::from_secs(1));
 
         // animate to look at point_cloud_id_2 from the top left
-        window.camera_movement()
+        window
+            .camera_movement()
             .view_topleft()
             .focus_on_point_cloud(point_cloud_id_2)
             .animated(Default::default())
