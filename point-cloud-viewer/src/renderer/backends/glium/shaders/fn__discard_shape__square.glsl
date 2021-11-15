@@ -1,0 +1,1 @@
+void discard_shape() { }
