@@ -1,22 +1,22 @@
-use pasture_core::containers::{PointBuffer, PointBufferExt};
-use pasture_core::layout::{PointAttributeDefinition, PrimitiveType, PointAttributeDataType};
-use std::fmt::Formatter;
-use pasture_core::nalgebra::Vector3;
-use crate::renderer::error::{RendererResult, RendererError};
+use crate::renderer::error::{RendererError, RendererResult};
 use crate::renderer::viewer::private::RenderThreadHandle;
 use derivative::Derivative;
+use pasture_core::containers::{PointBuffer, PointBufferExt};
+use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PrimitiveType};
+use pasture_core::nalgebra::Vector3;
+use std::fmt::Formatter;
 
 /// Extracts the data for one point attribute from the point buffer
 /// and converts it to the vertex data of an appropriate type for the attribute type, that is
 /// supported by the given graphics backend.
-pub fn point_attribute_to_vertex_data<B>
-(
+pub fn point_attribute_to_vertex_data<B>(
     points: &dyn PointBuffer,
     attribute: &PointAttributeDefinition,
-    backend: &B
+    backend: &B,
 ) -> RendererResult<VertexData>
-where B: RenderThreadHandle + ?Sized {
-
+where
+    B: RenderThreadHandle + ?Sized,
+{
     let vertex_data_type_candidates: &[VertexDataType] = match attribute.datatype() {
         PointAttributeDataType::U8 => &[VertexDataType::U8],
         PointAttributeDataType::I8 => &[],
@@ -32,30 +32,27 @@ where B: RenderThreadHandle + ?Sized {
         PointAttributeDataType::Vec3u8 => &[],
         PointAttributeDataType::Vec3u16 => &[],
         PointAttributeDataType::Vec3f32 => &[VertexDataType::Vec3F32],
-        PointAttributeDataType::Vec3f64 => &[VertexDataType::Vec3F32Transform, VertexDataType::Vec3F32],
+        PointAttributeDataType::Vec3f64 => {
+            &[VertexDataType::Vec3F32Transform, VertexDataType::Vec3F32]
+        }
     };
 
-    let vertex_data_type = vertex_data_type_candidates.iter()
-        .find(
-            |candidate| backend.is_vertex_data_type_supported(**candidate)
-        );
-    
+    let vertex_data_type = vertex_data_type_candidates
+        .iter()
+        .find(|candidate| backend.is_vertex_data_type_supported(**candidate));
+
     let vertex_data_type = match vertex_data_type {
         None => {
             return Err(RendererError::UnsupportedOperation {
                 backend_name: backend.name(),
                 operation_name: format!("Point Attribute Data Type {}", attribute.datatype()),
-                platform_specific: false
+                platform_specific: false,
             });
         }
-        Some(dt) => {*dt}
+        Some(dt) => *dt,
     };
 
-    let vertex_data = point_attribute_to_vertex_data_type(
-        points,
-        attribute,
-        vertex_data_type
-    );
+    let vertex_data = point_attribute_to_vertex_data_type(points, attribute, vertex_data_type);
 
     Ok(vertex_data)
 }
@@ -63,10 +60,10 @@ where B: RenderThreadHandle + ?Sized {
 /// Extracts the values for some point attribute from a point buffer and converts them to the
 /// vertex buffer data of the given type.
 /// Panicks, of the conversion of the point attribute data type to the vertex data type is not supported.
-fn point_attribute_to_vertex_data_type (
+fn point_attribute_to_vertex_data_type(
     points: &dyn PointBuffer,
     attribute: &PointAttributeDefinition,
-    vertex_buffer_data_type: VertexDataType
+    vertex_buffer_data_type: VertexDataType,
 ) -> VertexData {
     match (attribute.datatype(), vertex_buffer_data_type) {
 
@@ -97,7 +94,7 @@ fn point_attribute_to_vertex_data_type (
             // from the bounds, we calculate offset and scale,
             // such that every value will be between -5_000 and 5_000
             // so we keep an acceptable precision after converting to f32.
-            let (offset, scale) = if points.len() > 0 {
+            let (offset, scale) = if !points.is_empty() {
                 let offset = (min + max) / 2.0;
                 let mut scale = (max - min) / 10_000.0;
                 if scale.x < 1.0 { scale.x = 1.0; }
@@ -161,25 +158,16 @@ pub enum VertexDataType {
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub enum VertexData {
-    F32(
-        #[derivative(Debug="ignore")]
-        Vec<F32Attribute>
-    ),
-    U8(
-        #[derivative(Debug="ignore")]
-        Vec<U8Attribute>
-    ),
-    Vec3F32(
-        #[derivative(Debug="ignore")]
-        Vec<Vec3F32Attribute>
-    ),
+    F32(#[derivative(Debug = "ignore")] Vec<F32Attribute>),
+    U8(#[derivative(Debug = "ignore")] Vec<U8Attribute>),
+    Vec3F32(#[derivative(Debug = "ignore")] Vec<Vec3F32Attribute>),
     Vec3F32Transform {
         /// position = value * scale + offset
         /// value = (position - offset) / scale
-        #[derivative(Debug="ignore")]
+        #[derivative(Debug = "ignore")]
         values: Vec<Vec3F32Attribute>,
         offset: Vector3<f64>,
-        scale: Vector3<f64>
+        scale: Vector3<f64>,
     },
 }
 
@@ -189,23 +177,21 @@ impl std::fmt::Display for VertexDataType {
             VertexDataType::F32 => write!(f, "float"),
             VertexDataType::Vec3F32 => write!(f, "vec3f"),
             VertexDataType::U8 => write!(f, "u8"),
-            VertexDataType::Vec3F32Transform => write!(f, "vec3f+transformation")
+            VertexDataType::Vec3F32Transform => write!(f, "vec3f+transformation"),
         }
     }
 }
 
 impl VertexData {
-
     /// The data type of this vertex buffer data
     pub fn data_type(&self) -> VertexDataType {
         match self {
             VertexData::F32(_) => VertexDataType::F32,
             VertexData::Vec3F32(_) => VertexDataType::Vec3F32,
             VertexData::U8(_) => VertexDataType::U8,
-            VertexData::Vec3F32Transform{..} => VertexDataType::Vec3F32Transform
+            VertexData::Vec3F32Transform { .. } => VertexDataType::Vec3F32Transform,
         }
     }
-
 }
 
 /// Generic wrapper for a scalar point attribute value.
@@ -215,7 +201,7 @@ impl VertexData {
 /// or structs defined outside of the crate.
 #[derive(Copy, Clone, Debug)]
 pub struct Attribute<T> {
-    pub value: T
+    pub value: T,
 }
 
 impl<T> Attribute<T> {
@@ -232,7 +218,11 @@ pub struct Vec3<T> {
 }
 
 impl<T> Vec3<T> {
-    pub fn new(x: T, y: T, z: T) -> Self { Self { position: [x, y, z] } }
+    pub fn new(x: T, y: T, z: T) -> Self {
+        Self {
+            position: [x, y, z],
+        }
+    }
 }
 
 /// Wraps a f32, for making glium's implement_vertex!() work with f32 point attributes
@@ -245,9 +235,14 @@ pub type U8Attribute = Attribute<u8>;
 pub type Vec3F32Attribute = Vec3<f32>;
 
 /// Helper for copying one point attribute into a vector, while applying a conversion function to each element.
-fn get_point_attribute_vertex_data<T, U, F> (points: &dyn PointBuffer, attribute: &PointAttributeDefinition, map_fn: F) -> Vec<U>
-    where F: Fn(T) -> U,
-          T: PrimitiveType
+fn get_point_attribute_vertex_data<T, U, F>(
+    points: &dyn PointBuffer,
+    attribute: &PointAttributeDefinition,
+    map_fn: F,
+) -> Vec<U>
+where
+    F: Fn(T) -> U,
+    T: PrimitiveType,
 {
     let mut attr_data = Vec::new();
     attr_data.reserve(points.len());

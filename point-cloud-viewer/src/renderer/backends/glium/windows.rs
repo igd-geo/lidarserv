@@ -1,27 +1,36 @@
-use crate::renderer::renderer_command::{WindowId, RendererCommand, PointCloudId, PointAttribute, FocusTarget};
-use glium::{glutin, Display, Surface};
-use glium::glutin::dpi::{LogicalSize, PhysicalPosition};
-use crate::renderer::error::{RendererResult, RendererError};
-use glium::glutin::window::WindowId as OsWindowId;
-use std::collections::HashMap;
-use glium::glutin::event_loop::EventLoopWindowTarget;
-use log::debug;
-use crate::renderer::backends::glium::draw_point_cloud::PointCloudsRenderer;
-use crate::renderer::settings::{BaseRenderSettings, PointCloudRenderSettings, AnimationSettings, AnimationEasing};
-use crate::renderer::backends::glium::draw_grid::GridRenderer;
-use glium::glutin::event::{ ModifiersState, DeviceId, WindowEvent, ElementState, MouseButton as WinitMouseButton, MouseScrollDelta };
-use crate::navigation::event::{MouseDragSettings, MouseButton};
-use crate::navigation::{Navigation, ViewDirection, Matrices};
+use crate::navigation::event::{MouseButton, MouseDragSettings};
 use crate::navigation::map_navigation::MapNavigation;
+use crate::navigation::{Matrices, Navigation, ViewDirection};
+use crate::renderer::backends::glium::animation_helper::{
+    AnimationHelper, PolynomialEasingFunction,
+};
+use crate::renderer::backends::glium::draw_grid::GridRenderer;
+use crate::renderer::backends::glium::draw_point_cloud::PointCloudsRenderer;
+use crate::renderer::error::{RendererError, RendererResult};
+use crate::renderer::renderer_command::{
+    FocusTarget, PointAttribute, PointCloudId, RendererCommand, WindowId,
+};
+use crate::renderer::settings::{
+    AnimationEasing, AnimationSettings, BaseRenderSettings, PointCloudRenderSettings,
+};
 use crate::renderer::vertex_data::VertexData;
+use glium::glutin::dpi::{LogicalSize, PhysicalPosition};
+use glium::glutin::event::{
+    DeviceId, ElementState, ModifiersState, MouseButton as WinitMouseButton, MouseScrollDelta,
+    WindowEvent,
+};
+use glium::glutin::event_loop::EventLoopWindowTarget;
+use glium::glutin::window::WindowId as OsWindowId;
+use glium::{glutin, Display, Surface};
+use log::debug;
 use pasture_core::math::AABB;
-use crate::renderer::backends::glium::animation_helper::{AnimationHelper, PolynomialEasingFunction};
+use std::collections::HashMap;
 use std::time::Instant;
 
 #[derive(Copy, Clone, PartialEq)]
 enum FocusMode {
     Free,
-    BoundingBox(AABB<f64>)
+    BoundingBox(AABB<f64>),
 }
 
 pub struct Window {
@@ -47,7 +56,6 @@ pub struct WindowManager {
 }
 
 impl WindowManager {
-
     pub fn new() -> Self {
         WindowManager {
             window_id_counter: WindowId::begin(),
@@ -61,7 +69,6 @@ impl WindowManager {
         closed_notify_sender: crossbeam_channel::Sender<()>,
         multisampling: u16,
     ) -> RendererResult<WindowId> {
-
         // Create window
         let wb = glutin::window::WindowBuilder::new()
             .with_title("Point Cloud Viewer")
@@ -73,13 +80,17 @@ impl WindowManager {
             .with_depth_buffer(24)
             .with_vsync(true)
             .build_windowed(wb, event_loop)
-            .map_err(|e| RendererError::Graphics { source: Box::new(e) })?;
-        let display = Display::from_gl_window(gl_window)
-            .map_err(|e| RendererError::Graphics { source: Box::new(e) })?;
+            .map_err(|e| RendererError::Graphics {
+                source: Box::new(e),
+            })?;
+        let display = Display::from_gl_window(gl_window).map_err(|e| RendererError::Graphics {
+            source: Box::new(e),
+        })?;
         let render_settings = BaseRenderSettings::default();
-        let grid = render_settings.grid.as_ref().map(|grid_settings| {
-            GridRenderer::new(&display, grid_settings.to_owned()).unwrap()
-        });
+        let grid = render_settings
+            .grid
+            .as_ref()
+            .map(|grid_settings| GridRenderer::new(&display, grid_settings.to_owned()).unwrap());
         let point_clouds = PointCloudsRenderer::new();
         let modifiers = ModifiersState::default();
         let cursors = HashMap::new();
@@ -109,15 +120,27 @@ impl WindowManager {
         let mut tmp = current_size;
         window.process_window_event(WindowEvent::ScaleFactorChanged {
             scale_factor: current_scale_factor,
-            new_inner_size: &mut tmp
+            new_inner_size: &mut tmp,
         });
         window.process_window_event(WindowEvent::Resized(current_size));
 
         // log
-        debug!("Window opened: {:?}", window.display.gl_window().window().id());
-        debug!("OpenGL version: {}", window.display.get_opengl_version_string());
-        debug!("OpenGL vendor: {}", window.display.get_opengl_vendor_string());
-        debug!("OpenGL renderer: {}", window.display.get_opengl_renderer_string());
+        debug!(
+            "Window opened: {:?}",
+            window.display.gl_window().window().id()
+        );
+        debug!(
+            "OpenGL version: {}",
+            window.display.get_opengl_version_string()
+        );
+        debug!(
+            "OpenGL vendor: {}",
+            window.display.get_opengl_vendor_string()
+        );
+        debug!(
+            "OpenGL renderer: {}",
+            window.display.get_opengl_renderer_string()
+        );
         debug!("OpenGL profile: {:?}", window.display.get_opengl_profile());
 
         // insert window
@@ -129,7 +152,7 @@ impl WindowManager {
     pub fn window_by_id_mut(&mut self, id: WindowId) -> RendererResult<&mut Window> {
         match self.windows_by_id.get_mut(&id) {
             None => Err(RendererError::WindowClosed { id }),
-            Some(win) => Ok(win)
+            Some(win) => Ok(win),
         }
     }
 
@@ -144,16 +167,17 @@ impl WindowManager {
     }
 
     pub fn close_os(&mut self, id: OsWindowId) {
-        let item = self.windows_by_id.iter().find(|(_, v)| v.display.gl_window().window().id() == id);
+        let item = self
+            .windows_by_id
+            .iter()
+            .find(|(_, v)| v.display.gl_window().window().id() == id);
         if let Some((&k, _)) = item {
             self.close(k.to_owned());
         }
     }
-
 }
 
 impl Window {
-
     pub fn request_redraw(&self) {
         self.display.gl_window().window().request_redraw()
     }
@@ -170,7 +194,11 @@ impl Window {
             WindowEvent::ModifiersChanged(new_modifiers) => {
                 self.modifiers = new_modifiers;
             }
-            WindowEvent::CursorMoved { position, device_id, .. } => {
+            WindowEvent::CursorMoved {
+                position,
+                device_id,
+                ..
+            } => {
                 let previous = self.cursors.insert(device_id, position);
                 if let Some(previous_position) = previous {
                     if let Some((drag_device, drag_button, drag_modifiers)) = self.current_drag {
@@ -189,8 +217,8 @@ impl Window {
                                     },
                                     shift_pressed: drag_modifiers.shift(),
                                     ctrl_pressed: drag_modifiers.ctrl(),
-                                    alt_pressed: drag_modifiers.alt()
-                                }
+                                    alt_pressed: drag_modifiers.alt(),
+                                },
                             );
                             self.free_focus();
                             self.request_redraw();
@@ -198,18 +226,23 @@ impl Window {
                     }
                 }
             }
-            WindowEvent::ScaleFactorChanged {scale_factor, ..} => {
+            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
                 self.current_scale_factor = scale_factor;
-            },
+            }
             WindowEvent::Resized(size) => {
                 self.nav_controller.on_window_resized(
                     size.width as f64 / self.current_scale_factor,
-                    size.height as f64 / self.current_scale_factor
+                    size.height as f64 / self.current_scale_factor,
                 );
                 self.update_animation_target();
                 self.request_redraw();
             }
-            WindowEvent::MouseInput { state, button, device_id, .. } => match state {
+            WindowEvent::MouseInput {
+                state,
+                button,
+                device_id,
+                ..
+            } => match state {
                 ElementState::Pressed => {
                     if self.current_drag.is_none() {
                         self.current_drag = Some((device_id, button, self.modifiers));
@@ -224,22 +257,20 @@ impl Window {
                         }
                     }
                 }
-            }
+            },
             WindowEvent::MouseWheel { delta, .. } => {
                 let scroll_amount = match delta {
                     MouseScrollDelta::LineDelta(_, delta_y) => {
                         // assume a line to be equivalent to 20 logical pixels
                         delta_y as f64 * 20.0
                     }
-                    MouseScrollDelta::PixelDelta(delta) => {
-                        delta.y / self.current_scale_factor
-                    }
+                    MouseScrollDelta::PixelDelta(delta) => delta.y / self.current_scale_factor,
                 };
                 self.nav_controller.on_scroll(scroll_amount);
                 self.free_focus();
                 self.request_redraw();
             }
-            _ => ()
+            _ => (),
         }
     }
 
@@ -259,7 +290,6 @@ impl Window {
     }
 
     pub fn draw(&mut self) -> RendererResult<()> {
-
         // elapsed time since last draw
         self.time_step();
 
@@ -269,7 +299,7 @@ impl Window {
                 let m = self.nav_controller.update();
                 self.broadcast_camera_matrix(&m);
                 m
-            },
+            }
             Some(animated_matrices) => {
                 self.request_redraw();
                 animated_matrices
@@ -284,26 +314,26 @@ impl Window {
                 self.render_settings.bg_color.r,
                 self.render_settings.bg_color.g,
                 self.render_settings.bg_color.b,
-                1.0
+                1.0,
             ),
-            1.0
+            1.0,
         );
 
         // draw point clouds
         if self.render_settings.enable_edl {
-            self.point_clouds.draw_with_edl(
-                &self.display,
-                &mut frame,
-                self.current_scale_factor,
-                &view_projection,
-                &matrices.projection_matrix_inv
-            ).unwrap();
+            self.point_clouds
+                .draw_with_edl(
+                    &self.display,
+                    &mut frame,
+                    self.current_scale_factor,
+                    &view_projection,
+                    &matrices.projection_matrix_inv,
+                )
+                .unwrap();
         } else {
-            self.point_clouds.draw(
-                &mut frame,
-                self.current_scale_factor,
-                &view_projection
-            ).unwrap();
+            self.point_clouds
+                .draw(&mut frame, self.current_scale_factor, &view_projection)
+                .unwrap();
         }
 
         // draw grid
@@ -312,10 +342,13 @@ impl Window {
                 &mut frame,
                 &view_projection,
                 &matrices.view_matrix_inv,
-                self.current_scale_factor
-            ).unwrap()
+                self.current_scale_factor,
+            )
+            .unwrap()
         }
-        frame.finish().map_err(|e| RendererError::Graphics { source: Box::new(e) })
+        frame.finish().map_err(|e| RendererError::Graphics {
+            source: Box::new(e),
+        })
     }
 
     pub fn set_title(&mut self, title: &str) {
@@ -323,14 +356,10 @@ impl Window {
     }
 
     pub fn update_settings(&mut self, new_settings: BaseRenderSettings) -> RendererResult<()> {
-
         // grid
         let result = if let Some(grid_settings) = &new_settings.grid {
-
             let new_grid_result = match self.grid.take() {
-                None => {
-                    GridRenderer::new(&self.display, grid_settings.to_owned())
-                }
+                None => GridRenderer::new(&self.display, grid_settings.to_owned()),
                 Some(mut g) => {
                     let update_result = g.update_settings(&self.display, grid_settings.to_owned());
                     update_result.map(move |_| g)
@@ -341,7 +370,7 @@ impl Window {
                 self.grid = Some(g);
             })
         } else {
-            self.grid = None ;
+            self.grid = None;
             Ok(())
         };
 
@@ -357,26 +386,51 @@ impl Window {
         result
     }
 
-    pub fn update_default_point_cloud_render_settings(&mut self, new_settings: PointCloudRenderSettings) -> RendererResult<()> {
-        let result = self.point_clouds.update_default_settings(&self.display, &new_settings);
+    pub fn update_default_point_cloud_render_settings(
+        &mut self,
+        new_settings: PointCloudRenderSettings,
+    ) -> RendererResult<()> {
+        let result = self
+            .point_clouds
+            .update_default_settings(&self.display, &new_settings);
         self.request_redraw();
         result
     }
 
-    pub fn update_point_cloud_render_settings(&mut self, point_cloud_id: PointCloudId, new_settings: Option<PointCloudRenderSettings>) -> RendererResult<()> {
-        let result = self.point_clouds.update_settings(&self.display, point_cloud_id, new_settings);
+    pub fn update_point_cloud_render_settings(
+        &mut self,
+        point_cloud_id: PointCloudId,
+        new_settings: Option<PointCloudRenderSettings>,
+    ) -> RendererResult<()> {
+        let result = self
+            .point_clouds
+            .update_settings(&self.display, point_cloud_id, new_settings);
         self.request_redraw();
         result
     }
 
-    pub fn add_point_cloud(&mut self, positions: &VertexData, attributes: &[PointAttribute], render_settings: &Option<PointCloudRenderSettings>) -> RendererResult<PointCloudId> {
-        let result = self.point_clouds.add(&self.display, positions, attributes, render_settings);
+    pub fn add_point_cloud(
+        &mut self,
+        positions: &VertexData,
+        attributes: &[PointAttribute],
+        render_settings: &Option<PointCloudRenderSettings>,
+    ) -> RendererResult<PointCloudId> {
+        let result = self
+            .point_clouds
+            .add(&self.display, positions, attributes, render_settings);
         self.request_redraw();
         result
     }
 
-    pub fn update_points(&mut self, id: PointCloudId, positions: &VertexData, attributes: &[PointAttribute]) -> RendererResult<()> {
-        let result = self.point_clouds.update_points(&self.display, id, positions, attributes);
+    pub fn update_points(
+        &mut self,
+        id: PointCloudId,
+        positions: &VertexData,
+        attributes: &[PointAttribute],
+    ) -> RendererResult<()> {
+        let result = self
+            .point_clouds
+            .update_points(&self.display, id, positions, attributes);
         self.request_redraw();
         result
     }
@@ -391,7 +445,6 @@ impl Window {
         self.camera_animation.abort();
         self.focus = FocusMode::Free;
         self.request_redraw();
-
     }
 
     fn update_animation_target(&mut self) {
@@ -403,8 +456,12 @@ impl Window {
         }
     }
 
-    pub fn move_camera(&mut self, focus: Option<FocusTarget>, view: Option<ViewDirection>, animation: Option<AnimationSettings>) -> RendererResult<()>{
-
+    pub fn move_camera(
+        &mut self,
+        focus: Option<FocusTarget>,
+        view: Option<ViewDirection>,
+        animation: Option<AnimationSettings>,
+    ) -> RendererResult<()> {
         // backup old matrices - for the animation
         let from = self.nav_controller.update();
 
@@ -413,7 +470,7 @@ impl Window {
             None => None,
             Some(FocusTarget::All) => self.point_clouds.bounding_box(),
             Some(FocusTarget::BoundingBox(aabb)) => Some(aabb),
-            Some(FocusTarget::PointCloud(id)) => self.point_clouds.point_cloud_bounding_box(id)?
+            Some(FocusTarget::PointCloud(id)) => self.point_clouds.point_cloud_bounding_box(id)?,
         };
 
         // change the orientation
@@ -445,10 +502,7 @@ impl Window {
         }
 
         // update
-        self.focus = new_focus_aabb.map_or(
-            FocusMode::Free,
-            |aabb| FocusMode::BoundingBox(aabb)
-        );
+        self.focus = new_focus_aabb.map_or(FocusMode::Free, FocusMode::BoundingBox);
         self.request_redraw();
         Ok(())
     }
@@ -456,17 +510,18 @@ impl Window {
     pub fn add_camera_subscriber(&mut self) -> crossbeam_channel::Receiver<Matrices> {
         let (sender, receiver) = crossbeam_channel::unbounded();
         let initial = self.nav_controller.update();
-        sender.send(initial).unwrap();  // unwrap: can only fail, if receiver was dropped - but we still hold the receiver, so this will always succeed.
+        sender.send(initial).unwrap(); // unwrap: can only fail, if receiver was dropped - but we still hold the receiver, so this will always succeed.
         self.camera_subscribers.push(sender);
         receiver
     }
-
-
 }
 
 impl Drop for Window {
     fn drop(&mut self) {
         self.closed_notify_sender.send(()).ok();
-        debug!("Window closed: {:?}", self.display.gl_window().window().id());
+        debug!(
+            "Window closed: {:?}",
+            self.display.gl_window().window().id()
+        );
     }
 }
