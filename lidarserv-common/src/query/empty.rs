@@ -18,11 +18,11 @@ where
     Pos: Position<Component = Comp>,
     Comp: Component,
 {
-    fn max_lod_position(&self, position: &Pos) -> Option<LodLevel> {
+    fn max_lod_position(&self, _position: &Pos) -> Option<LodLevel> {
         None
     }
 
-    fn max_lod_area(&self, bounds: &AABB<Comp>) -> Option<LodLevel> {
+    fn max_lod_area(&self, _bounds: &AABB<Comp>) -> Option<LodLevel> {
         None
     }
 }

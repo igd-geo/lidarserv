@@ -4,7 +4,6 @@ use crate::net::protocol::messages::{DeviceType, Message, NodeId, Query};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::AABB;
 use lidarserv_common::geometry::grid::LodLevel;
-use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::{F64CoordinateSystem, F64Position, Position};
 use lidarserv_common::las::{I32LasReadWrite, Las, LasReadWrite};
 use std::fmt::{Debug, Formatter};

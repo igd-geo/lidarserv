@@ -13,9 +13,12 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
+type SharedNodeResult<Sampl, Point, Comp, CSys> =
+    Result<Arc<Node<Sampl, Point, Comp, CSys>>, ReadLasError>;
+
 pub struct Page<Sampl, Point, Comp: Scalar, CSys> {
     binary: RwLock<Option<Arc<Vec<u8>>>>,
-    node: RwLock<Option<Result<Arc<Node<Sampl, Point, Comp, CSys>>, ReadLasError>>>,
+    node: RwLock<Option<SharedNodeResult<Sampl, Point, Comp, CSys>>>,
 }
 
 #[derive(Clone)]
@@ -193,7 +196,7 @@ where
 pub struct OctreePageLoader<LasL, Page> {
     loader: LasL,
     base_path: PathBuf,
-    _phantom: PhantomData<fn() -> fn(&Page) -> Page>,
+    _phantom: PhantomData<fn(&Page) -> Page>,
 }
 
 pub struct OctreeFileHandle<LasL, Page> {

@@ -168,10 +168,7 @@ fn meta_tree_node_id_to_proto_node_id(node_id: &MetaTreeNodeId) -> NodeId {
 }
 
 fn sensor_pos_node_to_protocol_node_data(node: &SensorPosNode) -> NodeData {
-    node.las_files()
-        .into_iter()
-        .map(|data| Vec::from(data))
-        .collect()
+    node.las_files().into_iter().map(Vec::from).collect()
 }
 
 impl DynIndex
@@ -227,7 +224,7 @@ impl DynWriter
 impl DynReader for () {
     fn blocking_update(
         &mut self,
-        queries: &mut Receiver<Box<dyn Query<I32Position> + Send + Sync>>,
+        _queries: &mut Receiver<Box<dyn Query<I32Position> + Send + Sync>>,
     ) -> bool {
         todo!()
     }

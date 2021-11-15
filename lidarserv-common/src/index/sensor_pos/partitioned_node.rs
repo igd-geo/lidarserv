@@ -539,7 +539,7 @@ where
         assert_eq!(threads.num_threads(), self.num_partitions());
 
         // create empty
-        let mut splitter = PartitionedNodeSplitter {
+        let splitter = PartitionedNodeSplitter {
             node_id: self.node_id.clone(),
             replaces_base_node_at: Some(sensor_position),
             hasher: self.hasher.clone(),
@@ -711,7 +711,7 @@ where
 
                 // calculate bounding box for this partition
                 let s1 = span!("parallel_store (split): calculate bounds");
-                let mut bounds = partition.calculate_bounds();
+                let bounds = partition.calculate_bounds();
                 drop(s1);
 
                 // prepare what to write to the las file
@@ -808,7 +808,7 @@ where
 
                 // calculate aabb
                 let s1 = span!("parallel_store (split): calculate bounds");
-                let mut bounds = from_partition.calculate_bounds();
+                let bounds = from_partition.calculate_bounds();
                 drop(s1);
 
                 // move over points

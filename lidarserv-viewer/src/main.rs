@@ -1,6 +1,6 @@
 use crate::cli::Args;
 use anyhow::Result;
-use lidarserv_server::common::geometry::bounding_box::{BaseAABB, OptionAABB, AABB};
+use lidarserv_server::common::geometry::bounding_box::{BaseAABB, AABB};
 use lidarserv_server::common::geometry::grid::LodLevel;
 use lidarserv_server::common::nalgebra::Point3;
 use lidarserv_server::net::client::viewer::ViewerClient;

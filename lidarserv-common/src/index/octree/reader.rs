@@ -1,13 +1,13 @@
 use crate::geometry::points::PointType;
 use crate::index::octree::Inner;
-use crate::index::sensor_pos::writer::IndexError;
-use crate::index::{Node, Reader};
+use crate::index::{Node, Reader, Update};
 use crate::nalgebra::Scalar;
 use crate::query::Query;
 use crossbeam_channel::Receiver;
 use std::sync::Arc;
 
 pub struct OctreeReader<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> {
+    #[allow(dead_code)] // todo: will not be dead code any more, once OctreeReader is implemented
     pub(super) inner: Arc<Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>>,
 }
 
@@ -17,7 +17,7 @@ impl<Point: PointType, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> Reader<Po
     type NodeId = ();
     type Node = ();
 
-    fn set_query<Q: Query<Point::Position> + 'static + Send + Sync>(&mut self, query: Q) {
+    fn set_query<Q: Query<Point::Position> + 'static + Send + Sync>(&mut self, _query: Q) {
         todo!()
     }
 
@@ -27,7 +27,7 @@ impl<Point: PointType, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> Reader<Po
 
     fn blocking_update(
         &mut self,
-        queries: &mut Receiver<Box<dyn Query<Point::Position> + Send + Sync>>,
+        _queries: &mut Receiver<Box<dyn Query<Point::Position> + Send + Sync>>,
     ) -> bool {
         todo!()
     }
@@ -40,11 +40,12 @@ impl<Point: PointType, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> Reader<Po
         todo!()
     }
 
-    fn update_one(&mut self) -> Option<(Self::NodeId, Vec<(Self::NodeId, Self::Node)>)> {
+    fn update_one(&mut self) -> Option<Update<Self::NodeId, Self::Node>> {
         todo!()
     }
 }
 
+// todo delete
 impl Node for () {
     fn las_files(&self) -> Vec<&[u8]> {
         todo!()

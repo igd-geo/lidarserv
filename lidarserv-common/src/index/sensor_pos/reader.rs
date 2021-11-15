@@ -1,6 +1,7 @@
 use crate::geometry::grid::GridHierarchy;
 use crate::geometry::points::PointType;
 use crate::geometry::position::{Component, Position};
+use crate::index;
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::BinDataPage;
 use crate::index::sensor_pos::{Inner, Update};
@@ -119,7 +120,7 @@ where
         node_to_remove
     }
 
-    fn update_one(&mut self) -> Option<(Self::NodeId, Vec<(Self::NodeId, Self::Node)>)> {
+    fn update_one(&mut self) -> Option<index::Update<Self::NodeId, Self::Node>> {
         self.sort_update_order();
         if let Some((node_id, _)) = self.update_order.pop() {
             // load nodes

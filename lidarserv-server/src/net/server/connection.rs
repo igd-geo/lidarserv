@@ -1,4 +1,3 @@
-use crate::common::geometry::position::CoordinateSystemError;
 use crate::common::las::Las;
 use crate::index::DynIndex;
 use crate::net::protocol::connection::Connection;
@@ -12,12 +11,10 @@ use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
 use lidarserv_common::nalgebra::Point3;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use log::info;
-use std::fmt::format;
 use std::io::Cursor;
 use std::sync::Arc;
 use std::thread;
 use tokio::net::TcpStream;
-use tokio::select;
 use tokio::sync::broadcast::Receiver;
 
 pub async fn handle_connection(
@@ -132,7 +129,7 @@ async fn capture_device_mode(
 }
 
 async fn viewer_mode(
-    mut con: Connection<TcpStream>,
+    con: Connection<TcpStream>,
     index: Arc<dyn DynIndex>,
     mut shutdown: Receiver<()>,
 ) -> Result<(), LidarServerError> {

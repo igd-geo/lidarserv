@@ -1,5 +1,4 @@
 use crate::geometry::points::PointType;
-use crate::index::sensor_pos::writer::IndexError;
 use crate::query::Query;
 
 pub mod octree;
@@ -47,8 +46,10 @@ where
 
     fn remove_one(&mut self) -> Option<Self::NodeId>;
 
-    fn update_one(&mut self) -> Option<(Self::NodeId, Vec<(Self::NodeId, Self::Node)>)>;
+    fn update_one(&mut self) -> Option<Update<Self::NodeId, Self::Node>>;
 }
+
+pub type Update<NodeId, NodeData> = (NodeId, Vec<(NodeId, NodeData)>);
 
 pub trait Node {
     fn las_files(&self) -> Vec<&[u8]>;
