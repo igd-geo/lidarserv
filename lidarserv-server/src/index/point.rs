@@ -115,4 +115,26 @@ impl GlobalPoint {
             las_attributes,
         })
     }
+
+    pub fn from_las_point(
+        las_point: LasPoint,
+        coordinate_system: &I32CoordinateSystem,
+    ) -> GlobalPoint {
+        let LasPoint {
+            position,
+            sensor_pos: SensorPositionAttribute(sensor_position),
+            las_attributes,
+        } = las_point;
+        let global = F64CoordinateSystem::new();
+        // unwrap: transcoding to F64CoordinateSystem never fails
+        let position = position.transcode(coordinate_system, &global).unwrap();
+        let sensor_position = sensor_position
+            .transcode(coordinate_system, &global)
+            .unwrap();
+        GlobalPoint {
+            position,
+            sensor_pos: SensorPositionAttribute(sensor_position),
+            las_attributes,
+        }
+    }
 }

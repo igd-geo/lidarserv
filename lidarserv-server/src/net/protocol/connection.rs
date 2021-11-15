@@ -5,6 +5,8 @@ use bytes::{Buf, BytesMut};
 use log::trace;
 use thiserror::Error;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
+use tokio::net::TcpStream;
 use tokio::sync::broadcast::Receiver;
 
 use crate::net::protocol::messages::Message;
@@ -45,7 +47,12 @@ where
         con.read_magic_number(shutdown).await?;
         Ok(con)
     }
+}
 
+impl<Stream> Connection<Stream>
+where
+    Stream: AsyncRead + Unpin,
+{
     async fn read_magic_number(
         &mut self,
         shutdown: &mut Receiver<()>,
@@ -73,11 +80,6 @@ where
             )));
         }
 
-        Ok(())
-    }
-
-    async fn write_magic_number(&mut self) -> Result<(), LidarServerError> {
-        self.stream.write_all(MAGIC_NUMBER).await?;
         Ok(())
     }
 
@@ -113,6 +115,7 @@ where
         }
     }
 
+    /// cancel safe
     pub async fn read_message_or_eof(
         &mut self,
         shutdown: &mut Receiver<()>,
@@ -154,6 +157,16 @@ where
             )))
         }
     }
+}
+
+impl<Stream> Connection<Stream>
+where
+    Stream: AsyncWrite + Unpin,
+{
+    async fn write_magic_number(&mut self) -> Result<(), LidarServerError> {
+        self.stream.write_all(MAGIC_NUMBER).await?;
+        Ok(())
+    }
 
     pub async fn write_message(&mut self, message: &Message) -> Result<(), LidarServerError> {
         trace!("Send to {}: {:?}", &self.peer_addr, &message);
@@ -178,5 +191,23 @@ where
         // send
         self.stream.write_all(&data[..]).await?;
         Ok(())
+    }
+}
+
+impl Connection<TcpStream> {
+    pub fn into_split(self) -> (Connection<OwnedReadHalf>, Connection<OwnedWriteHalf>) {
+        let (read_half, write_half) = self.stream.into_split();
+        (
+            Connection {
+                stream: read_half,
+                peer_addr: self.peer_addr,
+                buffer: self.buffer,
+            },
+            Connection {
+                stream: write_half,
+                peer_addr: self.peer_addr,
+                buffer: Default::default(),
+            },
+        )
     }
 }

@@ -8,8 +8,7 @@ edition = "2021"
 [dependencies]
 nalgebra = { version = "0.23.2", features = ["serde-serialize"] }
 las = { version = "0.7.5", features = ["laz"] }
-#laz = "0.6.0"
-laz = { path = "../../laz-rs" }
+laz = "0.6.0"
 num-traits = "0.2.14"
 thiserror = "1.0.30"
 tracy-client = { version = "0.12.5", default_features=false }

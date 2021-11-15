@@ -62,7 +62,7 @@ where
             a = listener.accept() => a
         };
 
-        let (mut connection, addr) = accepted?;
+        let (connection, addr) = accepted?;
         {
             let index = Arc::clone(&index);
             let connections_alive_sender = connections_alive_sender.clone();
@@ -70,18 +70,13 @@ where
             tokio::spawn(async move {
                 // handle connection
                 let result =
-                    handle_connection(&mut connection, index, connection_shutdown_receiver).await;
+                    handle_connection(connection, index, connection_shutdown_receiver).await;
                 if let Err(e) = result {
                     error!("{}: {}", addr, e);
                 }
 
-                // disconnect the writing part of the socket
+                // log eof
                 info!("{}: Disconnect", addr);
-                match connection.shutdown().await {
-                    Ok(_) => (),
-                    Err(e) => error!("{}: {}", addr, e),
-                }
-                drop(connection);
 
                 // dropping the connections_alive_sender tells the connections_alive_receiver,
                 // that the connection is closed. THe application will only exit, once all

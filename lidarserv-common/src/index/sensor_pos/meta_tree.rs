@@ -359,6 +359,10 @@ impl MetaTreeNodeId {
     pub fn lod(&self) -> &LodLevel {
         &self.lod
     }
+
+    pub fn tree_node(&self) -> &LeveledGridCell {
+        &self.node
+    }
 }
 
 #[cfg(test)]

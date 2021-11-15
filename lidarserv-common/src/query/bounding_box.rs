@@ -29,7 +29,11 @@ where
         }
     }
 
-    fn max_lod_area(&self, _bounds: &AABB<Comp>) -> Option<LodLevel> {
-        todo!()
+    fn max_lod_area(&self, bounds: &AABB<Comp>) -> Option<LodLevel> {
+        if AABB::intersects(bounds, &self.bounds) {
+            Some(self.lod)
+        } else {
+            None
+        }
     }
 }

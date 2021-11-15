@@ -24,6 +24,15 @@ pub enum Message {
 
     /// Sent from client to server in CaptureDevice mode, to insert a batch of new points.
     InsertPoints { data: LasPointData },
+
+    /// Sent from the client to server in Viewer mode, to set or update the query.
+    Query(Query),
+
+    /// Sent from the server to the client with some update to the current query result.
+    IncrementalResult {
+        replaces: Option<NodeId>,
+        nodes: Vec<(NodeId, Vec<LasPointData>)>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -38,6 +47,21 @@ pub enum CoordinateSystem {
         scale: Vector3<f64>,
         offset: Vector3<f64>,
     },
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum Query {
+    AabbQuery {
+        min_bounds: Vector3<f64>,
+        max_bounds: Vector3<f64>,
+        lod_level: u16,
+    },
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct NodeId {
+    pub lod_level: u16,
+    pub id: [u8; 14],
 }
 
 /// Just a wrapper around Vec<u8>, with a custom Debug impl, so that not the full binary file is

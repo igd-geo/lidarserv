@@ -16,7 +16,7 @@ where
     fn writer(&self) -> Self::Writer;
     fn reader<Q>(&self, query: Q) -> Self::Reader
     where
-        Q: Query<Point::Position> + 'static;
+        Q: Query<Point::Position> + 'static + Send + Sync;
 }
 
 pub trait Writer<Point>
@@ -32,13 +32,24 @@ where
     Point: PointType,
 {
     type NodeId;
-    type Node;
+    type Node: Node;
+
+    fn set_query<Q: Query<Point::Position> + 'static + Send + Sync>(&mut self, query: Q);
 
     fn update(&mut self);
+
+    fn blocking_update(
+        &mut self,
+        queries: &mut crossbeam_channel::Receiver<Box<dyn Query<Point::Position> + Send + Sync>>,
+    ) -> bool;
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node)>;
 
     fn remove_one(&mut self) -> Option<Self::NodeId>;
 
     fn update_one(&mut self) -> Option<(Self::NodeId, Vec<(Self::NodeId, Self::Node)>)>;
+}
+
+pub trait Node {
+    fn las_files(&self) -> Vec<&[u8]>;
 }

@@ -1,0 +1,15 @@
+[package]
+name = "lidarserv-viewer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+structopt = { version = "0.3.23", features = ["paw", "wrap_help", "color", "suggestions"]}
+paw = "1.0.0"
+anyhow = "1.0.44"
+lidarserv-server = { path = "../lidarserv-server" }
+tokio = { version = "1.12.0", features = ["full"] }
+log = "0.4.14"
+simple_logger = "1.13.0"

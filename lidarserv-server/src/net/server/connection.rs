@@ -1,17 +1,27 @@
+use crate::common::geometry::position::CoordinateSystemError;
 use crate::common::las::Las;
 use crate::index::DynIndex;
 use crate::net::protocol::connection::Connection;
-use crate::net::protocol::messages::{CoordinateSystem, DeviceType, Message};
+use crate::net::protocol::messages::Message::IncrementalResult;
+use crate::net::protocol::messages::{CoordinateSystem, DeviceType, LasPointData, Message, Query};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
+use lidarserv_common::geometry::bounding_box::{BaseAABB, OptionAABB};
+use lidarserv_common::geometry::grid::LodLevel;
+use lidarserv_common::geometry::position::{I32Position, Position};
 use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
+use lidarserv_common::nalgebra::Point3;
+use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use log::info;
+use std::fmt::format;
 use std::io::Cursor;
 use std::sync::Arc;
+use std::thread;
 use tokio::net::TcpStream;
+use tokio::select;
 use tokio::sync::broadcast::Receiver;
 
 pub async fn handle_connection(
-    con: &mut TcpStream,
+    con: TcpStream,
     index: Arc<dyn DynIndex>,
     mut shutdown: Receiver<()>,
 ) -> Result<(), LidarServerError> {
@@ -54,7 +64,7 @@ pub async fn handle_connection(
     if let Message::ConnectionMode { device } = msg {
         match device {
             DeviceType::Viewer => {
-                todo!()
+                viewer_mode(con, index, shutdown).await?;
             }
             DeviceType::CaptureDevice => {
                 capture_device_mode(con, index, shutdown).await?;
@@ -70,7 +80,7 @@ pub async fn handle_connection(
 }
 
 async fn capture_device_mode(
-    mut con: Connection<&'_ mut TcpStream>,
+    mut con: Connection<TcpStream>,
     index: Arc<dyn DynIndex>,
     mut shutdown: Receiver<()>,
 ) -> Result<(), LidarServerError> {
@@ -118,5 +128,117 @@ async fn capture_device_mode(
             return Err(LidarServerError::Protocol(message));
         }
     }
+    Ok(())
+}
+
+async fn viewer_mode(
+    mut con: Connection<TcpStream>,
+    index: Arc<dyn DynIndex>,
+    mut shutdown: Receiver<()>,
+) -> Result<(), LidarServerError> {
+    let (mut con_read, mut con_write) = con.into_split();
+    let coordinate_system = index.index_info().clone();
+    let (queries_sender, queries_receiver) = crossbeam_channel::unbounded();
+    let (updates_sender, mut updates_receiver) = tokio::sync::mpsc::channel(1);
+
+    let send_task = tokio::spawn(async move {
+        while let Some(message) = updates_receiver.recv().await {
+            match con_write.write_message(&message).await {
+                Ok(_) => {}
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(())
+    });
+
+    // query
+    let query_thread = thread::spawn(move || -> Result<(), LidarServerError> {
+        let mut reader = index.reader();
+        let mut queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
+        while reader.blocking_update(&mut queries_receiver) {
+            if let Some((node_id, data)) = reader.load_one() {
+                updates_sender
+                    .blocking_send(IncrementalResult {
+                        replaces: None,
+                        nodes: vec![(node_id, data.into_iter().map(LasPointData).collect())],
+                    })
+                    .unwrap();
+            }
+            if let Some(node_id) = reader.remove_one() {
+                updates_sender
+                    .blocking_send(IncrementalResult {
+                        replaces: Some(node_id),
+                        nodes: vec![],
+                    })
+                    .unwrap();
+            }
+            if let Some((node_id, replacements)) = reader.update_one() {
+                updates_sender
+                    .blocking_send(IncrementalResult {
+                        replaces: Some(node_id),
+                        nodes: replacements
+                            .into_iter()
+                            .map(|(replacement_node_id, replacement_node_data)| {
+                                (
+                                    replacement_node_id,
+                                    replacement_node_data
+                                        .into_iter()
+                                        .map(LasPointData)
+                                        .collect(),
+                                )
+                            })
+                            .collect(),
+                    })
+                    .unwrap();
+            }
+        }
+        Ok(())
+    });
+
+    // read incoming messages and send to queries to query thread
+    while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
+        let query = match msg {
+            Message::Query(q) => q,
+            _ => {
+                return Err(LidarServerError::Protocol(
+                    "Expected `Query` message or EOF.".into(),
+                ));
+            }
+        };
+        match query {
+            Query::AabbQuery {
+                lod_level,
+                min_bounds,
+                max_bounds,
+            } => {
+                let mut aabb = OptionAABB::empty();
+                for p in [min_bounds, max_bounds] {
+                    let pos = match I32Position::encode(&coordinate_system, &Point3::from(p)) {
+                        Ok(pos) => pos,
+                        Err(e) => {
+                            return Err(LidarServerError::Protocol(format!(
+                                "Received invalid query: {}",
+                                e
+                            )));
+                        }
+                    };
+                    aabb.extend(&pos);
+                }
+                let aabb = aabb.into_aabb().unwrap(); // unwrap: we just added two points, so it cannot be empty
+                let lod = LodLevel::from_level(lod_level);
+                queries_sender
+                    .send(Box::new(BoundingBoxQuery::new(aabb, lod)))
+                    .unwrap();
+            }
+        }
+    }
+
+    // end query thread and wait for it to stop
+    drop(queries_sender);
+    tokio::task::spawn_blocking(move || query_thread.join())
+        .await
+        .unwrap()
+        .unwrap()?;
+    send_task.await.unwrap()?;
     Ok(())
 }

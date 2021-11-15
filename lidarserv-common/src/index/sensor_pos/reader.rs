@@ -1,19 +1,19 @@
 use crate::geometry::grid::GridHierarchy;
 use crate::geometry::points::PointType;
 use crate::geometry::position::{Component, Position};
-use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId, Node};
+use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::BinDataPage;
-use crate::index::sensor_pos::writer::IndexError;
 use crate::index::sensor_pos::{Inner, Update};
-use crate::index::Reader;
+use crate::index::{Node, Reader};
 use crate::lru_cache::pager::CacheLoadError;
 use crate::nalgebra::Scalar;
 use crate::query::{Query, QueryExt};
+use crossbeam_channel::{Receiver, TryRecvError};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos> {
-    query: Box<dyn Query<Pos>>,
+    query: Box<dyn Query<Pos> + Send + Sync>,
     inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
     meta_tree: MetaTree<GridH, Comp>,
     updates: crossbeam_channel::Receiver<Update<Comp>>,
@@ -30,23 +30,73 @@ pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos> {
 impl<GridH, SamplF, Comp, LasL, CSys, Point, Pos> Reader<Point>
     for SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos>
 where
-    Point: PointType,
+    Point: PointType<Position = Pos>,
     Comp: Component,
     GridH: GridHierarchy<Component = Comp, Position = Pos> + Clone,
     Pos: Position<Component = Comp>,
 {
     type NodeId = MetaTreeNodeId;
-    type Node = Vec<Arc<BinDataPage>>;
+    type Node = SensorPosNode;
+
+    fn set_query<Q: Query<Pos> + 'static + Send + Sync>(&mut self, query: Q) {
+        self.update_query(Box::new(query))
+    }
 
     fn update(&mut self) {
         SensorPosReader::update(self);
+    }
+
+    fn blocking_update(
+        &mut self,
+        queries: &mut Receiver<Box<dyn Query<Pos> + Send + Sync>>,
+    ) -> bool {
+        loop {
+            // make sure we have the most recent query
+            let mut query = None;
+            loop {
+                match queries.try_recv() {
+                    Ok(q) => query = Some(q),
+                    Err(TryRecvError::Empty) => break,
+                    Err(TryRecvError::Disconnected) => {
+                        // if the channel is disconnected: return.
+                        // but still process the last query we received
+                        if query.is_some() {
+                            break;
+                        } else {
+                            return false;
+                        }
+                    }
+                }
+            }
+            if let Some(new_query) = query {
+                self.update_query(new_query);
+            }
+
+            // make sure we have the most recent updates from the writer
+            SensorPosReader::update(self);
+
+            // if there are things to do (load_one, remove_one, update_one) return early.
+            if !self.dirty_node_to_replacements.is_empty()
+                || !self.nodes_to_load.is_empty()
+                || !self.nodes_to_unload.is_empty()
+            {
+                return true;
+            }
+
+            // if there is nothing to do:
+            // wait for something to happen (either a new query, or an update to come in).
+            let mut sel = crossbeam_channel::Select::new();
+            sel.recv(&self.updates);
+            sel.recv(queries);
+            sel.ready();
+        }
     }
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node)> {
         self.sort_load_order();
         if let Some(node_id) = self.load_order.pop() {
             self.nodes_to_load.remove(&node_id);
-            let load_result = self.load_node(&node_id).unwrap_or_else(|_| Vec::new());
+            let load_result = self.load_node(&node_id).unwrap_or_default();
             self.loaded.insert(node_id.clone());
             Some((node_id, load_result))
         } else {
@@ -76,12 +126,7 @@ where
             let nodes_to_load = self.query_from(vec![node_id.clone()]);
             let loaded: Vec<_> = nodes_to_load
                 .iter()
-                .map(|node_id| {
-                    (
-                        node_id.clone(),
-                        self.load_node(node_id).unwrap_or_else(|_| Vec::new()),
-                    )
-                })
+                .map(|node_id| (node_id.clone(), self.load_node(node_id).unwrap_or_default()))
                 .collect();
 
             // update data structure
@@ -108,7 +153,7 @@ where
 {
     pub(super) fn new<Q>(query: Q, inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>) -> Self
     where
-        Q: Query<Pos> + 'static,
+        Q: Query<Pos> + 'static + Send + Sync,
     {
         // subscribe to meta tree updates
         let (updates_sender, updates_receiver) = crossbeam_channel::unbounded();
@@ -172,12 +217,9 @@ where
         self.query_from(root_nodes)
     }
 
-    fn update_query<Q>(&mut self, new_query: Q)
-    where
-        Q: Query<Pos> + 'static,
-    {
+    fn update_query(&mut self, new_query: Box<dyn Query<Pos> + Send + Sync>) {
         // execute query to get list of target nodes to load
-        self.query = Box::new(new_query);
+        self.query = new_query;
         let target_nodes = self.initial_query();
 
         // calculate difference between currently loaded nodes and new nodes
@@ -323,7 +365,7 @@ where
         });
     }
 
-    fn load_node(&self, node_id: &MetaTreeNodeId) -> Result<Vec<Arc<BinDataPage>>, CacheLoadError> {
+    fn load_node(&self, node_id: &MetaTreeNodeId) -> Result<SensorPosNode, CacheLoadError> {
         let mut loaded = Vec::with_capacity(self.inner.nr_threads);
         let mut files_to_load: Vec<_> = (0..self.inner.nr_threads)
             .map(|thread_id| node_id.file(thread_id))
@@ -337,6 +379,15 @@ where
                 }
             }
         }
-        Ok(loaded)
+        Ok(SensorPosNode(loaded))
+    }
+}
+
+#[derive(Default)]
+pub struct SensorPosNode(Vec<Arc<BinDataPage>>);
+
+impl Node for SensorPosNode {
+    fn las_files(&self) -> Vec<&[u8]> {
+        self.0.iter().map(|n| n.data.as_slice()).collect()
     }
 }

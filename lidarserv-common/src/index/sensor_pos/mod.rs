@@ -151,7 +151,7 @@ where
 
     fn reader<Q>(&self, query: Q) -> Self::Reader
     where
-        Q: Query<Pos> + 'static,
+        Q: Query<Pos> + 'static + Send + Sync,
     {
         SensorPosReader::new(query, Arc::clone(&self.inner))
     }

@@ -1,4 +1,5 @@
 pub mod bounding_box;
+pub mod empty;
 
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::LodLevel;

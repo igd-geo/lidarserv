@@ -341,6 +341,7 @@ where
                 );
                 worker_buffers = node.drain_bogus_points();
             }
+            node.mark_dirty();
 
             // check, if we need to split the node
             drop(s2);

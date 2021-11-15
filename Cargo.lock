@@ -193,7 +193,7 @@ name = "experiments"
 version = "0.1.0"
 dependencies = [
  "las",
- "laz 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "laz",
  "lidarserv-common",
 ]
 
@@ -306,19 +306,11 @@ checksum = "80dd11fe6e333400f08bd3a17c20146bfe4f719bb92545b388be9d21e69644b1"
 dependencies = [
  "byteorder",
  "chrono",
- "laz 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "laz",
  "log",
  "num",
  "thiserror",
  "uuid",
-]
-
-[[package]]
-name = "laz"
-version = "0.6.0"
-dependencies = [
- "byteorder",
- "num-traits",
 ]
 
 [[package]]
@@ -357,7 +349,7 @@ dependencies = [
  "crossbeam-channel",
  "crossbeam-utils",
  "las",
- "laz 0.6.0",
+ "laz",
  "log",
  "nalgebra",
  "num-traits",
@@ -373,6 +365,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "ciborium",
+ "crossbeam-channel",
  "human-panic",
  "lidarserv-common",
  "log",
@@ -382,6 +375,19 @@ dependencies = [
  "simple_logger",
  "structopt",
  "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "lidarserv-viewer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lidarserv-server",
+ "log",
+ "paw",
+ "simple_logger",
+ "structopt",
  "tokio",
 ]
 
