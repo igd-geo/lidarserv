@@ -35,6 +35,7 @@ where
         PointAttributeDataType::Vec3f64 => {
             &[VertexDataType::Vec3F32Transform, VertexDataType::Vec3F32]
         }
+        PointAttributeDataType::Vec4u8 => &[],
     };
 
     let vertex_data_type = vertex_data_type_candidates

@@ -58,7 +58,7 @@ pub enum Query {
     },
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct NodeId {
     pub lod_level: u16,
     pub id: [u8; 14],

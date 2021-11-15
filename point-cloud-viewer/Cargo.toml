@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pasture-core = "0.1.0"
+pasture-core = "0.2.0"
 log = "0.4.14"
 ouroboros = "0.9.3"
 derivative = "2.2.0"
