@@ -16,12 +16,12 @@ impl<Comp: Component> BoundingBoxQuery<Comp> {
     }
 }
 
-impl<Comp, Pos> Query<Pos> for BoundingBoxQuery<Comp>
+impl<Comp, Pos, CSys> Query<Pos, CSys> for BoundingBoxQuery<Comp>
 where
     Comp: Component,
     Pos: Position<Component = Comp>,
 {
-    fn max_lod_position(&self, position: &Pos) -> Option<LodLevel> {
+    fn max_lod_position(&self, position: &Pos, _coordinate_system: &CSys) -> Option<LodLevel> {
         if self.bounds.contains(position) {
             Some(self.lod)
         } else {
@@ -29,7 +29,7 @@ where
         }
     }
 
-    fn max_lod_area(&self, bounds: &AABB<Comp>) -> Option<LodLevel> {
+    fn max_lod_area(&self, bounds: &AABB<Comp>, _coordinate_system: &CSys) -> Option<LodLevel> {
         if AABB::intersects(bounds, &self.bounds) {
             Some(self.lod)
         } else {

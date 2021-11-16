@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos> {
-    query: Box<dyn Query<Pos> + Send + Sync>,
+    query: Box<dyn Query<Pos, CSys> + Send + Sync>,
     inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
     meta_tree: MetaTree<GridH, Comp>,
     updates: crossbeam_channel::Receiver<Update<Comp>>,
@@ -28,7 +28,7 @@ pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos> {
     nodes_to_unload: HashSet<MetaTreeNodeId>,
 }
 
-impl<GridH, SamplF, Comp, LasL, CSys, Point, Pos> Reader<Point>
+impl<GridH, SamplF, Comp, LasL, CSys, Point, Pos> Reader<Point, CSys>
     for SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos>
 where
     Point: PointType<Position = Pos>,
@@ -39,7 +39,7 @@ where
     type NodeId = MetaTreeNodeId;
     type Node = SensorPosNode;
 
-    fn set_query<Q: Query<Pos> + 'static + Send + Sync>(&mut self, query: Q) {
+    fn set_query<Q: Query<Pos, CSys> + 'static + Send + Sync>(&mut self, query: Q) {
         self.update_query(Box::new(query))
     }
 
@@ -49,7 +49,7 @@ where
 
     fn blocking_update(
         &mut self,
-        queries: &mut Receiver<Box<dyn Query<Pos> + Send + Sync>>,
+        queries: &mut Receiver<Box<dyn Query<Pos, CSys> + Send + Sync>>,
     ) -> bool {
         loop {
             // make sure we have the most recent query
@@ -154,7 +154,7 @@ where
 {
     pub(super) fn new<Q>(query: Q, inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>) -> Self
     where
-        Q: Query<Pos> + 'static + Send + Sync,
+        Q: Query<Pos, CSys> + 'static + Send + Sync,
     {
         // subscribe to meta tree updates
         let (updates_sender, updates_receiver) = crossbeam_channel::unbounded();
@@ -194,10 +194,11 @@ where
             };
 
             // test against query
-            let matches = self
-                .query
-                .as_ref()
-                .matches_node(&node.bounds, node_id.lod());
+            let matches = self.query.as_ref().matches_node(
+                &node.bounds,
+                &self.inner.coordinate_system,
+                node_id.lod(),
+            );
 
             if matches {
                 if node.is_leaf {
@@ -218,7 +219,7 @@ where
         self.query_from(root_nodes)
     }
 
-    fn update_query(&mut self, new_query: Box<dyn Query<Pos> + Send + Sync>) {
+    fn update_query(&mut self, new_query: Box<dyn Query<Pos, CSys> + Send + Sync>) {
         // execute query to get list of target nodes to load
         self.query = new_query;
         let target_nodes = self.initial_query();
@@ -261,10 +262,11 @@ where
                 if is_node_split {
                     self.nodes_to_load.remove(&update.node);
                     for replacement in update.replaced_by {
-                        let matches = self
-                            .query
-                            .as_ref()
-                            .matches_node(&replacement.bounds, replacement.replace_with.lod());
+                        let matches = self.query.as_ref().matches_node(
+                            &replacement.bounds,
+                            &self.inner.coordinate_system,
+                            replacement.replace_with.lod(),
+                        );
                         if matches {
                             self.nodes_to_load.insert(replacement.replace_with);
                         }
@@ -312,10 +314,11 @@ where
                 // if the node is neither loaded, nor scheduled to be loaded
                 // check if it still does not match the query and eventually add it to the load list
                 for replacement in update.replaced_by {
-                    let matches = self
-                        .query
-                        .as_ref()
-                        .matches_node(&replacement.bounds, replacement.replace_with.lod());
+                    let matches = self.query.as_ref().matches_node(
+                        &replacement.bounds,
+                        &self.inner.coordinate_system,
+                        replacement.replace_with.lod(),
+                    );
                     if matches {
                         self.nodes_to_load.insert(replacement.replace_with);
                     }

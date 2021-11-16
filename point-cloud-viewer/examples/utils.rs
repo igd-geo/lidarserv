@@ -58,3 +58,5 @@ pub fn attributes_example_point_cloud(center: Point3<f64>) -> impl PointBuffer {
     }
     buf
 }
+
+fn main() {}

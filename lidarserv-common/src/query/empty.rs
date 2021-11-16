@@ -13,16 +13,16 @@ impl EmptyQuery {
     }
 }
 
-impl<Pos, Comp> Query<Pos> for EmptyQuery
+impl<Pos, Comp, CSys> Query<Pos, CSys> for EmptyQuery
 where
     Pos: Position<Component = Comp>,
     Comp: Component,
 {
-    fn max_lod_position(&self, _position: &Pos) -> Option<LodLevel> {
+    fn max_lod_position(&self, _position: &Pos, _coordinate_system: &CSys) -> Option<LodLevel> {
         None
     }
 
-    fn max_lod_area(&self, _bounds: &AABB<Comp>) -> Option<LodLevel> {
+    fn max_lod_area(&self, _bounds: &AABB<Comp>, _coordinate_system: &CSys) -> Option<LodLevel> {
         None
     }
 }

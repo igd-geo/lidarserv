@@ -99,7 +99,7 @@ where
     }
 }
 
-impl<Point, GridH, LasL, Sampl, Comp, CSys, SamplF, Pos> Index<Point>
+impl<Point, GridH, LasL, Sampl, Comp, CSys, SamplF, Pos> Index<Point, CSys>
     for Octree<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>
 where
     Point: PointType<Position = Pos> + Clone + Send + Sync + 'static,
@@ -121,7 +121,7 @@ where
 
     fn reader<Q>(&self, _query: Q) -> Self::Reader
     where
-        Q: Query<Pos> + 'static,
+        Q: Query<Pos, CSys> + 'static,
     {
         OctreeReader {
             inner: Arc::clone(&self.inner),

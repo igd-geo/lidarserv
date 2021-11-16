@@ -15,8 +15,8 @@ crossbeam-channel = "0.5.1"
 glium = "0.30.2"
 
 [dev-dependencies]
-pasture-io = "0.1.0"
+pasture-io = "0.2.0"
 dotenv = "0.15.0"
 pretty_env_logger = "0.4.0"
-pasture-derive = "0.1.0"
+pasture-derive = "0.2.0"
 las = "0.7.4"

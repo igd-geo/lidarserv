@@ -121,7 +121,7 @@ where
     }
 }
 
-impl<GridH, SamplF, Point, Pos, Comp, LasL, CSys, Sampl, Raw> Index<Point>
+impl<GridH, SamplF, Point, Pos, Comp, LasL, CSys, Sampl, Raw> Index<Point, CSys>
     for SensorPosIndex<GridH, SamplF, Comp, LasL, CSys>
 where
     GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
@@ -151,7 +151,7 @@ where
 
     fn reader<Q>(&self, query: Q) -> Self::Reader
     where
-        Q: Query<Pos> + 'static + Send + Sync,
+        Q: Query<Pos, CSys> + 'static + Send + Sync,
     {
         SensorPosReader::new(query, Arc::clone(&self.inner))
     }

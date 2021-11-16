@@ -11,13 +11,13 @@ pub struct OctreeReader<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> {
     pub(super) inner: Arc<Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>>,
 }
 
-impl<Point: PointType, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> Reader<Point>
+impl<Point: PointType, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> Reader<Point, CSys>
     for OctreeReader<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>
 {
     type NodeId = ();
     type Node = ();
 
-    fn set_query<Q: Query<Point::Position> + 'static + Send + Sync>(&mut self, _query: Q) {
+    fn set_query<Q: Query<Point::Position, CSys> + 'static + Send + Sync>(&mut self, _query: Q) {
         todo!()
     }
 
@@ -27,7 +27,7 @@ impl<Point: PointType, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> Reader<Po
 
     fn blocking_update(
         &mut self,
-        _queries: &mut Receiver<Box<dyn Query<Point::Position> + Send + Sync>>,
+        _queries: &mut Receiver<Box<dyn Query<Point::Position, CSys> + Send + Sync>>,
     ) -> bool {
         todo!()
     }

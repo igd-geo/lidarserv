@@ -51,7 +51,9 @@ pub type Node = (NodeId, NodeData);
 pub trait DynReader: Send + Sync {
     fn blocking_update(
         &mut self,
-        queries: &mut crossbeam_channel::Receiver<Box<dyn Query<I32Position> + Send + Sync>>,
+        queries: &mut crossbeam_channel::Receiver<
+            Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
+        >,
     ) -> bool;
 
     fn load_one(&mut self) -> Option<Node>;
@@ -113,13 +115,13 @@ impl DynReader
 {
     fn blocking_update(
         &mut self,
-        queries: &mut Receiver<Box<dyn Query<I32Position> + Send + Sync>>,
+        queries: &mut Receiver<Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>>,
     ) -> bool {
-        Reader::<LasPoint>::blocking_update(self, queries)
+        Reader::<LasPoint, _>::blocking_update(self, queries)
     }
 
     fn load_one(&mut self) -> Option<Node> {
-        Reader::<LasPoint>::load_one(self).map(|(node_id, node)| {
+        Reader::<LasPoint, _>::load_one(self).map(|(node_id, node)| {
             let node_id = meta_tree_node_id_to_proto_node_id(&node_id);
             let node_data = sensor_pos_node_to_protocol_node_data(&node);
             (node_id, node_data)
@@ -127,13 +129,13 @@ impl DynReader
     }
 
     fn remove_one(&mut self) -> Option<NodeId> {
-        Reader::<LasPoint>::remove_one(self)
+        Reader::<LasPoint, _>::remove_one(self)
             .as_ref()
             .map(meta_tree_node_id_to_proto_node_id)
     }
 
     fn update_one(&mut self) -> Option<(NodeId, Vec<Node>)> {
-        Reader::<LasPoint>::update_one(self).map(|(node_id, replacements)| {
+        Reader::<LasPoint, _>::update_one(self).map(|(node_id, replacements)| {
             let node_id = meta_tree_node_id_to_proto_node_id(&node_id);
             let replacements = replacements
                 .into_iter()
@@ -224,7 +226,7 @@ impl DynWriter
 impl DynReader for () {
     fn blocking_update(
         &mut self,
-        _queries: &mut Receiver<Box<dyn Query<I32Position> + Send + Sync>>,
+        _queries: &mut Receiver<Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>>,
     ) -> bool {
         todo!()
     }
