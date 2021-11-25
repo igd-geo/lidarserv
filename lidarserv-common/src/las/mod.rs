@@ -67,7 +67,7 @@ const BOGUS_POINTS_VLR_RECORD_ID: u16 = 1337;
 pub struct Las<Points, Component: Scalar, CSys> {
     pub points: Points,
     pub bounds: OptionAABB<Component>,
-    pub bogus_points: Option<u32>,
+    pub non_bogus_points: Option<u32>,
     pub coordinate_system: CSys,
 }
 
@@ -142,7 +142,7 @@ where
         let Las {
             points,
             bounds,
-            bogus_points,
+            non_bogus_points,
             coordinate_system,
         } = las;
 
@@ -200,12 +200,12 @@ where
         };
 
         // bogus points vlr
-        let bogus_points_vlr = if let Some(bogus_points) = bogus_points {
+        let bogus_points_vlr = if let Some(non_bogus_points) = non_bogus_points {
             let vlr = Vlr {
                 user_id: BOGUS_POINTS_VLR_USER_ID.to_string(),
                 record_id: BOGUS_POINTS_VLR_RECORD_ID,
-                description: "Number of bogus points.".to_string(),
-                data: Vec::from(bogus_points.to_le_bytes()),
+                description: "Number of non bogus points.".to_string(),
+                data: Vec::from(non_bogus_points.to_le_bytes()),
             };
             header.number_of_variable_length_records += 1;
             header.offset_to_point_data += vlr.len(false) as u32;
@@ -330,7 +330,7 @@ where
         }
 
         // find and parse bogus points vlr
-        let bogus_points = vlrs
+        let non_bogus_points = vlrs
             .iter()
             .find(|it| {
                 read_las_string(&it.user_id)
@@ -412,7 +412,7 @@ where
         Ok(Las {
             points,
             bounds,
-            bogus_points,
+            non_bogus_points,
             coordinate_system,
         })
     }

@@ -6,6 +6,7 @@ use lidarserv_common::geometry::bounding_box::AABB;
 use lidarserv_common::geometry::grid::LodLevel;
 use lidarserv_common::geometry::position::{F64CoordinateSystem, F64Position, Position};
 use lidarserv_common::las::{I32LasReadWrite, Las, LasReadWrite};
+use lidarserv_common::nalgebra::Matrix4;
 use std::fmt::{Debug, Formatter};
 use std::io::Cursor;
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -121,6 +122,23 @@ where
                 min_bounds: min.coords,
                 max_bounds: max.coords,
                 lod_level: lod.level(),
+            }))
+            .await
+    }
+
+    pub async fn query_view_frustum(
+        &mut self,
+        view_projection_matrix: Matrix4<f64>,
+        view_projection_matrix_inv: Matrix4<f64>,
+        window_width_pixels: f64,
+        min_distance_pixels: f64,
+    ) -> Result<(), LidarServerError> {
+        self.connection
+            .write_message(&Message::Query(Query::ViewFrustumQuery {
+                view_projection_matrix,
+                view_projection_matrix_inv,
+                window_width_pixels,
+                min_distance_pixels,
             }))
             .await
     }

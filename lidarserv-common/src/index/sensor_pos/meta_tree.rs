@@ -113,6 +113,32 @@ impl<GridH, Comp: Scalar> MetaTree<GridH, Comp> {
             .flatten()
     }
 
+    pub fn root_nodes_for_lod(&self, lod: &LodLevel) -> impl Iterator<Item = MetaTreeNodeId> + '_ {
+        let lod = *lod;
+        self.lods
+            .get(lod.level() as usize)
+            .into_iter()
+            .map(move |lod_nodes| {
+                if lod_nodes.depth.is_empty() {
+                    None
+                } else {
+                    Some(
+                        lod_nodes.depth[0]
+                            .iter()
+                            .map(move |(pos, _)| MetaTreeNodeId {
+                                lod,
+                                node: LeveledGridCell {
+                                    lod: LodLevel::base(),
+                                    pos: *pos,
+                                },
+                            }),
+                    )
+                }
+            })
+            .flatten()
+            .flatten()
+    }
+
     pub fn get(&self, node_id: &MetaTreeNodeId) -> Option<&Node<Comp>> {
         let lod = match self.lods.get(node_id.lod.level() as usize) {
             None => return None,
@@ -123,6 +149,10 @@ impl<GridH, Comp: Scalar> MetaTree<GridH, Comp> {
             Some(v) => v,
         };
         depth.get(&node_id.node.pos)
+    }
+
+    pub fn sensor_grid_hierarchy(&self) -> &GridH {
+        &self.sensor_grid_hierarchy
     }
 }
 
@@ -362,6 +392,13 @@ impl MetaTreeNodeId {
 
     pub fn tree_node(&self) -> &LeveledGridCell {
         &self.node
+    }
+
+    pub fn with_lod(self, lod: LodLevel) -> Self {
+        MetaTreeNodeId {
+            lod,
+            node: self.node,
+        }
     }
 }
 

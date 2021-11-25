@@ -21,7 +21,7 @@ fn main() {
             // The point cloud id can be used, to reference the point cloud later.
             // For example, we can pass it to the `remove_point_cloud` function, to remove it again.
             sleep(Duration::from_secs(3));
-            window.remove_point_cloud(point_cloud_id);
+            window.remove_point_cloud(point_cloud_id).unwrap();
 
             // Should we want to update the points of a point cloud,
             // then we can re-upload a new point buffer to the GPU, by using `update_point_cloud`:
@@ -34,7 +34,7 @@ fn main() {
                     .unwrap();
                 sleep(Duration::from_secs_f64(0.1));
             }
-            window.remove_point_cloud(point_cloud_id);
+            window.remove_point_cloud(point_cloud_id).unwrap();
 
             // Every point cloud has a bunch of settings, such as which color to use when
             // drawing the points.
@@ -55,7 +55,7 @@ fn main() {
                 })
                 .unwrap();
             sleep(Duration::from_secs(3));
-            window.remove_point_cloud(point_cloud_id);
+            window.remove_point_cloud(point_cloud_id).unwrap();
 
             // In general, we can add as many point clouds to a window, as we want.
             // As the name suggests, `set_default_point_cloud_settings` will equally influence
@@ -124,8 +124,8 @@ fn main() {
             {
                 // resetting the settings will make a point cloud fall back to the default
                 // settings, which right now is grey,square points.
-                window.reset_point_cloud_settings(point_cloud_id_1);
-                window.reset_point_cloud_settings(point_cloud_id_2);
+                window.reset_point_cloud_settings(point_cloud_id_1).unwrap();
+                window.reset_point_cloud_settings(point_cloud_id_2).unwrap();
                 sleep(Duration::from_secs(3));
 
                 // at this point, only point cloud 3 has specialized settings,

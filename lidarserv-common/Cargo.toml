@@ -17,6 +17,7 @@ serde = { version = "1.0.126", features = ["derive"] }
 ciborium = "0.1.0"
 log = "0.4.14"
 crossbeam-utils = "0.8.5"
+crossbeam-deque = "0.8.1"
 
 [features]
 trace = ["tracy-client/enable"]

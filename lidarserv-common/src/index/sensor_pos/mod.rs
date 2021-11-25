@@ -19,6 +19,7 @@ use crate::index::sensor_pos::reader::SensorPosReader;
 use crate::index::sensor_pos::writer::SensorPosWriter;
 use crate::index::Index;
 use crate::las::LasReadWrite;
+use crate::lru_cache::pager::IoError;
 use crate::nalgebra::Scalar;
 use crate::query::Query;
 pub use las::Point as LasPoint;
@@ -44,6 +45,7 @@ pub struct SensorPosIndexParams<SamplF, GridH, Comp: Scalar, LasL, CSys> {
     pub coordinate_system: CSys,
     pub max_lod: LodLevel,
     pub max_delay: Duration,
+    pub coarse_lod_steps: usize,
 }
 
 struct Inner<GridH, SamplF, Comp: Scalar, LasL, CSys> {
@@ -57,6 +59,7 @@ struct Inner<GridH, SamplF, Comp: Scalar, LasL, CSys> {
     pub shared: RwLock<Shared<GridH, Comp>>,
     pub max_lod: LodLevel,
     pub max_delay: Duration,
+    pub coarse_lod_steps: usize,
 }
 
 struct Shared<GridH, Comp: Scalar> {
@@ -96,6 +99,7 @@ where
             coordinate_system,
             max_lod,
             max_delay,
+            coarse_lod_steps,
         } = params;
         SensorPosIndex {
             inner: Arc::new(Inner {
@@ -112,6 +116,7 @@ where
                     meta_tree,
                     readers: vec![],
                 }),
+                coarse_lod_steps,
             }),
         }
     }
@@ -119,14 +124,21 @@ where
     pub fn coordinate_system(&self) -> &CSys {
         &self.inner.coordinate_system
     }
+
+    pub fn sampling_factory(&self) -> &SamplF {
+        &self.inner.sampling_factory
+    }
+
+    pub fn flush(&self) -> Result<(), IoError> {
+        self.inner.page_manager.flush()
+    }
 }
 
 impl<GridH, SamplF, Point, Pos, Comp, LasL, CSys, Sampl, Raw> Index<Point, CSys>
     for SensorPosIndex<GridH, SamplF, Comp, LasL, CSys>
 where
     GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
-    SamplF:
-        SamplingFactory<Point = Point, Param = LodLevel, Sampling = Sampl> + Send + Sync + 'static,
+    SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
     Point: PointType<Position = Pos>
         + WithAttr<SensorPositionAttribute<Pos>>
         + Clone
@@ -142,7 +154,7 @@ where
     Raw: RawSamplingEntry<Point = Point> + Send,
 {
     type Writer = SensorPosWriter<Point, CSys>;
-    type Reader = SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos>;
+    type Reader = SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>;
 
     fn writer(&self) -> Self::Writer {
         let index_inner = Arc::clone(&self.inner);
@@ -154,14 +166,5 @@ where
         Q: Query<Pos, CSys> + 'static + Send + Sync,
     {
         SensorPosReader::new(query, Arc::clone(&self.inner))
-    }
-}
-
-impl<GridH, SamplF, Comp: Scalar, LasL, CSys> Drop for Inner<GridH, SamplF, Comp, LasL, CSys> {
-    fn drop(&mut self) {
-        // flush remaining cache entries to disk
-        self.page_manager
-            .flush()
-            .expect("Error flushing pages to disk in Drop")
     }
 }

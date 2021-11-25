@@ -93,7 +93,7 @@ where
                     Las {
                         points: points.iter(),
                         bounds: node.bounding_box.clone(),
-                        bogus_points: Some(node.bogus_points.len() as u32),
+                        non_bogus_points: Some(node.sampling.len() as u32),
                         coordinate_system: node.coordinate_system.clone(),
                     },
                     write,
@@ -160,7 +160,10 @@ where
         };
         let las_coordinate_system = las_data.coordinate_system;
         let bounding_box = las_data.bounds;
-        let bogus_start_pos = las_data.points.len() - las_data.bogus_points.unwrap_or(0) as usize;
+        let bogus_start_pos = las_data
+            .non_bogus_points
+            .map(|b| b as usize)
+            .unwrap_or(las_data.points.len());
         let bogus_points = las_data.points.split_off(bogus_start_pos);
         let mut sampling = make_sampling();
         let rejected = sampling.insert(las_data.points, |_, _| ());

@@ -249,7 +249,7 @@ where
     Sampl: Sampling<Point = Point> + Clone,
     Comp: Component,
     CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq,
-    SamplF: SamplingFactory<Param = LodLevel, Point = Point, Sampling = Sampl>,
+    SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
     pub fn thread(&self) -> Result<(), IndexingThreadError> {
         loop {
@@ -421,10 +421,7 @@ impl<Point, GridH> OctreeWriter<Point, GridH> {
         Sampl: Sampling<Point = Point> + Clone + Send + Sync + 'static,
         Comp: Component + Send + Sync,
         CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq + Send + Sync + 'static,
-        SamplF: SamplingFactory<Param = LodLevel, Point = Point, Sampling = Sampl>
-            + Send
-            + Sync
-            + 'static,
+        SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
     {
         let condvar = Arc::new(Condvar::new());
         let inboxes = Arc::new(Mutex::new(Inboxes::new(

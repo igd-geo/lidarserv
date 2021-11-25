@@ -6,6 +6,7 @@ use crate::geometry::sampling::{
     IntoExactSizeIterator, RawSamplingEntry, Sampling, SamplingFactory,
 };
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
+use crate::index::sensor_pos::page_manager::{BinDataPage, FileId};
 use crate::index::sensor_pos::partitioned_node::{
     PartitionedNode, PartitionedNodeSplitter, PartitionedPoints,
 };
@@ -85,10 +86,7 @@ where
     ) -> Self
     where
         GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
-        SamplF: SamplingFactory<Point = Point, Param = LodLevel, Sampling = Sampl>
-            + Sync
-            + Send
-            + 'static,
+        SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Sync + Send + 'static,
         Sampl: Sampling<Point = Point, Raw = Raw> + Send,
         for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
         Raw: RawSamplingEntry<Point = Point> + Send,
@@ -147,8 +145,7 @@ fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys, Raw>(
 ) -> Result<(), IndexError>
 where
     Comp: Component + Send + Sync + Serialize + DeserializeOwned,
-    SamplF:
-        SamplingFactory<Sampling = Sampl, Param = LodLevel, Point = Point> + Send + Sync + 'static,
+    SamplF: SamplingFactory<Sampling = Sampl, Point = Point> + Send + Sync + 'static,
     Sampl: Sampling<Point = Point, Raw = Raw> + Send,
     for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
     Raw: RawSamplingEntry<Point = Point>,
@@ -164,10 +161,18 @@ where
     LasL: LasReadWrite<Point, CSys> + Send + Sync + 'static,
     CSys: Clone + PartialEq + Send + Sync + 'static,
 {
+    tracy_client::set_thread_name("Coordinator thread");
+
     // start thread that publishes changes to reders
     let (changes_sender, changes_receiver) = crossbeam_channel::unbounded();
     let inner_clone = Arc::clone(&inner);
     let notify_thread = spawn(move || notify_readers_thread(changes_receiver, inner_clone));
+
+    // start the thread that writes nodes to disk
+    let (cache_cleanup_sender, cache_cleanup_receiver) = crossbeam_channel::bounded(5);
+    let inner_clone = Arc::clone(&inner);
+    let disk_write_thread =
+        spawn(move || cache_cleanup_thread(cache_cleanup_receiver, inner_clone));
 
     let mut new_points = VecDeque::new();
     let mut loaded_nodes = Vec::<PartitionedNode<Sampl, Point, Comp>>::new();
@@ -254,20 +259,14 @@ where
         }
         let mut worker_buffers = PartitionedPoints::from_partitions(worker_buffers);
 
-        // insert points into each lod, top-to-bottom
-        // until no points are left in all worker buffers.
+        // load nodes
         let mut lod = LodLevel::base();
-        drop(s1);
-        while !worker_buffers.is_empty() {
-            let s1 = span!("coordinator_thread: insert lod");
+        while lod <= inner.max_lod {
+            // load from disk, if needed
+            let s1 = span!("coordinator_thread: load lod");
             s1.emit_value(lod.level() as u64);
-
-            // get sampling for this node
             let node_id = nodes.node_for_lod(&lod);
             let lod_level = lod.level() as usize;
-
-            // load from disk, if needed
-            let s2 = span!("coordinator_thread:: load to/from disk");
             if lod_level >= loaded_nodes.len() || *loaded_nodes[lod_level].node_id() != node_id {
                 let s3 = span!("coordinator_thread::: parallel_load");
                 let node = PartitionedNode::parallel_load(
@@ -311,18 +310,40 @@ where
 
                 // make sure we do not overfill the cache while loading nodes
                 let s3 = span!("coordinator_thread::: cache cleanup");
-                threads
-                    .execute(|_| inner.page_manager.cleanup())
-                    .join()
-                    .into_iter()
-                    .collect::<Result<Vec<_>, _>>()?;
+                cache_cleanup_sender.send(()).unwrap();
                 drop(s3);
             }
+
+            // next lod
+            lod = lod.finer();
+        }
+
+        // insert points into each lod, top-to-bottom
+        // until no points are left in all worker buffers.
+        drop(s1);
+        let s1 = span!("coordinator_thread: insert points");
+        PartitionedNode::parallel_insert_multi_lod(
+            &mut loaded_nodes,
+            worker_buffers,
+            &inner.sampling_factory,
+            |p, q| {
+                *q.attribute_mut::<SensorPositionAttribute<Pos>>() =
+                    p.attribute::<SensorPositionAttribute<Pos>>().clone()
+            },
+            &mut threads,
+        );
+        drop(s1);
+
+        /*
+        let mut lod = LodLevel::base();
+        drop(s1);
+        while !worker_buffers.is_empty() {
+            let s1 = span!("coordinator_thread: insert lod");
+            s1.emit_value(lod.level() as u64);
+            let lod_level = lod.level() as usize;
             let node = &mut loaded_nodes[lod_level];
 
             // add new points
-            drop(s2);
-            let s2 = span!("coordinator_thread:: add new points");
             if lod == inner.max_lod {
                 // At the max lod level, we keep all points.
                 // So no sampling needs to be performed.
@@ -343,8 +364,16 @@ where
             }
             node.mark_dirty();
 
-            // check, if we need to split the node
-            drop(s2);
+            // next lod level in next loop iteration
+            lod = lod.finer();
+            drop(s1);
+        }*/
+
+        // split nodes, that got too big
+        let mut lod = LodLevel::base();
+        while lod <= inner.max_lod {
+            let lod_level = lod.level() as usize;
+            let node = &mut loaded_nodes[lod_level];
             if node.nr_points() > inner.max_node_size {
                 let s2 = span!("coordinator_thread:: split");
 
@@ -402,12 +431,16 @@ where
                     &mut threads,
                 )?;
 
+                // write to disk
+                let s3 = span!("coordinator_thread::: cache cleanup");
+                cache_cleanup_sender.send(()).unwrap();
+                drop(s3);
+
                 drop(s2);
             }
 
-            // next lod level in next loop iteration
-            lod = lod.finer();
-            drop(s1);
+            // next lod
+            lod = lod.finer()
         }
 
         // Publish the changes to the connected viewers.
@@ -454,6 +487,7 @@ where
             &changes_sender,
         )?;
     }
+    cache_cleanup_sender.send(()).unwrap();
 
     // dump metatree to disk
     drop(s1);
@@ -466,6 +500,10 @@ where
     // stop notify thread
     drop(changes_sender);
     notify_thread.join().unwrap();
+
+    // stop disk writer thread
+    drop(cache_cleanup_sender);
+    disk_write_thread.join().unwrap();
 
     Ok(())
 }
@@ -564,6 +602,34 @@ fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys>(
                 }
                 Err(_) => {
                     shared.readers.swap_remove(pos);
+                }
+            }
+        }
+    }
+}
+
+fn cache_cleanup_thread<GridH, SamplF, Comp, LasL, CSys>(
+    trigger_receiver: crossbeam_channel::Receiver<()>,
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+) where
+    Comp: Component,
+{
+    tracy_client::set_thread_name("Cache cleanup thread");
+    while let Ok(()) = trigger_receiver.recv() {
+        for _ in trigger_receiver.try_iter() {}
+        match inner.page_manager.cleanup() {
+            Ok(_) => {}
+            Err(e) => {
+                let nr_errors = e
+                    .value
+                    .error_counter
+                    .fetch_add(1, std::sync::atomic::Ordering::AcqRel)
+                    + 1;
+                if nr_errors < 5 {
+                    log::error!("Error while writing node {:?} to disk. This is attempt number {}, I will try again later. The error was: {}", e.key, nr_errors, e.source);
+                    inner.page_manager.store_arc(&e.key, e.value);
+                } else {
+                    log::error!("Error while writing node {:?} to disk. This was the final attempt, I am giving up. The error was: {}", e.key, e.source);
                 }
             }
         }

@@ -3,6 +3,8 @@ use crate::geometry::position::{F64Position, I32Position, Position};
 use crate::nalgebra::Point3;
 use nalgebra::Scalar;
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
+use std::mem;
 
 /// Represents a level of detail.
 /// LOD 0 is the "base lod", the coarsest possible level.
@@ -54,7 +56,7 @@ impl LodLevel {
 }
 
 /// A collection of grids, that get finer with each LOD.
-pub trait GridHierarchy {
+pub trait GridHierarchy: Debug {
     type Component: Scalar;
     type Position: Position<Component = Self::Component>;
     type Grid: Grid<Component = Self::Component, Position = Self::Position>;
@@ -359,6 +361,32 @@ impl LeveledGridCell {
             },
         })
     }
+
+    pub fn overlaps_with(&self, mut other: &LeveledGridCell) -> bool {
+        let mut cell_1 = self;
+        let mut cell_2 = other;
+        if cell_1.lod > cell_2.lod {
+            mem::swap(&mut cell_1, &mut cell_2);
+        }
+        let lod_difference = cell_2.lod.level() - cell_1.lod.level();
+        let multiplier = 1 << (lod_difference);
+        let min = GridCell {
+            x: cell_1.pos.x * multiplier,
+            y: cell_1.pos.y * multiplier,
+            z: cell_1.pos.z * multiplier,
+        };
+        let max = GridCell {
+            x: (cell_1.pos.x + 1) * multiplier,
+            y: (cell_1.pos.y + 1) * multiplier,
+            z: (cell_1.pos.z + 1) * multiplier,
+        };
+        return min.x <= cell_2.pos.x
+            && cell_2.pos.x < max.x
+            && min.y <= cell_2.pos.y
+            && cell_2.pos.y < max.y
+            && min.z <= cell_2.pos.z
+            && cell_2.pos.z < max.z;
+    }
 }
 
 #[cfg(test)]
@@ -618,5 +646,233 @@ mod tests {
                 }
             }
         );
+    }
+
+    #[test]
+    fn leveled_grid_cell_overlap() {
+        let base_cell = LeveledGridCell {
+            lod: LodLevel::from_level(3),
+            pos: GridCell { x: 0, y: 0, z: 0 },
+        };
+
+        // overlaps with self
+        assert!(base_cell.overlaps_with(&base_cell));
+
+        // not with neighbor
+        assert!(!base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(3),
+            pos: GridCell { x: 1, y: 0, z: 0 }
+        }));
+
+        // overlaps with parent(s)
+        assert!(base_cell.overlaps_with(&base_cell.parent().unwrap()));
+        assert!(base_cell.overlaps_with(&base_cell.parent().unwrap().parent().unwrap()));
+        assert!(base_cell.overlaps_with(
+            &base_cell
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+        ));
+
+        // overlaps with children
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 0, y: 0, z: 0 }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 0, y: 0, z: 1 }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 0, y: 1, z: 0 }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 0, y: 1, z: 1 }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 1, y: 0, z: 0 }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 1, y: 0, z: 1 }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 1, y: 1, z: 0 }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 1, y: 1, z: 1 }
+        }));
+
+        // not with non-children
+        assert!(!base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell { x: 1, y: 2, z: 0 }
+        }));
+
+        // overlaps with recursive children
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(5),
+            pos: GridCell { x: 0, y: 1, z: 2 }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(5),
+            pos: GridCell { x: 3, y: 2, z: 1 }
+        }));
+
+        // not a recursive child any more
+        assert!(!base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(5),
+            pos: GridCell { x: 4, y: 0, z: 3 }
+        }));
+    }
+
+    #[test]
+    fn leveled_grid_cell_overlap_neg() {
+        let base_cell = LeveledGridCell {
+            lod: LodLevel::from_level(3),
+            pos: GridCell {
+                x: -3,
+                y: -6,
+                z: -9,
+            },
+        };
+
+        // overlaps with self
+        assert!(base_cell.overlaps_with(&base_cell));
+
+        // not with neighbor
+        assert!(!base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(3),
+            pos: GridCell {
+                x: -2,
+                y: -6,
+                z: -9
+            }
+        }));
+
+        // overlaps with parent(s)
+        assert!(base_cell.overlaps_with(&base_cell.parent().unwrap()));
+        assert!(base_cell.overlaps_with(&base_cell.parent().unwrap().parent().unwrap()));
+        assert!(base_cell.overlaps_with(
+            &base_cell
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+        ));
+
+        // overlaps with children
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -6,
+                y: -12,
+                z: -18
+            }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -6,
+                y: -12,
+                z: -17
+            }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -6,
+                y: -11,
+                z: -18
+            }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -6,
+                y: -11,
+                z: -17
+            }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -5,
+                y: -12,
+                z: -18
+            }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -5,
+                y: -12,
+                z: -17
+            }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -5,
+                y: -11,
+                z: -18
+            }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -5,
+                y: -11,
+                z: -17
+            }
+        }));
+
+        // not with non-children
+        assert!(!base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(4),
+            pos: GridCell {
+                x: -4,
+                y: -11,
+                z: -18
+            }
+        }));
+
+        // overlaps with recursive children
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(5),
+            pos: GridCell {
+                x: -12,
+                y: -24,
+                z: -36
+            }
+        }));
+        assert!(base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(5),
+            pos: GridCell {
+                x: -9,
+                y: -21,
+                z: -33
+            }
+        }));
+
+        // not a recursive child any more
+        assert!(!base_cell.overlaps_with(&LeveledGridCell {
+            lod: LodLevel::from_level(5),
+            pos: GridCell {
+                x: -8,
+                y: -21,
+                z: -33
+            }
+        }));
     }
 }

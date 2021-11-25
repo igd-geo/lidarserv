@@ -12,14 +12,18 @@ use crate::index::sensor_pos::writer::IndexError;
 use crate::las::{Las, LasReadWrite, ReadLasError, WriteLasError};
 use crate::span;
 use crate::utils::thread_pool::Threads;
-use crossbeam_utils::CachePadded;
+use crossbeam_deque::Steal;
+use crossbeam_utils::sync::WaitGroup;
+use crossbeam_utils::{Backoff, CachePadded};
 use nalgebra::Scalar;
 use std::cell::UnsafeCell;
+use std::cmp::min;
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::io::Cursor;
 use std::iter::ExactSizeIterator;
 use std::mem;
+use std::sync::atomic::{AtomicU16, AtomicU8, AtomicUsize, Ordering};
 use std::sync::Barrier;
 use std::time::Instant;
 
@@ -105,7 +109,7 @@ where
         dirty: bool,
     ) -> Self
     where
-        SamplF: SamplingFactory<Sampling = Sampl, Param = LodLevel>,
+        SamplF: SamplingFactory<Sampling = Sampl>,
     {
         assert!(num_partitions.is_power_of_two());
         assert!(num_partitions > 0);
@@ -162,15 +166,6 @@ where
         self.nr_sampled_points() + self.nr_bogus_points()
     }
 
-    pub fn drain_bogus_points(&mut self) -> PartitionedPoints<Point> {
-        let partitions = self
-            .partitions
-            .iter_mut()
-            .map(|partition| mem::take(&mut partition.get_mut().bogus))
-            .collect();
-        PartitionedPoints::from_partitions(partitions)
-    }
-
     pub fn mark_dirty(&mut self) {
         if self.dirty_since.is_none() {
             self.dirty_since = Some(Instant::now())
@@ -195,20 +190,6 @@ where
     Comp: Component + Send + Sync,
     Raw: RawSamplingEntry<Point = Point> + Send,
 {
-    pub fn clone_points(&self) -> Vec<Point>
-    where
-        Point: Clone,
-    {
-        self.partitions
-            .iter()
-            .flat_map(|p| {
-                let mut points = p.get().bogus.clone();
-                points.append(&mut p.get().sampling.clone_points());
-                points.into_iter()
-            })
-            .collect()
-    }
-
     pub fn parallel_load<LasL, CSys, SamplF>(
         num_partitions: usize,
         node_id: MetaTreeNodeId,
@@ -219,7 +200,7 @@ where
         threads: &mut Threads,
     ) -> Result<Self, IndexError>
     where
-        SamplF: SamplingFactory<Sampling = Sampl, Param = LodLevel>,
+        SamplF: SamplingFactory<Sampling = Sampl>,
         LasL: LasReadWrite<Point, CSys> + Sync,
         CSys: PartialEq + Sync,
     {
@@ -259,7 +240,10 @@ where
 
                 // split points into "actual" points and bogus points
                 let s1 = span!("parallel_load: split of bogus");
-                let bogus_start = las.points.len() - las.bogus_points.unwrap_or(0) as usize;
+                let bogus_start = las
+                    .non_bogus_points
+                    .map(|b| b as usize)
+                    .unwrap_or(las.points.len());
                 let bogus = las.points.split_off(bogus_start);
                 let points = las.points;
                 drop(s1);
@@ -320,15 +304,15 @@ where
 
                 // prepare what to write to the las file
                 let s1 = span!("parallel_store: assemble");
+                let non_bogus_points = Some(partition.sampling.len() as u32);
                 let bogus_points_iter = partition.bogus.iter();
                 let sampled_points_iter = partition.sampling.iter();
                 let points_iter = IterChain::new(sampled_points_iter, bogus_points_iter);
-                let bogus_points = Some(partition.bogus.len() as u32);
                 let bounds = bounds.clone();
                 let coordinate_system = coordinate_system.clone();
                 let las = Las {
                     points: points_iter,
-                    bogus_points,
+                    non_bogus_points,
                     bounds,
                     coordinate_system,
                 };
@@ -339,6 +323,7 @@ where
 
                 // encode las
                 let s1 = span!("parallel_store: encode las");
+                s1.emit_value(las.points.len() as u64);
                 let mut data = Vec::new();
                 if exists {
                     let write = Cursor::new(&mut data);
@@ -354,7 +339,14 @@ where
                 // write file
                 let s1 = span!("parallel_store: store page");
                 let file_id = node_id.file(thread_id);
-                page_manager.store(&file_id, BinDataPage { exists, data });
+                page_manager.store(
+                    &file_id,
+                    BinDataPage {
+                        exists,
+                        data,
+                        error_counter: Default::default(),
+                    },
+                );
                 drop(s1);
 
                 Ok(())
@@ -373,160 +365,265 @@ where
         Ok(())
     }
 
-    pub fn parallel_insert<SamplF, Patch>(
-        &mut self,
-        points_partitions: PartitionedPoints<Point>,
+    pub fn parallel_insert_multi_lod<SamplF, Patch>(
+        selfs: &mut Vec<Self>,
+        mut points_partitions: PartitionedPoints<Point>,
         sampling_factory: &SamplF,
         patch_rejected: Patch,
         threads: &mut Threads,
     ) where
-        SamplF: SamplingFactory<Point = Point, Sampling = Sampl, Param = LodLevel> + Sync,
+        SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Sync,
         Patch: Fn(&Point, &mut Point) + Sync,
     {
-        let s0 = span!("parallel_insert");
-        assert_eq!(threads.num_threads(), self.num_partitions());
-        assert_eq!(points_partitions.num_partitions(), self.num_partitions());
-        let num_partitions = self.num_partitions;
-        let partitions = &self.partitions;
-        let hasher = &self.hasher;
+        let s0 = span!("parallel_insert_multi_lod");
+        for s in &*selfs {
+            assert_eq!(threads.num_threads(), s.num_partitions());
+            assert_eq!(points_partitions.num_partitions(), s.num_partitions());
+        }
+        let num_partitions = selfs.first().unwrap().num_partitions;
+        let num_lods = selfs.len();
 
-        // communication between threads
+        // divide points into batches of 2_000 points
+        let batch_size = 2_000;
+        let mut tasks = Vec::new();
+        for thread_id in 0..num_partitions {
+            let mut points = mem::take(points_partitions.partitions[thread_id].get_mut());
+            while points.len() > batch_size {
+                // split of a batch
+                let batch_start = points.len() - batch_size;
+                let batch = points.split_off(batch_start);
+                tasks.push(batch);
+            }
+            tasks.push(points);
+        }
+
+        // shared messages for inter thread communication
         let mut messages = Vec::new();
-        for _ in 0..num_partitions * num_partitions {
-            messages.push(UnsafeSyncCell::new(CachePadded::new(Vec::new())));
+        for _ in 0..num_partitions * num_partitions * (num_lods - 1) {
+            // index = lod_index * num_partitions * num_partitions + receiver_thread_id * num_partitions + sender_thread_id
+            messages.push(UnsafeSyncCell::new(Vec::new()));
         }
-        let barrier = Barrier::new(num_partitions);
+        let mut wait_groups = Vec::new();
+        for _ in 0..num_partitions * num_partitions * (num_lods - 1) {
+            wait_groups.push(WaitGroup::new());
+        }
+        let messages_sent = AtomicUsize::new(0);
 
-        let aabbs = threads
-            .execute(|thread_id| {
-                // unsafe: every thread works on a different point partition (based on each threads
-                // thread id), so there are no two references to the same partition.
-                let points =
-                    unsafe { mem::take(points_partitions.partitions[thread_id].unsafe_get_mut()) };
+        // queues for scheduling work between the threads
+        let mut local_insert_workers = Vec::new();
+        let mut local_insert_stealers = Vec::new();
+        for _ in 0..num_partitions {
+            let w = crossbeam_deque::Worker::new_fifo();
+            let s = w.stealer();
+            local_insert_workers.push(Some(w));
+            local_insert_stealers.push(s);
+        }
+        let ready = AtomicUsize::new(0);
 
-                // calculate aabb
-                let s1 = span!("parallel_insert: calculate aabb");
-                let mut aabb = OptionAABB::empty();
-                for point in &points {
-                    aabb.extend(point.position());
-                }
-                drop(s1);
+        // distribute tasks on worker queues
+        for (i, task) in tasks.drain(..).enumerate() {
+            let w = local_insert_workers[i % num_partitions].as_mut().unwrap();
+            w.push(task);
+        }
 
-                // sample points locally first
-                let s1 = span!("parallel_insert: sample locally");
-                let mut threadlocal_sample = sampling_factory.build(self.node_id.lod());
-                let mut rejected = threadlocal_sample.insert(points, &patch_rejected);
-                drop(s1);
+        // assemble args for each worker thread
+        let mut args = Vec::new();
+        for thread_id in 0..num_partitions {
+            args.push((
+                local_insert_stealers.clone(),
+                local_insert_workers[thread_id].take().unwrap(),
+                wait_groups.clone(),
+            ));
+        }
+        drop(wait_groups);
 
-                // partition local node
-                let s1 = span!("parallel_insert: partition");
-                let mut partitioned = Vec::new();
-                for _ in 0..num_partitions {
-                    partitioned.push(Vec::with_capacity(threadlocal_sample.len()));
-                }
-                for raw_entry in threadlocal_sample.into_raw() {
-                    let mut hash = hasher.build_hasher();
-                    raw_entry.cell().hash(&mut hash);
-                    let partition_id = (hash.finish() & self.bit_mask) as usize;
-                    partitioned[partition_id].push(raw_entry);
-                }
-                drop(s1);
+        let thread_results = threads
+            .execute_with_args(
+                args,
+                |thread_id, (task_stealers, queue, mut wait_groups)| {
+                    let mut aabbs = Vec::new();
+                    let mut local_sample = sampling_factory.build(&LodLevel::from_level(0));
+                    let mut next_lod_points = Vec::new();
+                    let mut last_aabb = OptionAABB::empty();
+                    let last_lod_partition =
+                        unsafe { selfs.last().unwrap().partitions[thread_id].unsafe_get_mut() };
 
-                // share results with other threads
-                // so that thread 1 receives partition 1 from every thread,
-                // thread 2 receives partition 2 from every thread,
-                // and similarly for all other threads.
-                let s1 = span!("parallel_insert: exchange messages");
-                for (receiver_thread_id, points) in partitioned.into_iter().enumerate() {
-                    let index = receiver_thread_id * num_partitions + thread_id;
+                    for lod_index in 0..num_lods - 1 {
+                        // take tasks from the queue and sample locally
 
-                    // unsafe: every thread accesses different indices
-                    //  (index i is accessed by thread t, if i % num_threads == t )
-                    // so no mut aliasing occurs.
-                    unsafe {
-                        **messages[index].unsafe_get_mut() = points;
+                        'local_insert_points: loop {
+                            // get a batch of points
+                            let points = match queue.pop() {
+                                Some(p) => p,
+                                None => {
+                                    let mut retry = true;
+                                    let mut stolen = None;
+                                    'try_steal_task: while retry {
+                                        retry = false;
+                                        let ready_threads = ready.load(Ordering::Acquire);
+                                        for s in &local_insert_stealers {
+                                            match s.steal_batch_and_pop(&queue) {
+                                                Steal::Empty => {}
+                                                Steal::Success(p) => {
+                                                    stolen = Some(p);
+                                                    break 'try_steal_task;
+                                                }
+                                                Steal::Retry => retry = true,
+                                            }
+                                        }
+                                        if !retry && ready_threads < lod_index * num_partitions {
+                                            retry = true;
+                                            let backoff = Backoff::new();
+                                            while ready.load(Ordering::Acquire) == ready_threads {
+                                                backoff.snooze();
+                                            }
+                                        }
+                                    }
+                                    if let Some(p) = stolen {
+                                        p
+                                    } else {
+                                        break 'local_insert_points;
+                                    }
+                                }
+                            };
+
+                            // insert into the node
+                            let s1 = span!("parallel_insert_multi_lod2: local sample");
+                            let mut rejected = local_sample.insert(points, &patch_rejected);
+                            next_lod_points.append(&mut rejected);
+                            drop(s1);
+                        }
+
+                        // calculate node aabb
+                        let s1 = span!("parallel_insert_multi_lod2: aabb");
+                        aabbs.push(local_sample.bounding_box());
+                        drop(s1);
+
+                        // partition
+                        let s1 = span!("parallel_insert_multi_lod2: partition");
+                        let mut partitions = Vec::new();
+                        for _ in 0..num_partitions {
+                            partitions.push(Vec::with_capacity(local_sample.len()));
+                        }
+                        let hasher = &selfs[lod_index].hasher;
+                        let bit_mask = selfs[lod_index].bit_mask;
+                        for raw_entry in local_sample.into_raw() {
+                            let mut hash = hasher.build_hasher();
+                            raw_entry.cell().hash(&mut hash);
+                            let partition_id = (hash.finish() & bit_mask) as usize;
+                            partitions[partition_id].push(raw_entry);
+                        }
+                        drop(s1);
+
+                        // "send" each partition to its thread
+                        for (receiver_thread_id, partition) in partitions.into_iter().enumerate() {
+                            let message_index = lod_index * num_partitions * num_partitions
+                                + receiver_thread_id * num_partitions
+                                + thread_id;
+                            *unsafe { messages[message_index].unsafe_get_mut() } = partition;
+                        }
+                        messages_sent.fetch_add(1, Ordering::AcqRel);
+
+                        // start processing the next lod tasks, that we already have while still
+                        // waiting for the other threads to send over their points
+                        let next_lod_index = lod_index + 1;
+                        let mut next_local_sample =
+                            sampling_factory.build(&LodLevel::from_level(next_lod_index as u16));
+                        let mut next_next_lod_points = Vec::new();
+                        let backoff = Backoff::new();
+                        while messages_sent.load(Ordering::Acquire)
+                            < num_partitions * next_lod_index
+                        {
+                            if !next_lod_points.is_empty() {
+                                if next_lod_index == num_lods - 1 {
+                                    let s1 =
+                                        span!("parallel_insert_multi_lod2: max_lod while waiting");
+                                    for p in &next_lod_points {
+                                        last_aabb.extend(p.position());
+                                    }
+                                    last_lod_partition.bogus.append(&mut next_lod_points);
+                                    drop(s1);
+                                } else {
+                                    let num_points = min(next_lod_points.len(), batch_size);
+                                    let batch_start = next_lod_points.len() - num_points;
+                                    let batch = next_lod_points.split_off(batch_start);
+                                    let s1 = span!(
+                                        "parallel_insert_multi_lod2: local sample while waiting"
+                                    );
+                                    let mut rejected =
+                                        next_local_sample.insert(batch, &patch_rejected);
+                                    next_next_lod_points.append(&mut rejected);
+                                    drop(s1);
+                                }
+                            } else {
+                                backoff.snooze();
+                            }
+                        }
+
+                        // "receive" from other threads
+                        // (just moves them over to their own vec for our convenience)
+                        let mut received = Vec::new();
+                        for sender_thread_id in 0..num_partitions {
+                            let message_index = lod_index * num_partitions * num_partitions
+                                + thread_id * num_partitions
+                                + sender_thread_id;
+                            let message =
+                                mem::take(unsafe { messages[message_index].unsafe_get_mut() });
+                            received.push(message);
+                        }
+
+                        // merge into node
+                        let s1 = span!("parallel_insert_multi_lod2: merge");
+                        let node_partition =
+                            unsafe { selfs[lod_index].partitions[thread_id].unsafe_get_mut() };
+                        for raw in received {
+                            let mut rejected =
+                                node_partition.sampling.insert_raw(raw, &patch_rejected);
+                            next_lod_points.append(&mut rejected);
+                        }
+                        drop(s1);
+
+                        // create tasks for next lod
+                        while next_lod_points.len() > batch_size {
+                            let batch_start = next_lod_points.len() - batch_size;
+                            let batch = next_lod_points.split_off(batch_start);
+                            queue.push(batch);
+                        }
+                        if next_lod_points.len() > 0 {
+                            queue.push(next_lod_points);
+                        }
+                        ready.fetch_add(1, Ordering::AcqRel);
+
+                        // prepare next iteration
+                        local_sample = next_local_sample;
+                        next_lod_points = next_next_lod_points;
                     }
-                }
-                let s2 = span!("parallel_insert: barrier.wait()");
-                barrier.wait();
-                drop(s2);
-                let mut raw_points = Vec::new();
-                for sender_thread_id in 0..num_partitions {
-                    let index = thread_id * num_partitions + sender_thread_id;
-                    // unsafe: every thread accesses different indices
-                    //  (thread t accesses the slice of indices t * num_threads <= i < t * num_threads + num_threads  )
-                    // so no mut aliasing occurs.
-                    // Also no aliasing with the previous access to `messages`, because it is
-                    // protected by a barrier in between.
-                    unsafe {
-                        raw_points.push(mem::take(&mut **messages[index].unsafe_get_mut()));
-                    }
-                }
-                drop(s1);
 
-                // merge results from different threads
-                // unsafe:
-                //      every thread dereferences a different partition
-                //      (based on each threads thread id).
-                //      So there is exactly one mutable reference for each partition.
-                let s1 = span!("parallel_insert: merge");
-                let partition = unsafe { partitions[thread_id].unsafe_get_mut() };
-                partition.bogus.append(&mut rejected);
-                for block in raw_points {
-                    rejected = partition.sampling.insert_raw(block, &patch_rejected);
-                    partition.bogus.append(&mut rejected);
-                }
-                drop(s1);
-                aabb
-            })
+                    // calculate max_lod aabb and store points
+                    let s1 = span!("parallel_insert_multi_lod2: max_lod");
+                    while let Some(mut points) = queue.pop() {
+                        for p in &points {
+                            last_aabb.extend(p.position());
+                        }
+                        last_lod_partition.bogus.append(&mut points);
+                    }
+                    aabbs.push(last_aabb);
+                    drop(s1);
+                    aabbs
+                },
+            )
             .join();
 
-        // extend aabb
-        for aabb in aabbs {
-            self.bounds.extend_other(&aabb);
-        }
-        drop(s0);
-    }
-
-    pub fn parallel_insert_bogus(
-        &mut self,
-        points_partitions: PartitionedPoints<Point>,
-        threads: &mut Threads,
-    ) {
-        let s0 = span!("parallel_insert_bogus");
-        assert_eq!(threads.num_threads(), self.num_partitions());
-        let partitions = &self.partitions;
-        let thread_bounds = threads
-            .execute(|thread_id| {
-                // unsafe:
-                //      every thread dereferences a different partition
-                //      (based on each threads thread id).
-                //      So there is exactly one mutable reference for each partition.
-                let partition = unsafe { partitions[thread_id].unsafe_get_mut() };
-                let points = unsafe { points_partitions.partitions[thread_id].unsafe_get_mut() };
-
-                // calculate aabb
-                let s1 = span!("parallel_insert_bogus: calculate bounds");
-                let mut bounds = OptionAABB::empty();
-                for point in &*points {
-                    bounds.extend(point.position());
+        // apply aabbs and mark dirty
+        for aabbs in thread_results {
+            for (lod_index, aabb) in aabbs.into_iter().enumerate() {
+                selfs[lod_index].bounds.extend_other(&aabb);
+                if !aabb.is_empty() {
+                    selfs[lod_index].mark_dirty();
                 }
-                drop(s1);
-
-                // insert
-                let s1 = span!("parallel_insert_bogus: append");
-                partition.bogus.append(points);
-                drop(s1);
-
-                bounds
-            })
-            .join();
-
-        let s1 = span!("parallel_insert_bogus: merge bounds");
-        for aabb in thread_bounds {
-            self.bounds.extend_other(&aabb);
+            }
         }
-        drop(s1);
+
         drop(s0);
     }
 
@@ -716,14 +813,14 @@ where
 
                 // prepare what to write to the las file
                 let s1 = span!("parallel_store (split): assemble");
+                let non_bogus_points = Some(partition.sampled.len() as u32);
                 let sampled_points_iter = partition.sampled.iter().map(|raw| raw.point());
                 let bogus_points_iter = partition.bogus.iter();
                 let points_iter = IterChain::new(sampled_points_iter, bogus_points_iter);
-                let bogus_points = Some(partition.bogus.len() as u32);
                 let coordinate_system = coordinate_system.clone();
                 let las = Las {
                     points: points_iter,
-                    bogus_points,
+                    non_bogus_points,
                     bounds: bounds.clone(),
                     coordinate_system,
                 };
@@ -749,7 +846,14 @@ where
                 // write file
                 let s1 = span!("parallel_store (split): store page");
                 let file_id = node_id.file(thread_id);
-                page_manager.store(&file_id, BinDataPage { exists, data });
+                page_manager.store(
+                    &file_id,
+                    BinDataPage {
+                        exists,
+                        data,
+                        error_counter: Default::default(),
+                    },
+                );
                 drop(s1);
 
                 Ok(bounds)
@@ -772,7 +876,7 @@ where
         threads: &mut Threads,
     ) -> PartitionedNode<Sampl, Point, Comp>
     where
-        SamplF: SamplingFactory<Sampling = Sampl, Param = LodLevel>,
+        SamplF: SamplingFactory<Sampling = Sampl>,
         Sampl: Sampling<Point = Point, Raw = Raw> + Send,
     {
         assert_eq!(threads.num_threads(), self.num_partitions);

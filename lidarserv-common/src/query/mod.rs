@@ -1,11 +1,12 @@
 pub mod bounding_box;
 pub mod empty;
+pub mod lod;
 pub mod view_frustum;
 
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, CoordinateSystem, Position};
+use crate::geometry::position::{CoordinateSystem, Position};
 
 pub trait Query<Pos, CSys>
 where

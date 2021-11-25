@@ -28,9 +28,15 @@ pub mod settings;
 #[error("Coordinate system mismatch.")]
 pub struct CoordinateSystemMismatchError;
 
+pub struct IndexInfo<'a> {
+    pub coordinate_system: &'a I32CoordinateSystem,
+    pub sampling_factory:
+        &'a GridCenterSamplingFactory<I32GridHierarchy, LasPoint, I32Position, i32>,
+}
+
 /// object safe wrapper for a point cloud index, otherwise very similar to [lidarserv_common::index::Index].
 pub trait DynIndex: Send + Sync {
-    fn index_info(&self) -> &I32CoordinateSystem; // maybe return more info in future...
+    fn index_info(&self) -> IndexInfo;
     fn writer(&self) -> Box<dyn DynWriter>;
     fn reader(&self) -> Box<dyn DynReader>;
     fn flush(&mut self) -> Result<(), Box<dyn Error>>;
@@ -70,8 +76,11 @@ impl DynIndex
         I32CoordinateSystem,
     >
 {
-    fn index_info(&self) -> &I32CoordinateSystem {
-        self.coordinate_system()
+    fn index_info(&self) -> IndexInfo {
+        IndexInfo {
+            coordinate_system: self.coordinate_system(),
+            sampling_factory: self.sampling_factory(),
+        }
     }
 
     fn writer(&self) -> Box<dyn DynWriter> {
@@ -85,7 +94,7 @@ impl DynIndex
     }
 
     fn flush(&mut self) -> Result<(), Box<dyn Error>> {
-        Ok(())
+        SensorPosIndex::flush(self).map_err(|e| Box::new(e) as Box<dyn Error>)
     }
 }
 
@@ -111,6 +120,7 @@ impl DynReader
         I32LasReadWrite,
         I32CoordinateSystem,
         I32Position,
+        LasPoint,
     >
 {
     fn blocking_update(
@@ -184,8 +194,11 @@ impl DynIndex
         GridCenterSamplingFactory<I32GridHierarchy, LasPoint, I32Position, i32>,
     >
 {
-    fn index_info(&self) -> &I32CoordinateSystem {
-        self.coordinate_system()
+    fn index_info(&self) -> IndexInfo {
+        IndexInfo {
+            coordinate_system: self.coordinate_system(),
+            sampling_factory: self.sampling_factory(),
+        }
     }
 
     fn writer(&self) -> Box<dyn DynWriter> {

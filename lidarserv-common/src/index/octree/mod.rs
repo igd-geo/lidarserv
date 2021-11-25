@@ -85,6 +85,10 @@ where
         &self.inner.coordinate_system
     }
 
+    pub fn sampling_factory(&self) -> &SamplF {
+        &self.inner.sample_factory
+    }
+
     pub fn flush(&mut self) -> Result<(), FlushError> {
         self.inner
             .page_cache
@@ -109,8 +113,7 @@ where
     Sampl: Sampling<Point = Point> + Clone + Send + Sync + 'static,
     Comp: Component + Send + Sync,
     CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq + Send + Sync + 'static,
-    SamplF:
-        SamplingFactory<Param = LodLevel, Point = Point, Sampling = Sampl> + Send + Sync + 'static,
+    SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
 {
     type Writer = OctreeWriter<Point, GridH>;
     type Reader = OctreeReader<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>;

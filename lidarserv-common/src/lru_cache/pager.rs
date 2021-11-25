@@ -379,6 +379,7 @@ where
         // the entire page cache during that time.
         drop(cache_lock);
         drop(s1);
+        s.emit_text(format!("{:?}", &key).as_str());
 
         // resolve the Later instance to get the actual data to write
         let data = data.into().unwrap();

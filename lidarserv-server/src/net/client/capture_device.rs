@@ -103,7 +103,7 @@ impl CaptureDeviceClient {
                     Las {
                         points: las_points.iter(),
                         bounds: OptionAABB::empty(), // these bounds are technically wrong, but they do not matter for just sending them to the server.
-                        bogus_points: None,
+                        non_bogus_points: None,
                         coordinate_system,
                     },
                     cursor,

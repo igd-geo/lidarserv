@@ -1,50 +1,202 @@
-use crate::geometry::grid::GridHierarchy;
-use crate::geometry::points::PointType;
+use crate::geometry::bounding_box::{BaseAABB, AABB};
+use crate::geometry::grid::{GridHierarchy, LodLevel};
+use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
+use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index;
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::BinDataPage;
+use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::{Inner, Update};
 use crate::index::{Node, Reader};
+use crate::las::LasReadWrite;
 use crate::lru_cache::pager::CacheLoadError;
 use crate::nalgebra::Scalar;
+use crate::query::lod::LodQuery;
 use crate::query::{Query, QueryExt};
 use crossbeam_channel::{Receiver, TryRecvError};
+use nalgebra::{min, Point3};
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
+use std::io::Cursor;
 use std::sync::Arc;
 
-pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos> {
-    query: Box<dyn Query<Pos, CSys> + Send + Sync>,
+pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point> {
     inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
     meta_tree: MetaTree<GridH, Comp>,
     updates: crossbeam_channel::Receiver<Update<Comp>>,
-    loaded: HashSet<MetaTreeNodeId>,
+    lods: Vec<LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>>,
     update_counter: u32,
-    dirty_node_to_replacements: HashMap<MetaTreeNodeId, (u32, HashSet<MetaTreeNodeId>)>,
-    replacement_to_dirty_node: HashMap<MetaTreeNodeId, MetaTreeNodeId>,
-    update_order: Vec<(MetaTreeNodeId, u32)>,
-    nodes_to_load: HashSet<MetaTreeNodeId>,
-    load_order: Vec<MetaTreeNodeId>,
-    nodes_to_unload: HashSet<MetaTreeNodeId>,
 }
 
-impl<GridH, SamplF, Comp, LasL, CSys, Point, Pos> Reader<Point, CSys>
-    for SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos>
+impl<GridH, SamplF, Comp, LasL, CSys, Pos, Point>
+    SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>
 where
-    Point: PointType<Position = Pos>,
     Comp: Component,
-    GridH: GridHierarchy<Component = Comp, Position = Pos> + Clone,
+    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>>,
     Pos: Position<Component = Comp>,
+    GridH: GridHierarchy<Component = Comp> + Clone,
+    Comp: Clone,
+    LasL: LasReadWrite<Point, CSys>,
+    SamplF: SamplingFactory<Point = Point>,
+{
+    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>) -> Self
+    where
+        Q: Query<Pos, CSys> + 'static + Send + Sync,
+    {
+        // subscribe to meta tree updates
+        let (updates_sender, updates) = crossbeam_channel::unbounded();
+        let meta_tree = {
+            let mut write = inner.shared.write().unwrap();
+            write.readers.push(updates_sender);
+            write.meta_tree.clone()
+        };
+
+        // create reader
+        let mut result = SensorPosReader {
+            inner,
+            meta_tree,
+            updates,
+            lods: vec![],
+            update_counter: 0,
+        };
+
+        // create lod level readers
+        let query: Arc<dyn Query<Pos, CSys> + Send + Sync> = Arc::new(query);
+        for lod_level in 0..=result.inner.max_lod.level() {
+            result.lods.push(LodReader::new(
+                LodLevel::from_level(lod_level),
+                Arc::clone(&query),
+                Arc::clone(&result.inner),
+            ));
+            let (fine, coarse) = Self::lod_layer_and_coarse(
+                &mut result.lods,
+                result.inner.coarse_lod_steps,
+                lod_level as usize,
+            );
+            fine.initial_query(&result.meta_tree, coarse);
+        }
+
+        result
+    }
+
+    fn lod_layer_and_coarse(
+        lods: &mut Vec<LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>>,
+        coarse_lod_steps: usize,
+        lod_index: usize,
+    ) -> (
+        &mut LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>,
+        Option<&mut LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>>,
+    ) {
+        let coarse_lod_level = if coarse_lod_steps <= lod_index {
+            lod_index - coarse_lod_steps
+        } else if lod_index > 0 {
+            0
+        } else {
+            return (&mut lods[lod_index], None);
+        };
+        let (first, second) = lods.split_at_mut(lod_index as usize);
+        return (&mut second[0], Some(&mut first[coarse_lod_level]));
+    }
+
+    fn update_coarse(&mut self, updated_node: &MetaTreeNodeId) {
+        let influenced_lod_index =
+            updated_node.lod().level() as usize + self.inner.coarse_lod_steps;
+        if *updated_node.lod() == LodLevel::base() {
+            let iter_to = min(influenced_lod_index + 1, self.lods.len());
+            for index in 1..iter_to {
+                let (fine, coarse) =
+                    Self::lod_layer_and_coarse(&mut self.lods, self.inner.coarse_lod_steps, index);
+                assert_eq!(coarse.as_ref().unwrap().lod, *updated_node.lod());
+                fine.refresh_coarse(updated_node, coarse, &self.meta_tree)
+            }
+        } else if influenced_lod_index < self.lods.len() {
+            let (fine, coarse) = Self::lod_layer_and_coarse(
+                &mut self.lods,
+                self.inner.coarse_lod_steps,
+                influenced_lod_index,
+            );
+            assert_eq!(coarse.as_ref().unwrap().lod, *updated_node.lod());
+            fine.refresh_coarse(updated_node, coarse, &self.meta_tree)
+        }
+    }
+
+    fn set_query_arc(&mut self, query: Arc<dyn Query<Pos, CSys> + Send + Sync>) {
+        for i in 0..self.lods.len() {
+            let (lod_layer, coarse) =
+                Self::lod_layer_and_coarse(&mut self.lods, self.inner.coarse_lod_steps, i);
+            lod_layer.set_query(Arc::clone(&query), &self.meta_tree, coarse);
+        }
+    }
+}
+
+impl<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point> Reader<Point, CSys>
+    for SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>
+where
+    Pos: Position<Component = Comp>,
+    GridH: GridHierarchy<Component = Comp> + Clone,
+    LasL: LasReadWrite<Point, CSys>,
+    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>>,
+    Comp: Component + Clone,
+    SamplF: SamplingFactory<Point = Point>,
 {
     type NodeId = MetaTreeNodeId;
     type Node = SensorPosNode;
 
     fn set_query<Q: Query<Pos, CSys> + 'static + Send + Sync>(&mut self, query: Q) {
-        self.update_query(Box::new(query))
+        let query: Arc<dyn Query<Pos, CSys> + Send + Sync> = Arc::new(query);
+        self.set_query_arc(query)
     }
 
     fn update(&mut self) {
-        SensorPosReader::update(self);
+        // get pending updates
+        let updates: Vec<_> = self.updates.try_iter().collect();
+
+        // deduplicate updates
+        let mut merged_updates = Vec::new();
+        let mut replacement_position = HashMap::new();
+        for update in updates {
+            let index = if let Some(index) = replacement_position.get(&update.node) {
+                let base_update: &mut Update<Comp> = &mut merged_updates[*index];
+                let mut i = 0;
+                while i < base_update.replaced_by.len() {
+                    if base_update.replaced_by[i].replace_with == update.node {
+                        base_update.replaced_by.swap_remove(i);
+                    } else {
+                        i += 1;
+                    }
+                }
+                base_update
+                    .replaced_by
+                    .append(&mut update.replaced_by.clone());
+                *index
+            } else {
+                let index = merged_updates.len();
+                merged_updates.push(update.clone());
+                index
+            };
+            for replacement in update.replaced_by {
+                replacement_position.insert(replacement.replace_with, index);
+            }
+        }
+
+        // process each update
+        for update in merged_updates {
+            // update meta tree
+            self.meta_tree.apply_update(&update);
+
+            let lod_index = update.node.lod().level() as usize;
+            if lod_index < self.lods.len() {
+                self.update_counter += 1;
+                let (lod_layer, coarse_layer) = Self::lod_layer_and_coarse(
+                    &mut self.lods,
+                    self.inner.coarse_lod_steps,
+                    lod_index,
+                );
+                lod_layer.apply_update(&update, &self.meta_tree, coarse_layer, self.update_counter)
+            }
+        }
     }
 
     fn blocking_update(
@@ -70,18 +222,17 @@ where
                 }
             }
             if let Some(new_query) = query {
-                self.update_query(new_query);
+                self.set_query_arc(Arc::from(new_query));
             }
 
             // make sure we have the most recent updates from the writer
-            SensorPosReader::update(self);
+            self.update();
 
             // if there are things to do (load_one, remove_one, update_one) return early.
-            if !self.dirty_node_to_replacements.is_empty()
-                || !self.nodes_to_load.is_empty()
-                || !self.nodes_to_unload.is_empty()
-            {
-                return true;
+            for lod in &self.lods {
+                if lod.is_dirty() {
+                    return true;
+                }
             }
 
             // if there is nothing to do:
@@ -94,37 +245,265 @@ where
     }
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node)> {
-        self.sort_load_order();
-        if let Some(node_id) = self.load_order.pop() {
+        // load
+        // start loading at lod0 and progressively get finer.
+        let mut result = None;
+        for lod_index in 0..self.lods.len() {
+            if let Some(load) = self.lods[lod_index].load_one() {
+                result = Some(load);
+                break;
+            }
+        }
+
+        // if this lod is a coarse layer for another lod
+        // notify that finer lod of the update so it can check, if the update influenced the query
+        // result.
+        if let Some((loaded_node, _)) = &result {
+            self.update_coarse(loaded_node);
+        }
+        result
+    }
+
+    fn remove_one(&mut self) -> Option<Self::NodeId> {
+        for lod_index in (0..self.lods.len()).rev() {
+            if let Some(remove) = self.lods[lod_index].remove_one() {
+                return Some(remove);
+            }
+        }
+        None
+    }
+
+    fn update_one(&mut self) -> Option<index::Update<Self::NodeId, Self::Node>> {
+        // choose the lod level t update, that "has to offer" the oldest update
+        // so that updates that have been pending for the longest time are prioritized
+        let lod_index = self
+            .lods
+            .iter_mut()
+            .map(|lod_reader| lod_reader.next_update_number())
+            .enumerate()
+            .min_by_key(|(_, update_number)| update_number.unwrap_or(u32::MAX))
+            .map(|(index, _)| index);
+
+        // update!
+        let option_update = if let Some(lod_index) = lod_index {
+            let (lod_layer, coarse) =
+                Self::lod_layer_and_coarse(&mut self.lods, self.inner.coarse_lod_steps, lod_index);
+            lod_layer.update_one(coarse, &self.meta_tree)
+        } else {
+            None
+        };
+
+        // if this lod is a coarse layer for another lod
+        // notify that finer lod of the update so it can check, if the update influenced the query
+        // result of the finer lod.
+        if let Some((updated_node, _)) = &option_update {
+            self.update_coarse(updated_node);
+        }
+        option_update
+    }
+}
+
+struct LodReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point> {
+    query: Arc<dyn Query<Pos, CSys> + Send + Sync>,
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+    lod: LodLevel,
+    loaded: HashMap<MetaTreeNodeId, SensorPosNode>,
+    dirty_node_to_replacements: HashMap<MetaTreeNodeId, (u32, HashSet<MetaTreeNodeId>)>,
+    replacement_to_dirty_node: HashMap<MetaTreeNodeId, MetaTreeNodeId>,
+    update_order: Vec<(MetaTreeNodeId, u32)>,
+    nodes_to_load: HashSet<MetaTreeNodeId>,
+    nodes_to_unload: HashSet<MetaTreeNodeId>,
+    coarse_cache: HashMap<MetaTreeNodeId, Vec<Point>>,
+}
+
+impl<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point>
+    LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>
+where
+    Pos: Position<Component = Comp>,
+    GridH: GridHierarchy<Component = Comp>,
+    LasL: LasReadWrite<Point, CSys>,
+    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>>,
+    Comp: Component,
+    SamplF: SamplingFactory<Point = Point>,
+{
+    pub fn new(
+        lod: LodLevel,
+        query: Arc<dyn Query<Pos, CSys> + Send + Sync>,
+        inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+    ) -> Self {
+        LodReader {
+            lod,
+            query,
+            inner,
+            loaded: HashMap::new(),
+            dirty_node_to_replacements: HashMap::new(),
+            replacement_to_dirty_node: HashMap::new(),
+            update_order: Vec::new(),
+            nodes_to_load: HashSet::new(),
+            nodes_to_unload: HashSet::new(),
+            coarse_cache: HashMap::new(),
+        }
+    }
+
+    pub fn set_query(
+        &mut self,
+        new_query: Arc<dyn Query<Pos, CSys> + Send + Sync>,
+        meta_tree: &MetaTree<GridH, Comp>,
+        coarse_level: Option<&mut Self>,
+    ) {
+        // execute query to get list of target nodes to load
+        self.query = new_query;
+        let root_nodes = meta_tree.root_nodes_for_lod(&self.lod).collect();
+        let target_nodes = self.evaluate_query(root_nodes, meta_tree, coarse_level);
+
+        // calculate difference between currently loaded nodes and new nodes
+        self.nodes_to_load = HashSet::new();
+        self.nodes_to_unload = self.loaded.keys().cloned().collect();
+        for node in target_nodes {
+            if self.loaded.contains_key(&node) {
+                self.nodes_to_unload.remove(&node);
+            } else if let Some(base_node) = self.replacement_to_dirty_node.get(&node) {
+                self.nodes_to_unload.remove(base_node);
+            } else {
+                self.nodes_to_load.insert(node);
+            }
+        }
+    }
+
+    pub fn initial_query(
+        &mut self,
+        meta_tree: &MetaTree<GridH, Comp>,
+        coarse_level: Option<&mut Self>,
+    ) {
+        let query = Arc::clone(&self.query);
+        self.set_query(query, meta_tree, coarse_level);
+    }
+
+    pub fn load_one(&mut self) -> Option<(MetaTreeNodeId, SensorPosNode)> {
+        if let Some(node_id) = self.nodes_to_load.iter().cloned().next() {
             self.nodes_to_load.remove(&node_id);
             let load_result = self.load_node(&node_id).unwrap_or_default();
-            self.loaded.insert(node_id.clone());
+            self.loaded.insert(node_id.clone(), load_result.clone());
             Some((node_id, load_result))
         } else {
             None
         }
     }
 
-    fn remove_one(&mut self) -> Option<Self::NodeId> {
+    pub fn remove_one(&mut self) -> Option<MetaTreeNodeId> {
         let node_to_remove = self.nodes_to_unload.iter().next().cloned();
         if let Some(node_id) = &node_to_remove {
             self.nodes_to_unload.remove(node_id);
             self.loaded.remove(node_id);
+            self.coarse_cache.remove(node_id);
             if let Some((_, replacements)) = self.dirty_node_to_replacements.remove(node_id) {
                 for r in replacements {
                     self.replacement_to_dirty_node.remove(&r);
                 }
-                self.reset_update_order()
+                self.update_order.clear();
             }
         }
         node_to_remove
     }
 
-    fn update_one(&mut self) -> Option<index::Update<Self::NodeId, Self::Node>> {
-        self.sort_update_order();
+    pub fn apply_update(
+        &mut self,
+        update: &Update<Comp>,
+        meta_tree: &MetaTree<GridH, Comp>,
+        coarse_level: Option<&mut Self>,
+        update_counter: u32,
+    ) {
+        let is_node_split =
+            update.replaced_by.len() != 1 || update.replaced_by[0].replace_with != update.node;
+
+        if self.nodes_to_load.contains(&update.node) {
+            // if the update is to be loaded:
+            // load the replacement instead.
+            // (if this is not a node split, this is a no-op)
+            if is_node_split {
+                self.nodes_to_load.remove(&update.node);
+
+                let matching_replacements =
+                    self.evaluate_query(vec![update.node.clone()], meta_tree, coarse_level);
+                self.nodes_to_load.extend(matching_replacements);
+            }
+        } else if let Some(base_node) = self.replacement_to_dirty_node.get(&update.node) {
+            // if the update is already dirty:
+
+            // if the node was scheduled to unload, but it now matches the query, then we should not unload it any more
+            if self.nodes_to_unload.contains(base_node)
+                && self.matches_node(base_node, meta_tree, coarse_level)
+            {
+                self.nodes_to_unload.remove(base_node);
+            }
+
+            // update the replacement info
+            if is_node_split {
+                let (_, replacements) = self.dirty_node_to_replacements.get_mut(base_node).unwrap();
+                replacements.remove(&update.node);
+                for replacement in &update.replaced_by {
+                    replacements.insert(replacement.replace_with.clone());
+                }
+                let base_node = base_node.clone();
+                self.replacement_to_dirty_node.remove(&update.node);
+                for replacement in &update.replaced_by {
+                    self.replacement_to_dirty_node
+                        .insert(replacement.replace_with.clone(), base_node.clone());
+                }
+            }
+        } else if self.loaded.contains_key(&update.node) {
+            // if the node is not yet marked as dirty, but loaded.
+
+            // if the node was scheduled to unload, but it now matches the query, then we should not unload it any more
+            if self.nodes_to_unload.contains(&update.node)
+                && self.matches_node(&update.node, meta_tree, coarse_level)
+            {
+                self.nodes_to_unload.remove(&update.node);
+            }
+
+            // mark as dirty
+            self.dirty_node_to_replacements.insert(
+                update.node.clone(),
+                (
+                    update_counter,
+                    update
+                        .replaced_by
+                        .iter()
+                        .map(|r| r.replace_with.clone())
+                        .collect(),
+                ),
+            );
+            for replacement in &update.replaced_by {
+                self.replacement_to_dirty_node
+                    .insert(replacement.replace_with.clone(), update.node.clone());
+            }
+
+            // reset update order, so it gets re-calculated next time update_one() is called.
+            self.update_order.clear();
+        } else {
+            // if the node is neither loaded, nor scheduled to be loaded
+            // check if it still does not match the query and eventually add it to the load list
+            let matching_replacements =
+                self.evaluate_query(vec![update.node.clone()], meta_tree, coarse_level);
+            self.nodes_to_load.extend(matching_replacements);
+        }
+    }
+
+    pub fn next_update_number(&mut self) -> Option<u32> {
+        self.ensure_update_order();
+        self.update_order.last().map(|(_, i)| *i)
+    }
+
+    pub fn update_one(
+        &mut self,
+        coarse: Option<&mut Self>,
+        meta_tree: &MetaTree<GridH, Comp>,
+    ) -> Option<index::Update<MetaTreeNodeId, SensorPosNode>> {
+        self.ensure_update_order();
+
         if let Some((node_id, _)) = self.update_order.pop() {
             // load nodes
-            let nodes_to_load = self.query_from(vec![node_id.clone()]);
+            let nodes_to_load = self.evaluate_query(vec![node_id.clone()], meta_tree, coarse);
             let loaded: Vec<_> = nodes_to_load
                 .iter()
                 .map(|node_id| (node_id.clone(), self.load_node(node_id).unwrap_or_default()))
@@ -132,7 +511,8 @@ where
 
             // update data structure
             self.loaded.remove(&node_id);
-            self.loaded.extend(nodes_to_load.iter().cloned());
+            self.coarse_cache.remove(&node_id);
+            self.loaded.extend(loaded.iter().cloned());
             let (_, replacements) = self.dirty_node_to_replacements.remove(&node_id).unwrap();
             for replacement in replacements {
                 self.replacement_to_dirty_node.remove(&replacement);
@@ -144,51 +524,77 @@ where
             None
         }
     }
-}
 
-impl<GridH, SamplF, Comp, LasL, CSys, Pos> SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos>
-where
-    Comp: Component,
-    GridH: GridHierarchy<Component = Comp, Position = Pos> + Clone,
-    Pos: Position<Component = Comp>,
-{
-    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>) -> Self
-    where
-        Q: Query<Pos, CSys> + 'static + Send + Sync,
-    {
-        // subscribe to meta tree updates
-        let (updates_sender, updates_receiver) = crossbeam_channel::unbounded();
-        let meta_tree = {
-            let mut write = inner.shared.write().unwrap();
-            write.readers.push(updates_sender);
-            write.meta_tree.clone()
-        };
-
-        let mut result = SensorPosReader {
-            query: Box::new(query),
-            inner,
-            meta_tree,
-            updates: updates_receiver,
-            loaded: HashSet::new(),
-            replacement_to_dirty_node: HashMap::new(),
-            dirty_node_to_replacements: HashMap::new(),
-            update_counter: 0,
-            nodes_to_load: HashSet::new(),
-            load_order: Vec::new(),
-            nodes_to_unload: HashSet::new(),
-            update_order: Vec::new(),
-        };
-        result.nodes_to_load = result.initial_query();
-        result
+    pub fn is_dirty(&self) -> bool {
+        if !self.nodes_to_load.is_empty() {
+            return true;
+        }
+        if !self.nodes_to_unload.is_empty() {
+            return true;
+        }
+        if !self.dirty_node_to_replacements.is_empty() {
+            return true;
+        }
+        false
     }
 
-    fn query_from(&self, start_nodes: Vec<MetaTreeNodeId>) -> HashSet<MetaTreeNodeId> {
-        let mut result_nodes = HashSet::new();
+    fn refresh_coarse(
+        &mut self,
+        coarse_node: &MetaTreeNodeId,
+        coarse: Option<&mut Self>,
+        meta_tree: &MetaTree<GridH, Comp>,
+    ) {
+        // get the equivalent to the coarse node on this lod.
+        let mut query_root = coarse_node.clone().with_lod(self.lod);
+        while meta_tree.get(&query_root).is_none() {
+            query_root = if let Some(p) = query_root.parent() {
+                p
+            } else {
+                // no node in this lod overlaps with the given node from the coarse layer.
+                // in this case we have nothing to do.
+                return;
+            }
+        }
 
-        let mut todo: Vec<_> = start_nodes;
+        // re-evaluate query for that node
+        let target_nodes = self.evaluate_query(vec![query_root], meta_tree, coarse);
+
+        // ensure that all nodes in the query result are indeed loaded, or at least on the list of nodes to load later
+        for node in target_nodes {
+            if let Some(loaded_node) = self.replacement_to_dirty_node.get(&node) {
+                self.nodes_to_unload.remove(loaded_node);
+            } else if self.loaded.contains_key(&node) {
+                self.nodes_to_unload.remove(&node);
+            } else {
+                self.nodes_to_load.insert(node);
+            }
+        }
+    }
+
+    fn ensure_update_order(&mut self) {
+        if self.update_order.is_empty() {
+            let updates = self
+                .dirty_node_to_replacements
+                .iter()
+                .map(|(node_id, (update_number, _))| (node_id.clone(), *update_number));
+            self.update_order.extend(updates);
+            self.update_order.sort_by_key(|(_, i)| u32::MAX - *i)
+        }
+    }
+
+    fn evaluate_query_using_aabbs(
+        &self,
+        start_from_nodes: Vec<MetaTreeNodeId>,
+        meta_tree: &MetaTree<GridH, Comp>,
+    ) -> Vec<MetaTreeNodeId> {
+        // start with the given start nodes and an empty result
+        let mut todo = start_from_nodes;
+        let mut result_nodes = Vec::new();
+
+        // keep processing nodes, until all nodes are processed.
         while let Some(node_id) = todo.pop() {
             // get node
-            let node = match self.meta_tree.get(&node_id) {
+            let node = match meta_tree.get(&node_id) {
                 None => continue,
                 Some(n) => n,
             };
@@ -203,170 +609,151 @@ where
             if matches {
                 if node.is_leaf {
                     // if we found a matching leaf node: Add it to the result
-                    result_nodes.insert(node_id);
+                    result_nodes.push(node_id);
                 } else {
                     // if we found a matching branch node, recurse into children until we reach a leaf node
                     todo.extend(node_id.children());
                 }
             }
         }
-
         result_nodes
     }
 
-    fn initial_query(&self) -> HashSet<MetaTreeNodeId> {
-        let root_nodes = self.meta_tree.root_nodes().collect();
-        self.query_from(root_nodes)
-    }
-
-    fn update_query(&mut self, new_query: Box<dyn Query<Pos, CSys> + Send + Sync>) {
-        // execute query to get list of target nodes to load
-        self.query = new_query;
-        let target_nodes = self.initial_query();
-
-        // calculate difference between currently loaded nodes and new nodes
-        self.nodes_to_load = HashSet::new();
-        self.nodes_to_unload = self.loaded.clone();
-        for node in target_nodes {
-            if self.loaded.contains(&node) {
-                self.nodes_to_unload.remove(&node);
-            } else if let Some(base_node) = self.replacement_to_dirty_node.get(&node) {
-                self.nodes_to_unload.remove(base_node);
-            } else {
-                self.nodes_to_load.insert(node);
+    fn coarse_check(&mut self, meta_tree: &MetaTree<GridH, Comp>, node: &MetaTreeNodeId) -> bool {
+        // search in the meta tree for all leaf nodes on this lod,
+        // that are overlapping with the given node
+        let mut overlapping_nodes = Vec::new();
+        let mut to_search: Vec<_> = meta_tree.root_nodes_for_lod(&self.lod).collect();
+        while let Some(current_node_id) = to_search.pop() {
+            if current_node_id.tree_node().overlaps_with(node.tree_node()) {
+                if let Some(current_node) = meta_tree.get(&current_node_id) {
+                    if current_node.is_leaf {
+                        overlapping_nodes.push(current_node_id);
+                    } else {
+                        to_search.extend(current_node_id.children().into_iter());
+                    }
+                }
             }
         }
 
-        self.reset_load_order();
-    }
-
-    fn update(&mut self) {
-        // get pending updates
-        let updates: Vec<_> = self.updates.try_iter().collect();
-
-        // todo dedup updates
-
-        self.update_counter += 1;
-
-        for update in updates {
-            // update meta tree
-            self.meta_tree.apply_update(&update);
-
-            let is_node_split =
-                update.replaced_by.len() != 1 || update.replaced_by[0].replace_with != update.node;
-
-            if self.nodes_to_load.contains(&update.node) {
-                // if the update is to be loaded:
-                // load the replacement instead.
-                // (if this is not a node split, this is a no-op)
-                if is_node_split {
-                    self.nodes_to_load.remove(&update.node);
-                    for replacement in update.replaced_by {
-                        let matches = self.query.as_ref().matches_node(
-                            &replacement.bounds,
-                            &self.inner.coordinate_system,
-                            replacement.replace_with.lod(),
-                        );
-                        if matches {
-                            self.nodes_to_load.insert(replacement.replace_with);
-                        }
-                    }
-                    self.reset_load_order()
+        // map to the nodes that are loaded.
+        // (the loaded nodes are not necessarily leaf nodes - only if all node splits are fully applied)
+        // (also, some might just not be loaded, because they don't match the query.)
+        // (also, we are collect()ing into a HashSet, to get rid of duplicates)
+        let loaded_overlapping_nodes: HashSet<_> = overlapping_nodes
+            .into_iter()
+            .filter_map(|overlapping_leaf| {
+                if let Some(loaded) = self.replacement_to_dirty_node.get(&overlapping_leaf) {
+                    Some(loaded.clone())
+                } else if self.loaded.contains_key(&overlapping_leaf) {
+                    Some(overlapping_leaf)
+                } else {
+                    None
                 }
-            } else if let Some(base_node) = self.replacement_to_dirty_node.get(&update.node) {
-                // if the update is already dirty:
-                // update the replacement info
-                // (also a no-op for non-node-splits)
-                if is_node_split {
-                    let (_, replacements) =
-                        self.dirty_node_to_replacements.get_mut(base_node).unwrap();
-                    replacements.remove(&update.node);
-                    for replacement in &update.replaced_by {
-                        replacements.insert(replacement.replace_with.clone());
-                    }
-                    let base_node = base_node.clone();
-                    self.replacement_to_dirty_node.remove(&update.node);
-                    for replacement in &update.replaced_by {
-                        self.replacement_to_dirty_node
-                            .insert(replacement.replace_with.clone(), base_node.clone());
+            })
+            .collect();
+
+        // parse the las data of these nodes, using self.coarse_cache as a cache
+        for node_id in &loaded_overlapping_nodes {
+            // make sure it is in the coarse nodes cache
+            self.coarse_cache.entry(node_id.clone()).or_insert_with(|| {
+                let mut points = Vec::new();
+                let node = &self.loaded[node_id];
+                for data in node.las_files() {
+                    let las_result = self.inner.las_loader.read_las(Cursor::new(data));
+                    if let Ok(mut las) = las_result {
+                        points.append(&mut las.points);
                     }
                 }
-            } else if self.loaded.contains(&update.node) {
-                // if the node is not yet marked as dirty, but loaded
-                // initially mark as dirty
-                self.dirty_node_to_replacements.insert(
-                    update.node.clone(),
-                    (
-                        self.update_counter,
-                        update
-                            .replaced_by
-                            .iter()
-                            .map(|r| r.replace_with.clone())
-                            .collect(),
+                points
+            });
+        }
+        let points = loaded_overlapping_nodes
+            .into_iter()
+            .map(|node_id| &self.coarse_cache[&node_id])
+            .flatten();
+
+        // filter points based on sensor pos
+        // to get only points belonging to the node
+        let sensor_pos_bounds = meta_tree
+            .sensor_grid_hierarchy()
+            .get_leveled_cell_bounds(node.tree_node());
+        let points = points.filter(|p| {
+            sensor_pos_bounds.contains(&p.attribute::<SensorPositionAttribute<Pos>>().0)
+        });
+
+        // calculate the max lod for each point,
+        // and check, that at least one point justifies the lod level from the node
+        let point_distance = self
+            .inner
+            .sampling_factory
+            .build(&self.lod)
+            .point_distance();
+        points
+            .filter_map(|p| {
+                let position = p.position();
+                let bounds = AABB::new(
+                    Point3::new(
+                        position.x() - point_distance,
+                        position.y() - point_distance,
+                        position.z() - point_distance,
+                    ),
+                    Point3::new(
+                        position.x() + point_distance,
+                        position.y() + point_distance,
+                        position.z() + point_distance,
                     ),
                 );
-                for replacement in update.replaced_by {
-                    self.replacement_to_dirty_node
-                        .insert(replacement.replace_with, update.node.clone());
-                }
-                self.reset_update_order()
-            } else {
-                // if the node is neither loaded, nor scheduled to be loaded
-                // check if it still does not match the query and eventually add it to the load list
-                for replacement in update.replaced_by {
-                    let matches = self.query.as_ref().matches_node(
-                        &replacement.bounds,
-                        &self.inner.coordinate_system,
-                        replacement.replace_with.lod(),
-                    );
-                    if matches {
-                        self.nodes_to_load.insert(replacement.replace_with);
-                    }
-                }
-                self.reset_load_order();
-            }
+                self.query
+                    .max_lod_area(&bounds, &self.inner.coordinate_system)
+                //.max_lod_position(position, &self.inner.coordinate_system)
+            })
+            .any(|max_lod| *node.lod() <= max_lod)
+    }
+
+    fn filter_nodes_using_coarse<'a>(
+        &self,
+        nodes: Vec<MetaTreeNodeId>,
+        coarse: &'a mut Self,
+        meta_tree: &'a MetaTree<GridH, Comp>,
+    ) -> impl Iterator<Item = MetaTreeNodeId> + 'a {
+        nodes
+            .into_iter()
+            .filter(|node_id| coarse.coarse_check(meta_tree, node_id))
+    }
+
+    fn evaluate_query(
+        &self,
+        start_from_nodes: Vec<MetaTreeNodeId>,
+        meta_tree: &MetaTree<GridH, Comp>,
+        coarse: Option<&mut Self>,
+    ) -> Vec<MetaTreeNodeId> {
+        let aabb_result = self.evaluate_query_using_aabbs(start_from_nodes, meta_tree);
+        if let Some(coarse_level) = coarse {
+            self.filter_nodes_using_coarse(aabb_result, coarse_level, meta_tree)
+                .collect()
+        } else {
+            aabb_result
         }
     }
 
-    fn reset_load_order(&mut self) {
-        self.load_order.clear();
-    }
-
-    fn reset_update_order(&mut self) {
-        self.update_order.clear();
-    }
-
-    fn sort_load_order(&mut self) {
-        // only re-sort, if the load order has been cleared
-        if !self.load_order.is_empty() {
-            return;
+    fn matches_node(
+        &self,
+        node: &MetaTreeNodeId,
+        meta_tree: &MetaTree<GridH, Comp>,
+        coarse: Option<&mut Self>,
+    ) -> bool {
+        let bounds = meta_tree
+            .sensor_grid_hierarchy()
+            .get_leveled_cell_bounds(node.tree_node());
+        let matches_aabb =
+            self.query
+                .matches_node(&bounds, &self.inner.coordinate_system, node.lod());
+        if let Some(coarse_level) = coarse {
+            coarse_level.coarse_check(meta_tree, node)
+        } else {
+            matches_aabb
         }
-
-        // sort nodes_to_load by lod
-        // so that coarse lod levels are loaded first
-        self.load_order.extend(self.nodes_to_load.iter().cloned());
-        self.load_order
-            .sort_by_key(|node| u16::MAX - node.lod().level());
-    }
-
-    fn sort_update_order(&mut self) {
-        // only re-sort, if the update order has been cleared
-        if !self.update_order.is_empty() {
-            return;
-        }
-
-        // insert pending updates
-        self.update_order.extend(
-            self.dirty_node_to_replacements
-                .iter()
-                .map(|(node_id, (update_number, _))| (node_id.clone(), *update_number)),
-        );
-
-        // sort by update number
-        // so that the oldest updates are processed first
-        self.update_order.sort_by_key(|(node_id, update_number)| {
-            (u32::MAX - *update_number, u16::MAX - node_id.lod().level())
-        });
     }
 
     fn load_node(&self, node_id: &MetaTreeNodeId) -> Result<SensorPosNode, CacheLoadError> {
@@ -387,7 +774,7 @@ where
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SensorPosNode(Vec<Arc<BinDataPage>>);
 
 impl Node for SensorPosNode {

@@ -2,6 +2,7 @@ use crate::nalgebra::{distance_squared, Scalar};
 use nalgebra::{Point3, Vector3};
 use num_traits::Bounded;
 use std::fmt::Debug;
+use std::ops::{Add, Sub};
 use thiserror::Error;
 
 /// Error type for [CoordinateSystem::encode_position].
@@ -24,9 +25,13 @@ pub trait CoordinateSystem: Debug {
 
     /// Returns the global position coordinates, that the point in this coordinate system represents.
     fn decode_position(&self, pos: &Self::Position) -> Point3<f64>;
+
+    fn decode_distance(&self, distance: <Self::Position as Position>::Component) -> f64;
 }
 
-pub trait Component: Copy + Scalar + PartialOrd + Bounded {
+pub trait Component:
+    Copy + Scalar + PartialOrd + Bounded + Sub<Output = Self> + Add<Output = Self>
+{
     /// Center between two numbers ( result = (x1 + x2) / 2 )
     fn center(x1: Self, x2: Self) -> Self;
 }
@@ -34,7 +39,6 @@ pub trait Component: Copy + Scalar + PartialOrd + Bounded {
 /// A position in 3d space
 pub trait Position: Debug {
     type Component: Component;
-    type Distance: PartialOrd;
 
     /// Returns the X component of the position in the coordinate system that it was created in.
     /// (To get the global point in space that this position encodes, independently from the used
@@ -57,7 +61,7 @@ pub trait Position: Debug {
     /// The distance is not meant to be interpreted as an absolute number, i.e. it cannot be
     /// interpreted as "distance in meters". Rather distances can be compared to each other, to
     /// establish an "is-closer-to-than" relationship.
-    fn distance_to(&self, other: &Self) -> Self::Distance;
+    fn distance_to(&self, other: &Self) -> Self::Component;
 
     /// Constructs a point in the given coordinate system, that represents the given global
     /// position coordinates.
@@ -131,6 +135,10 @@ impl F64Position {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         F64Position(Point3::new(x, y, z))
     }
+
+    pub fn global_position(&self) -> &Point3<f64> {
+        &self.0
+    }
 }
 
 impl Default for F64Position {
@@ -161,11 +169,15 @@ impl CoordinateSystem for F64CoordinateSystem {
     fn decode_position(&self, pos: &Self::Position) -> Point3<f64> {
         pos.0
     }
+
+    #[inline]
+    fn decode_distance(&self, distance: f64) -> f64 {
+        distance
+    }
 }
 
 impl Position for F64Position {
     type Component = f64;
-    type Distance = f64;
 
     fn x(&self) -> Self::Component {
         self.0.x
@@ -184,7 +196,7 @@ impl Position for F64Position {
     }
 
     /// Squared (euclidean) distance.
-    fn distance_to(&self, other: &Self) -> Self::Distance {
+    fn distance_to(&self, other: &Self) -> Self::Component {
         distance_squared(&self.0, &other.0)
     }
 }
@@ -262,6 +274,11 @@ impl CoordinateSystem for I32CoordinateSystem {
         let pos_f64 = Vector3::<f64>::new(pos.0.x as f64, pos.0.y as f64, pos.0.z as f64);
         Point3::from(pos_f64.component_mul(&self.scale) + self.offset)
     }
+
+    fn decode_distance(&self, distance: i32) -> f64 {
+        // assume a distance along the x axis
+        self.scale.x * distance as f64
+    }
 }
 
 /// Position with i32 x, y and z components.
@@ -276,7 +293,6 @@ impl Default for I32Position {
 
 impl Position for I32Position {
     type Component = i32;
-    type Distance = i32;
 
     fn x(&self) -> Self::Component {
         self.0.x
@@ -295,7 +311,7 @@ impl Position for I32Position {
     }
 
     /// manhattan distance
-    fn distance_to(&self, other: &Self) -> Self::Distance {
+    fn distance_to(&self, other: &Self) -> Self::Component {
         let p = self.0 - other.0;
         p.x.abs()
             .saturating_add(p.y.abs())

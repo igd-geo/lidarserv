@@ -5,15 +5,18 @@ use crate::lru_cache::pager::{
     PageManager as GenericPageManager,
 };
 use crate::nalgebra::Scalar;
+use crate::span;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{ErrorKind, Read, Write};
 use std::path::PathBuf;
+use std::sync::atomic::AtomicU8;
 
 #[derive(Default, Debug)]
 pub struct BinDataPage {
     pub exists: bool,
     pub data: Vec<u8>,
+    pub error_counter: AtomicU8,
 }
 
 pub struct BinDataLoader {
@@ -74,6 +77,7 @@ impl PageFileHandle for BinDataFileHandle {
                     Ok(BinDataPage {
                         exists: false,
                         data: Vec::new(),
+                        error_counter: AtomicU8::new(0),
                     })
                 } else {
                     Err(CacheLoadError::IO { source: e.into() })
@@ -83,6 +87,7 @@ impl PageFileHandle for BinDataFileHandle {
         let mut result = BinDataPage {
             exists: true,
             data: vec![],
+            error_counter: AtomicU8::new(0),
         };
         file.read_to_end(&mut result.data)?;
         Ok(result)
@@ -90,10 +95,14 @@ impl PageFileHandle for BinDataFileHandle {
 
     fn store(&mut self, data: &Self::Data) -> Result<(), IoError> {
         if data.exists {
+            let s = span!("BinDataFileHandle::store: write and sync");
+            s.emit_value(data.data.len() as u64);
             let mut file = File::create(&self.file_name)?;
             file.write_all(&data.data)?;
             file.sync_all()?;
+            drop(s);
         } else {
+            let s = span!("BinDataFileHandle::store: delete");
             match std::fs::remove_file(&self.file_name) {
                 Ok(_) => (),
                 Err(e) => {
@@ -105,6 +114,7 @@ impl PageFileHandle for BinDataFileHandle {
                     };
                 }
             }
+            drop(s);
         }
         Ok(())
     }

@@ -10,6 +10,7 @@ use lidarserv_common::geometry::position::{I32Position, Position};
 use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
 use lidarserv_common::nalgebra::Point3;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
+use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use log::info;
 use std::io::Cursor;
 use std::sync::Arc;
@@ -50,8 +51,8 @@ pub async fn handle_connection(
     // send index information to client
     con.write_message(&Message::PointCloudInfo {
         coordinate_system: CoordinateSystem::I32CoordinateSystem {
-            scale: *index.index_info().scale(),
-            offset: *index.index_info().offset(),
+            scale: *index.index_info().coordinate_system.scale(),
+            offset: *index.index_info().coordinate_system.offset(),
         },
     })
     .await?;
@@ -134,7 +135,8 @@ async fn viewer_mode(
     mut shutdown: Receiver<()>,
 ) -> Result<(), LidarServerError> {
     let (mut con_read, mut con_write) = con.into_split();
-    let coordinate_system = index.index_info().clone();
+    let coordinate_system = index.index_info().coordinate_system.clone();
+    let sampling_factory = index.index_info().sampling_factory.clone();
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded();
     let (updates_sender, mut updates_receiver) = tokio::sync::mpsc::channel(1);
 
@@ -193,49 +195,68 @@ async fn viewer_mode(
     });
 
     // read incoming messages and send to queries to query thread
-    while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
-        let query = match msg {
-            Message::Query(q) => q,
-            _ => {
-                return Err(LidarServerError::Protocol(
-                    "Expected `Query` message or EOF.".into(),
-                ));
-            }
-        };
-        match query {
-            Query::AabbQuery {
-                lod_level,
-                min_bounds,
-                max_bounds,
-            } => {
-                let mut aabb = OptionAABB::empty();
-                for p in [min_bounds, max_bounds] {
-                    let pos = match I32Position::encode(&coordinate_system, &Point3::from(p)) {
-                        Ok(pos) => pos,
-                        Err(e) => {
-                            return Err(LidarServerError::Protocol(format!(
-                                "Received invalid query: {}",
-                                e
-                            )));
-                        }
-                    };
-                    aabb.extend(&pos);
+    let receive_queries = async move {
+        while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
+            let query = match msg {
+                Message::Query(q) => q,
+                _ => {
+                    return Err(LidarServerError::Protocol(
+                        "Expected `Query` message or EOF.".into(),
+                    ));
                 }
-                let aabb = aabb.into_aabb().unwrap(); // unwrap: we just added two points, so it cannot be empty
-                let lod = LodLevel::from_level(lod_level);
-                queries_sender
-                    .send(Box::new(BoundingBoxQuery::new(aabb, lod)))
-                    .unwrap();
+            };
+            match query {
+                Query::AabbQuery {
+                    lod_level,
+                    min_bounds,
+                    max_bounds,
+                } => {
+                    let mut aabb = OptionAABB::empty();
+                    for p in [min_bounds, max_bounds] {
+                        let pos = match I32Position::encode(&coordinate_system, &Point3::from(p)) {
+                            Ok(pos) => pos,
+                            Err(e) => {
+                                return Err(LidarServerError::Protocol(format!(
+                                    "Received invalid query: {}",
+                                    e
+                                )));
+                            }
+                        };
+                        aabb.extend(&pos);
+                    }
+                    let aabb = aabb.into_aabb().unwrap(); // unwrap: we just added two points, so it cannot be empty
+                    let lod = LodLevel::from_level(lod_level);
+                    queries_sender
+                        .send(Box::new(BoundingBoxQuery::new(aabb, lod)))
+                        .unwrap();
+                }
+                Query::ViewFrustumQuery {
+                    view_projection_matrix,
+                    view_projection_matrix_inv,
+                    window_width_pixels,
+                    min_distance_pixels,
+                } => {
+                    let query = ViewFrustumQuery::new(
+                        view_projection_matrix,
+                        view_projection_matrix_inv,
+                        window_width_pixels,
+                        min_distance_pixels,
+                        &sampling_factory,
+                        &coordinate_system,
+                    );
+                    queries_sender.send(Box::new(query)).unwrap();
+                }
             }
         }
-    }
+        Ok(())
+    };
+    let result = receive_queries.await;
 
     // end query thread and wait for it to stop
-    drop(queries_sender);
     tokio::task::spawn_blocking(move || query_thread.join())
         .await
         .unwrap()
         .unwrap()?;
     send_task.await.unwrap()?;
-    Ok(())
+    result
 }

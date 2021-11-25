@@ -6,6 +6,22 @@ pub struct Args {
     #[structopt(long, default_value="info", possible_values = &["trace", "debug", "info", "warn", "error"])]
     pub log_level: log::Level,
 
+    /// speeds up or slows down the reader by the given factor
+    #[structopt(long, default_value = "1.0")]
+    pub speed_factor: f64,
+
+    /// The offset moves each point, such that (offset-x, offset-y, offset-z) becomes the origin.
+    #[structopt(long, short = "x", default_value = "0.0")]
+    pub offset_x: f64,
+
+    /// See offset-x.
+    #[structopt(long, short = "y", default_value = "0.0")]
+    pub offset_y: f64,
+
+    /// See offset-x.
+    #[structopt(long, short = "z", default_value = "0.0")]
+    pub offset_z: f64,
+
     /// File with the sensor trajectory
     #[structopt(long)]
     pub trajectory_file: String,

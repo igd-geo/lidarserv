@@ -1,4 +1,4 @@
-use lidarserv_common::nalgebra::Vector3;
+use lidarserv_common::nalgebra::{Matrix4, Vector3};
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{Debug, Formatter};
 
@@ -55,6 +55,12 @@ pub enum Query {
         min_bounds: Vector3<f64>,
         max_bounds: Vector3<f64>,
         lod_level: u16,
+    },
+    ViewFrustumQuery {
+        view_projection_matrix: Matrix4<f64>,
+        view_projection_matrix_inv: Matrix4<f64>,
+        window_width_pixels: f64,
+        min_distance_pixels: f64,
     },
 }
 

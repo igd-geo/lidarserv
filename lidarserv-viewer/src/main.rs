@@ -1,81 +1,34 @@
 use crate::cli::Args;
 use anyhow::Result;
-use lidarserv_server::common::geometry::bounding_box::{BaseAABB, AABB};
-use lidarserv_server::common::geometry::grid::LodLevel;
 use lidarserv_server::common::geometry::points::PointType;
 use lidarserv_server::common::geometry::position::Position;
 use lidarserv_server::common::las::LasPointAttributes;
-use lidarserv_server::common::nalgebra::Point3;
+use lidarserv_server::common::nalgebra::{Matrix4, Point3};
 use lidarserv_server::index::point::GlobalPoint;
 use lidarserv_server::net::client::viewer::{IncrementalUpdate, ViewerClient};
-use log::{debug, error, trace};
+use log::{debug, trace};
 use pasture_core::containers::{PerAttributeVecPointStorage, PointBuffer};
+use pasture_core::layout::attributes::INTENSITY;
 use pasture_core::layout::PointType as PasturePointType;
 use pasture_core::math::AABB as PastureAABB;
 use pasture_core::nalgebra::Vector3;
 use pasture_derive::PointType;
+use point_cloud_viewer::navigation::Matrices;
 use point_cloud_viewer::renderer::settings::{
-    BaseRenderSettings, Color, PointCloudRenderSettings, PointColor, PointShape, PointSize,
+    BaseRenderSettings, Color, ColorMap, PointCloudRenderSettings, PointColor, PointShape,
+    PointSize, ScalarAttributeColoring,
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::collections::HashMap;
 use std::thread;
 use tokio::sync::broadcast::Receiver;
+use tokio::sync::mpsc::error::TryRecvError;
 
 mod cli;
 
 #[paw::main]
 fn main(args: Args) {
     simple_logger::init_with_level(args.log_level).unwrap();
-    match main_with_errorhandling(args) {
-        Ok(()) => (),
-        Err(e) => {
-            error!("{}", e);
-        }
-    }
-}
-
-fn main_with_errorhandling(args: Args) -> Result<()> {
-    let (exit_sender, mut exit_receiver) = tokio::sync::broadcast::channel(1);
-    let (update_sender, update_receiver) = crossbeam_channel::bounded(5);
-    let net = thread::spawn(move || network_thread(args, &mut exit_receiver, update_sender));
-    viewer_thread(update_receiver);
-    net.join().unwrap()
-}
-
-#[tokio::main]
-async fn network_thread(
-    args: Args,
-    shutdown: &mut Receiver<()>,
-    updates_sender: crossbeam_channel::Sender<IncrementalUpdate>,
-) -> Result<()> {
-    // connect
-    let mut client = ViewerClient::connect((args.host, args.port), shutdown).await?;
-
-    // set query
-    let aabb = AABB::new(
-        Point3::new(
-            412785.340004 - 213.7,
-            5318821.784996 - 282.33,
-            315.510010 - 50.86,
-        ),
-        Point3::new(
-            412785.340004 + 213.7,
-            5318821.784996 + 282.33,
-            315.510010 + 50.86,
-        ),
-    );
-    client.query_aabb(&aabb, &LodLevel::from_level(5)).await?;
-
-    // keep receiving updates
-    loop {
-        let update = client.receive_update(shutdown).await?;
-        trace!("{:?}", update);
-        updates_sender.send(update).unwrap();
-    }
-}
-
-fn viewer_thread(updates_receiver: crossbeam_channel::Receiver<IncrementalUpdate>) {
     point_cloud_viewer::renderer::backends::glium::GliumRenderOptions::default().run(
         move |render_thread| {
             // create window
@@ -90,26 +43,45 @@ fn viewer_thread(updates_receiver: crossbeam_channel::Receiver<IncrementalUpdate
                 .unwrap();
             window
                 .set_default_point_cloud_settings(PointCloudRenderSettings {
-                    point_color: PointColor::Fixed(Color::GREY_5),
+                    point_color: PointColor::ScalarAttribute(ScalarAttributeColoring {
+                        attribute: INTENSITY,
+                        color_map: ColorMap::blue_green(),
+                        min: 0.0,
+                        max: u16::MAX as f32,
+                    }),
                     point_shape: PointShape::Round,
-                    point_size: PointSize::Fixed(5.0),
+                    point_size: PointSize::Fixed(6.0),
                 })
                 .unwrap();
 
+            // start network thread and continuosly
+            //  - send camera matrix to server
+            //  - receive point cloud updates from server
+            let offset = Vector3::new(0.0, 0.0, 0.0);
+            let camera_receiver = window.subscribe_to_camera().unwrap();
+            let (tokio_camera_sender, tokio_camera_receiver) = tokio::sync::mpsc::channel(500);
+            let (exit_sender, mut exit_receiver) = tokio::sync::broadcast::channel(1);
+            let (updates_sender, updates_receiver) = crossbeam_channel::bounded(5);
+            thread::spawn(move || {
+                network_thread(
+                    args,
+                    &mut exit_receiver,
+                    updates_sender,
+                    tokio_camera_receiver,
+                )
+            });
+            thread::spawn(move || {
+                forward_camera(camera_receiver, tokio_camera_sender, offset);
+                exit_sender.send(()).ok();
+            });
+
             // move to where the query is
+            // todo do not hardcode
             window
                 .camera_movement()
                 .focus_on_bounding_box(PastureAABB::from_min_max(
-                    Point3::new(
-                        412785.340004 - 213.7,
-                        5318821.784996 - 282.33,
-                        315.510010 - 50.86,
-                    ),
-                    Point3::new(
-                        412785.340004 + 213.7,
-                        5318821.784996 + 282.33,
-                        315.510010 + 50.86,
-                    ),
+                    Point3::new(-213.7, -282.33, 0.0),
+                    Point3::new(213.7, 282.33, 50.0),
                 ))
                 .execute()
                 .unwrap();
@@ -133,13 +105,22 @@ fn viewer_thread(updates_receiver: crossbeam_channel::Receiver<IncrementalUpdate
                 }
                 if let Some(node) = update_points {
                     let point_cloud_id = *point_clouds.get(&node.node_id).unwrap();
-                    window.update_point_cloud(point_cloud_id, &node_to_pasture(node.points), &[]);
+                    window
+                        .update_point_cloud(
+                            point_cloud_id,
+                            &node_to_pasture(node.points, offset),
+                            &[&INTENSITY],
+                        )
+                        .unwrap();
                 }
 
                 // insert new pcs
                 for node in insert {
                     let point_cloud_id = window
-                        .add_point_cloud(&node_to_pasture(node.points))
+                        .add_point_cloud_with_attributes(
+                            &node_to_pasture(node.points, offset),
+                            &[&INTENSITY],
+                        )
                         .unwrap();
                     point_clouds.insert(node.node_id, point_cloud_id);
                 }
@@ -154,6 +135,86 @@ fn viewer_thread(updates_receiver: crossbeam_channel::Receiver<IncrementalUpdate
     );
 }
 
+fn forward_camera(
+    receiver: crossbeam_channel::Receiver<Matrices>,
+    sender: tokio::sync::mpsc::Sender<Matrices>,
+    offset: Vector3<f64>,
+) {
+    let mut last_message = None;
+    for mut message in receiver {
+        if let Some(last_message) = &last_message {
+            if *last_message == message {
+                continue;
+            }
+        }
+        last_message = Some(message.clone());
+        message.view_matrix = message.view_matrix
+            * Matrix4::new(
+                // damn, rustfmt...
+                1.0, 0.0, 0.0, -offset.x, 0.0, 1.0, 0.0, -offset.y, 0.0, 0.0, 1.0, -offset.z, 0.0,
+                0.0, 0.0, 1.0,
+            );
+        message.view_matrix_inv = Matrix4::new(
+            1.0, 0.0, 0.0, offset.x, 0.0, 1.0, 0.0, offset.y, 0.0, 0.0, 1.0, offset.z, 0.0, 0.0,
+            0.0, 1.0,
+        ) * message.view_matrix_inv;
+        sender.blocking_send(message).ok();
+    }
+}
+
+#[tokio::main]
+async fn network_thread(
+    args: Args,
+    shutdown: &mut Receiver<()>,
+    updates_sender: crossbeam_channel::Sender<IncrementalUpdate>,
+    mut camera_reciver: tokio::sync::mpsc::Receiver<Matrices>,
+) -> Result<()> {
+    // connect
+    let client = ViewerClient::connect((args.host, args.port), shutdown).await?;
+    let (mut client_read, mut client_write) = client.into_split();
+
+    // task to send query to server
+    tokio::spawn(async move {
+        loop {
+            // get latest query
+            let mut camera_matrix = match camera_reciver.recv().await {
+                None => return,
+                Some(m) => m,
+            };
+            loop {
+                match camera_reciver.try_recv() {
+                    Ok(m) => camera_matrix = m,
+                    Err(TryRecvError::Empty) => break,
+                    Err(TryRecvError::Disconnected) => return,
+                }
+            }
+
+            // send to server
+            let view_projection_matrix =
+                camera_matrix.projection_matrix * camera_matrix.view_matrix;
+            let view_projection_matrix_inv =
+                camera_matrix.view_matrix_inv * camera_matrix.projection_matrix_inv;
+            debug!("Query: {:?}", view_projection_matrix);
+            client_write
+                .query_view_frustum(
+                    view_projection_matrix,
+                    view_projection_matrix_inv,
+                    camera_matrix.window_size.x,
+                    5.0,
+                )
+                .await
+                .unwrap()
+        }
+    });
+
+    // keep receiving updates
+    loop {
+        let update = client_read.receive_update(shutdown).await?;
+        trace!("{:?}", update);
+        updates_sender.send(update).unwrap();
+    }
+}
+
 #[repr(C, packed)]
 #[derive(Clone, Copy, Debug, PartialEq, Default, PointType)]
 pub struct PasturePointt {
@@ -163,7 +224,7 @@ pub struct PasturePointt {
     pub intensity: u16,
 }
 
-fn node_to_pasture(points: Vec<GlobalPoint>) -> impl PointBuffer {
+fn node_to_pasture(points: Vec<GlobalPoint>, offset: Vector3<f64>) -> impl PointBuffer {
     let mut point_buf = PerAttributeVecPointStorage::new(PasturePointt::layout());
     for point in points {
         let pasture_point = PasturePointt {
@@ -171,7 +232,7 @@ fn node_to_pasture(points: Vec<GlobalPoint>) -> impl PointBuffer {
                 point.position().x(),
                 point.position().y(),
                 point.position().z(),
-            ),
+            ) - offset,
             intensity: point.attribute::<LasPointAttributes>().intensity,
         };
         point_buf.push_point(pasture_point);

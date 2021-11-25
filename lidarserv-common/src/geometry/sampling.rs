@@ -1,10 +1,12 @@
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::geometry::points::PointType;
-use crate::geometry::position::Component;
+use crate::geometry::position::{Component, Position};
 use std::collections::hash_map::{Entry, Values};
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
+use nalgebra::Point;
 use std::marker::PhantomData;
 use std::mem;
 
@@ -12,22 +14,27 @@ pub trait SamplingFactory {
     type Point;
     type Sampling: Sampling<Point = Self::Point>;
 
-    /// Usually the LOD.
-    /// Or a LeveledGridCell for some more special applications.
-    type Param;
-
-    fn build(&self, param: &Self::Param) -> Self::Sampling;
+    fn build(&self, param: &LodLevel) -> Self::Sampling;
 }
 
 /// Samples incoming points and stores the selected ones.
 pub trait Sampling {
-    type Point;
+    type Point: PointType;
     type Raw: RawSamplingEntry;
 
     /// Return the number of points, that have been selected by the sampling.
     fn len(&self) -> usize;
 
+    /// The minimum distance between two sampled points
+    fn point_distance(&self) -> <<Self::Point as PointType>::Position as Position>::Component;
+
+    /// Returns true, if the sampling is empty
     fn is_empty(&self) -> bool;
+
+    /// calculate the bounding box of the contained points.
+    fn bounding_box(
+        &self,
+    ) -> OptionAABB<<<Self::Point as PointType>::Position as Position>::Component>;
 
     /// Samples from the given list of points and stores the selected ones.
     /// The return value contains
@@ -56,6 +63,9 @@ pub trait Sampling {
 
     /// Returns the list of entries in this node, leaving the node empty.
     fn drain_raw(&mut self) -> Vec<Self::Raw>;
+
+    ///
+    fn points_into_raw(&self, points: Vec<Self::Point>) -> Vec<Self::Raw>;
 
     /// Inserts raw entries into the node, that have been obtained from [Self::into_raw] on a
     /// different node of the same LOD.
@@ -139,16 +149,15 @@ impl<GridHierarchy, Point, Position, Distance> SamplingFactory
 where
     GridHierarchy: super::grid::GridHierarchy,
     Distance: PartialOrd,
-    Position: super::position::Position<Distance = Distance>,
+    Position: super::position::Position<Component = Distance>,
     Position::Component: Component,
     Point: PointType<Position = Position>,
     GridHierarchy::Grid: super::grid::Grid<Position = Position, Component = Position::Component>,
 {
     type Point = Point;
     type Sampling = GridCenterSampling<GridHierarchy::Grid, Point, Position, Distance>;
-    type Param = LodLevel;
 
-    fn build(&self, level: &Self::Param) -> Self::Sampling {
+    fn build(&self, level: &LodLevel) -> Self::Sampling {
         GridCenterSampling {
             grid: self.grid_hierarchy.level(level).into_grid(),
             points: HashMap::new(),
@@ -159,8 +168,8 @@ where
 impl<Grid, Point, Position, Distance> Sampling
     for GridCenterSampling<Grid, Point, Position, Distance>
 where
-    Distance: PartialOrd,
-    Position: super::position::Position<Distance = Distance>,
+    Distance: PartialOrd + Component,
+    Position: super::position::Position<Component = Distance>,
     Position::Component: Component,
     Point: PointType<Position = Position>,
     Grid: super::grid::Grid<Position = Position, Component = Position::Component>,
@@ -172,8 +181,32 @@ where
         self.points.len()
     }
 
+    fn point_distance(
+        &self,
+    ) -> <<Self::Point as PointType>::Position as crate::geometry::position::Position>::Component
+    {
+        let example_cell = self.grid.cell_bounds(&GridCell { x: 0, y: 0, z: 0 });
+        let min = example_cell.min::<Position>();
+        let max = example_cell.max::<Position>();
+        let p1 = Position::from_components(min.x(), min.y(), min.z());
+        let p2 = Position::from_components(max.x(), min.y(), min.z());
+        p1.distance_to(&p2)
+    }
+
     fn is_empty(&self) -> bool {
         self.points.is_empty()
+    }
+
+    fn bounding_box(
+        &self,
+    ) -> OptionAABB<
+        <<Self::Point as PointType>::Position as crate::geometry::position::Position>::Component,
+    > {
+        let mut bounds = OptionAABB::empty();
+        for p in self.points.values() {
+            bounds.extend(p.point.position());
+        }
+        bounds
     }
 
     fn insert<F>(
@@ -254,6 +287,25 @@ where
         points
             .into_iter()
             .map(|(k, v)| GridCenterRawEntry { cell: k, entry: v })
+            .collect()
+    }
+
+    fn points_into_raw(&self, points: Vec<Self::Point>) -> Vec<Self::Raw> {
+        points
+            .into_iter()
+            .map(|point| {
+                let cell = self.grid.cell_at(point.position());
+                let center: Position = self.grid.cell_bounds(&cell).center();
+                let center_distance = center.distance_to(point.position());
+                GridCenterRawEntry {
+                    cell,
+                    entry: GridCenterEntry {
+                        point,
+                        center,
+                        center_distance,
+                    },
+                }
+            })
             .collect()
     }
 

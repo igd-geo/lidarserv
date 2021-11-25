@@ -1,5 +1,5 @@
 use crate::geometry::position::{Component, Position};
-use nalgebra::{Point3, Scalar};
+use nalgebra::{Point3, Scalar, Vector3};
 use num_traits::Bounded;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
@@ -75,7 +75,7 @@ impl<C: Component> BaseAABB<C> for OptionAABB<C> {
             self.min.z = other.min.z;
         }
         if other.max.x > self.max.x {
-            self.max.x = other.max.y;
+            self.max.x = other.max.x;
         }
         if other.max.y > self.max.y {
             self.max.y = other.max.y;

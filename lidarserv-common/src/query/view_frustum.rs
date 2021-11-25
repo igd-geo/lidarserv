@@ -1,6 +1,8 @@
 use crate::geometry::bounding_box::{BaseAABB, AABB};
 use crate::geometry::grid::{Grid, GridCell, GridHierarchy, LodLevel};
+use crate::geometry::points::PointType;
 use crate::geometry::position::{Component, CoordinateSystem, F64Position, Position};
+use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::query::Query;
 use nalgebra::{Matrix4, Point3, Vector3, Vector4};
 
@@ -13,28 +15,24 @@ pub struct ViewFrustumQuery {
 }
 
 impl ViewFrustumQuery {
-    pub fn new<GridH, CSys, Pos, Comp>(
+    pub fn new<SamplF, Point, CSys, Pos>(
         view_projection_matrix: Matrix4<f64>,
         view_projection_matrix_inv: Matrix4<f64>,
         window_width_pixels: f64,
         min_distance_pixels: f64,
-        grid_hierarchy: &GridH,
+        sampling_factory: &SamplF,
         coordinate_system: &CSys,
     ) -> Self
     where
-        GridH: GridHierarchy<Position = Pos, Component = Comp>,
+        SamplF: SamplingFactory<Point = Point>,
+        Point: PointType<Position = Pos>,
         CSys: CoordinateSystem<Position = Pos>,
-        Pos: Position<Component = Comp>,
-        Comp: Component,
+        Pos: Position,
     {
         let clip_min_point_dist = min_distance_pixels / window_width_pixels * 2.0;
 
-        let example_lod0_cell = grid_hierarchy
-            .level(&LodLevel::from_level(0))
-            .cell_bounds(&GridCell { x: 0, y: 0, z: 0 });
-        let global_min = coordinate_system.decode_position(&example_lod0_cell.min());
-        let global_max = coordinate_system.decode_position(&example_lod0_cell.max());
-        let lod0_point_distance = global_max.x - global_min.x;
+        let lod0_point_distance = sampling_factory.build(&LodLevel::base()).point_distance();
+        let lod0_point_distance = coordinate_system.decode_distance(lod0_point_distance);
 
         ViewFrustumQuery {
             view_projection_matrix,
@@ -77,7 +75,7 @@ where
         let min_point_dist: f64 = (self.view_projection_matrix_inv * clip_min_point_dist_hom)
             .xyz()
             .norm();
-        let lod_level = (min_point_dist / self.lod0_point_distance).log2().ceil() as u16;
+        let lod_level = (self.lod0_point_distance / min_point_dist).log2().ceil() as u16;
         Some(LodLevel::from_level(lod_level))
     }
 
@@ -136,11 +134,11 @@ where
                 }
             })
             .unwrap();
-
-        // calculate the lod for that point
         if min_d < 0.0 {
             min_d_point = near_clipping_plane.project_onto_plane(&min_d_point);
         }
+
+        // calculate the lod for that point
         let min_d_point_hom = Vector4::new(min_d_point.x, min_d_point.y, min_d_point.z, 1.0);
         let clip_min_d_point_hom = self.view_projection_matrix * min_d_point_hom;
         let clip_min_point_dist_hom = Vector4::new(
@@ -152,7 +150,7 @@ where
         let min_point_dist = (self.view_projection_matrix_inv * clip_min_point_dist_hom)
             .xyz()
             .norm();
-        let lod_level = (min_point_dist / self.lod0_point_distance).log2().ceil() as u16;
+        let lod_level = (self.lod0_point_distance / min_point_dist).log2().ceil() as u16;
         Some(LodLevel::from_level(lod_level))
     }
 }

@@ -164,11 +164,12 @@ fn read_points(args: &Args, sender: tokio::sync::mpsc::Sender<Vec<GlobalPoint>>)
     let frame_time = 1.0 / args.fps as f64;
     let mut current_frame: Option<(f64, Instant, Vec<_>)> = None;
     for (traj, point) in points {
+        let point_scaled_time_stamp = point.time_stamp / args.speed_factor;
         loop {
-            let (start_ts, start_time, points) =
-                current_frame.get_or_insert_with(|| (point.time_stamp, Instant::now(), Vec::new()));
+            let (start_ts, start_time, points) = current_frame
+                .get_or_insert_with(|| (point_scaled_time_stamp, Instant::now(), Vec::new()));
             let end_ts = *start_ts + frame_time;
-            if point.time_stamp <= end_ts {
+            if point_scaled_time_stamp <= end_ts {
                 let trajectory_position = Vector3::new(traj.easting, traj.northing, traj.altitude1);
                 let point_hom =
                     Vector4::new(point.point_3d_x, point.point_3d_z, -point.point_3d_y, 1.0);
@@ -177,17 +178,20 @@ fn read_points(args: &Args, sender: tokio::sync::mpsc::Sender<Vec<GlobalPoint>>)
                         * point_hom;
                 let point_position = point_hom.xyz() / point_hom.w;
                 let position = trajectory_position + point_position;
-                let mut global_point =
-                    GlobalPoint::new(F64Position::new(position.x, position.y, position.z));
+                let mut global_point = GlobalPoint::new(F64Position::new(
+                    position.x - args.offset_x,
+                    position.y - args.offset_y,
+                    position.z - args.offset_z,
+                ));
                 global_point
                     .attribute_mut::<SensorPositionAttribute<F64Position>>()
                     .0 = F64Position::new(
-                    trajectory_position.x,
-                    trajectory_position.y,
-                    trajectory_position.z,
+                    trajectory_position.x - args.offset_x,
+                    trajectory_position.y - args.offset_y,
+                    trajectory_position.z - args.offset_z,
                 );
                 global_point.attribute_mut::<LasPointAttributes>().intensity =
-                    point.intensity as u16;
+                    (point.intensity * u16::MAX as f64) as u16;
                 points.push(global_point);
                 break;
             }

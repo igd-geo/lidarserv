@@ -1,0 +1,11 @@
+
+[build]
+# uncomment for cargo flamegraph
+rustflags = "-C debuginfo=1 -C force-frame-pointers=y"
+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+
+[target.arm-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+
