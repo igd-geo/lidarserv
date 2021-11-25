@@ -116,18 +116,16 @@ where
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
 {
     type Writer = OctreeWriter<Point, GridH>;
-    type Reader = OctreeReader<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>;
+    type Reader = OctreeReader<Point, GridH, LasL, Sampl, Comp, CSys, SamplF, Pos>;
 
     fn writer(&self) -> Self::Writer {
         OctreeWriter::new(Arc::clone(&self.inner))
     }
 
-    fn reader<Q>(&self, _query: Q) -> Self::Reader
+    fn reader<Q>(&self, query: Q) -> Self::Reader
     where
-        Q: Query<Pos, CSys> + 'static,
+        Q: Query<Pos, CSys> + 'static + Send + Sync,
     {
-        OctreeReader {
-            inner: Arc::clone(&self.inner),
-        }
+        OctreeReader::new(query, Arc::clone(&self.inner))
     }
 }
