@@ -11,8 +11,9 @@ use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
 use lidarserv_common::nalgebra::Point3;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use lidarserv_common::query::view_frustum::ViewFrustumQuery;
-use log::info;
+use log::{debug, info};
 use std::io::Cursor;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::thread;
 use tokio::net::TcpStream;
@@ -62,7 +63,7 @@ pub async fn handle_connection(
     if let Message::ConnectionMode { device } = msg {
         match device {
             DeviceType::Viewer => {
-                viewer_mode(con, index, shutdown).await?;
+                viewer_mode(con, index, shutdown, addr).await?;
             }
             DeviceType::CaptureDevice => {
                 capture_device_mode(con, index, shutdown).await?;
@@ -133,6 +134,7 @@ async fn viewer_mode(
     con: Connection<TcpStream>,
     index: Arc<dyn DynIndex>,
     mut shutdown: Receiver<()>,
+    addr: SocketAddr,
 ) -> Result<(), LidarServerError> {
     let (mut con_read, mut con_write) = con.into_split();
     let coordinate_system = index.index_info().coordinate_system.clone();
@@ -226,9 +228,9 @@ async fn viewer_mode(
                     }
                     let aabb = aabb.into_aabb().unwrap(); // unwrap: we just added two points, so it cannot be empty
                     let lod = LodLevel::from_level(lod_level);
-                    queries_sender
-                        .send(Box::new(BoundingBoxQuery::new(aabb, lod)))
-                        .unwrap();
+                    let query = BoundingBoxQuery::new(aabb, lod);
+                    debug!("{}: Query: {:?}", addr, &query);
+                    queries_sender.send(Box::new(query)).unwrap();
                 }
                 Query::ViewFrustumQuery {
                     view_projection_matrix,
@@ -244,6 +246,7 @@ async fn viewer_mode(
                         &sampling_factory,
                         &coordinate_system,
                     );
+                    debug!("{}: Query: {:?}", addr, &query);
                     queries_sender.send(Box::new(query)).unwrap();
                 }
             }

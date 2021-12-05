@@ -23,18 +23,18 @@ pub trait PointType {
 
     /// Access the point attribute specified by the type parameter.
     #[inline]
-    fn attribute_mut<T>(&mut self) -> &mut T
+    fn set_attribute<T>(&mut self, new_value: T)
     where
         Self: WithAttr<T>,
     {
-        self.value_mut()
+        self.set_value(new_value)
     }
 }
 
 pub trait WithAttr<T> {
     fn value(&self) -> &T;
 
-    fn value_mut(&mut self) -> &mut T;
+    fn set_value(&mut self, new_value: T);
 }
 
 #[cfg(test)]
@@ -73,8 +73,8 @@ mod tests {
             &self.example
         }
 
-        fn value_mut(&mut self) -> &mut ExampleAttribute {
-            &mut self.example
+        fn set_value(&mut self, new_value: ExampleAttribute) {
+            self.example = new_value;
         }
     }
 
@@ -83,8 +83,8 @@ mod tests {
             &self.foo_bar
         }
 
-        fn value_mut(&mut self) -> &mut FooBarAttribute {
-            &mut self.foo_bar
+        fn set_value(&mut self, new_value: FooBarAttribute) {
+            self.foo_bar = new_value
         }
     }
 
@@ -98,8 +98,8 @@ mod tests {
         };
 
         // set some attribute values
-        point.attribute_mut::<FooBarAttribute>().0 = 123;
-        point.attribute_mut::<ExampleAttribute>().0 = 42;
+        point.set_attribute(FooBarAttribute(123));
+        point.set_attribute(ExampleAttribute(42));
 
         // get and check attribute values
         let foo_bar = point.attribute::<FooBarAttribute>();

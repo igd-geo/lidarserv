@@ -1,5 +1,7 @@
+use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
 use crate::query::Query;
+use std::error::Error;
 
 pub mod octree;
 pub mod sensor_pos;
@@ -16,12 +18,18 @@ where
     fn reader<Q>(&self, query: Q) -> Self::Reader
     where
         Q: Query<Point::Position, CSys> + 'static + Send + Sync;
+    fn flush(&mut self) -> Result<(), Box<dyn Error>>;
 }
 
 pub trait Writer<Point>
 where
     Point: PointType,
 {
+    // returns the number of points, that are currently being inserted, or are waiting
+    // in a buffer/queue for being inserted.
+    // i.e. all points, that have been submitted via [Self::insert], but are not visible to queries, yet.
+    fn backlog_size(&self) -> usize;
+
     /// Insert new points into the index.
     fn insert(&mut self, points: Vec<Point>);
 }
@@ -30,8 +38,8 @@ pub trait Reader<Point, CSys>
 where
     Point: PointType,
 {
-    type NodeId;
-    type Node: Node;
+    type NodeId: NodeId;
+    type Node: Node<Point = Point>;
 
     fn set_query<Q: Query<Point::Position, CSys> + 'static + Send + Sync>(&mut self, query: Q);
 
@@ -54,5 +62,12 @@ where
 pub type Update<NodeId, NodeData> = (NodeId, Vec<(NodeId, NodeData)>);
 
 pub trait Node {
-    fn las_files(&self) -> Vec<&[u8]>;
+    type Point;
+
+    fn las_files(&self) -> Vec<Vec<u8>>;
+    fn points(&self) -> Vec<Self::Point>;
+}
+
+pub trait NodeId {
+    fn lod(&self) -> LodLevel;
 }

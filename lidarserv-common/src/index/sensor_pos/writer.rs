@@ -6,7 +6,7 @@ use crate::geometry::sampling::{
     IntoExactSizeIterator, RawSamplingEntry, Sampling, SamplingFactory,
 };
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
-use crate::index::sensor_pos::page_manager::{BinDataPage, FileId};
+use crate::index::sensor_pos::page_manager::FileId;
 use crate::index::sensor_pos::partitioned_node::{
     PartitionedNode, PartitionedNodeSplitter, PartitionedPoints,
 };
@@ -27,7 +27,8 @@ use std::collections::VecDeque;
 use std::error::Error as StdError;
 use std::fmt::Debug;
 use std::mem;
-use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::{atomic, Arc};
 use std::thread::{spawn, JoinHandle};
 use thiserror::Error;
 
@@ -67,6 +68,7 @@ pub struct SensorPosWriter<Point, CSys> {
     coordinator_join: Option<JoinHandle<Result<(), IndexError>>>,
     new_points_sender: Option<Sender<Vec<Point>>>,
     coordinate_system: CSys,
+    pending_points: Arc<AtomicUsize>,
 }
 
 impl<Point, Pos, Comp, CSys> SensorPosWriter<Point, CSys>
@@ -93,15 +95,18 @@ where
         LasL: LasReadWrite<Point, CSys> + Send + Sync + 'static,
     {
         let (new_points_sender, new_points_receiver) = crossbeam_channel::unbounded();
+        let pending_points = Arc::new(AtomicUsize::new(0));
         let coordinator_join = {
             let inner = Arc::clone(&index_inner);
             let meta_tree = inner.shared.read().unwrap().meta_tree.clone();
-            spawn(move || coordinator_thread(inner, new_points_receiver, meta_tree))
+            let pending_points = Arc::clone(&pending_points);
+            spawn(move || coordinator_thread(inner, new_points_receiver, meta_tree, pending_points))
         };
         SensorPosWriter {
             coordinator_join: Some(coordinator_join),
             new_points_sender: Some(new_points_sender),
             coordinate_system: index_inner.coordinate_system.clone(),
+            pending_points,
         }
     }
 
@@ -114,7 +119,14 @@ impl<Point, CSys> Writer<Point> for SensorPosWriter<Point, CSys>
 where
     Point: PointType,
 {
+    fn backlog_size(&self) -> usize {
+        self.pending_points
+            .load(std::sync::atomic::Ordering::Acquire)
+    }
+
     fn insert(&mut self, points: Vec<Point>) {
+        self.pending_points
+            .fetch_add(points.len(), std::sync::atomic::Ordering::Release);
         self.new_points_sender
             .as_mut()
             .unwrap()
@@ -142,6 +154,7 @@ fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys, Raw>(
     inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
     new_points_receiver: Receiver<Vec<Point>>,
     mut meta_tree: MetaTree<GridH, Comp>,
+    pending_points: Arc<AtomicUsize>,
 ) -> Result<(), IndexError>
 where
     Comp: Component + Send + Sync + Serialize + DeserializeOwned,
@@ -198,9 +211,9 @@ where
                 new_points.push_back(received);
             }
         }
+        drop(s1);
 
         // find the nodes to insert points into based on the current sensor position
-        drop(s1);
         let s1 = span!("coordinator_thread: choose nodes");
         let first_point = &new_points[0][0];
         let sensor_pos = first_point
@@ -208,10 +221,10 @@ where
             .0
             .clone();
         let nodes = meta_tree.query_sensor_position(&sensor_pos);
+        drop(s1);
 
         // get the points from the head of new_points,
         // that can be inserted into the same nodes.
-        drop(s1);
         let s1 = span!("coordinator_thread: how many points");
         let bounds = nodes.min_bounds();
         let mut nr_points = 0;
@@ -224,11 +237,18 @@ where
                 }
             }
             nr_points += block.len();
+            if nr_points > inner.max_node_size * 2 {
+                // not too many points at once, to avoid excessive node splits.
+                nr_points = inner.max_node_size * 2;
+                break 'blocks;
+            }
         }
+
         s1.emit_value(nr_points as u64);
+        pending_points.fetch_sub(nr_points, atomic::Ordering::Release);
+        drop(s1);
 
         // transfer points into buffers for individual worker threads
-        drop(s1);
         let s1 = span!("coordinator_thread: copy points");
         let mut worker_buffers = Vec::new();
         let points_per_thread = nr_points / nr_threads;
@@ -257,7 +277,8 @@ where
             // use for thread `thread_id`
             worker_buffers.push(points);
         }
-        let mut worker_buffers = PartitionedPoints::from_partitions(worker_buffers);
+        let worker_buffers = PartitionedPoints::from_partitions(worker_buffers);
+        drop(s1);
 
         // load nodes
         let mut lod = LodLevel::base();
@@ -277,6 +298,7 @@ where
                     &inner.las_loader,
                     &inner.coordinate_system,
                     &mut threads,
+                    inner.hasher.clone(),
                 )?;
                 drop(s3);
 
@@ -316,65 +338,31 @@ where
 
             // next lod
             lod = lod.finer();
+            drop(s1);
         }
 
         // insert points into each lod, top-to-bottom
         // until no points are left in all worker buffers.
-        drop(s1);
         let s1 = span!("coordinator_thread: insert points");
         PartitionedNode::parallel_insert_multi_lod(
             &mut loaded_nodes,
             worker_buffers,
             &inner.sampling_factory,
             |p, q| {
-                *q.attribute_mut::<SensorPositionAttribute<Pos>>() =
-                    p.attribute::<SensorPositionAttribute<Pos>>().clone()
+                q.set_attribute(p.attribute::<SensorPositionAttribute<Pos>>().clone());
             },
             &mut threads,
         );
         drop(s1);
-
-        /*
-        let mut lod = LodLevel::base();
-        drop(s1);
-        while !worker_buffers.is_empty() {
-            let s1 = span!("coordinator_thread: insert lod");
-            s1.emit_value(lod.level() as u64);
-            let lod_level = lod.level() as usize;
-            let node = &mut loaded_nodes[lod_level];
-
-            // add new points
-            if lod == inner.max_lod {
-                // At the max lod level, we keep all points.
-                // So no sampling needs to be performed.
-                // We will use the bogus points as a simple "flat points buffer"
-                node.parallel_insert_bogus(worker_buffers, &mut threads);
-                worker_buffers = PartitionedPoints::new(nr_threads);
-            } else {
-                node.parallel_insert(
-                    worker_buffers,
-                    &inner.sampling_factory,
-                    |p, q| {
-                        *q.attribute_mut::<SensorPositionAttribute<Pos>>() =
-                            p.attribute::<SensorPositionAttribute<Pos>>().clone()
-                    },
-                    &mut threads,
-                );
-                worker_buffers = node.drain_bogus_points();
-            }
-            node.mark_dirty();
-
-            // next lod level in next loop iteration
-            lod = lod.finer();
-            drop(s1);
-        }*/
 
         // split nodes, that got too big
         let mut lod = LodLevel::base();
         while lod <= inner.max_lod {
             let lod_level = lod.level() as usize;
             let node = &mut loaded_nodes[lod_level];
-            if node.nr_points() > inner.max_node_size {
+            if node.nr_points() > inner.max_node_size
+                && node.node_id().tree_node().lod < inner.max_lod
+            {
                 let s2 = span!("coordinator_thread:: split");
 
                 // queue of nodes, that still need to be split
@@ -392,7 +380,9 @@ where
                     // the child nodes, that are small enough are put into `fully_split`, the other
                     // ones are re-queued.
                     for child in children {
-                        if child.nr_points() > inner.max_node_size {
+                        if child.nr_points() > inner.max_node_size
+                            && child.node_id().tree_node().lod < inner.max_lod
+                        {
                             queue.push(child)
                         } else {
                             fully_split.push(child)

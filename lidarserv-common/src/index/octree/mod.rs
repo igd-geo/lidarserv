@@ -15,6 +15,7 @@ use crate::index::Index;
 use crate::las::LasReadWrite;
 use crate::nalgebra::Scalar;
 use crate::query::Query;
+use std::error::Error;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
@@ -127,5 +128,9 @@ where
         Q: Query<Pos, CSys> + 'static + Send + Sync,
     {
         OctreeReader::new(query, Arc::clone(&self.inner))
+    }
+
+    fn flush(&mut self) -> Result<(), Box<dyn Error>> {
+        Octree::flush(self).map_err(|e| Box::new(e) as Box<dyn Error>)
     }
 }

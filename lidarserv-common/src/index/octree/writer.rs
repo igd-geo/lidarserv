@@ -10,7 +10,7 @@ use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
 use crate::nalgebra::Scalar;
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::cmp::{min, Ordering};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -42,6 +42,7 @@ pub enum TaskPriorityFunction {
     OldestPoint,
     NewestPoint,
     TaskAge,
+    NrPointsWeightedByTaskAge,
 }
 
 struct Inboxes<Point> {
@@ -122,6 +123,14 @@ impl TaskPriorityFunction {
             TaskPriorityFunction::NewestPoint => task_2.max_generation.cmp(&task_1.max_generation),
             TaskPriorityFunction::TaskAge => {
                 task_2.created_generation.cmp(&task_1.created_generation)
+            }
+            TaskPriorityFunction::NrPointsWeightedByTaskAge => {
+                let base = min(task_1.min_generation, task_2.min_generation);
+                let l = task_1.points.len() as f64
+                    * 2.0_f64.powi((task_1.min_generation - base) as i32);
+                let r = task_2.points.len() as f64
+                    * 2.0_f64.powi((task_2.min_generation - base) as i32);
+                l.partial_cmp(&r).unwrap_or_else(|| unreachable!())
             }
         }
     }
@@ -492,6 +501,10 @@ where
     GridH: GridHierarchy<Position = Pos>,
     Point: PointType<Position = Pos> + Clone,
 {
+    fn backlog_size(&self) -> usize {
+        self.nr_points_waiting()
+    }
+
     fn insert(&mut self, points: Vec<Point>) {
         self.insert_many(points)
     }

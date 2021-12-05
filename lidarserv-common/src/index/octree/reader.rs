@@ -4,14 +4,14 @@ use crate::geometry::position::{Component, CoordinateSystem, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
-use crate::index::{Node, Reader, Update};
+use crate::index::{Node, NodeId, Reader, Update};
 use crate::las::LasReadWrite;
 use crate::lru_cache::pager::PageDirectory;
 use crate::nalgebra::Scalar;
 use crate::query::{Query, QueryExt};
 use crossbeam_channel::{Receiver, TryRecvError};
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct OctreeReader<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF, Pos> {
     #[allow(dead_code)] // todo: will not be dead code any more, once OctreeReader is implemented
@@ -322,7 +322,7 @@ where
     Pos: Position<Component = Comp>,
 {
     type NodeId = LeveledGridCell;
-    type Node = OctreePage;
+    type Node = OctreePage<Sampl, Point, Comp, CSys, LasL>;
 
     fn set_query<Q: Query<Point::Position, CSys> + 'static + Send + Sync>(&mut self, query: Q) {
         OctreeReader::set_query(self, Box::new(query))
@@ -380,31 +380,52 @@ where
     }
 }
 
-pub struct OctreePage {
-    pub data: Arc<Vec<u8>>,
+pub struct OctreePage<Sampl, Point, Comp: Scalar, CSys, LasL> {
+    page: Arc<Page<Sampl, Point, Comp, CSys>>,
+    loader: LasL,
 }
 
-impl OctreePage {
-    pub fn from_page<Sampl, Point, Comp, CSys, Pos, LasL>(
-        page: Arc<Page<Sampl, Point, Comp, CSys>>,
-        loader: &LasL,
-    ) -> Self
-    where
-        Point: PointType<Position = Pos> + Clone,
-        Pos: Position<Component = Comp>,
-        Comp: Component,
-        Sampl: Sampling<Point = Point>,
-        CSys: Clone + PartialEq,
-        LasL: LasReadWrite<Point, CSys>,
-    {
+impl<Sampl, Point, Comp, CSys, Pos, LasL> OctreePage<Sampl, Point, Comp, CSys, LasL>
+where
+    Point: PointType<Position = Pos> + Clone,
+    Pos: Position<Component = Comp>,
+    Comp: Component,
+    Sampl: Sampling<Point = Point>,
+    CSys: Clone + PartialEq,
+    LasL: LasReadWrite<Point, CSys> + Clone,
+{
+    pub fn from_page(page: Arc<Page<Sampl, Point, Comp, CSys>>, loader: &LasL) -> Self {
         OctreePage {
-            data: page.get_binary(loader),
+            page,
+            loader: loader.clone(),
         }
     }
 }
 
-impl Node for OctreePage {
-    fn las_files(&self) -> Vec<&[u8]> {
-        vec![self.data.as_slice()]
+impl<Sampl, Point, Comp, CSys, Pos, LasL> Node for OctreePage<Sampl, Point, Comp, CSys, LasL>
+where
+    Point: PointType<Position = Pos> + Clone,
+    Pos: Position<Component = Comp>,
+    Comp: Component,
+    Sampl: Sampling<Point = Point>,
+    CSys: Clone + PartialEq,
+    LasL: LasReadWrite<Point, CSys> + Clone,
+{
+    type Point = Point;
+
+    fn las_files(&self) -> Vec<Vec<u8>> {
+        vec![self.page.get_binary(&self.loader).as_ref().clone()]
+    }
+
+    fn points(&self) -> Vec<Self::Point> {
+        self.page
+            .get_points(&self.loader)
+            .unwrap_or_else(|_| Vec::new())
+    }
+}
+
+impl NodeId for LeveledGridCell {
+    fn lod(&self) -> LodLevel {
+        self.lod
     }
 }

@@ -51,8 +51,8 @@ where
         &self.sensor_pos
     }
 
-    fn value_mut(&mut self) -> &mut SensorPositionAttribute<Pos> {
-        &mut self.sensor_pos
+    fn set_value(&mut self, new_value: SensorPositionAttribute<Pos>) {
+        self.sensor_pos = new_value;
     }
 }
 
@@ -61,37 +61,20 @@ impl<Pos> WithAttr<LasPointAttributes> for GenericPoint<Pos> {
         self.las_attributes.as_ref()
     }
 
-    fn value_mut(&mut self) -> &mut LasPointAttributes {
-        self.las_attributes.as_mut()
+    fn set_value(&mut self, new_value: LasPointAttributes) {
+        *self.las_attributes = new_value
     }
 }
 
 impl LasExtraBytes for LasPoint {
-    const NR_EXTRA_BYTES: usize = 12;
+    const NR_EXTRA_BYTES: usize = SensorPositionAttribute::<I32Position>::NR_EXTRA_BYTES;
 
     fn get_extra_bytes(&self) -> Vec<u8> {
-        let mut bytes = vec![0; 12];
-        let bytes_x = self.sensor_pos.0.x().to_le_bytes();
-        let bytes_y = self.sensor_pos.0.y().to_le_bytes();
-        let bytes_z = self.sensor_pos.0.z().to_le_bytes();
-        bytes[0..4].copy_from_slice(&bytes_x[..]);
-        bytes[4..8].copy_from_slice(&bytes_y[..]);
-        bytes[8..12].copy_from_slice(&bytes_z[..]);
-        bytes
+        self.sensor_pos.get_extra_bytes()
     }
 
     fn set_extra_bytes(&mut self, extra_bytes: &[u8]) {
-        let mut bytes_x = [0; 4];
-        let mut bytes_y = [0; 4];
-        let mut bytes_z = [0; 4];
-        bytes_x.copy_from_slice(&extra_bytes[0..4]);
-        bytes_y.copy_from_slice(&extra_bytes[4..8]);
-        bytes_z.copy_from_slice(&extra_bytes[8..12]);
-        self.sensor_pos.0 = I32Position::from_components(
-            i32::from_le_bytes(bytes_x),
-            i32::from_le_bytes(bytes_y),
-            i32::from_le_bytes(bytes_z),
-        );
+        self.sensor_pos.set_extra_bytes(extra_bytes)
     }
 }
 

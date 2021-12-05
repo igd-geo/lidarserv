@@ -106,6 +106,29 @@ where
         arc
     }
 
+    pub fn get_points<LasL>(&self, loader: &LasL) -> Result<Vec<Point>, ReadLasError>
+    where
+        LasL: LasReadWrite<Point, CSys>,
+    {
+        // try to get points from node
+        {
+            let read_lock = self.node.read().unwrap();
+            if let Some(node) = &*read_lock {
+                return node.as_ref().map_err(|e| e.clone()).map(|n| {
+                    let mut points = n.sampling.clone_points();
+                    points.append(&mut n.bogus_points.clone());
+                    points
+                });
+            }
+        }
+
+        // else: parse las
+        let read_lock = self.binary.read().unwrap();
+        // unwrap: if self.node is None, then self.binary MUST be a Some.
+        let cursor = Cursor::new(read_lock.as_ref().unwrap().as_slice());
+        loader.read_las(cursor).map(|las| las.points)
+    }
+
     pub fn get_node<LasL, F>(
         &self,
         loader: &LasL,

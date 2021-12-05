@@ -5,6 +5,7 @@ use crate::index::point::LasPoint;
 use crate::net::protocol::messages::NodeId;
 use crossbeam_channel::Receiver;
 use lidarserv_common::geometry::grid::{I32Grid, I32GridHierarchy, LeveledGridCell};
+use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position};
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
 use lidarserv_common::index::octree::reader::OctreeReader;
@@ -15,7 +16,7 @@ use lidarserv_common::index::sensor_pos::writer::SensorPosWriter;
 use lidarserv_common::index::sensor_pos::SensorPosIndex;
 use lidarserv_common::index::Node as IndexNode;
 use lidarserv_common::index::{Reader, Writer as CommonWriter};
-use lidarserv_common::las::I32LasReadWrite;
+use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
 use lidarserv_common::query::empty::EmptyQuery;
 use lidarserv_common::query::Query;
 use std::error::Error;
@@ -134,7 +135,7 @@ impl DynReader
     fn load_one(&mut self) -> Option<Node> {
         Reader::<LasPoint, _>::load_one(self).map(|(node_id, node)| {
             let node_id = meta_tree_node_id_to_proto_node_id(&node_id);
-            let node_data = sensor_pos_node_to_protocol_node_data(&node);
+            let node_data = node.las_files();
             (node_id, node_data)
         })
     }
@@ -153,7 +154,7 @@ impl DynReader
                 .map(|(replacement_node_id, replacement_node_data)| {
                     let replacement_node_id =
                         meta_tree_node_id_to_proto_node_id(&replacement_node_id);
-                    let node_data = sensor_pos_node_to_protocol_node_data(&replacement_node_data);
+                    let node_data = replacement_node_data.las_files();
                     (replacement_node_id, node_data)
                 })
                 .collect();
@@ -196,10 +197,6 @@ fn leveled_grid_cell_to_proto_node_id(grid_cell: &LeveledGridCell) -> NodeId {
             id
         },
     }
-}
-
-fn sensor_pos_node_to_protocol_node_data(node: &SensorPosNode) -> NodeData {
-    node.las_files().into_iter().map(Vec::from).collect()
 }
 
 impl DynIndex
@@ -277,7 +274,7 @@ impl DynReader
     fn load_one(&mut self) -> Option<Node> {
         Reader::load_one(self).map(|(node_id, data)| {
             let node_id = leveled_grid_cell_to_proto_node_id(&node_id);
-            (node_id, vec![data.data.as_ref().clone()])
+            (node_id, data.las_files())
         })
     }
 
@@ -293,12 +290,7 @@ impl DynReader
                 leveled_grid_cell_to_proto_node_id(&node_id),
                 replace
                     .into_iter()
-                    .map(|(n, o)| {
-                        (
-                            leveled_grid_cell_to_proto_node_id(&n),
-                            vec![o.data.as_ref().clone()],
-                        )
-                    })
+                    .map(|(n, o)| (leveled_grid_cell_to_proto_node_id(&n), o.las_files()))
                     .collect(),
             )
         })

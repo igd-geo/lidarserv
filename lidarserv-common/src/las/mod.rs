@@ -491,26 +491,25 @@ where
         let mut point = P::new(position);
 
         // set las point attributes
-        {
-            let las_attr = point.attribute_mut::<LasPointAttributes>();
-            las_attr.intensity = raw.intensity;
-            if let Flags::TwoByte(b1, b2) = raw.flags {
-                las_attr.return_number = (b1 & 0xE0) >> 5;
-                las_attr.number_of_returns = (b1 & 0x1C) >> 2;
-                las_attr.scan_direction = (b1 & 0x02) == 0x02;
-                las_attr.edge_of_flight_line = (b1 & 0x01) == 0x01;
-                las_attr.classification = b2;
-            } else {
-                unreachable!("Point format 0 will always have Flags::TwoByte.")
-            }
-            las_attr.scan_angle_rank = if let ScanAngle::Rank(a) = raw.scan_angle {
-                a
-            } else {
-                unreachable!("Point format 0 will always have ScanAngle::Rank.")
-            };
-            las_attr.user_data = raw.user_data;
-            las_attr.point_source_id = raw.point_source_id;
+        let mut las_attr = LasPointAttributes::default();
+        las_attr.intensity = raw.intensity;
+        if let Flags::TwoByte(b1, b2) = raw.flags {
+            las_attr.return_number = (b1 & 0xE0) >> 5;
+            las_attr.number_of_returns = (b1 & 0x1C) >> 2;
+            las_attr.scan_direction = (b1 & 0x02) == 0x02;
+            las_attr.edge_of_flight_line = (b1 & 0x01) == 0x01;
+            las_attr.classification = b2;
+        } else {
+            unreachable!("Point format 0 will always have Flags::TwoByte.")
         }
+        las_attr.scan_angle_rank = if let ScanAngle::Rank(a) = raw.scan_angle {
+            a
+        } else {
+            unreachable!("Point format 0 will always have ScanAngle::Rank.")
+        };
+        las_attr.user_data = raw.user_data;
+        las_attr.point_source_id = raw.point_source_id;
+        point.set_attribute(las_attr);
 
         // set extra bytes
         point.set_extra_bytes(raw.extra_bytes.as_slice());

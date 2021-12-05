@@ -1,3 +1,11 @@
 
 [workspace]
-members = ["lidarserv-server", "lidarserv-common", "lidarserv-viewer", "velodyne-csv-replay", "point-cloud-viewer", "experiments"]
+members = [
+    "lidarserv-server",
+    "lidarserv-common",
+    "lidarserv-viewer",
+    "velodyne-csv-replay",
+    "point-cloud-viewer",
+    "experiments",
+    "evaluation"
+]

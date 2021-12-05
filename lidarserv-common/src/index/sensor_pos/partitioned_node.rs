@@ -1,5 +1,5 @@
 use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
-use crate::geometry::grid::{GridHierarchy, LodLevel};
+use crate::geometry::grid::{GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
 use crate::geometry::sampling::{
@@ -16,10 +16,11 @@ use crossbeam_deque::Steal;
 use crossbeam_utils::sync::WaitGroup;
 use crossbeam_utils::{Backoff, CachePadded};
 use nalgebra::Scalar;
+use rand::RngCore;
 use std::cell::UnsafeCell;
 use std::cmp::min;
 use std::collections::hash_map::RandomState;
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::hash::{BuildHasher, Hash, Hasher, SipHasher};
 use std::io::Cursor;
 use std::iter::ExactSizeIterator;
 use std::mem;
@@ -28,7 +29,7 @@ use std::sync::Barrier;
 use std::time::Instant;
 
 pub struct PartitionedNode<Sampl, Point, Comp: Scalar> {
-    hasher: RandomState,
+    hasher: RustCellHasher,
     bit_mask: u64,
     partitions: Vec<UnsafeSyncCell<Partition<Sampl, Point>>>,
     num_partitions: usize,
@@ -40,7 +41,7 @@ pub struct PartitionedNode<Sampl, Point, Comp: Scalar> {
 pub struct PartitionedNodeSplitter<Point, Pos, Raw> {
     node_id: MetaTreeNodeId,
     replaces_base_node_at: Option<Pos>,
-    hasher: RandomState,
+    hasher: RustCellHasher,
     bit_mask: u64,
     partitions: Vec<UnsafeSyncCell<SplitterPartition<Point, Raw>>>,
     num_partitions: usize,
@@ -58,6 +59,49 @@ struct Partition<Sampl, Point> {
 struct SplitterPartition<Point, Raw> {
     sampled: Vec<Raw>,
     bogus: Vec<Point>,
+}
+
+pub trait CellHasher: Clone {
+    fn compute_hash<V: Hash>(&self, cell: &V) -> u64;
+}
+
+/// Equivalent to rusts [std::collections::hash_map::RandomState], but it allows
+/// access to the random keys, so we can store the used keys in the index settings,
+/// so that the hash function will be consistent after restarting the server.
+#[derive(Clone)]
+pub struct RustCellHasher {
+    key0: u64,
+    key1: u64,
+}
+
+impl CellHasher for RustCellHasher {
+    #[inline]
+    fn compute_hash<V: Hash>(&self, cell: &V) -> u64 {
+        // deprecation: I do not have much choice here...
+        // if it actually gets removed in the future, we could still switch to some external crate
+        #[allow(deprecated)]
+        let mut h = SipHasher::new_with_keys(self.key0, self.key1);
+        cell.hash(&mut h);
+        h.finish()
+    }
+}
+
+impl RustCellHasher {
+    pub fn new_random() -> Self {
+        RustCellHasher {
+            key0: rand::thread_rng().next_u64(),
+            key1: rand::thread_rng().next_u64(),
+        }
+    }
+
+    pub fn state(&self) -> (u64, u64) {
+        (self.key0, self.key1)
+    }
+
+    pub fn from_state(state: (u64, u64)) -> Self {
+        let (key0, key1) = state;
+        RustCellHasher { key0, key1 }
+    }
 }
 
 /// Wrapper around UnsafeCell, that is Sync.
@@ -107,6 +151,7 @@ where
         node_id: MetaTreeNodeId,
         sampling_factory: &SamplF,
         dirty: bool,
+        hasher: RustCellHasher,
     ) -> Self
     where
         SamplF: SamplingFactory<Sampling = Sampl>,
@@ -114,7 +159,6 @@ where
         assert!(num_partitions.is_power_of_two());
         assert!(num_partitions > 0);
 
-        let hasher = RandomState::new();
         let bit_mask = num_partitions as u64 - 1;
         let partitions = (0..num_partitions)
             .map(|_| {
@@ -198,6 +242,7 @@ where
         las_loader: &LasL,
         coordinate_system: &CSys,
         threads: &mut Threads,
+        hasher: RustCellHasher,
     ) -> Result<Self, IndexError>
     where
         SamplF: SamplingFactory<Sampling = Sampl>,
@@ -205,7 +250,7 @@ where
         CSys: PartialEq + Sync,
     {
         let s1 = span!("parallel_load: prepare");
-        let mut this = Self::new(num_partitions, node_id, sampling_factory, false);
+        let mut this = Self::new(num_partitions, node_id, sampling_factory, false, hasher);
         assert_eq!(threads.num_threads(), this.num_partitions());
 
         let partitions = &this.partitions;
@@ -294,6 +339,24 @@ where
     {
         let s0 = span!("parallel_store");
         assert_eq!(threads.num_threads(), self.num_partitions());
+
+        // shortcut for empty nodes...
+        if self.nr_points() == 0 {
+            for thread_id in 0..self.num_partitions {
+                let file_id = self.node_id.file(thread_id);
+                page_manager.store(
+                    &file_id,
+                    BinDataPage {
+                        exists: false,
+                        data: Vec::new(),
+                        error_counter: Default::default(),
+                    },
+                );
+            }
+            self.dirty_since = None;
+            return Ok(());
+        }
+
         let partitions = &self.partitions;
         let bounds = self.bounds.clone();
         let node_id = &self.node_id;
@@ -508,9 +571,8 @@ where
                         let hasher = &selfs[lod_index].hasher;
                         let bit_mask = selfs[lod_index].bit_mask;
                         for raw_entry in local_sample.into_raw() {
-                            let mut hash = hasher.build_hasher();
-                            raw_entry.cell().hash(&mut hash);
-                            let partition_id = (hash.finish() & bit_mask) as usize;
+                            let partition_id =
+                                (hasher.compute_hash(raw_entry.cell()) & bit_mask) as usize;
                             partitions[partition_id].push(raw_entry);
                         }
                         drop(s1);

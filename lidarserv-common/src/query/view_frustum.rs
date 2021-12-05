@@ -15,6 +15,20 @@ pub struct ViewFrustumQuery {
 }
 
 impl ViewFrustumQuery {
+    pub const fn new_raw(
+        view_projection_matrix: Matrix4<f64>,
+        view_projection_matrix_inv: Matrix4<f64>,
+        clip_min_point_dist: f64,
+        lod0_point_distance: f64,
+    ) -> Self {
+        ViewFrustumQuery {
+            view_projection_matrix,
+            view_projection_matrix_inv,
+            clip_min_point_dist,
+            lod0_point_distance,
+        }
+    }
+
     pub fn new<SamplF, Point, CSys, Pos>(
         view_projection_matrix: Matrix4<f64>,
         view_projection_matrix_inv: Matrix4<f64>,
