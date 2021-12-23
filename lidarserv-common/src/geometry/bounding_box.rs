@@ -1,5 +1,5 @@
 use crate::geometry::position::{Component, Position};
-use nalgebra::{Point3, Scalar, Vector3};
+use nalgebra::{Point3, Scalar};
 use num_traits::Bounded;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};

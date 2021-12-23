@@ -10,7 +10,7 @@ use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
 use crate::nalgebra::Scalar;
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::cmp::{min, Ordering};
+use std::cmp::{max, Ordering};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -43,6 +43,8 @@ pub enum TaskPriorityFunction {
     NewestPoint,
     TaskAge,
     NrPointsWeightedByTaskAge,
+    NrPointsWeightedByOldestPoint,
+    NrPointsWeightedByNegNewestPoint,
 }
 
 struct Inboxes<Point> {
@@ -113,23 +115,35 @@ impl TaskPriorityFunction {
         task_2: &InsertionTask<P>,
     ) -> Ordering {
         match self {
-            TaskPriorityFunction::NrPoints => {
-                let l = task_1.points.len();
-                let r = task_2.points.len();
-                l.cmp(&r)
-            }
-            TaskPriorityFunction::Lod => cell_2.lod.cmp(&cell_1.lod),
+            TaskPriorityFunction::NrPoints => task_1.points.len().cmp(&task_2.points.len()),
+            TaskPriorityFunction::Lod => cell_1.lod.cmp(&cell_2.lod),
             TaskPriorityFunction::OldestPoint => task_2.min_generation.cmp(&task_1.min_generation),
             TaskPriorityFunction::NewestPoint => task_2.max_generation.cmp(&task_1.max_generation),
             TaskPriorityFunction::TaskAge => {
                 task_2.created_generation.cmp(&task_1.created_generation)
             }
             TaskPriorityFunction::NrPointsWeightedByTaskAge => {
-                let base = min(task_1.min_generation, task_2.min_generation);
+                let base = max(task_1.created_generation, task_2.created_generation);
                 let l = task_1.points.len() as f64
-                    * 2.0_f64.powi((task_1.min_generation - base) as i32);
+                    * 2.0_f64.powi((base - task_1.created_generation) as i32);
                 let r = task_2.points.len() as f64
-                    * 2.0_f64.powi((task_2.min_generation - base) as i32);
+                    * 2.0_f64.powi((base - task_2.created_generation) as i32);
+                l.partial_cmp(&r).unwrap_or_else(|| unreachable!())
+            }
+            TaskPriorityFunction::NrPointsWeightedByOldestPoint => {
+                let base = max(task_1.min_generation, task_2.min_generation);
+                let l = task_1.points.len() as f64
+                    * 2.0_f64.powi((base - task_1.min_generation) as i32);
+                let r = task_2.points.len() as f64
+                    * 2.0_f64.powi((base - task_2.min_generation) as i32);
+                l.partial_cmp(&r).unwrap_or_else(|| unreachable!())
+            }
+            TaskPriorityFunction::NrPointsWeightedByNegNewestPoint => {
+                let base = max(task_1.max_generation, task_2.max_generation);
+                let l = task_1.points.len() as f64
+                    * 2.0_f64.powi((base - task_1.max_generation) as i32);
+                let r = task_2.points.len() as f64
+                    * 2.0_f64.powi((base - task_2.max_generation) as i32);
                 l.partial_cmp(&r).unwrap_or_else(|| unreachable!())
             }
         }
@@ -286,7 +300,7 @@ where
             let is_max_lod = self.inner.max_lod == node_id.lod;
             let task_min_generation = task.min_generation;
             let task_max_generation = task.max_generation;
-            let child_tasks = self.writer_task(node_id, task, is_max_lod)?;
+            let (child_tasks, should_notify) = self.writer_task(node_id, task, is_max_lod)?;
             debug_assert!(!is_max_lod || child_tasks.is_none()); // if we are at the max lod, no more children are allowed
 
             // unlock the node, create child tasks
@@ -312,7 +326,7 @@ where
             }
 
             // notify subscriptions
-            {
+            if should_notify {
                 let mut lock = self.inner.subscriptions.lock().unwrap();
                 let mut it_end = lock.len();
                 let mut it = 0;
@@ -338,7 +352,7 @@ where
         node_id: LeveledGridCell,
         task: InsertionTask<Point>,
         is_max_lod: bool,
-    ) -> Result<Option<[(LeveledGridCell, Vec<Point>); 8]>, WriterTaskError> {
+    ) -> Result<(Option<[(LeveledGridCell, Vec<Point>); 8]>, bool), WriterTaskError> {
         // get points
         let node_arc = self.inner.page_cache.load_or_default(&node_id)?.get_node(
             &self.inner.loader,
@@ -348,6 +362,8 @@ where
         let mut node = (*node_arc).clone();
 
         // insert new points
+        node.sampling.reset_dirty();
+        let initial_nr_bogus = node.bogus_points.len();
         let mut next_lod_points = node.sampling.insert(task.points, |_, _| ());
         node.bogus_points.append(&mut next_lod_points);
 
@@ -369,13 +385,16 @@ where
             Vec::new()
         };
 
+        let final_nr_bogus = node.bogus_points.len();
+        let should_notify_clients = node.sampling.is_dirty() || final_nr_bogus < initial_nr_bogus;
+
         // write back to cache
         let page = Page::from_node(node);
         self.inner.page_cache.store(&node_id, page);
 
         // split into 8 child nodes
         if !make_children {
-            return Ok(None);
+            return Ok((None, should_notify_clients));
         }
         let mut children: [Vec<Point>; 8] = [
             Vec::with_capacity(children_points.len()),
@@ -414,7 +433,7 @@ where
             (child_node_ids[6], mem::take(&mut children[6])),
             (child_node_ids[7], mem::take(&mut children[7])),
         ];
-        Ok(Some(result))
+        Ok((Some(result), should_notify_clients))
     }
 }
 

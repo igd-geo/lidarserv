@@ -61,6 +61,7 @@ struct Inner<GridH, SamplF, Comp: Scalar, LasL, CSys> {
     pub coordinate_system: CSys,
     pub shared: RwLock<Shared<GridH, Comp>>,
     pub max_lod: LodLevel,
+    pub max_node_split_level: LodLevel,
     pub max_delay: Duration,
     pub coarse_lod_steps: usize,
     pub hasher: RustCellHasher,
@@ -116,6 +117,11 @@ where
                 las_loader,
                 coordinate_system,
                 max_lod,
+                max_node_split_level: if max_lod <= meta_tree.sensor_grid_hierarchy().max_level() {
+                    max_lod
+                } else {
+                    meta_tree.sensor_grid_hierarchy().max_level()
+                },
                 max_delay,
                 shared: RwLock::new(Shared {
                     meta_tree,

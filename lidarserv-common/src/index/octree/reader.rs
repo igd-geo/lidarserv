@@ -9,20 +9,19 @@ use crate::las::LasReadWrite;
 use crate::lru_cache::pager::PageDirectory;
 use crate::nalgebra::Scalar;
 use crate::query::{Query, QueryExt};
-use crossbeam_channel::{Receiver, TryRecvError};
+use crossbeam_channel::Receiver;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub struct OctreeReader<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF, Pos> {
-    #[allow(dead_code)] // todo: will not be dead code any more, once OctreeReader is implemented
     pub(super) inner: Arc<Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>>,
-
+    update_cnt: u64,
     query: Box<dyn Query<Pos, CSys> + Send + Sync>,
     changed_nodes_receiver: crossbeam_channel::Receiver<LeveledGridCell>,
     loaded: HashSet<LeveledGridCell>,
     frontier: HashMap<LeveledGridCell, FrontierElement>,
     load_queue: HashSet<LeveledGridCell>,
-    reload_queue: HashSet<LeveledGridCell>,
+    reload_queue: HashMap<LeveledGridCell, u64>,
     remove_queue: HashSet<LeveledGridCell>,
     known_root_nodes: HashSet<LeveledGridCell>,
 }
@@ -62,12 +61,13 @@ where
         let root_nodes = inner.page_cache.directory().get_root_cells();
         let mut reader = OctreeReader {
             inner,
+            update_cnt: 0,
             query: Box::new(query),
             changed_nodes_receiver,
             loaded: HashSet::new(),
             frontier: HashMap::default(),
             load_queue: HashSet::new(),
-            reload_queue: HashSet::new(),
+            reload_queue: HashMap::new(),
             remove_queue: HashSet::new(),
             known_root_nodes: HashSet::new(),
         };
@@ -114,8 +114,13 @@ where
 
         // schedule all changed nodes, that are already loaded for a reload.
         let reload: Vec<_> = self.loaded.intersection(&changes).cloned().collect();
+        if !reload.is_empty() {
+            self.update_cnt += 1;
+        }
         for reload_cell in reload {
-            self.reload_queue.insert(reload_cell);
+            self.reload_queue
+                .entry(reload_cell)
+                .or_insert(self.update_cnt);
         }
 
         // Update the frontier.
@@ -217,9 +222,9 @@ where
     }
 
     pub fn reload_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point, Comp, CSys>>)> {
-        let reload = match self.reload_queue.iter().next() {
+        let reload = match self.reload_queue.iter().min_by_key(|&(_, v)| *v) {
             None => return None,
-            Some(e) => e.clone(),
+            Some((k, _)) => *k,
         };
         self.reload_queue.remove(&reload);
         let node = self.inner.page_cache.load_or_default(&reload).unwrap();

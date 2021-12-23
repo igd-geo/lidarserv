@@ -6,7 +6,6 @@ use crate::geometry::sampling::{
     IntoExactSizeIterator, RawSamplingEntry, Sampling, SamplingFactory,
 };
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
-use crate::index::sensor_pos::page_manager::FileId;
 use crate::index::sensor_pos::partitioned_node::{
     PartitionedNode, PartitionedNodeSplitter, PartitionedPoints,
 };
@@ -191,6 +190,7 @@ where
     let mut loaded_nodes = Vec::<PartitionedNode<Sampl, Point, Comp>>::new();
     let nr_threads = inner.nr_threads;
     let mut threads = Threads::new(nr_threads);
+    let mut previous_split_levels = Vec::new();
 
     'main: loop {
         // make sure we have points to insert
@@ -220,7 +220,8 @@ where
             .attribute::<SensorPositionAttribute<_>>()
             .0
             .clone();
-        let nodes = meta_tree.query_sensor_position(&sensor_pos);
+        let nodes = meta_tree.query_sensor_position(&sensor_pos, &previous_split_levels);
+        previous_split_levels = nodes.split_levels();
         drop(s1);
 
         // get the points from the head of new_points,
@@ -361,7 +362,7 @@ where
             let lod_level = lod.level() as usize;
             let node = &mut loaded_nodes[lod_level];
             if node.nr_points() > inner.max_node_size
-                && node.node_id().tree_node().lod < inner.max_lod
+                && node.node_id().tree_node().lod < inner.max_node_split_level
             {
                 let s2 = span!("coordinator_thread:: split");
 
@@ -381,7 +382,7 @@ where
                     // ones are re-queued.
                     for child in children {
                         if child.nr_points() > inner.max_node_size
-                            && child.node_id().tree_node().lod < inner.max_lod
+                            && child.node_id().tree_node().lod < inner.max_node_split_level
                         {
                             queue.push(child)
                         } else {
@@ -414,7 +415,7 @@ where
                 )?;
 
                 // save the old node (it is now empty)
-                old_node.parallel_store(
+                old_node.parallel_store_alt(
                     &inner.page_manager,
                     &inner.las_loader,
                     &inner.coordinate_system,
@@ -510,7 +511,7 @@ fn apply_updates<Point, Sampl, GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Raw
 where
     Sampl: Sampling<Point = Point, Raw = Raw> + Send,
     for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
-    Point: PointType<Position = Pos> + Send,
+    Point: PointType<Position = Pos> + Send + Clone,
     Comp: Component + Send + Sync,
     Pos: Position<Component = Comp> + Sync,
     Raw: RawSamplingEntry<Point = Point> + Send,
@@ -524,7 +525,7 @@ where
     )];
 
     // store node contents
-    replace_with.parallel_store(
+    replace_with.parallel_store_alt(
         &inner.page_manager,
         &inner.las_loader,
         &inner.coordinate_system,

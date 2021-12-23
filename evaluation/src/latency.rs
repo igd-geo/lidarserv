@@ -1,4 +1,4 @@
-use crate::{get_env, Config, Point, PointIdAttribute};
+use crate::{Config, Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position};
 use lidarserv_common::index::{Index, Node, NodeId, Reader, Writer};
@@ -25,9 +25,8 @@ where
 {
     // query thread
     let reader = index.reader(query);
-    let nr_points = points.len();
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded(); // we will never actually push a new query. but the channel is still used to tell the queryer when to stop.
-    let rt = thread::spawn(move || read_thread::<I>(reader, nr_points, queries_receiver));
+    let rt = thread::spawn(move || read_thread::<I>(reader, queries_receiver));
 
     // do the insertions in the current thread
     let insertion_times = insertion_thread::<I>(index.writer(), points, config);
@@ -160,7 +159,6 @@ where
 
 pub fn read_thread<I>(
     mut reader: I::Reader,
-    nr_points: usize,
     mut queries: crossbeam_channel::Receiver<
         Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
     >,
@@ -202,11 +200,18 @@ where
         if let Some((_, repl)) = reader.update_one() {
             let now = Instant::now();
             for (node_id, node) in repl {
-                let points = node.points();
+                let points = node.las_files().into_iter().map(|data| {
+                    las_loader
+                        .read_las(Cursor::new(data))
+                        .map(|las| las.points as Vec<Point>)
+                        .unwrap_or_else(|_| Vec::new())
+                });
                 let lod_index = node_id.lod().level() as usize;
-                for point in points {
-                    let index: usize = point.attribute::<PointIdAttribute>().0;
-                    receive_times[lod_index].entry(index).or_insert(now);
+                for points in points {
+                    for point in points {
+                        let index: usize = point.attribute::<PointIdAttribute>().0;
+                        receive_times[lod_index].entry(index).or_insert(now);
+                    }
                 }
             }
         }

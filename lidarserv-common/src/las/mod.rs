@@ -2,6 +2,7 @@ use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{CoordinateSystem, I32CoordinateSystem, I32Position, Position};
 use crate::nalgebra::Scalar;
+use crossbeam_deque::Steal;
 use las::point::Format;
 use las::raw::point::{Flags, ScanAngle};
 use las::{Version, Vlr};
@@ -71,6 +72,16 @@ pub struct Las<Points, Component: Scalar, CSys> {
     pub coordinate_system: CSys,
 }
 
+pub struct WorkStealingLas<Point, Component: Scalar, CSys> {
+    pub points_queue: crossbeam_deque::Worker<Vec<Point>>,
+    pub points_stealers: Vec<crossbeam_deque::Stealer<Vec<Point>>>,
+    pub bogus_queue: crossbeam_deque::Worker<Vec<Point>>,
+    pub bogus_stealers: Vec<crossbeam_deque::Stealer<Vec<Point>>>,
+    pub bounds: OptionAABB<Component>,
+    pub coordinate_system: CSys,
+    pub bogus_points_vlr: bool,
+}
+
 pub trait LasReadWrite<Point, CSys>
 where
     Point: PointType,
@@ -84,6 +95,14 @@ where
         W: Write + Seek + Send,
         It: Iterator + ExactSizeIterator,
         It::Item: Borrow<Point>;
+
+    fn write_las_work_stealing<W>(
+        &self,
+        las: WorkStealingLas<Point, <Point::Position as Position>::Component, CSys>,
+        wr: W,
+    ) -> Result<(), WriteLasError>
+    where
+        W: Write + Seek + Send;
 
     #[allow(clippy::type_complexity)]
     fn read_las<R: Read + Seek + Send>(
@@ -122,6 +141,415 @@ impl I32LasReadWrite {
         I32LasReadWrite {
             compression: use_compression,
         }
+    }
+
+    fn write_las_work_stealing_compressed<W, Point>(
+        &self,
+        las: WorkStealingLas<Point, <Point::Position as Position>::Component, I32CoordinateSystem>,
+        mut wr: W,
+    ) -> Result<(), WriteLasError>
+    where
+        W: Write + Seek + Send,
+        Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+    {
+        let WorkStealingLas {
+            points_queue,
+            points_stealers,
+            bogus_queue,
+            bogus_stealers,
+            bounds,
+            coordinate_system,
+            bogus_points_vlr: use_bogus_points_vlr,
+        } = las;
+
+        // las 1.2, Point format 0
+        let version = Version::new(1, 2);
+        let mut format = Format::new(0).unwrap();
+        format.extra_bytes = Point::NR_EXTRA_BYTES as u16;
+        format.is_compressed = self.compression;
+
+        // string "LIDARSERV" for system identifier and generating software
+        let mut lidarserv = [0; 32];
+        let lidarserv_data = "LIDARSERV".bytes().collect::<Vec<_>>();
+        lidarserv[..lidarserv_data.len()].copy_from_slice(lidarserv_data.as_slice());
+
+        // bounds
+        let (min, max) = match bounds.into_aabb() {
+            Some(aabb) => (
+                aabb.min::<I32Position>().decode(&coordinate_system),
+                aabb.max::<I32Position>().decode(&coordinate_system),
+            ),
+            None => (Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0)),
+        };
+
+        let mut header = las::raw::Header {
+            version,
+            system_identifier: lidarserv,
+            generating_software: lidarserv,
+            header_size: version.header_size(),
+            offset_to_point_data: version.header_size() as u32,
+            number_of_variable_length_records: 0,
+            point_data_record_format: format.to_u8().unwrap(),
+            point_data_record_length: format.len(),
+            number_of_point_records: 0,
+            number_of_points_by_return: [0; 5],
+            x_scale_factor: coordinate_system.scale().x,
+            y_scale_factor: coordinate_system.scale().y,
+            z_scale_factor: coordinate_system.scale().z,
+            x_offset: coordinate_system.offset().x,
+            y_offset: coordinate_system.offset().y,
+            z_offset: coordinate_system.offset().z,
+            min_x: min.x,
+            min_y: min.y,
+            min_z: min.z,
+            max_x: max.x,
+            max_y: max.y,
+            max_z: max.z,
+            ..Default::default()
+        };
+
+        // write header
+        let header_position = wr.seek(SeekFrom::Current(0))?;
+        header.write_to(&mut wr).map_err(|e| match e {
+            las::Error::Io(io_e) => io_e,
+            _ => panic!("Unexpected error"),
+        })?;
+
+        // write laz vlr
+        let laz_vlr = {
+            let laz_vlr = {
+                let mut laz_items = LazItemRecordBuilder::new();
+                laz_items.add_item(LazItemType::Point10);
+                if format.extra_bytes > 0 {
+                    laz_items.add_item(laz::LazItemType::Byte(format.extra_bytes));
+                }
+                LazVlr::from_laz_items(laz_items.build())
+            };
+            let vlr = {
+                let mut laz_vlr_data = Cursor::new(Vec::new());
+                laz_vlr.write_to(&mut laz_vlr_data)?;
+                Vlr {
+                    user_id: LazVlr::USER_ID.to_string(),
+                    record_id: LazVlr::RECORD_ID,
+                    description: LazVlr::DESCRIPTION.to_string(),
+                    data: laz_vlr_data.into_inner(),
+                }
+            };
+            header.number_of_variable_length_records += 1;
+            header.offset_to_point_data += vlr.len(false) as u32;
+            header.point_data_record_format |= 0x80;
+            vlr.into_raw(false)
+                .unwrap()
+                .write_to(&mut wr)
+                .map_err(|e| match e {
+                    las::Error::Io(io_e) => io_e,
+                    _ => panic!("Unexpected error"),
+                })?;
+            laz_vlr
+        };
+
+        // write bogus points vlr
+        let bogus_points_vlr_pos = wr.seek(SeekFrom::Current(0))?;
+        if use_bogus_points_vlr {
+            let vlr = Vlr {
+                user_id: BOGUS_POINTS_VLR_USER_ID.to_string(),
+                record_id: BOGUS_POINTS_VLR_RECORD_ID,
+                description: "Number of non bogus points.".to_string(),
+                data: Vec::from(0_u32.to_le_bytes()),
+            };
+            header.number_of_variable_length_records += 1;
+            header.offset_to_point_data += vlr.len(false) as u32;
+            vlr.clone()
+                .into_raw(false)
+                .unwrap()
+                .write_to(&mut wr)
+                .map_err(|e| match e {
+                    las::Error::Io(io_e) => io_e,
+                    _ => panic!("Unexpected error"),
+                })?;
+        };
+
+        let mut compressor = LasZipCompressor::new(wr, laz_vlr).map_err(|e| match e {
+            laz::LasZipError::IoError(io_e) => io_e,
+            _ => panic!("Unexpected error"),
+        })?;
+
+        // write "normal" points
+        let mut nr_non_bogus = 0;
+        'tasks_loop: loop {
+            // get batch of points to write
+            let points = match points_queue.pop() {
+                Some(v) => v,
+                None => 'steal_loop: loop {
+                    let mut retry = false;
+                    for stealer in &points_stealers {
+                        match stealer.steal_batch_and_pop(&points_queue) {
+                            Steal::Success(s) => break 'steal_loop s,
+                            Steal::Retry => retry = true,
+                            Steal::Empty => (),
+                        }
+                    }
+                    if !retry {
+                        break 'tasks_loop;
+                    }
+                },
+            };
+
+            // write
+            let mut buf_uncompressed = Vec::new();
+            nr_non_bogus += points.len();
+            header.number_of_point_records += points.len() as u32;
+            let points_by_return = write_point_data_i32(
+                Cursor::new(&mut buf_uncompressed),
+                points.into_iter(),
+                &format,
+            )?;
+            compressor.compress_many(&buf_uncompressed)?;
+            for i in 0..5 {
+                header.number_of_points_by_return[i] += points_by_return[i];
+            }
+        }
+
+        // write bogus points
+        'bogus_tasks_loop: loop {
+            // get batch of points to write
+            let points = match bogus_queue.pop() {
+                Some(v) => v,
+                None => 'bogus_steal_loop: loop {
+                    let mut retry = false;
+                    for stealer in &bogus_stealers {
+                        match stealer.steal_batch_and_pop(&bogus_queue) {
+                            Steal::Success(s) => break 'bogus_steal_loop s,
+                            Steal::Retry => retry = true,
+                            Steal::Empty => (),
+                        }
+                    }
+                    if !retry {
+                        break 'bogus_tasks_loop;
+                    }
+                },
+            };
+
+            // write
+            header.number_of_point_records += points.len() as u32;
+            let mut buf_uncompressed = Vec::new();
+            let points_by_return = write_point_data_i32(
+                Cursor::new(&mut buf_uncompressed),
+                points.into_iter(),
+                &format,
+            )?;
+            compressor.compress_many(&buf_uncompressed)?;
+            for i in 0..5 {
+                header.number_of_points_by_return[i] += points_by_return[i];
+            }
+        }
+
+        // finalize
+        compressor.done()?;
+        let mut wr = compressor.into_inner();
+
+        // write updated header
+        wr.seek(SeekFrom::Start(header_position))?;
+        header.write_to(&mut wr).map_err(|e| match e {
+            las::Error::Io(io_e) => io_e,
+            _ => panic!("Unexpected error"),
+        })?;
+
+        // write updated bogus points vlr
+        if use_bogus_points_vlr {
+            wr.seek(SeekFrom::Start(bogus_points_vlr_pos))?;
+            let vlr = Vlr {
+                user_id: BOGUS_POINTS_VLR_USER_ID.to_string(),
+                record_id: BOGUS_POINTS_VLR_RECORD_ID,
+                description: "Number of non bogus points.".to_string(),
+                data: Vec::from((nr_non_bogus as u32).to_le_bytes()),
+            };
+            vlr.into_raw(false)
+                .unwrap()
+                .write_to(&mut wr)
+                .map_err(|e| match e {
+                    las::Error::Io(io_e) => io_e,
+                    _ => panic!("Unexpected error"),
+                })?;
+        }
+        Ok(())
+    }
+
+    fn write_las_work_stealing_uncompressed<W, Point>(
+        &self,
+        las: WorkStealingLas<Point, <Point::Position as Position>::Component, I32CoordinateSystem>,
+        mut wr: W,
+    ) -> Result<(), WriteLasError>
+    where
+        W: Write + Seek + Send,
+        Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+    {
+        let WorkStealingLas {
+            points_queue,
+            points_stealers,
+            bogus_queue,
+            bogus_stealers,
+            bounds,
+            coordinate_system,
+            bogus_points_vlr: use_bogus_points_vlr,
+        } = las;
+
+        // las 1.2, Point format 0
+        let version = Version::new(1, 2);
+        let mut format = Format::new(0).unwrap();
+        format.extra_bytes = Point::NR_EXTRA_BYTES as u16;
+        format.is_compressed = self.compression;
+
+        // string "LIDARSERV" for system identifier and generating software
+        let mut lidarserv = [0; 32];
+        let lidarserv_data = "LIDARSERV".bytes().collect::<Vec<_>>();
+        lidarserv[..lidarserv_data.len()].copy_from_slice(lidarserv_data.as_slice());
+
+        // bounds
+        let (min, max) = match bounds.into_aabb() {
+            Some(aabb) => (
+                aabb.min::<I32Position>().decode(&coordinate_system),
+                aabb.max::<I32Position>().decode(&coordinate_system),
+            ),
+            None => (Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0)),
+        };
+
+        let mut header = las::raw::Header {
+            version,
+            system_identifier: lidarserv,
+            generating_software: lidarserv,
+            header_size: version.header_size(),
+            offset_to_point_data: version.header_size() as u32,
+            number_of_variable_length_records: 0,
+            point_data_record_format: format.to_u8().unwrap(),
+            point_data_record_length: format.len(),
+            number_of_point_records: 0,
+            number_of_points_by_return: [0; 5],
+            x_scale_factor: coordinate_system.scale().x,
+            y_scale_factor: coordinate_system.scale().y,
+            z_scale_factor: coordinate_system.scale().z,
+            x_offset: coordinate_system.offset().x,
+            y_offset: coordinate_system.offset().y,
+            z_offset: coordinate_system.offset().z,
+            min_x: min.x,
+            min_y: min.y,
+            min_z: min.z,
+            max_x: max.x,
+            max_y: max.y,
+            max_z: max.z,
+            ..Default::default()
+        };
+
+        // write header
+        let header_position = wr.seek(SeekFrom::Current(0))?;
+        header.write_to(&mut wr).map_err(|e| match e {
+            las::Error::Io(io_e) => io_e,
+            _ => panic!("Unexpected error"),
+        })?;
+
+        // write bogus points vlr
+        let bogus_points_vlr_pos = wr.seek(SeekFrom::Current(0))?;
+        if use_bogus_points_vlr {
+            let vlr = Vlr {
+                user_id: BOGUS_POINTS_VLR_USER_ID.to_string(),
+                record_id: BOGUS_POINTS_VLR_RECORD_ID,
+                description: "Number of non bogus points.".to_string(),
+                data: Vec::from(0_u32.to_le_bytes()),
+            };
+            header.number_of_variable_length_records += 1;
+            header.offset_to_point_data += vlr.len(false) as u32;
+            vlr.into_raw(false)
+                .unwrap()
+                .write_to(&mut wr)
+                .map_err(|e| match e {
+                    las::Error::Io(io_e) => io_e,
+                    _ => panic!("Unexpected error"),
+                })?;
+        };
+
+        // write "normal" points
+        let mut nr_non_bogus = 0;
+        'tasks_loop: loop {
+            // get batch of points to write
+            let points = match points_queue.pop() {
+                Some(v) => v,
+                None => 'steal_loop: loop {
+                    let mut retry = false;
+                    for stealer in &points_stealers {
+                        match stealer.steal_batch_and_pop(&points_queue) {
+                            Steal::Success(s) => break 'steal_loop s,
+                            Steal::Retry => retry = true,
+                            Steal::Empty => (),
+                        }
+                    }
+                    if !retry {
+                        break 'tasks_loop;
+                    }
+                },
+            };
+
+            // write
+            nr_non_bogus += points.len();
+            header.number_of_point_records += points.len() as u32;
+            let points_by_return = write_point_data_i32(&mut wr, points.into_iter(), &format)?;
+            for i in 0..5 {
+                header.number_of_points_by_return[i] += points_by_return[i];
+            }
+        }
+
+        // write bogus points
+        'bogus_tasks_loop: loop {
+            // get batch of points to write
+            let points = match bogus_queue.pop() {
+                Some(v) => v,
+                None => 'bogus_steal_loop: loop {
+                    let mut retry = false;
+                    for stealer in &bogus_stealers {
+                        match stealer.steal_batch_and_pop(&bogus_queue) {
+                            Steal::Success(s) => break 'bogus_steal_loop s,
+                            Steal::Retry => retry = true,
+                            Steal::Empty => (),
+                        }
+                    }
+                    if !retry {
+                        break 'bogus_tasks_loop;
+                    }
+                },
+            };
+
+            // write
+            header.number_of_point_records += points.len() as u32;
+            let points_by_return = write_point_data_i32(&mut wr, points.into_iter(), &format)?;
+            for i in 0..5 {
+                header.number_of_points_by_return[i] += points_by_return[i];
+            }
+        }
+
+        // write updated header
+        wr.seek(SeekFrom::Start(header_position))?;
+        header.write_to(&mut wr).map_err(|e| match e {
+            las::Error::Io(io_e) => io_e,
+            _ => panic!("Unexpected error"),
+        })?;
+
+        // write updated bogus points vlr
+        if use_bogus_points_vlr {
+            wr.seek(SeekFrom::Start(bogus_points_vlr_pos))?;
+            let vlr = Vlr {
+                user_id: BOGUS_POINTS_VLR_USER_ID.to_string(),
+                record_id: BOGUS_POINTS_VLR_RECORD_ID,
+                description: "Number of non bogus points.".to_string(),
+                data: Vec::from((nr_non_bogus as u32).to_le_bytes()),
+            };
+            vlr.into_raw(false)
+                .unwrap()
+                .write_to(&mut wr)
+                .map_err(|e| match e {
+                    las::Error::Io(io_e) => io_e,
+                    _ => panic!("Unexpected error"),
+                })?;
+        }
+        Ok(())
     }
 }
 
@@ -293,6 +721,21 @@ where
             wr.write_all(point_data.as_slice())?;
         }
         Ok(())
+    }
+
+    fn write_las_work_stealing<W>(
+        &self,
+        las: WorkStealingLas<Point, <Point::Position as Position>::Component, I32CoordinateSystem>,
+        wr: W,
+    ) -> Result<(), WriteLasError>
+    where
+        W: Write + Seek + Send,
+    {
+        if self.compression {
+            self.write_las_work_stealing_compressed(las, wr)
+        } else {
+            self.write_las_work_stealing_uncompressed(las, wr)
+        }
     }
 
     fn read_las<R: Read + Seek + Send>(

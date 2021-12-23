@@ -201,7 +201,11 @@ where
     }
 
     /// Queries, which nodes should be loaded for a given sensor position.
-    pub fn query_sensor_position(&self, sensor_pos: &Pos) -> SensorPositionQueryResult<Comp> {
+    pub fn query_sensor_position(
+        &self,
+        sensor_pos: &Pos,
+        previous_split_levels: &[LodLevel],
+    ) -> SensorPositionQueryResult<Comp> {
         // Node to start inserting points into, if a lod is completely empty.
         let lod0 = LodLevel::base();
 
@@ -209,8 +213,18 @@ where
         let node_ids: Vec<LeveledGridCell> = self
             .lods
             .iter()
-            .map(|meta_tree_lod| {
-                meta_tree_lod.query_sensor_position(sensor_pos, &self.sensor_grid_hierarchy)
+            .enumerate()
+            .map(|(lod_index, meta_tree_lod)| {
+                meta_tree_lod.query_sensor_position(
+                    sensor_pos,
+                    &self.sensor_grid_hierarchy,
+                    &previous_split_levels
+                        .get(lod_index)
+                        .cloned()
+                        .unwrap_or_else(LodLevel::base)
+                        .coarser()
+                        .unwrap_or_else(LodLevel::base),
+                )
             })
             .collect();
 
@@ -308,6 +322,7 @@ where
         &self,
         sensor_pos: &Pos,
         sensor_grid_hierarchy: &GridH,
+        min_level: &LodLevel,
     ) -> LeveledGridCell
     where
         Pos: Position<Component = Comp>,
@@ -318,7 +333,15 @@ where
                 .level(&LodLevel::from_level(depth as u16))
                 .leveled_cell_at(sensor_pos);
             match nodes.get(&cell.pos) {
-                None => return cell,
+                None => {
+                    return if cell.lod >= *min_level {
+                        cell
+                    } else {
+                        sensor_grid_hierarchy
+                            .level(min_level)
+                            .leveled_cell_at(sensor_pos)
+                    }
+                }
                 Some(Node { is_leaf: true, .. }) => return cell,
                 Some(Node { is_leaf: false, .. }) => (),
             }
@@ -349,6 +372,10 @@ where
             self.fallback_node
         };
         MetaTreeNodeId { lod: *lod, node }
+    }
+
+    pub fn split_levels(&self) -> Vec<LodLevel> {
+        self.node_ids.iter().map(|node_id| node_id.lod).collect()
     }
 }
 
@@ -493,35 +520,35 @@ mod tests {
             .center();
 
         assert_eq!(
-            t.query_sensor_position(&p1, &grid_hierarchy),
+            t.query_sensor_position(&p1, &grid_hierarchy, &LodLevel::base()),
             LeveledGridCell {
                 lod: LodLevel::from_level(0),
                 pos: GridCell { x: 2, y: 0, z: 0 },
             }
         );
         assert_eq!(
-            t.query_sensor_position(&p2, &grid_hierarchy),
+            t.query_sensor_position(&p2, &grid_hierarchy, &LodLevel::base()),
             LeveledGridCell {
                 lod: LodLevel::from_level(0),
                 pos: GridCell { x: 1, y: 0, z: 0 },
             }
         );
         assert_eq!(
-            t.query_sensor_position(&p3, &grid_hierarchy),
+            t.query_sensor_position(&p3, &grid_hierarchy, &LodLevel::base()),
             LeveledGridCell {
                 lod: LodLevel::from_level(1),
                 pos: GridCell { x: 0, y: 1, z: 0 },
             }
         );
         assert_eq!(
-            t.query_sensor_position(&p4, &grid_hierarchy),
+            t.query_sensor_position(&p4, &grid_hierarchy, &LodLevel::base()),
             LeveledGridCell {
                 lod: LodLevel::from_level(1),
                 pos: GridCell { x: 1, y: 0, z: 0 },
             }
         );
         assert_eq!(
-            t.query_sensor_position(&p5, &grid_hierarchy),
+            t.query_sensor_position(&p5, &grid_hierarchy, &LodLevel::base()),
             LeveledGridCell {
                 lod: LodLevel::from_level(2),
                 pos: GridCell { x: 0, y: 0, z: 0 },

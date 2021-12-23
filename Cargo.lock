@@ -541,10 +541,14 @@ version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
  "dotenv",
+ "libmedium",
  "lidarserv-common",
  "lidarserv-server",
  "log",
  "nalgebra",
+ "pasture-core",
+ "pasture-derive",
+ "point-cloud-viewer",
  "pretty_env_logger",
  "serde",
  "serde_json",
@@ -558,6 +562,7 @@ dependencies = [
  "las",
  "laz 0.6.0",
  "lidarserv-common",
+ "velodyne-csv-replay",
 ]
 
 [[package]]
@@ -886,6 +891,12 @@ name = "libm"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
+
+[[package]]
+name = "libmedium"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "701ed544a1ad145f1a171e15f2def7d6f537a17e2cf0957577e4129bf00a2dce"
 
 [[package]]
 name = "lidarserv-common"

@@ -6,7 +6,7 @@ pub mod view_frustum;
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
-use crate::geometry::position::{CoordinateSystem, Position};
+use crate::geometry::position::Position;
 
 pub trait Query<Pos, CSys>
 where

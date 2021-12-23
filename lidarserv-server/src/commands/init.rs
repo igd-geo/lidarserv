@@ -6,7 +6,6 @@ use crate::index::settings::{
 };
 use anyhow::Result;
 use lidarserv_common::index::sensor_pos::partitioned_node::RustCellHasher;
-use std::cell::Cell;
 
 pub fn run(init_options: InitOptions) -> Result<()> {
     // create the directory

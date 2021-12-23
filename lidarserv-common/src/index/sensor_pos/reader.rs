@@ -1,4 +1,4 @@
-use crate::geometry::bounding_box::{BaseAABB, AABB};
+use crate::geometry::bounding_box::BaseAABB;
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
@@ -12,13 +12,10 @@ use crate::index::{Node, NodeId, Reader};
 use crate::las::LasReadWrite;
 use crate::lru_cache::pager::CacheLoadError;
 use crate::nalgebra::Scalar;
-use crate::query::lod::LodQuery;
 use crate::query::{Query, QueryExt};
 use crossbeam_channel::{Receiver, TryRecvError};
-use nalgebra::{min, Point3};
-use std::cmp::Ordering;
+use nalgebra::min;
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use std::io::Cursor;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -678,26 +675,11 @@ where
 
         // calculate the max lod for each point,
         // and check, that at least one point justifies the lod level from the node
-        let point_distance = self
-            .inner
-            .sampling_factory
-            .build(&self.lod)
-            .point_distance();
+        let sampl = self.inner.sampling_factory.build(&self.lod);
         points
             .filter_map(|p| {
                 let position = p.position();
-                let bounds = AABB::new(
-                    Point3::new(
-                        position.x() - point_distance,
-                        position.y() - point_distance,
-                        position.z() - point_distance,
-                    ),
-                    Point3::new(
-                        position.x() + point_distance,
-                        position.y() + point_distance,
-                        position.z() + point_distance,
-                    ),
-                );
+                let bounds = sampl.cell_aabb(position);
                 self.query
                     .max_lod_area(&bounds, &self.inner.coordinate_system)
                 //.max_lod_position(position, &self.inner.coordinate_system)

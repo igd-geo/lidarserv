@@ -2,7 +2,6 @@ use crate::common::geometry::grid::LodLevel;
 use crate::common::index::octree::writer::TaskPriorityFunction;
 use lidarserv_common::nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
-use std::collections::hash_map::RandomState;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use thiserror::Error;

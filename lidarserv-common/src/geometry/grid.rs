@@ -64,6 +64,8 @@ pub trait GridHierarchy: Debug {
     /// Returns the given hierarchy level.
     fn level(&self, lod: &LodLevel) -> LevelGrid<Self::Grid>;
 
+    fn max_level(&self) -> LodLevel;
+
     /// Returns the bounding box of the given cell
     fn get_leveled_cell_bounds(&self, cell: &LeveledGridCell) -> AABB<Self::Component> {
         self.level(&cell.lod).cell_bounds(&cell.pos)
@@ -157,6 +159,10 @@ impl GridHierarchy for F64GridHierarchy {
         let cell_size = self.base_size * 0.5_f64.powi(lod.level() as i32);
         LevelGrid::new(*lod, F64Grid { cell_size })
     }
+
+    fn max_level(&self) -> LodLevel {
+        LodLevel::from_level(u16::MAX)
+    }
 }
 
 impl Grid for F64Grid {
@@ -215,6 +221,10 @@ impl GridHierarchy for I32GridHierarchy {
     fn level(&self, lod: &LodLevel) -> LevelGrid<Self::Grid> {
         let grid = I32Grid::new(&lod.finer_by(self.shift));
         LevelGrid::new(*lod, grid)
+    }
+
+    fn max_level(&self) -> LodLevel {
+        LodLevel::from_level(31 - self.shift)
     }
 }
 
@@ -362,7 +372,7 @@ impl LeveledGridCell {
         })
     }
 
-    pub fn overlaps_with(&self, mut other: &LeveledGridCell) -> bool {
+    pub fn overlaps_with(&self, other: &LeveledGridCell) -> bool {
         let mut cell_1 = self;
         let mut cell_2 = other;
         if cell_1.lod > cell_2.lod {

@@ -1,5 +1,8 @@
+use lidarserv_common::geometry::bounding_box::{BaseAABB, AABB};
+use lidarserv_common::geometry::grid::LodLevel;
+use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use lidarserv_common::query::view_frustum::ViewFrustumQuery;
-use nalgebra::Matrix4;
+use nalgebra::{Matrix4, Point3};
 
 /// A query that "looks down at an overwiew of the full point cloud".
 /// It mostly covers shallow lod levels.
@@ -65,5 +68,15 @@ pub fn preset_query_3() -> ViewFrustumQuery {
         ).transpose(),
         0.02,
         8.184,
+    )
+}
+
+pub fn preset_query_4() -> BoundingBoxQuery<i32> {
+    BoundingBoxQuery::new(
+        AABB::new(
+            Point3::new(-30000, 10000, -20000),
+            Point3::new(10000, 70000, 20000),
+        ),
+        LodLevel::from_level(5),
     )
 }

@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 lidarserv-common = { path = "../lidarserv-common" }
+velodyne-csv-replay = { path = "../velodyne-csv-replay" }
 las = "0.7.5"
 laz = "0.6.0"

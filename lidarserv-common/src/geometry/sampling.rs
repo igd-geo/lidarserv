@@ -5,8 +5,7 @@ use std::collections::hash_map::{Entry, Values};
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
-use nalgebra::Point;
+use crate::geometry::bounding_box::{BaseAABB, OptionAABB, AABB};
 use std::marker::PhantomData;
 use std::mem;
 
@@ -28,6 +27,12 @@ pub trait Sampling {
     /// The minimum distance between two sampled points
     fn point_distance(&self) -> <<Self::Point as PointType>::Position as Position>::Component;
 
+    /// Return the bounding box for the cell at the given position.
+    fn cell_aabb(
+        &self,
+        position: &<Self::Point as PointType>::Position,
+    ) -> AABB<<<Self::Point as PointType>::Position as Position>::Component>;
+
     /// Returns true, if the sampling is empty
     fn is_empty(&self) -> bool;
 
@@ -40,18 +45,10 @@ pub trait Sampling {
     /// The return value contains
     /// all points that got rejected from the sampling,
     /// as well as all preexisting points, that got replaced by a selected point.
+    /// Sets the dirty bit, if any of the points is accepted.
     fn insert<F>(&mut self, points: Vec<Self::Point>, patch_rejected: F) -> Vec<Self::Point>
     where
         F: FnMut(&Self::Point, &mut Self::Point);
-
-    /// Deletes all points in the sampling.
-    fn clear(&mut self);
-
-    /// Returns the list of sampled points.
-    fn into_points(self) -> Vec<Self::Point>;
-
-    /// Empties the node and returns the list of sampled points.
-    fn drain_points(&mut self) -> Vec<Self::Point>;
 
     /// Returns a copy of the list of sampled points.
     fn clone_points(&self) -> Vec<Self::Point>
@@ -64,15 +61,13 @@ pub trait Sampling {
     /// Returns the list of entries in this node, leaving the node empty.
     fn drain_raw(&mut self) -> Vec<Self::Raw>;
 
-    ///
-    fn points_into_raw(&self, points: Vec<Self::Point>) -> Vec<Self::Raw>;
-
     /// Inserts raw entries into the node, that have been obtained from [Self::into_raw] on a
     /// different node of the same LOD.
     /// When points are already inserted in a sampling, but have to be re-inserted into a different
     /// sampling, then using [Self::into_raw] and [Self::insert_raw] can be more efficient than
-    /// [Self::into_points] and [Self::insert], because it can carry over some internal meta-data,
-    /// that does not need to be re-calculated.
+    /// [Self::clone_points] and [Self::insert], because it can carry over some internal meta-data,
+    /// that does not need to be re-calculated. And we spare a clone.
+    /// Sets the dirty bit, if any of the entries is accepted.
     fn insert_raw<F>(&mut self, entries: Vec<Self::Raw>, patch_rejected: F) -> Vec<Self::Point>
     where
         F: FnMut(&Self::Point, &mut Self::Point);
@@ -83,6 +78,12 @@ pub trait Sampling {
     {
         self.into_iter()
     }
+
+    /// Reset the dirty bit.
+    fn reset_dirty(&mut self);
+
+    /// Return the status of the dirty bit.
+    fn is_dirty(&self) -> bool;
 }
 
 pub trait RawSamplingEntry {
@@ -110,6 +111,7 @@ pub struct GridCenterRawEntry<Point, Position, Distance> {
 pub struct GridCenterSampling<Grid, Point, Position, Distance> {
     grid: Grid,
     points: HashMap<GridCell, GridCenterEntry<Point, Position, Distance>>,
+    dirty: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -161,6 +163,7 @@ where
         GridCenterSampling {
             grid: self.grid_hierarchy.level(level).into_grid(),
             points: HashMap::new(),
+            dirty: false,
         }
     }
 }
@@ -191,6 +194,16 @@ where
         let p1 = Position::from_components(min.x(), min.y(), min.z());
         let p2 = Position::from_components(max.x(), min.y(), min.z());
         p1.distance_to(&p2)
+    }
+
+    fn cell_aabb(
+        &self,
+        position: &<Self::Point as PointType>::Position,
+    ) -> AABB<
+        <<Self::Point as PointType>::Position as crate::geometry::position::Position>::Component,
+    > {
+        let cell = self.grid.cell_at(position);
+        self.grid.cell_bounds(&cell)
     }
 
     fn is_empty(&self) -> bool {
@@ -234,6 +247,7 @@ where
                         patch_rejected(&point, &mut existing_entry.point);
                         std::mem::swap(&mut point, &mut existing_entry.point);
                         existing_entry.center_distance = dist;
+                        self.dirty = true;
                     }
                     rejected.push(point);
                 }
@@ -246,23 +260,11 @@ where
                         center,
                         center_distance,
                     });
+                    self.dirty = true;
                 }
             }
         }
         rejected
-    }
-
-    fn clear(&mut self) {
-        self.points.clear();
-    }
-
-    fn into_points(self) -> Vec<Self::Point> {
-        self.points.into_values().map(|entry| entry.point).collect()
-    }
-
-    fn drain_points(&mut self) -> Vec<Self::Point> {
-        let points = mem::take(&mut self.points);
-        points.into_values().map(|c| c.point).collect()
     }
 
     fn clone_points(&self) -> Vec<Self::Point>
@@ -290,25 +292,6 @@ where
             .collect()
     }
 
-    fn points_into_raw(&self, points: Vec<Self::Point>) -> Vec<Self::Raw> {
-        points
-            .into_iter()
-            .map(|point| {
-                let cell = self.grid.cell_at(point.position());
-                let center: Position = self.grid.cell_bounds(&cell).center();
-                let center_distance = center.distance_to(point.position());
-                GridCenterRawEntry {
-                    cell,
-                    entry: GridCenterEntry {
-                        point,
-                        center,
-                        center_distance,
-                    },
-                }
-            })
-            .collect()
-    }
-
     fn insert_raw<F>(&mut self, entries: Vec<Self::Raw>, mut patch_rejected: F) -> Vec<Self::Point>
     where
         F: FnMut(&Self::Point, &mut Self::Point),
@@ -324,15 +307,25 @@ where
                     if entry.center_distance < existing_entry.center_distance {
                         patch_rejected(&entry.point, &mut existing_entry.point);
                         std::mem::swap(&mut entry, existing_entry);
+                        self.dirty = true;
                     }
                     rejected.push(entry.point);
                 }
                 Entry::Vacant(v) => {
                     v.insert(entry);
+                    self.dirty = true;
                 }
             }
         }
         rejected
+    }
+
+    fn reset_dirty(&mut self) {
+        self.dirty = false;
+    }
+
+    fn is_dirty(&self) -> bool {
+        self.dirty
     }
 }
 

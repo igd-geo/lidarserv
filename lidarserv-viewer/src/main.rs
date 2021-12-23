@@ -15,8 +15,8 @@ use pasture_core::nalgebra::Vector3;
 use pasture_derive::PointType;
 use point_cloud_viewer::navigation::Matrices;
 use point_cloud_viewer::renderer::settings::{
-    BaseRenderSettings, Color, ColorMap, PointCloudRenderSettings, PointColor, PointShape,
-    PointSize, ScalarAttributeColoring,
+    BaseRenderSettings, ColorMap, PointCloudRenderSettings, PointColor, PointShape, PointSize,
+    ScalarAttributeColoring,
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::collections::HashMap;
@@ -200,7 +200,7 @@ async fn network_thread(
                     view_projection_matrix,
                     view_projection_matrix_inv,
                     camera_matrix.window_size.x,
-                    5.0,
+                    10.0,
                 )
                 .await
                 .unwrap()
