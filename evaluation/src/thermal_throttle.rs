@@ -61,10 +61,10 @@ pub fn processor_cooldown() {
             sleep(Duration::from_secs(5));
         } else {
             info!(
-                "Fan '{}' is at {} rpm. Will wait for one additional minute before continuing with program execution.",
+                "Fan '{}' is at {} rpm. Will wait for two additional minutes before continuing with program execution.",
                 name, rpm
             );
-            sleep(Duration::from_secs(60));
+            sleep(Duration::from_secs(120));
             return;
         }
     }
