@@ -297,7 +297,7 @@ def main():
     # read file
     with open("eval-results-3.json") as f:
         data = json.load(f)
-    with open("eval-disk-speed-results-3.json") as f:
+    with open("eval-disk-speed-results-5.json") as f:
         disk_speed_data = json.load(f)
 
     plot_insertion_rate_by_nr_threads(data["num_threads"], "octree_index")
