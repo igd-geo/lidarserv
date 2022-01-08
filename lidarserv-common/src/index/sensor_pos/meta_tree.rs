@@ -3,7 +3,6 @@
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::{GridCell, GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::position::{Component, Position};
-use crate::index::sensor_pos::page_manager::FileId;
 use crate::index::sensor_pos::{Replacement, Update};
 use crate::nalgebra::Scalar;
 use serde::de::DeserializeOwned;
@@ -380,25 +379,6 @@ where
 }
 
 impl MetaTreeNodeId {
-    pub fn file(&self, thread_id: usize) -> FileId {
-        FileId {
-            lod: self.lod,
-            tree_depth: self.node.lod,
-            grid_cell: self.node.pos,
-            thread_index: thread_id,
-        }
-    }
-
-    pub fn from_file(file: &FileId) -> Self {
-        MetaTreeNodeId {
-            lod: file.lod,
-            node: LeveledGridCell {
-                lod: file.tree_depth,
-                pos: file.grid_cell,
-            },
-        }
-    }
-
     pub fn children(&self) -> [MetaTreeNodeId; 8] {
         self.node.children().map(|node| MetaTreeNodeId {
             lod: self.lod,
@@ -415,6 +395,14 @@ impl MetaTreeNodeId {
 
     pub fn lod(&self) -> &LodLevel {
         &self.lod
+    }
+
+    pub fn tree_depth(&self) -> &LodLevel {
+        &self.tree_node().lod
+    }
+
+    pub fn grid_cell(&self) -> &GridCell {
+        &self.tree_node().pos
     }
 
     pub fn tree_node(&self) -> &LeveledGridCell {

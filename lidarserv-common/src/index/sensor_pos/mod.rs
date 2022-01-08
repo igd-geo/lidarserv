@@ -9,9 +9,7 @@ use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
-use crate::geometry::sampling::{
-    IntoExactSizeIterator, RawSamplingEntry, Sampling, SamplingFactory,
-};
+use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::PageManager;
 use crate::index::sensor_pos::partitioned_node::RustCellHasher;
@@ -32,15 +30,15 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-pub struct SensorPosIndex<GridH, SamplF, Comp: Scalar, LasL, CSys> {
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+pub struct SensorPosIndex<GridH, SamplF, Comp: Scalar, LasL, CSys, Point, Sampl> {
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
 }
 
-pub struct SensorPosIndexParams<SamplF, GridH, Comp: Scalar, LasL, CSys> {
+pub struct SensorPosIndexParams<SamplF, GridH, Comp: Scalar, LasL, CSys, Point, Sampl> {
     pub nr_threads: usize,
     pub max_node_size: usize,
     pub sampling_factory: SamplF,
-    pub page_manager: PageManager,
+    pub page_manager: PageManager<Point, Comp, Sampl, LasL, CSys>,
     pub meta_tree_file: PathBuf,
     pub meta_tree: MetaTree<GridH, Comp>,
     pub las_loader: LasL,
@@ -51,10 +49,10 @@ pub struct SensorPosIndexParams<SamplF, GridH, Comp: Scalar, LasL, CSys> {
     pub hasher: RustCellHasher,
 }
 
-struct Inner<GridH, SamplF, Comp: Scalar, LasL, CSys> {
+struct Inner<GridH, SamplF, Comp: Scalar, LasL, CSys, Point, Sampl> {
     pub nr_threads: usize,
     pub max_node_size: usize,
-    pub page_manager: PageManager,
+    pub page_manager: PageManager<Point, Comp, Sampl, LasL, CSys>,
     pub sampling_factory: SamplF,
     pub meta_tree_file: PathBuf,
     pub las_loader: LasL,
@@ -87,12 +85,20 @@ struct Replacement<Comp: Scalar> {
     bounds: AABB<Comp>,
 }
 
-impl<GridH, SamplF, Comp, LasL, CSys> SensorPosIndex<GridH, SamplF, Comp, LasL, CSys>
+impl<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>
+    SensorPosIndex<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>
 where
     GridH: GridHierarchy<Component = Comp>,
     Comp: Component,
+    CSys: Clone,
+    Point: PointType + Clone,
+    Point::Position: Position<Component = Comp>,
+    LasL: LasReadWrite<Point, CSys> + Clone,
+    Sampl: Sampling<Point = Point>,
 {
-    pub fn new(params: SensorPosIndexParams<SamplF, GridH, Comp, LasL, CSys>) -> Self {
+    pub fn new(
+        params: SensorPosIndexParams<SamplF, GridH, Comp, LasL, CSys, Point, Sampl>,
+    ) -> Self {
         let SensorPosIndexParams {
             nr_threads,
             max_node_size,
@@ -147,7 +153,7 @@ where
 }
 
 impl<GridH, SamplF, Point, Pos, Comp, LasL, CSys, Sampl, Raw> Index<Point, CSys>
-    for SensorPosIndex<GridH, SamplF, Comp, LasL, CSys>
+    for SensorPosIndex<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>
 where
     GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
@@ -161,12 +167,11 @@ where
     Comp: Component + Serialize + DeserializeOwned + Send + Sync,
     LasL: LasReadWrite<Point, CSys> + Clone + Send + Sync + 'static,
     CSys: Clone + PartialEq + Send + Sync + 'static,
-    Sampl: Sampling<Point = Point, Raw = Raw> + Send,
-    for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
-    Raw: RawSamplingEntry<Point = Point> + Send,
+    Sampl: Sampling<Point = Point, Raw = Raw> + Send + Clone + 'static,
+    Raw: RawSamplingEntry<Point = Point> + Send + 'static,
 {
     type Writer = SensorPosWriter<Point, CSys>;
-    type Reader = SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>;
+    type Reader = SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>;
 
     fn writer(&self) -> Self::Writer {
         let index_inner = Arc::clone(&self.inner);

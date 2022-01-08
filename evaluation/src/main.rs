@@ -43,7 +43,7 @@ fn run_simple(base_config: Config, points: Vec<Point>, coordinate_system: I32Coo
             compression,
             ..base_config.clone()
         };
-        let result = evaluate(&config, &points, &coordinate_system, true, true);
+        let result = evaluate(&config, &points, &coordinate_system, true, true, false);
         runs.entry("compression".to_string())
             .or_insert_with(Vec::new)
             .push(result);
@@ -56,15 +56,16 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
     let mut runs = HashMap::new();
 
     // "default run" with base settings
+    /*
     {
         let result = evaluate(&base_config, &points, &coordinate_system, true, true);
         runs.entry("default".to_string())
             .or_insert_with(Vec::new)
             .push(result);
-    }
+    }*/
 
     // modify task priority function
-    let task_priority_functions = [
+    /*let task_priority_functions = [
         "NrPoints",
         "TaskAge",
         "Lod",
@@ -92,10 +93,10 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
         runs.entry("task_priority_function_low_cache".to_string())
             .or_insert_with(Vec::new)
             .push(results);
-    }
+    }*/
 
     // modify threads
-    for num_threads in [1, 2, 4, 8] {
+    /*for num_threads in [1, 2, 4, 8] {
         let config = Config {
             num_threads,
             ..base_config.clone()
@@ -104,10 +105,20 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
         runs.entry("num_threads".to_string())
             .or_insert_with(Vec::new)
             .push(results);
+    }*/
+    for num_threads in [8, 4, 2, 1] {
+        let config = Config {
+            num_threads,
+            ..base_config.clone()
+        };
+        let results = evaluate(&config, &points, &coordinate_system, false, true, true);
+        runs.entry("num_threads".to_string())
+            .or_insert_with(Vec::new)
+            .push(results);
     }
 
     // modify cache size
-    for max_cache_size in [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192] {
+    /*for max_cache_size in [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192] {
         let config = Config {
             max_cache_size,
             ..base_config.clone()
@@ -116,10 +127,10 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
         runs.entry("max_cache_size".to_string())
             .or_insert_with(Vec::new)
             .push(results);
-    }
+    }*/
 
     // modify node size
-    for max_node_size in [
+    /*for max_node_size in [
         3_125, 6_250, 12_500, 25_000, 50_000, 100_000, 200_000, 400_000,
     ] {
         let config = Config {
@@ -130,7 +141,7 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
         runs.entry("max_node_size".to_string())
             .or_insert_with(Vec::new)
             .push(results);
-    }
+    }*/
 
     println!("{}", json!(runs))
 }
@@ -139,6 +150,7 @@ fn evaluate_octree(
     config: &Config,
     points: &[Point],
     coordinate_system: &I32CoordinateSystem,
+    force_skip_latency: bool,
 ) -> serde_json::Value {
     // measure insertion rate
     reset_data_folder(config);
@@ -156,7 +168,9 @@ fn evaluate_octree(
     info!("Results: {}", &octree_query_perf);
 
     // measure latency
-    let octree_latency = if config.pps as f64 > max_pps {
+    let octree_latency = if force_skip_latency {
+        None as Option<serde_json::Value>
+    } else if config.pps as f64 > max_pps {
         warn!(
             "Skipping latency measurement, because the indexer is too slow for {} points/sec.",
             config.pps
@@ -186,6 +200,7 @@ fn evaluate_sensor_pos_index(
     config: &Config,
     points: &[Point],
     coordinate_system: &I32CoordinateSystem,
+    force_skip_latency: bool,
 ) -> serde_json::Value {
     // measure insertion rate
     reset_data_folder(config);
@@ -203,7 +218,9 @@ fn evaluate_sensor_pos_index(
     info!("Results: {}", &sensorpos_query_perf);
 
     // measure latency
-    let sensorpos_latency = if config.pps as f64 > max_pps {
+    let sensorpos_latency = if force_skip_latency {
+        None as Option<serde_json::Value>
+    } else if config.pps as f64 > max_pps {
         warn!(
             "Skipping latency measurement, because the indexer is too slow for {} points/sec.",
             config.pps
@@ -235,16 +252,18 @@ fn evaluate(
     coordinate_system: &I32CoordinateSystem,
     octree: bool,
     sensorpos: bool,
+    force_skip_latency: bool,
 ) -> serde_json::Value {
     info!("Configuration: {:#?}", config);
 
     let mut result = HashMap::new();
     if octree {
-        let octree_results = evaluate_octree(config, points, coordinate_system);
+        let octree_results = evaluate_octree(config, points, coordinate_system, force_skip_latency);
         result.insert("octree_index".to_string(), octree_results);
     }
     if sensorpos {
-        let sensorpos_results = evaluate_sensor_pos_index(config, points, coordinate_system);
+        let sensorpos_results =
+            evaluate_sensor_pos_index(config, points, coordinate_system, force_skip_latency);
         result.insert("sensor_pos_index".to_string(), sensorpos_results);
     }
     result.insert("config".to_string(), json!(config));

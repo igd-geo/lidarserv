@@ -19,6 +19,7 @@ use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::query::empty::EmptyQuery;
 use lidarserv_common::query::Query;
 use std::error::Error;
+use std::sync::Arc;
 use thiserror::Error;
 
 pub mod builder;
@@ -52,7 +53,7 @@ pub trait DynWriter: Send + Sync {
     ) -> Result<(), CoordinateSystemMismatchError>;
 }
 
-pub type NodeData = Vec<Vec<u8>>;
+pub type NodeData = Vec<Arc<Vec<u8>>>;
 pub type Node = (NodeId, NodeData);
 
 pub trait DynReader: Send + Sync {
@@ -75,6 +76,8 @@ impl DynIndex
         i32,
         I32LasReadWrite,
         I32CoordinateSystem,
+        LasPoint,
+        GridCenterSampling<I32Grid, LasPoint, I32Position, i32>,
     >
 {
     fn index_info(&self) -> IndexInfo {
@@ -122,6 +125,7 @@ impl DynReader
         I32CoordinateSystem,
         I32Position,
         LasPoint,
+        GridCenterSampling<I32Grid, LasPoint, I32Position, i32>,
     >
 {
     fn blocking_update(

@@ -33,6 +33,12 @@ pub trait Sampling {
         position: &<Self::Point as PointType>::Position,
     ) -> AABB<<<Self::Point as PointType>::Position as Position>::Component>;
 
+    /// Return the identifier for the cell at the given position.
+    fn cell(
+        &self,
+        position: &<Self::Point as PointType>::Position,
+    ) -> <Self::Raw as RawSamplingEntry>::Cell;
+
     /// Returns true, if the sampling is empty
     fn is_empty(&self) -> bool;
 
@@ -71,13 +77,6 @@ pub trait Sampling {
     fn insert_raw<F>(&mut self, entries: Vec<Self::Raw>, patch_rejected: F) -> Vec<Self::Point>
     where
         F: FnMut(&Self::Point, &mut Self::Point);
-
-    fn iter<'a>(&'a self) -> <&Self as IntoExactSizeIterator>::IntoIter
-    where
-        &'a Self: IntoExactSizeIterator<Item = &'a Self::Point>,
-    {
-        self.into_iter()
-    }
 
     /// Reset the dirty bit.
     fn reset_dirty(&mut self);
@@ -206,6 +205,13 @@ where
         self.grid.cell_bounds(&cell)
     }
 
+    fn cell(
+        &self,
+        position: &<Self::Point as PointType>::Position,
+    ) -> <Self::Raw as RawSamplingEntry>::Cell {
+        self.grid.cell_at(position)
+    }
+
     fn is_empty(&self) -> bool {
         self.points.is_empty()
     }
@@ -327,45 +333,4 @@ where
     fn is_dirty(&self) -> bool {
         self.dirty
     }
-}
-
-pub trait IntoExactSizeIterator {
-    type Item;
-    type IntoIter: Iterator<Item = Self::Item> + ExactSizeIterator;
-    fn into_iter(self) -> Self::IntoIter;
-}
-
-impl<'a, Grid, Point, Position, Distance> IntoExactSizeIterator
-    for &'a GridCenterSampling<Grid, Point, Position, Distance>
-{
-    type Item = &'a Point;
-    type IntoIter = GridCenterSamplingIter<'a, Point, Position, Distance>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        let values = self.points.values();
-        GridCenterSamplingIter { inner: values }
-    }
-}
-
-pub struct GridCenterSamplingIter<'a, Point, Position, Distance> {
-    inner: Values<'a, GridCell, GridCenterEntry<Point, Position, Distance>>,
-}
-
-impl<'a, Point, Position, Distance> Iterator
-    for GridCenterSamplingIter<'a, Point, Position, Distance>
-{
-    type Item = &'a Point;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|e| &e.point)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.inner.size_hint()
-    }
-}
-
-impl<'a, Point, Position, Distance> ExactSizeIterator
-    for GridCenterSamplingIter<'a, Point, Position, Distance>
-{
 }

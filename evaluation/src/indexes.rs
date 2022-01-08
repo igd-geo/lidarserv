@@ -7,10 +7,11 @@ use lidarserv_common::index::octree::page_manager::OctreePageLoader;
 use lidarserv_common::index::octree::writer::TaskPriorityFunction;
 use lidarserv_common::index::octree::Octree;
 use lidarserv_common::index::sensor_pos::meta_tree::MetaTree;
-use lidarserv_common::index::sensor_pos::page_manager::{BinDataLoader, FileIdDirectory};
+use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
 use lidarserv_common::index::sensor_pos::partitioned_node::RustCellHasher;
 use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
 use lidarserv_common::las::I32LasReadWrite;
+use lidarserv_server::index::point::LasPoint;
 use log::error;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -21,6 +22,8 @@ pub type I32SensorPosIndex = SensorPosIndex<
     i32,
     I32LasReadWrite,
     I32CoordinateSystem,
+    Point,
+    GridCenterSampling<I32Grid, Point, I32Position, i32>,
 >;
 pub type I32Octree = Octree<
     Point,
@@ -48,14 +51,19 @@ pub fn create_sensor_pos_index(
     let sampling_factory = GridCenterSamplingFactory::new(point_grid_hierarchy);
     let sensor_grid_hierarchy = I32GridHierarchy::new(14);
     let meta_tree = MetaTree::new(sensor_grid_hierarchy);
-    let page_loader = BinDataLoader::new(data_folder.clone(), "laz".to_string());
-    let directory = FileIdDirectory::from_meta_tree(&meta_tree, nr_threads as usize);
+    let las_loader = I32LasReadWrite::new(config.compression);
+    let page_loader = Loader::new(
+        data_folder.clone(),
+        config.compression,
+        coordinate_system.clone(),
+        las_loader.clone(),
+    );
+    let directory = FileIdDirectory::from_meta_tree(&meta_tree);
     let page_manager = lidarserv_common::index::sensor_pos::page_manager::PageManager::new(
         page_loader,
         directory,
         max_cache_size,
     );
-    let las_loader = I32LasReadWrite::new(config.compression);
 
     let params = SensorPosIndexParams {
         nr_threads: config.num_threads as usize,

@@ -1,6 +1,7 @@
 use lidarserv_common::nalgebra::{Matrix4, Vector3};
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Message {
@@ -73,7 +74,7 @@ pub struct NodeId {
 /// Just a wrapper around Vec<u8>, with a custom Debug impl, so that not the full binary file is
 /// printed in the debug output.
 #[derive(Serialize, Deserialize, Clone)]
-pub struct LasPointData(pub Vec<u8>);
+pub struct LasPointData(pub Arc<Vec<u8>>);
 
 impl Debug for LasPointData {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

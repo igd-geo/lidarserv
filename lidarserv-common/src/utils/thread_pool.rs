@@ -50,13 +50,17 @@ pub struct ExecuteJoinIter<Data, Arg, Ret> {
 impl Threads {
     /// Creates a new thread pool with the given number of threads.
     pub fn new(nr_threads: usize) -> Self {
+        let core_ids = core_affinity::get_core_ids().unwrap();
         Threads {
             threads: (0..nr_threads)
                 .into_iter()
                 .map(|thread_id| {
                     let (tasks_sender, tasks_receiver) = crossbeam_channel::bounded(1);
-                    let join_handle =
-                        thread::spawn(move || Self::thread(thread_id, nr_threads, tasks_receiver));
+                    let core_id = core_ids[thread_id % core_ids.len()];
+                    let join_handle = thread::spawn(move || {
+                        core_affinity::set_for_current(core_id);
+                        Self::thread(thread_id, nr_threads, tasks_receiver)
+                    });
                     Thread {
                         join_handle,
                         tasks_sender,

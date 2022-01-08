@@ -19,6 +19,7 @@ log = "0.4.14"
 crossbeam-utils = "0.8.5"
 crossbeam-deque = "0.8.1"
 rand = "0.8.4"
+core_affinity = "0.5.10"
 
 [features]
 trace = ["tracy-client/enable"]

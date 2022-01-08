@@ -18,6 +18,7 @@ pub struct GeneralSettings {
     pub max_cache_size: usize,
     pub las_scale: Vector3<f64>,
     pub las_offset: Vector3<f64>,
+    pub use_compression: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

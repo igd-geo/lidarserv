@@ -182,7 +182,7 @@ where
                 .into_iter()
                 .map(|data| {
                     las_loader
-                        .read_las(Cursor::new(data))
+                        .read_las(Cursor::new(data.as_ref()))
                         .map(|las| las.points as Vec<Point>)
                         .unwrap_or_else(|_| Vec::new())
                 })
@@ -202,7 +202,7 @@ where
             for (node_id, node) in repl {
                 let points = node.las_files().into_iter().map(|data| {
                     las_loader
-                        .read_las(Cursor::new(data))
+                        .read_las(Cursor::new(data.as_ref()))
                         .map(|las| las.points as Vec<Point>)
                         .unwrap_or_else(|_| Vec::new())
                 });

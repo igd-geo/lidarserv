@@ -416,16 +416,8 @@ where
     CSys: Clone + PartialEq,
     LasL: LasReadWrite<Point, CSys> + Clone,
 {
-    type Point = Point;
-
-    fn las_files(&self) -> Vec<Vec<u8>> {
-        vec![self.page.get_binary(&self.loader).as_ref().clone()]
-    }
-
-    fn points(&self) -> Vec<Self::Point> {
-        self.page
-            .get_points(&self.loader)
-            .unwrap_or_else(|_| Vec::new())
+    fn las_files(&self) -> Vec<Arc<Vec<u8>>> {
+        vec![self.page.get_binary(&self.loader)]
     }
 }
 

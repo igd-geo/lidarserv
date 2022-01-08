@@ -10,7 +10,7 @@ use lidarserv_common::geometry::grid::I32GridHierarchy;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
 use lidarserv_common::index::sensor_pos::meta_tree::{MetaTree, MetaTreeIoError};
-use lidarserv_common::index::sensor_pos::page_manager::{BinDataLoader, FileIdDirectory};
+use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
 use lidarserv_common::index::sensor_pos::partitioned_node::RustCellHasher;
 use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
 use lidarserv_common::las::I32LasReadWrite;
@@ -50,14 +50,14 @@ fn build_octree_index(
     let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
 
     // page loading stuff
-    let las_loader = I32LasReadWrite::new(true); // todo config for that (use_compression)
+    let las_loader = I32LasReadWrite::new(genaral_settings.use_compression);
     let page_loader = OctreePageLoader::new(las_loader.clone(), data_path.to_owned());
     let mut directory_file_name = data_path.to_owned();
     directory_file_name.push("directory.bin");
     let page_directory = GridCellDirectory::new(&settings.max_lod, directory_file_name)?;
     let coordinate_system = I32CoordinateSystem::from_las_transform(
-        Vector3::new(0.01, 0.01, 0.01), // todo config for that
-        Vector3::new(0.0, 0.0, 0.0),    // todo config for that
+        genaral_settings.las_scale,
+        genaral_settings.las_offset,
     );
 
     let octree = Octree::new(
@@ -78,12 +78,21 @@ fn build_octree_index(
 }
 
 fn build_sensor_position_index(
-    genaral_settings: GeneralSettings,
+    general_settings: GeneralSettings,
     settings: SensorPositionSettings,
     data_path: &Path,
 ) -> Result<Box<dyn DynIndex>, BuilderError> {
+    // las loader
+    let las_loader = I32LasReadWrite::new(general_settings.use_compression);
+
+    // coordinate system
+    let coordinate_system = I32CoordinateSystem::from_las_transform(
+        general_settings.las_scale,
+        general_settings.las_offset,
+    );
+
     // sampling
-    let point_grid_hierarchy = I32GridHierarchy::new(21);
+    let point_grid_hierarchy = I32GridHierarchy::new(17);
     let sampling_factory = GridCenterSamplingFactory::new(point_grid_hierarchy);
 
     // sensor grid
@@ -95,25 +104,21 @@ fn build_sensor_position_index(
     let meta_tree = MetaTree::load_from_file(&meta_tree_file_name, sensor_grid_hierarchy)?;
 
     // page manager
-    let page_loader = BinDataLoader::new(data_path.to_owned(), "laz".to_string());
-    let directory = FileIdDirectory::from_meta_tree(&meta_tree, genaral_settings.nr_threads);
+    let page_loader = Loader::new(
+        data_path.to_owned(),
+        general_settings.use_compression,
+        coordinate_system.clone(),
+        las_loader.clone(),
+    );
+    let directory = FileIdDirectory::from_meta_tree(&meta_tree);
     let page_manager = lidarserv_common::index::sensor_pos::page_manager::PageManager::new(
         page_loader,
         directory,
-        genaral_settings.max_cache_size,
-    );
-
-    // las loader
-    let las_loader = I32LasReadWrite::new(true);
-
-    // coordinate system
-    let coordinate_system = I32CoordinateSystem::from_las_transform(
-        Vector3::new(0.01, 0.01, 0.01),
-        Vector3::new(0.0, 0.0, 0.0),
+        general_settings.max_cache_size,
     );
 
     let params = SensorPosIndexParams {
-        nr_threads: genaral_settings.nr_threads,
+        nr_threads: general_settings.nr_threads,
         max_node_size: settings.max_nr_points_per_node,
         meta_tree_file: meta_tree_file_name,
         sampling_factory,

@@ -2,17 +2,15 @@ use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
-use crate::geometry::sampling::{
-    IntoExactSizeIterator, RawSamplingEntry, Sampling, SamplingFactory,
-};
+use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
-use crate::index::sensor_pos::page_manager::{BinDataPage, PageManager};
+use crate::index::sensor_pos::page_manager::{PageManager, SensorPosPage};
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::writer::IndexError;
-use crate::las::{Las, LasReadWrite, ReadLasError, WorkStealingLas, WriteLasError};
+use crate::las::{Las, LasReadWrite, ReadLasError, WriteLasError};
 use crate::span;
 use crate::utils::thread_pool::Threads;
-use crossbeam_deque::Steal;
+use crossbeam_deque::{Steal, Worker};
 use crossbeam_utils::Backoff;
 use nalgebra::Scalar;
 use rand::RngCore;
@@ -22,11 +20,12 @@ use std::cmp::min;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::io::Cursor;
 use std::iter::ExactSizeIterator;
-use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Barrier;
 use std::time::Instant;
+use std::{cmp, mem};
 
+#[derive(Clone)]
 pub struct PartitionedNode<Sampl, Point, Comp: Scalar> {
     hasher: RustCellHasher,
     bit_mask: u64,
@@ -50,6 +49,7 @@ pub struct PartitionedPoints<Point> {
     partitions: Vec<UnsafeSyncCell<Vec<Point>>>,
 }
 
+#[derive(Clone)]
 struct Partition<Sampl, Point> {
     sampling: Sampl,
     bogus: Vec<Point>,
@@ -108,6 +108,12 @@ impl RustCellHasher {
 struct UnsafeSyncCell<Inner>(UnsafeCell<Inner>);
 
 unsafe impl<Inner> Sync for UnsafeSyncCell<Inner> {}
+
+impl<Inner: Clone> Clone for UnsafeSyncCell<Inner> {
+    fn clone(&self) -> Self {
+        UnsafeSyncCell::new(self.get().clone())
+    }
+}
 
 impl<Inner> UnsafeSyncCell<Inner> {
     pub fn new(inner: Inner) -> Self {
@@ -224,397 +230,116 @@ where
     }
 }
 
+impl<Sampl, Point, Comp> PartitionedNode<Sampl, Point, Comp>
+where
+    Comp: Component,
+    Sampl: Sampling<Point = Point>,
+    Point: std::clone::Clone,
+{
+    pub fn get_las_points(&self) -> (Vec<Point>, OptionAABB<Comp>, u32) {
+        let mut points = Vec::new();
+        for partition in &self.partitions {
+            points.append(&mut partition.get().sampling.clone_points())
+        }
+        let non_bogus_points = points.len() as u32;
+        for partition in &self.partitions {
+            points.append(&mut partition.get().bogus.clone())
+        }
+        (points, self.bounds.clone(), non_bogus_points)
+    }
+
+    pub fn from_las_points<SamplF: SamplingFactory<Sampling = Sampl>>(
+        num_partitions: usize,
+        node_id: MetaTreeNodeId,
+        sampling_factory: &SamplF,
+        hasher: RustCellHasher,
+        mut points: Vec<Point>,
+        nr_non_bogus_points: usize,
+    ) -> Self
+    where
+        Point: PointType,
+    {
+        let mut this = Self::new(
+            num_partitions,
+            node_id.clone(),
+            sampling_factory,
+            false,
+            hasher,
+        );
+        if points.is_empty() {
+            return this;
+        }
+
+        // split points into partitions
+        // assuming the point ordering produced by get_las_points:
+        //  - all normal points come first and then all bogus points
+        //  - within these two groups, the points are sorted by the partition id they belong in
+        let mut partitions = Vec::new();
+        for _ in 0..num_partitions {
+            partitions.push(Vec::new());
+        }
+        let hasher = &this.hasher;
+        let bit_mask = this.bit_mask;
+        while !points.is_empty() {
+            let last_pos = points.len() - 1;
+            let last_point = &points[last_pos];
+            let last_cell = this.partitions[0]
+                .get()
+                .sampling
+                .cell(last_point.position());
+            let partition_id = (hasher.compute_hash(&last_cell) & bit_mask) as usize;
+            let is_bogus = last_pos >= nr_non_bogus_points;
+
+            let start_search_at = if is_bogus { nr_non_bogus_points } else { 0 };
+            let first_pos = (&points[start_search_at..])
+                .binary_search_by(|probe| {
+                    let cell = this.partitions[0].get().sampling.cell(probe.position());
+                    let part = (hasher.compute_hash(&cell) & bit_mask) as usize;
+                    if part != partition_id {
+                        cmp::Ordering::Less
+                    } else {
+                        cmp::Ordering::Greater
+                    }
+                })
+                .unwrap_err();
+            let partition_points = points.split_off(first_pos);
+            partitions[partition_id].push((partition_points, is_bogus));
+        }
+
+        // insert
+        // todo consider to parallelize (parallelizes trivially per partition)
+        for (partition_id, p) in partitions.into_iter().enumerate() {
+            for (mut points, is_bogus) in p {
+                if is_bogus {
+                    this.partitions[partition_id]
+                        .get_mut()
+                        .bogus
+                        .append(&mut points)
+                } else {
+                    let rejected = this.partitions[partition_id]
+                        .get_mut()
+                        .sampling
+                        .insert(points, |_, _| unreachable!());
+                    assert!(rejected.is_empty());
+                }
+            }
+        }
+
+        this
+    }
+}
+
 impl<Sampl, Point, Comp, Pos, Raw> PartitionedNode<Sampl, Point, Comp>
 where
-    Sampl: Sampling<Point = Point, Raw = Raw> + Send,
-    for<'a> &'a Sampl: IntoExactSizeIterator<Item = &'a Point>,
-    Point: PointType<Position = Pos> + Send,
+    Sampl: Sampling<Point = Point, Raw = Raw> + Send + Clone,
+    Point: PointType<Position = Pos> + Send + Clone,
     Pos: Position<Component = Comp> + Sync,
     Comp: Component + Send + Sync,
     Raw: RawSamplingEntry<Point = Point> + Send,
 {
-    pub fn parallel_load<LasL, CSys, SamplF>(
-        num_partitions: usize,
-        node_id: MetaTreeNodeId,
-        sampling_factory: &SamplF,
-        page_manager: &PageManager,
-        las_loader: &LasL,
-        coordinate_system: &CSys,
-        threads: &mut Threads,
-        hasher: RustCellHasher,
-    ) -> Result<Self, IndexError>
-    where
-        SamplF: SamplingFactory<Sampling = Sampl> + Sync,
-        LasL: LasReadWrite<Point, CSys> + Sync,
-        CSys: PartialEq + Sync,
-    {
-        let s1 = span!("parallel_load: prepare");
-        let mut this = Self::new(num_partitions, node_id, sampling_factory, false, hasher);
-        assert_eq!(threads.num_threads(), this.num_partitions());
-
-        let mut messages = Vec::new();
-        for _ in 0..num_partitions * num_partitions {
-            messages.push(UnsafeSyncCell::new(Vec::new()));
-        }
-        let barrier = Barrier::new(num_partitions);
-        let partitions = &this.partitions;
-        let node_id = &this.node_id;
-        drop(s1);
-        let partition_bounds = threads
-            .execute(|tid| -> Result<OptionAABB<Comp>, IndexError> {
-                // load page
-                let s1 = span!("parallel_load: load page");
-                let file_id = node_id.file(tid);
-                let file = page_manager.load_or_default(&file_id)?;
-                drop(s1);
-
-                // if the file did not exist, we treat it as an empty las file.
-                // (in which case we are done - there are no points to insert into the node)
-                if !file.exists {
-                    return Ok(OptionAABB::empty());
-                }
-
-                // parse las
-                let s1 = span!("parallel_load: parse las");
-                let read = Cursor::new(file.data.as_slice());
-                let mut las = las_loader.read_las(read)?;
-                if las.coordinate_system != *coordinate_system {
-                    return Err(IndexError::ReadLas {
-                        source: ReadLasError::FileFormat {
-                            desc: "Coordinate system mismatch".to_string(),
-                        },
-                    });
-                }
-                drop(s1);
-
-                // split points into "actual" points and bogus points
-                let s1 = span!("parallel_load: split of bogus");
-                let bogus_start = las
-                    .non_bogus_points
-                    .map(|b| b as usize)
-                    .unwrap_or(las.points.len());
-                let bogus = las.points.split_off(bogus_start);
-                let points = las.points;
-                drop(s1);
-
-                // add points
-                // unsafe:
-                //      every thread dereferences a different partition
-                //      (based on each threads thread id).
-                //      So there is exactly one mutable reference for each partition.
-                let s1 = span!("parallel_load: sample");
-                let partition = unsafe { partitions[tid].unsafe_get_mut() };
-                partition.bogus = bogus;
-                let mut local_sampl = sampling_factory.build(&node_id.lod());
-                let rejected = local_sampl.insert(points, |_, _| ());
-                assert!(rejected.is_empty());
-                drop(s1);
-
-                let s1 = span!("parallel_load: partition");
-                let mut thread_partitions = Vec::new();
-                for _ in 0..num_partitions {
-                    thread_partitions.push(Vec::new());
-                }
-                let hasher = &this.hasher;
-                let bit_mask = this.bit_mask;
-                for raw_entry in local_sampl.into_raw() {
-                    let partition_id = (hasher.compute_hash(raw_entry.cell()) & bit_mask) as usize;
-                    thread_partitions[partition_id].push(raw_entry);
-                }
-                for (receiver_thread_id, data) in thread_partitions.into_iter().enumerate() {
-                    *unsafe {
-                        messages[num_partitions * receiver_thread_id + tid].unsafe_get_mut()
-                    } = data;
-                }
-                drop(s1);
-                barrier.wait();
-                let s1 = span!("parallel_load: merge");
-                for sender_thread_id in 0..num_partitions {
-                    let points = mem::take(unsafe {
-                        messages[num_partitions * tid + sender_thread_id].unsafe_get_mut()
-                    });
-                    let rejected = partition.sampling.insert_raw(points, |_, _| ());
-                    assert!(rejected.is_empty());
-                }
-                drop(s1);
-
-                // return aabb,
-                // so the main thread can update the node aabb
-                Ok(las.bounds)
-            })
-            .join();
-
-        // update the bounds
-        // (we only need to take the bounds from the first thread, because when storing partitioned
-        // nodes, we write the same bounds to every file anyways)
-        let s1 = span!("parallel_load: finalize");
-        let mut iter = partition_bounds.into_iter();
-        this.bounds = iter.next().unwrap()?;
-
-        // check the results of the remaining threads
-        for result in iter {
-            result?;
-        }
-        drop(s1);
-        Ok(this)
-    }
-
-    pub fn parallel_store_alt<CSys, LasL>(
-        &mut self,
-        page_manager: &PageManager,
-        las_loader: &LasL,
-        coordinate_system: &CSys,
-        threads: &mut Threads,
-    ) -> Result<(), IndexError>
-    where
-        CSys: Sync + Clone,
-        LasL: LasReadWrite<Point, CSys> + Sync,
-        Point: Clone,
-    {
-        let s0 = span!("parallel_store_alt");
-        assert_eq!(threads.num_threads(), self.num_partitions());
-
-        // shortcut for empty nodes...
-        if self.nr_points() == 0 {
-            for thread_id in 0..self.num_partitions {
-                let file_id = self.node_id.file(thread_id);
-                page_manager.store(
-                    &file_id,
-                    BinDataPage {
-                        exists: false,
-                        data: Vec::new(),
-                        error_counter: Default::default(),
-                    },
-                );
-            }
-            self.dirty_since = None;
-            return Ok(());
-        }
-
-        // prepare parallel execution
-        let num_partitions = self.num_partitions;
-        let partitions = &self.partitions;
-        let bounds = self.bounds.clone();
-        let node_id = &self.node_id;
-        let mut points_worker_queues = Vec::new();
-        let mut points_stealers = Vec::new();
-        for _ in 0..num_partitions {
-            let w = crossbeam_deque::Worker::new_fifo();
-            let s = w.stealer();
-            points_worker_queues.push(Some(w));
-            points_stealers.push(s);
-        }
-        let mut bogus_worker_queues = Vec::new();
-        let mut bogus_stealers = Vec::new();
-        for _ in 0..num_partitions {
-            let w = crossbeam_deque::Worker::new_fifo();
-            let s = w.stealer();
-            bogus_worker_queues.push(Some(w));
-            bogus_stealers.push(s);
-        }
-        let mut args = Vec::new();
-        for thread_id in 0..num_partitions {
-            args.push((
-                points_worker_queues[thread_id].take().unwrap(),
-                points_stealers.clone(),
-                bogus_worker_queues[thread_id].take().unwrap(),
-                bogus_stealers.clone(),
-            ))
-        }
-        let barrier = Barrier::new(num_partitions);
-        drop(points_stealers);
-        drop(bogus_stealers);
-
-        // parallel exec
-        let thread_results = threads
-            .execute_with_args(
-                args,
-                |thread_id,
-                 (points_queue, points_stealers, bogus_queue, bogus_stealers)|
-                 -> Result<(), IndexError> {
-                    let partition = partitions[thread_id].get();
-
-                    // prepare what to write to the las file
-                    let s1 = span!("parallel_store: prepare");
-                    let tasks_size = (partition.sampling.len() + partition.bogus.len()) / 50 + 1;
-                    let mut points = partition.sampling.clone_points();
-                    while points.len() >= tasks_size {
-                        let task = points.split_off(points.len() - tasks_size);
-                        points_queue.push(task);
-                    }
-                    if !points.is_empty() {
-                        points_queue.push(points);
-                    }
-                    let mut points = partition.bogus.clone();
-                    while points.len() >= tasks_size {
-                        let task = points.split_off(points.len() - tasks_size);
-                        bogus_queue.push(task);
-                    }
-                    if !points.is_empty() {
-                        bogus_queue.push(points);
-                    }
-                    barrier.wait();
-
-                    let bounds = bounds.clone();
-                    let coordinate_system = coordinate_system.clone();
-                    let las = WorkStealingLas {
-                        points_queue,
-                        points_stealers,
-                        bogus_queue,
-                        bogus_stealers,
-                        bounds,
-                        coordinate_system,
-                        bogus_points_vlr: true,
-                    };
-                    drop(s1);
-
-                    // encode las
-                    let s1 = span!("parallel_store: encode las");
-                    let mut data = Vec::new();
-                    let write = Cursor::new(&mut data);
-                    match las_loader.write_las_work_stealing(las, write) {
-                        Ok(_) => {}
-                        Err(WriteLasError::Io(_)) => {
-                            unreachable!("Cursor as write does not throw IO errors")
-                        }
-                    };
-                    drop(s1);
-
-                    // write file
-                    let s1 = span!("parallel_store: store page");
-                    let file_id = node_id.file(thread_id);
-                    page_manager.store(
-                        &file_id,
-                        BinDataPage {
-                            exists: true,
-                            data,
-                            error_counter: Default::default(),
-                        },
-                    );
-                    drop(s1);
-
-                    Ok(())
-                },
-            )
-            .join();
-
-        // check results
-        for result in thread_results {
-            result?;
-        }
-
-        // update dirtiness
-        self.dirty_since = None;
-
-        drop(s0);
-        Ok(())
-    }
-
-    pub fn parallel_store<CSys, LasL>(
-        &mut self,
-        page_manager: &PageManager,
-        las_loader: &LasL,
-        coordinate_system: &CSys,
-        threads: &mut Threads,
-    ) -> Result<(), IndexError>
-    where
-        CSys: Sync + Clone,
-        LasL: LasReadWrite<Point, CSys> + Sync,
-    {
-        let s0 = span!("parallel_store");
-        assert_eq!(threads.num_threads(), self.num_partitions());
-
-        // shortcut for empty nodes...
-        if self.nr_points() == 0 {
-            for thread_id in 0..self.num_partitions {
-                let file_id = self.node_id.file(thread_id);
-                page_manager.store(
-                    &file_id,
-                    BinDataPage {
-                        exists: false,
-                        data: Vec::new(),
-                        error_counter: Default::default(),
-                    },
-                );
-            }
-            self.dirty_since = None;
-            return Ok(());
-        }
-
-        let partitions = &self.partitions;
-        let bounds = self.bounds.clone();
-        let node_id = &self.node_id;
-
-        let thread_results = threads
-            .execute(|thread_id| -> Result<(), IndexError> {
-                let partition = partitions[thread_id].get();
-
-                // prepare what to write to the las file
-                let s1 = span!("parallel_store: assemble");
-                let non_bogus_points = Some(partition.sampling.len() as u32);
-                let bogus_points_iter = partition.bogus.iter();
-                let sampled_points_iter = partition.sampling.iter();
-                let points_iter = IterChain::new(sampled_points_iter, bogus_points_iter);
-                let bounds = bounds.clone();
-                let coordinate_system = coordinate_system.clone();
-                let las = Las {
-                    points: points_iter,
-                    non_bogus_points,
-                    bounds,
-                    coordinate_system,
-                };
-                drop(s1);
-
-                // if there are no points, then we can delete the file
-                let exists = las.points.len() > 0;
-
-                // encode las
-                let s1 = span!("parallel_store: encode las");
-                s1.emit_value(las.points.len() as u64);
-                let mut data = Vec::new();
-                if exists {
-                    let write = Cursor::new(&mut data);
-                    match las_loader.write_las(las, write) {
-                        Ok(_) => {}
-                        Err(WriteLasError::Io(_)) => {
-                            unreachable!("Cursor as write does not throw IO errors")
-                        }
-                    };
-                }
-                drop(s1);
-
-                // write file
-                let s1 = span!("parallel_store: store page");
-                let file_id = node_id.file(thread_id);
-                page_manager.store(
-                    &file_id,
-                    BinDataPage {
-                        exists,
-                        data,
-                        error_counter: Default::default(),
-                    },
-                );
-                drop(s1);
-
-                Ok(())
-            })
-            .join();
-
-        // check results
-        for result in thread_results {
-            result?;
-        }
-
-        // update dirtiness
-        self.dirty_since = None;
-
-        drop(s0);
-        Ok(())
-    }
-
     pub fn parallel_insert_multi_lod<SamplF, Patch>(
         selfs: &mut Vec<Self>,
-        mut points_partitions: PartitionedPoints<Point>,
+        mut points_to_insert: Vec<Point>,
         sampling_factory: &SamplF,
         patch_rejected: Patch,
         threads: &mut Threads,
@@ -625,23 +350,21 @@ where
         let s0 = span!("parallel_insert_multi_lod");
         for s in &*selfs {
             assert_eq!(threads.num_threads(), s.num_partitions());
-            assert_eq!(points_partitions.num_partitions(), s.num_partitions());
         }
         let num_partitions = selfs.first().unwrap().num_partitions;
         let num_lods = selfs.len();
 
-        // divide points into batches of 2_000 points
-        let batch_size = 2_000;
+        // divide points into batches
+        let batch_size = points_to_insert.len() / (num_partitions * 10) + 1;
         let mut tasks = Vec::new();
-        for thread_id in 0..num_partitions {
-            let mut points = mem::take(points_partitions.partitions[thread_id].get_mut());
-            while points.len() > batch_size {
-                // split of a batch
-                let batch_start = points.len() - batch_size;
-                let batch = points.split_off(batch_start);
-                tasks.push(batch);
-            }
-            tasks.push(points);
+        while points_to_insert.len() > batch_size {
+            // split of a batch
+            let batch_start = points_to_insert.len() - batch_size;
+            let batch = points_to_insert.split_off(batch_start);
+            tasks.push(batch);
+        }
+        if !points_to_insert.is_empty() {
+            tasks.push(points_to_insert);
         }
 
         // shared messages for inter thread communication
@@ -1017,172 +740,6 @@ where
         children
     }
 
-    pub fn parallel_store<CSys, LasL>(
-        self,
-        coordinate_system: &CSys,
-        las_loader: &LasL,
-        page_manager: &PageManager,
-        threads: &mut Threads,
-    ) -> Result<OptionAABB<Comp>, IndexError>
-    where
-        LasL: LasReadWrite<Point, CSys> + Sync,
-        CSys: Clone + Sync,
-        Point: Clone,
-    {
-        let s0 = span!("parallel_store_alt (split)");
-        assert_eq!(threads.num_threads(), self.num_partitions);
-
-        // shortcut for empty nodes...
-        if self.nr_points() == 0 {
-            for thread_id in 0..self.num_partitions {
-                let file_id = self.node_id.file(thread_id);
-                page_manager.store(
-                    &file_id,
-                    BinDataPage {
-                        exists: false,
-                        data: Vec::new(),
-                        error_counter: Default::default(),
-                    },
-                );
-            }
-            return Ok(OptionAABB::empty());
-        }
-
-        // prepare parallel execution
-        let num_partitions = self.num_partitions;
-        let partitions = &self.partitions;
-        let node_id = &self.node_id;
-        let mut points_worker_queues = Vec::new();
-        let mut points_stealers = Vec::new();
-        for _ in 0..num_partitions {
-            let w = crossbeam_deque::Worker::new_fifo();
-            let s = w.stealer();
-            points_worker_queues.push(Some(w));
-            points_stealers.push(s);
-        }
-        let mut bogus_worker_queues = Vec::new();
-        let mut bogus_stealers = Vec::new();
-        for _ in 0..num_partitions {
-            let w = crossbeam_deque::Worker::new_fifo();
-            let s = w.stealer();
-            bogus_worker_queues.push(Some(w));
-            bogus_stealers.push(s);
-        }
-        let mut args = Vec::new();
-        for thread_id in 0..num_partitions {
-            args.push((
-                points_worker_queues[thread_id].take().unwrap(),
-                points_stealers.clone(),
-                bogus_worker_queues[thread_id].take().unwrap(),
-                bogus_stealers.clone(),
-            ))
-        }
-        let barrier = Barrier::new(num_partitions);
-        let mut aabbs = Vec::new();
-        for _ in 0..num_partitions {
-            aabbs.push(UnsafeSyncCell::new(OptionAABB::empty()));
-        }
-        drop(points_stealers);
-        drop(bogus_stealers);
-
-        // parallel exec
-        let thread_results = threads
-            .execute_with_args(
-                args,
-                |thread_id,
-                 (points_queue, points_stealers, bogus_queue, bogus_stealers)|
-                 -> Result<OptionAABB<Comp>, IndexError> {
-                    let partition = partitions[thread_id].get();
-
-                    // calculate bounding box for this partition
-                    // todo - the work stealing las writer mixes points from all partitions.
-                    //      - we should use the bounding box of all partitions here.
-                    let s1 = span!("parallel_store (split): calculate bounds");
-                    let bounds = partition.calculate_bounds();
-                    *unsafe { aabbs[thread_id].unsafe_get_mut() } = bounds;
-                    drop(s1);
-
-                    // prepare what to write to the las file
-                    let s1 = span!("parallel_store: prepare");
-                    let tasks_size = (partition.sampled.len() + partition.bogus.len()) / 50 + 1;
-                    let mut points = partition
-                        .sampled
-                        .iter()
-                        .map(|raw| raw.point().clone())
-                        .collect::<Vec<_>>();
-                    while points.len() >= tasks_size {
-                        let task = points.split_off(points.len() - tasks_size);
-                        points_queue.push(task);
-                    }
-                    if !points.is_empty() {
-                        points_queue.push(points);
-                    }
-                    let mut points = partition.bogus.clone();
-                    while points.len() >= tasks_size {
-                        let task = points.split_off(points.len() - tasks_size);
-                        bogus_queue.push(task);
-                    }
-                    if !points.is_empty() {
-                        bogus_queue.push(points);
-                    }
-                    barrier.wait();
-                    let mut bounds = OptionAABB::empty();
-                    for aabb in &aabbs {
-                        bounds.extend_other(aabb.get());
-                    }
-
-                    let coordinate_system = coordinate_system.clone();
-                    let las = WorkStealingLas {
-                        points_queue,
-                        points_stealers,
-                        bogus_queue,
-                        bogus_stealers,
-                        bounds: bounds.clone(),
-                        coordinate_system,
-                        bogus_points_vlr: true,
-                    };
-                    drop(s1);
-
-                    // encode las
-                    let s1 = span!("parallel_store: encode las");
-                    let mut data = Vec::new();
-                    let write = Cursor::new(&mut data);
-                    match las_loader.write_las_work_stealing(las, write) {
-                        Ok(_) => {}
-                        Err(WriteLasError::Io(_)) => {
-                            unreachable!("Cursor as write does not throw IO errors")
-                        }
-                    };
-                    drop(s1);
-
-                    // write file
-                    let s1 = span!("parallel_store: store page");
-                    let file_id = node_id.file(thread_id);
-                    page_manager.store(
-                        &file_id,
-                        BinDataPage {
-                            exists: true,
-                            data,
-                            error_counter: Default::default(),
-                        },
-                    );
-                    drop(s1);
-
-                    Ok(bounds)
-                },
-            )
-            .join();
-
-        // check results
-        let mut bounds = OptionAABB::empty();
-        for result in thread_results {
-            bounds.extend_other(&result?);
-        }
-
-        drop(s0);
-        Ok(bounds)
-    }
-
     pub fn parallel_into_node<SamplF, Sampl>(
         self,
         sampling_factory: &SamplF,
@@ -1309,57 +866,4 @@ impl<Point> PartitionedPoints<Point> {
     }
 
     pub fn parallel_split(self) {}
-}
-
-/// Like iter::chain, just that it also works with ExactSizeIterator
-pub struct IterChain<I1, I2> {
-    i1: I1,
-    i2: I2,
-    state: bool,
-}
-
-impl<I1, I2> IterChain<I1, I2> {
-    pub fn new(i1: I1, i2: I2) -> Self {
-        IterChain {
-            i1,
-            i2,
-            state: true,
-        }
-    }
-}
-
-impl<I1, I2, Item> Iterator for IterChain<I1, I2>
-where
-    I1: Iterator<Item = Item>,
-    I2: Iterator<Item = Item>,
-{
-    type Item = Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.state {
-            if let Some(val) = self.i1.next() {
-                return Some(val);
-            }
-            self.state = false;
-        }
-        self.i2.next()
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let (min1, max1) = self.i1.size_hint();
-        let (min2, max2) = self.i2.size_hint();
-        let min = min1 + min2;
-        let max = match (max1, max2) {
-            (Some(m1), Some(m2)) => Some(m1 + m2),
-            _ => None,
-        };
-        (min, max)
-    }
-}
-
-impl<I1, I2, Item> ExactSizeIterator for IterChain<I1, I2>
-where
-    I1: ExactSizeIterator + Iterator<Item = Item>,
-    I2: ExactSizeIterator + Iterator<Item = Item>,
-{
 }

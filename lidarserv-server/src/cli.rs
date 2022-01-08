@@ -39,6 +39,10 @@ pub struct InitOptions {
     #[structopt(long, default_value = "0")]
     pub las_offset: VectorOption,
 
+    /// Disables laz compression of point data
+    #[structopt(long)]
+    pub las_no_compression: bool,
+
     /// Number of threads used for indexing the points.
     #[structopt(long, default_value = "4")]
     pub num_threads: usize,

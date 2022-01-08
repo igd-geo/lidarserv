@@ -3,6 +3,12 @@
 # uncomment for cargo flamegraph
 # rustflags = "-C debuginfo=1 -C force-frame-pointers=y"
 
+[profile.release]
+panic = "abort"
+codegen-units=1
+#lto=true
+#opt-level=3
+
 [target.armv7-unknown-linux-gnueabihf]
 linker = "arm-linux-gnueabihf-gcc"
 

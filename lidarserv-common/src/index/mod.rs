@@ -2,6 +2,7 @@ use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
 use crate::query::Query;
 use std::error::Error;
+use std::sync::Arc;
 
 pub mod octree;
 pub mod sensor_pos;
@@ -39,7 +40,7 @@ where
     Point: PointType,
 {
     type NodeId: NodeId;
-    type Node: Node<Point = Point>;
+    type Node: Node;
 
     fn set_query<Q: Query<Point::Position, CSys> + 'static + Send + Sync>(&mut self, query: Q);
 
@@ -62,10 +63,7 @@ where
 pub type Update<NodeId, NodeData> = (NodeId, Vec<(NodeId, NodeData)>);
 
 pub trait Node {
-    type Point;
-
-    fn las_files(&self) -> Vec<Vec<u8>>;
-    fn points(&self) -> Vec<Self::Point>;
+    fn las_files(&self) -> Vec<Arc<Vec<u8>>>;
 }
 
 pub trait NodeId {

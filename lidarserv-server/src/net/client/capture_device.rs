@@ -7,6 +7,7 @@ use lidarserv_common::geometry::bounding_box::OptionAABB;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
 use std::io::Cursor;
+use std::sync::Arc;
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio::sync::broadcast::Receiver;
 
@@ -117,7 +118,7 @@ impl CaptureDeviceClient {
         };
         self.connection
             .write_message(&Message::InsertPoints {
-                data: LasPointData(data),
+                data: LasPointData(Arc::new(data)),
             })
             .await?;
 

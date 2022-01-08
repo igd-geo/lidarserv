@@ -161,7 +161,7 @@ where
                     let mut points = Vec::new();
                     for las_segment in insert_node_las_segments {
                         let las: Las<Vec<LasPoint>, _, _> = las_reader
-                            .read_las(Cursor::new(las_segment.0))
+                            .read_las(Cursor::new(las_segment.0.as_ref()))
                             .map_err(|e| {
                                 LidarServerError::Protocol(format!(
                                     "Received invalid LAS data from server: {}",

@@ -100,7 +100,7 @@ async fn capture_device_mode(
         };
 
         // decode las
-        let read = Cursor::new(&data.0);
+        let read = Cursor::new(data.0.as_slice());
         let Las {
             points,
             coordinate_system,

@@ -1,11 +1,11 @@
-use crate::geometry::bounding_box::BaseAABB;
+use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
 use crate::geometry::grid::{GridHierarchy, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{Component, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index;
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
-use crate::index::sensor_pos::page_manager::BinDataPage;
+use crate::index::sensor_pos::page_manager::{SensorPosPage, SimplePoints};
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::{Inner, Update};
 use crate::index::{Node, NodeId, Reader};
@@ -16,30 +16,33 @@ use crate::query::{Query, QueryExt};
 use crossbeam_channel::{Receiver, TryRecvError};
 use nalgebra::min;
 use std::collections::{HashMap, HashSet};
-use std::io::Cursor;
-use std::marker::PhantomData;
 use std::sync::Arc;
 
-pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point> {
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point, Sampl> {
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
     meta_tree: MetaTree<GridH, Comp>,
     updates: crossbeam_channel::Receiver<Update<Comp>>,
-    lods: Vec<LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>>,
+    lods: Vec<LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>>,
     update_counter: u32,
 }
 
-impl<GridH, SamplF, Comp, LasL, CSys, Pos, Point>
-    SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>
+impl<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>
+    SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>
 where
     Comp: Component,
-    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>>,
+    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>> + Clone,
     Pos: Position<Component = Comp>,
     GridH: GridHierarchy<Component = Comp> + Clone,
     Comp: Clone,
     LasL: LasReadWrite<Point, CSys> + Clone,
-    SamplF: SamplingFactory<Point = Point>,
+    SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
+    Sampl: Sampling<Point = Point>,
+    CSys: Clone,
 {
-    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>) -> Self
+    pub(super) fn new<Q>(
+        query: Q,
+        inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
+    ) -> Self
     where
         Q: Query<Pos, CSys> + 'static + Send + Sync,
     {
@@ -80,12 +83,12 @@ where
     }
 
     fn lod_layer_and_coarse(
-        lods: &mut Vec<LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>>,
+        lods: &mut Vec<LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>>,
         coarse_lod_steps: usize,
         lod_index: usize,
     ) -> (
-        &mut LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>,
-        Option<&mut LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>>,
+        &mut LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>,
+        Option<&mut LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>>,
     ) {
         let coarse_lod_level = if coarse_lod_steps <= lod_index {
             lod_index - coarse_lod_steps
@@ -129,18 +132,20 @@ where
     }
 }
 
-impl<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point> Reader<Point, CSys>
-    for SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>
+impl<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point, Sampl> Reader<Point, CSys>
+    for SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>
 where
     Pos: Position<Component = Comp>,
     GridH: GridHierarchy<Component = Comp> + Clone,
     LasL: LasReadWrite<Point, CSys> + Clone,
-    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>>,
+    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>> + Clone,
     Comp: Component + Clone,
-    SamplF: SamplingFactory<Point = Point>,
+    SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
+    Sampl: Sampling<Point = Point>,
+    CSys: Clone,
 {
     type NodeId = MetaTreeNodeId;
-    type Node = SensorPosNode<LasL, Point, CSys>;
+    type Node = SensorPosNodeCollection<Sampl, Point, Comp>;
 
     fn set_query<Q: Query<Pos, CSys> + 'static + Send + Sync>(&mut self, query: Q) {
         let query: Arc<dyn Query<Pos, CSys> + Send + Sync> = Arc::new(query);
@@ -301,33 +306,34 @@ where
     }
 }
 
-struct LodReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point> {
+struct LodReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point, Sampl> {
     query: Arc<dyn Query<Pos, CSys> + Send + Sync>,
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
     lod: LodLevel,
-    loaded: HashMap<MetaTreeNodeId, SensorPosNode<LasL, Point, CSys>>,
+    loaded: HashMap<MetaTreeNodeId, SensorPosNodeCollection<Sampl, Point, Comp>>,
     dirty_node_to_replacements: HashMap<MetaTreeNodeId, (u32, HashSet<MetaTreeNodeId>)>,
     replacement_to_dirty_node: HashMap<MetaTreeNodeId, MetaTreeNodeId>,
     update_order: Vec<(MetaTreeNodeId, u32)>,
     nodes_to_load: HashSet<MetaTreeNodeId>,
     nodes_to_unload: HashSet<MetaTreeNodeId>,
-    coarse_cache: HashMap<MetaTreeNodeId, Vec<Point>>,
 }
 
-impl<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point>
-    LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point>
+impl<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point, Sampl>
+    LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>
 where
     Pos: Position<Component = Comp>,
     GridH: GridHierarchy<Component = Comp>,
     LasL: LasReadWrite<Point, CSys> + Clone,
-    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>>,
+    Point: PointType<Position = Pos> + WithAttr<SensorPositionAttribute<Pos>> + Clone,
     Comp: Component,
-    SamplF: SamplingFactory<Point = Point>,
+    SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
+    Sampl: Sampling<Point = Point>,
+    CSys: Clone,
 {
     pub fn new(
         lod: LodLevel,
         query: Arc<dyn Query<Pos, CSys> + Send + Sync>,
-        inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys>>,
+        inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
     ) -> Self {
         LodReader {
             lod,
@@ -339,7 +345,6 @@ where
             update_order: Vec::new(),
             nodes_to_load: HashSet::new(),
             nodes_to_unload: HashSet::new(),
-            coarse_cache: HashMap::new(),
         }
     }
 
@@ -377,7 +382,9 @@ where
         self.set_query(query, meta_tree, coarse_level);
     }
 
-    pub fn load_one(&mut self) -> Option<(MetaTreeNodeId, SensorPosNode<LasL, Point, CSys>)> {
+    pub fn load_one(
+        &mut self,
+    ) -> Option<(MetaTreeNodeId, SensorPosNodeCollection<Sampl, Point, Comp>)> {
         if let Some(node_id) = self.nodes_to_load.iter().cloned().next() {
             self.nodes_to_load.remove(&node_id);
             let load_result = self.load_node(&node_id).unwrap_or_default();
@@ -393,7 +400,6 @@ where
         if let Some(node_id) = &node_to_remove {
             self.nodes_to_unload.remove(node_id);
             self.loaded.remove(node_id);
-            self.coarse_cache.remove(node_id);
             if let Some((_, replacements)) = self.dirty_node_to_replacements.remove(node_id) {
                 for r in replacements {
                     self.replacement_to_dirty_node.remove(&r);
@@ -496,7 +502,7 @@ where
         &mut self,
         coarse: Option<&mut Self>,
         meta_tree: &MetaTree<GridH, Comp>,
-    ) -> Option<index::Update<MetaTreeNodeId, SensorPosNode<LasL, Point, CSys>>> {
+    ) -> Option<index::Update<MetaTreeNodeId, SensorPosNodeCollection<Sampl, Point, Comp>>> {
         self.ensure_update_order();
 
         if let Some((node_id, _)) = self.update_order.pop() {
@@ -509,7 +515,6 @@ where
 
             // update data structure
             self.loaded.remove(&node_id);
-            self.coarse_cache.remove(&node_id);
             self.loaded.extend(loaded.iter().cloned());
             let (_, replacements) = self.dirty_node_to_replacements.remove(&node_id).unwrap();
             for replacement in replacements {
@@ -651,26 +656,36 @@ where
             })
             .collect();
 
-        // parse the las data of these nodes, using self.coarse_cache as a cache
-        for node_id in &loaded_overlapping_nodes {
-            // make sure it is in the coarse nodes cache
-            self.coarse_cache.entry(node_id.clone()).or_insert_with(|| {
-                let node = &self.loaded[node_id];
-                node.points()
-            });
-        }
-        let points = loaded_overlapping_nodes
-            .into_iter()
-            .map(|node_id| &self.coarse_cache[&node_id])
-            .flatten();
+        // parse the las data of these nodes
+        let points = loaded_overlapping_nodes.into_iter().flat_map(|node_id| {
+            let node = &self.loaded[&node_id];
+            let me = &*self;
+            node.nodes.iter().map(move |page| {
+                page.get_points(&me.inner.las_loader).unwrap_or_else(|_| {
+                    Arc::new(SimplePoints {
+                        points: vec![],
+                        bounds: OptionAABB::empty(),
+                        non_bogus_points: 0,
+                    })
+                })
+            })
+        });
 
         // filter points based on sensor pos
         // to get only points belonging to the node
         let sensor_pos_bounds = meta_tree
             .sensor_grid_hierarchy()
             .get_leveled_cell_bounds(node.tree_node());
-        let points = points.filter(|p| {
-            sensor_pos_bounds.contains(&p.attribute::<SensorPositionAttribute<Pos>>().0)
+        let node_bounds = meta_tree.get(node).unwrap().bounds.clone();
+        let points = points.flat_map(|f| {
+            f.points
+                .iter()
+                .filter(|p| {
+                    node_bounds.contains(p.position())
+                    //sensor_pos_bounds.contains(&p.attribute::<SensorPositionAttribute<Pos>>().0)
+                })
+                .cloned()
+                .collect::<Vec<_>>()
         });
 
         // calculate the max lod for each point,
@@ -735,85 +750,60 @@ where
     fn load_node(
         &self,
         node_id: &MetaTreeNodeId,
-    ) -> Result<SensorPosNode<LasL, Point, CSys>, CacheLoadError> {
+    ) -> Result<SensorPosNodeCollection<Sampl, Point, Comp>, CacheLoadError> {
         let mut loaded = Vec::with_capacity(self.inner.nr_threads);
-        let mut files_to_load: Vec<_> = (0..self.inner.nr_threads)
-            .map(|thread_id| node_id.file(thread_id))
-            .collect();
+        let mut files_to_load = vec![node_id.clone()];
         while let Some(file_id) = files_to_load.pop() {
             if let Some(file) = self.inner.page_manager.load(&file_id)? {
-                if file.exists {
+                if file.exists() {
                     loaded.push(file);
                 } else {
                     files_to_load.extend(file_id.children().into_iter())
                 }
             }
+            self.inner.page_manager.cleanup_one_no_write();
         }
-        Ok(SensorPosNode {
-            las_data: loaded,
-            las_loader: Some(self.inner.las_loader.clone()),
-            _phantom: PhantomData,
+        Ok(SensorPosNodeCollection {
+            binary: loaded
+                .iter()
+                .map(|it| {
+                    it.get_binary(&self.inner.las_loader, self.inner.coordinate_system.clone())
+                })
+                .collect(),
+            nodes: loaded,
         })
     }
 }
 
-pub struct SensorPosNode<LasL, Point, CSys> {
-    las_data: Vec<Arc<BinDataPage>>,
-    las_loader: Option<LasL>,
-    _phantom: PhantomData<(Point, CSys)>,
+pub struct SensorPosNodeCollection<Sampl, Point, Comp: Scalar> {
+    /// actual nodes as sent from the cache
+    nodes: Vec<Arc<SensorPosPage<Sampl, Point, Comp>>>,
+
+    /// binary data for the clients
+    /// (so we don't have to store the las loader, etc in here.)
+    binary: Vec<Arc<Vec<u8>>>,
 }
 
-impl<LasL, Point, CSys> Default for SensorPosNode<LasL, Point, CSys> {
-    fn default() -> Self {
-        SensorPosNode {
-            las_data: vec![],
-            las_loader: None,
-            _phantom: PhantomData,
-        }
+impl<Sampl, Point, Comp: Scalar> Node for SensorPosNodeCollection<Sampl, Point, Comp> {
+    fn las_files(&self) -> Vec<Arc<Vec<u8>>> {
+        self.binary.clone()
     }
 }
-
-impl<LasL, Point, CSys> Clone for SensorPosNode<LasL, Point, CSys>
-where
-    LasL: Clone,
-{
+impl<Sampl, Point, Comp: Scalar> Clone for SensorPosNodeCollection<Sampl, Point, Comp> {
     fn clone(&self) -> Self {
-        SensorPosNode {
-            las_data: self.las_data.clone(),
-            las_loader: self.las_loader.clone(),
-            _phantom: PhantomData,
+        SensorPosNodeCollection {
+            nodes: self.nodes.clone(),
+            binary: self.binary.clone(),
         }
     }
 }
 
-impl<LasL, Point, CSys> Node for SensorPosNode<LasL, Point, CSys>
-where
-    LasL: LasReadWrite<Point, CSys>,
-    Point: PointType,
-{
-    type Point = Point;
-
-    fn las_files(&self) -> Vec<Vec<u8>> {
-        self.las_data
-            .iter()
-            .filter(|n| n.exists)
-            .map(|n| n.data.clone())
-            .collect()
-    }
-
-    fn points(&self) -> Vec<Self::Point> {
-        let mut points = Vec::new();
-        for las_file in self.las_data.iter().filter(|it| it.exists) {
-            let mut las_points = self
-                .las_loader
-                .as_ref()
-                .unwrap() // unwrap: if the list of las files is non empty, the las loader must be non empty too.
-                .read_las(Cursor::new(&las_file.data))
-                .map(|las| las.points)
-                .unwrap_or_else(|_| Vec::new());
-            points.append(&mut las_points);
+impl<Sampl, Point, Comp: Scalar> Default for SensorPosNodeCollection<Sampl, Point, Comp> {
+    fn default() -> Self {
+        SensorPosNodeCollection {
+            nodes: vec![],
+            binary: vec![],
         }
-        points
     }
 }
 

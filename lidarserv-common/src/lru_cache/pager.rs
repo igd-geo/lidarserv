@@ -176,6 +176,12 @@ where
         }
     }
 
+    /// Returns the tuple (max_size, current_size)
+    pub fn size(&self) -> (usize, usize) {
+        let lock = self.inner.lock().unwrap();
+        (lock.max_size, lock.cache.len())
+    }
+
     pub fn directory(&self) -> DirectoryGuard<'_, K, V, F, D> {
         DirectoryGuard(self.inner.lock().unwrap())
     }
@@ -320,7 +326,7 @@ where
 
     /// Like [Self::cleanup], just that it only removes a single page.
     /// Also, only cleans up pages, that have not been modified and can be removed directly without
-    /// first writing them to disk.
+    /// first writing them to disk. AS a result, this method cannot fail.
     pub fn cleanup_one_no_write(&self) {
         let mut cache_lock = self.inner.lock().unwrap();
         if cache_lock.cache.len() <= cache_lock.max_size {
@@ -360,6 +366,13 @@ where
             Some(p) => p,
         };
         let key = key.clone();
+
+        // fast path in case the page is not dirty: we do not need to save it then.
+        if !page.dirty {
+            cache_lock.cache.remove(&key);
+            cache_lock.plot_cache_size();
+            return Ok(true);
+        }
 
         // mark page for removal
         page.is_in_cleanup += 1;
