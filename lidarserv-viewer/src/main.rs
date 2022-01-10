@@ -172,44 +172,59 @@ async fn network_thread(
     // connect
     let client = ViewerClient::connect((args.host, args.port), shutdown).await?;
     let (mut client_read, mut client_write) = client.into_split();
+    let (ack_sender, mut ack_receiver) = tokio::sync::mpsc::unbounded_channel();
 
     // task to send query to server
     tokio::spawn(async move {
         loop {
-            // get latest query
-            let mut camera_matrix = match camera_reciver.recv().await {
-                None => return,
-                Some(m) => m,
-            };
-            loop {
-                match camera_reciver.try_recv() {
-                    Ok(m) => camera_matrix = m,
-                    Err(TryRecvError::Empty) => break,
-                    Err(TryRecvError::Disconnected) => return,
-                }
-            }
+            tokio::select! {
+                c = camera_reciver.recv() => {
+                    // get latest query
+                    let mut camera_matrix = match c {
+                        None => return,
+                        Some(m) => m,
+                    };
+                    loop {
+                        match camera_reciver.try_recv() {
+                            Ok(m) => camera_matrix = m,
+                            Err(TryRecvError::Empty) => break,
+                            Err(TryRecvError::Disconnected) => return,
+                        }
+                    }
 
-            // send to server
-            let view_projection_matrix =
-                camera_matrix.projection_matrix * camera_matrix.view_matrix;
-            let view_projection_matrix_inv =
-                camera_matrix.view_matrix_inv * camera_matrix.projection_matrix_inv;
-            debug!("Query: {:?}", view_projection_matrix);
-            client_write
-                .query_view_frustum(
-                    view_projection_matrix,
-                    view_projection_matrix_inv,
-                    camera_matrix.window_size.x,
-                    10.0,
-                )
-                .await
-                .unwrap()
+                    // send to server
+                    let view_projection_matrix =
+                        camera_matrix.projection_matrix * camera_matrix.view_matrix;
+                    let view_projection_matrix_inv =
+                        camera_matrix.view_matrix_inv * camera_matrix.projection_matrix_inv;
+                    debug!("Query: {:?}", view_projection_matrix);
+                    client_write
+                        .query_view_frustum(
+                            view_projection_matrix,
+                            view_projection_matrix_inv,
+                            camera_matrix.window_size.x,
+                            20.0,
+                        )
+                        .await
+                        .unwrap()
+
+                },
+                c = ack_receiver.recv() => {
+                    match c {
+                        None => return,
+                        Some(()) => {
+                            client_write.ack().await.unwrap();
+                        },
+                    }
+                },
+            }
         }
     });
 
     // keep receiving updates
     loop {
         let update = client_read.receive_update(shutdown).await?;
+        ack_sender.send(()).ok();
         trace!("{:?}", update);
         updates_sender.send(update).unwrap();
     }

@@ -23,7 +23,7 @@ use std::collections::VecDeque;
 use std::error::Error as StdError;
 use std::fmt::Debug;
 use std::mem;
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::{atomic, Arc};
 use std::thread::{spawn, JoinHandle};
 use thiserror::Error;
@@ -88,10 +88,11 @@ where
     where
         GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
         SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Sync + Send + 'static,
-        Sampl: Sampling<Point = Point, Raw = Raw> + Send + Clone + 'static,
-        Raw: RawSamplingEntry<Point = Point> + Send + 'static,
+        Sampl: Sampling<Point = Point, Raw = Raw> + Send + Sync + Clone + 'static,
+        Raw: RawSamplingEntry<Point = Point> + 'static,
         LasL: LasReadWrite<Point, CSys> + Send + Sync + Clone + 'static,
     {
+        // main worker thread
         let (new_points_sender, new_points_receiver) = crossbeam_channel::unbounded();
         let pending_points = Arc::new(AtomicUsize::new(0));
         let coordinator_join = {
@@ -157,9 +158,8 @@ fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys, Raw>(
 where
     Comp: Component + Send + Sync + Serialize + DeserializeOwned,
     SamplF: SamplingFactory<Sampling = Sampl, Point = Point> + Send + Sync + 'static,
-    Sampl: Sampling<Point = Point, Raw = Raw> + Send + Clone + 'static,
+    Sampl: Sampling<Point = Point, Raw = Raw> + Send + Sync + Clone + 'static,
     Raw: RawSamplingEntry<Point = Point>,
-    Sampl::Raw: Send + 'static,
     Point: PointType<Position = Pos>
         + WithAttr<SensorPositionAttribute<Pos>>
         + Clone
@@ -178,12 +178,24 @@ where
     let inner_clone = Arc::clone(&inner);
     let notify_thread = spawn(move || notify_readers_thread(changes_receiver, inner_clone));
 
-    // start the thread that writes nodes to disk
-    let inner_clone = Arc::clone(&inner);
+    // start the threads that writes nodes to disk
+    assert!(inner.nr_threads > 0);
+    let nr_cache_cleanup_threads = inner.nr_threads - 1;
+    let stop_cache_cleanup_threads = Arc::new(AtomicBool::new(false));
+    let mut cache_cleanup_threads = Vec::new();
+    for thread_id in 0..nr_cache_cleanup_threads {
+        let inner = Arc::clone(&inner);
+        let stop_cache_cleanup_threads = Arc::clone(&stop_cache_cleanup_threads);
+        let handle = spawn(move || {
+            tracy_client::set_thread_name(&format!("Cache cleanup #{}", thread_id));
+            cache_cleanup_thread(inner, stop_cache_cleanup_threads);
+        });
+        cache_cleanup_threads.push(handle);
+    }
+
+    // init
     let mut new_points = VecDeque::new();
     let mut loaded_nodes = Vec::<PartitionedNode<Sampl, Point, Comp>>::new();
-    let nr_threads = inner.nr_threads;
-    let mut threads = Threads::new(nr_threads);
     let mut previous_split_levels = Vec::new();
 
     'main: loop {
@@ -274,14 +286,7 @@ where
                 let node = inner
                     .page_manager
                     .load_or_default(&node_id)?
-                    .get_node_par(
-                        node_id,
-                        inner.nr_threads,
-                        &inner.sampling_factory,
-                        &inner.las_loader,
-                        inner.hasher.clone(),
-                        &mut threads,
-                    )?
+                    .get_node(node_id, &inner.sampling_factory, &inner.las_loader)?
                     .as_ref()
                     .clone();
                 drop(s3);
@@ -299,7 +304,6 @@ where
                                 old_node,
                                 vec![],
                                 inner.as_ref(),
-                                &mut threads,
                                 &mut meta_tree,
                                 &changes_sender,
                             )?;
@@ -323,15 +327,14 @@ where
         // insert points into each lod, top-to-bottom
         // until no points are left in all worker buffers.
         let s1 = span!("coordinator_thread: insert points");
-        PartitionedNode::parallel_insert_multi_lod(
-            &mut loaded_nodes,
-            worker_buffer,
-            &inner.sampling_factory,
-            |p, q| {
+        assert!(loaded_nodes.len() > 0);
+        let last_lod_node = loaded_nodes.len() - 1;
+        for node in &mut loaded_nodes[..last_lod_node] {
+            worker_buffer = node.insert_points(worker_buffer, |p, q| {
                 q.set_attribute(p.attribute::<SensorPositionAttribute<Pos>>().clone());
-            },
-            &mut threads,
-        );
+            });
+        }
+        loaded_nodes[last_lod_node].insert_bogus_points(worker_buffer);
         drop(s1);
 
         // split nodes, that got too big
@@ -345,8 +348,7 @@ where
                 let s2 = span!("coordinator_thread:: split");
 
                 // queue of nodes, that still need to be split
-                let mut queue =
-                    vec![node.parallel_drain_into_splitter(sensor_pos.clone(), &mut threads)];
+                let mut queue = vec![node.drain_into_splitter(sensor_pos.clone())];
 
                 // nodes that are fully split (nr of points is below the max_node_size)
                 let mut fully_split = Vec::new();
@@ -354,7 +356,7 @@ where
                 // keep processing nodes that are queued for splitting, until queue is empty
                 while let Some(split_node) = queue.pop() {
                     // split
-                    let children = split_node.parallel_split(&meta_tree, &mut threads);
+                    let children = split_node.split(&meta_tree);
 
                     // the child nodes, that are small enough are put into `fully_split`, the other
                     // ones are re-queued.
@@ -378,7 +380,7 @@ where
                     .unwrap();
                 let replacement_node = fully_split
                     .swap_remove(replacement_index)
-                    .parallel_into_node(&inner.sampling_factory, &mut threads);
+                    .into_node(&inner.sampling_factory);
                 let old_node = mem::replace(node, replacement_node);
 
                 // save
@@ -387,7 +389,6 @@ where
                     node.clone(),
                     fully_split,
                     inner.as_ref(),
-                    &mut threads,
                     &mut meta_tree,
                     &changes_sender,
                 )?;
@@ -404,19 +405,19 @@ where
         }
 
         // clear cache
-        let (max_size, current_size) = inner.page_manager.size();
-        let min_cleanup_tasks = threads.num_threads() * 5;
-        if current_size > max_size + min_cleanup_tasks {
+        let min_cleanup_tasks = nr_cache_cleanup_threads * 25; // chosen pretty arbitrarily, but large enough so that we do not have to do anything after a normal node split. This part should only have to do work, if the cleanup threads can't keep up.
+        let (max_size, mut current_size) = inner.page_manager.size();
+        while current_size > max_size + min_cleanup_tasks {
             let s1 = span!("coordinator_thread: cache cleanup");
-            let cleanup_results = threads.execute(|_| inner.page_manager.cleanup()).join();
-            for result in cleanup_results {
-                match result {
-                    Ok(()) => (),
-                    Err(e) => {
-                        error!("Could not flush page to disk: {:?}", e);
-                    }
+            match inner.page_manager.cleanup_one() {
+                Ok(_) => (),
+                Err(e) => {
+                    error!("Could not flush page to disk: {:?}", e);
                 }
             }
+
+            let (_, new_size) = inner.page_manager.size();
+            current_size = new_size;
             drop(s1);
         }
 
@@ -445,10 +446,10 @@ where
                 node.clone(),
                 Vec::new(),
                 inner.as_ref(),
-                &mut threads,
                 &mut meta_tree,
                 &changes_sender,
             )?;
+            node.mark_clean();
         }
         drop(s1);
 
@@ -464,14 +465,22 @@ where
             node,
             Vec::new(),
             inner.as_ref(),
-            &mut threads,
             &mut meta_tree,
             &changes_sender,
         )?;
     }
+    drop(s1);
+
+    // stop cleanup threads
+    let s1 = span!("coordinator_thread: terminate cache cleanup threads");
+    stop_cache_cleanup_threads.store(true, atomic::Ordering::Release);
+    inner.page_manager.block_on_cache_size_external_wakeup();
+    for join_handle in cache_cleanup_threads {
+        join_handle.join().unwrap();
+    }
+    drop(s1);
 
     // dump metatree to disk
-    drop(s1);
     let s1 = span!("coordinator_thread: dump meta tree");
     meta_tree
         .write_to_file(&inner.meta_tree_file)
@@ -490,7 +499,6 @@ fn apply_updates<Point, Sampl, GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Raw
     replace_with: PartitionedNode<Sampl, Point, Comp>,
     replace_with_split: Vec<PartitionedNodeSplitter<Point, Pos, Raw>>,
     inner: &Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>,
-    threads: &mut Threads,
     meta_tree: &mut MetaTree<GridH, Comp>,
     notify_sender: &crossbeam_channel::Sender<Update<Comp>>,
 ) -> Result<(), IndexError>
@@ -500,7 +508,7 @@ where
     Point: PointType<Position = Pos> + Send + Clone,
     Comp: Component + Send + Sync,
     Pos: Position<Component = Comp> + Sync,
-    Raw: RawSamplingEntry<Point = Point> + Send,
+    Raw: RawSamplingEntry<Point = Point>,
     LasL: LasReadWrite<Point, CSys> + Sync + Clone,
     CSys: Sync + Clone,
     GridH: GridHierarchy<Component = Comp, Position = Pos>,
@@ -519,7 +527,7 @@ where
     // store split node contents
     for node in replace_with_split {
         let node_id = node.node_id().clone();
-        let node = node.parallel_into_node(&inner.sampling_factory, threads);
+        let node = node.into_node(&inner.sampling_factory);
         let aabb = node.bounds().clone();
         inner
             .page_manager
@@ -578,6 +586,35 @@ fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>(
                     shared.readers.swap_remove(pos);
                 }
             }
+        }
+    }
+}
+
+fn cache_cleanup_thread<GridH, SamplF, Comp, LasL, CSys, Point, Sampl, Pos>(
+    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
+    shutdown: Arc<AtomicBool>,
+) where
+    Comp: Component,
+    CSys: Clone,
+    LasL: LasReadWrite<Point, CSys> + Clone,
+    Point: PointType<Position = Pos> + Clone,
+    Pos: Position<Component = Comp>,
+    Sampl: Sampling<Point = Point>,
+{
+    loop {
+        inner
+            .page_manager
+            .block_on_cache_size(|cur_size, max_size| {
+                cur_size > max_size || shutdown.load(atomic::Ordering::Acquire)
+            });
+        match inner.page_manager.cleanup() {
+            Ok(()) => (),
+            Err(e) => {
+                error!("Could not flush page to disk. You just lost data: {:?}", e);
+            }
+        }
+        if shutdown.load(atomic::Ordering::Acquire) {
+            return;
         }
     }
 }

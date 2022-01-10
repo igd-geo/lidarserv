@@ -4,7 +4,7 @@ use crate::geometry::points::PointType;
 use crate::geometry::position::{Component, CoordinateSystem, Position};
 use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId, Node};
-use crate::index::sensor_pos::partitioned_node::{PartitionedNode, RustCellHasher};
+use crate::index::sensor_pos::partitioned_node::PartitionedNode;
 use crate::index::sensor_pos::writer::IndexError;
 use crate::las::{Las, LasReadWrite, ReadLasError};
 use crate::lru_cache::pager::{
@@ -100,23 +100,27 @@ where
         points: &Arc<SimplePoints<Point, Comp>>,
         las_loader: &LasL,
         coordinate_system: CSys,
+        for_transmission: bool,
     ) -> Vec<u8>
     where
         LasL: LasReadWrite<Point, CSys>,
     {
         let mut data = Vec::new();
         if !points.points.is_empty() {
-            las_loader
-                .write_las(
-                    Las {
-                        points: points.points.iter(),
-                        bounds: points.bounds.clone(),
-                        non_bogus_points: Some(points.non_bogus_points),
-                        coordinate_system,
-                    },
-                    Cursor::new(&mut data),
-                )
-                .unwrap(); // unwrap: writing to a cursor does not throw i/o errors
+            let las = Las {
+                points: points.points.iter(),
+                bounds: points.bounds.clone(),
+                non_bogus_points: Some(points.non_bogus_points),
+                coordinate_system,
+            };
+            let cursor = Cursor::new(&mut data);
+            if for_transmission {
+                las_loader
+                    .write_las_force_no_compression(las, cursor)
+                    .unwrap(); // unwrap: writing to a cursor does not throw i/o errors
+            } else {
+                las_loader.write_las(las, cursor).unwrap(); // unwrap: writing to a cursor does not throw i/o errors
+            }
         }
         data
     }
@@ -134,19 +138,15 @@ where
 
     fn points_to_node<SamplF>(
         points: &Arc<SimplePoints<Point, Comp>>,
-        num_partitions: usize,
         node_id: MetaTreeNodeId,
         sampling_factory: &SamplF,
-        hasher: RustCellHasher,
     ) -> PartitionedNode<Sampl, Point, Comp>
     where
         SamplF: SamplingFactory<Sampling = Sampl>,
     {
         PartitionedNode::from_las_points(
-            num_partitions,
             node_id,
             sampling_factory,
-            hasher,
             points.points.clone(),
             points.non_bogus_points as usize,
         )
@@ -175,7 +175,12 @@ where
         }
     }
 
-    pub fn get_binary<LasL, CSys>(&self, las_loader: &LasL, coordinate_system: CSys) -> Arc<Vec<u8>>
+    pub fn get_binary<LasL, CSys>(
+        &self,
+        las_loader: &LasL,
+        coordinate_system: CSys,
+        for_transmission: bool,
+    ) -> Arc<Vec<u8>>
     where
         LasL: LasReadWrite<Point, CSys>,
     {
@@ -200,7 +205,7 @@ where
             }
         };
 
-        let data = Self::points_to_binary(&points, las_loader, coordinate_system);
+        let data = Self::points_to_binary(&points, las_loader, coordinate_system, for_transmission);
         let data = Arc::new(data);
         *bin_lock = Some(Arc::clone(&data));
         data
@@ -252,10 +257,8 @@ where
     pub fn get_node<LasL, CSys, SamplF>(
         &self,
         node_id: MetaTreeNodeId,
-        num_partitions: usize,
         sampling_factory: &SamplF,
         las_loader: &LasL,
-        hasher: RustCellHasher,
     ) -> Result<Arc<PartitionedNode<Sampl, Point, Comp>>, IndexError>
     where
         LasL: LasReadWrite<Point, CSys>,
@@ -276,8 +279,7 @@ where
             if let Some(node) = node_lock.as_ref() {
                 return Ok(Arc::clone(node));
             }
-            let node =
-                Self::points_to_node(&points, num_partitions, node_id, sampling_factory, hasher);
+            let node = Self::points_to_node(&points, node_id, sampling_factory);
             let node = Arc::new(node);
             *node_lock = Some(Arc::clone(&node));
             return Ok(node);
@@ -299,7 +301,7 @@ where
             points
         };
         drop(points_lock);
-        let node = Self::points_to_node(&points, num_partitions, node_id, sampling_factory, hasher);
+        let node = Self::points_to_node(&points, node_id, sampling_factory);
         let node = Arc::new(node);
         *node_lock = Some(Arc::clone(&node));
         Ok(node)
@@ -401,10 +403,8 @@ where
     pub fn get_node_par<SamplF, LasL, CSys>(
         &self,
         node_id: MetaTreeNodeId,
-        num_partitions: usize,
         sampling_factory: &SamplF,
         las_loader: &LasL,
-        hasher: RustCellHasher,
         threads: &mut Threads,
     ) -> Result<Arc<PartitionedNode<Sampl, Point, Comp>>, IndexError>
     where
@@ -428,13 +428,7 @@ where
                 return Ok(Arc::clone(node));
             }
             if let Some(points) = points {
-                let node = Self::points_to_node(
-                    &points,
-                    num_partitions,
-                    node_id,
-                    sampling_factory,
-                    hasher,
-                );
+                let node = Self::points_to_node(&points, node_id, sampling_factory);
                 let node = Arc::new(node);
                 *node_lock = Some(Arc::clone(&node));
                 return Ok(node);
@@ -457,7 +451,7 @@ where
             points
         };
         drop(points_lock);
-        let node = Self::points_to_node(&points, num_partitions, node_id, sampling_factory, hasher);
+        let node = Self::points_to_node(&points, node_id, sampling_factory);
         let node = Arc::new(node);
         *node_lock = Some(Arc::clone(&node));
         Ok(node)
@@ -499,7 +493,7 @@ where
     }
 
     fn store(&mut self, data: &Self::Data) -> Result<(), IoError> {
-        let bytes = data.get_binary(&self.las_loader, self.coordinate_system.clone());
+        let bytes = data.get_binary(&self.las_loader, self.coordinate_system.clone(), false);
         if !bytes.is_empty() {
             let s = span!("BinDataFileHandle::store: write and sync");
             s.emit_value(bytes.len() as u64);

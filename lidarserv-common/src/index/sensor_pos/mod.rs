@@ -12,7 +12,6 @@ use crate::geometry::position::{Component, Position};
 use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::PageManager;
-use crate::index::sensor_pos::partitioned_node::RustCellHasher;
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::reader::SensorPosReader;
 use crate::index::sensor_pos::writer::SensorPosWriter;
@@ -46,7 +45,6 @@ pub struct SensorPosIndexParams<SamplF, GridH, Comp: Scalar, LasL, CSys, Point, 
     pub max_lod: LodLevel,
     pub max_delay: Duration,
     pub coarse_lod_steps: usize,
-    pub hasher: RustCellHasher,
 }
 
 struct Inner<GridH, SamplF, Comp: Scalar, LasL, CSys, Point, Sampl> {
@@ -62,7 +60,6 @@ struct Inner<GridH, SamplF, Comp: Scalar, LasL, CSys, Point, Sampl> {
     pub max_node_split_level: LodLevel,
     pub max_delay: Duration,
     pub coarse_lod_steps: usize,
-    pub hasher: RustCellHasher,
 }
 
 struct Shared<GridH, Comp: Scalar> {
@@ -111,7 +108,6 @@ where
             max_lod,
             max_delay,
             coarse_lod_steps,
-            hasher,
         } = params;
         SensorPosIndex {
             inner: Arc::new(Inner {
@@ -134,7 +130,6 @@ where
                     readers: vec![],
                 }),
                 coarse_lod_steps,
-                hasher,
             }),
         }
     }
@@ -167,8 +162,8 @@ where
     Comp: Component + Serialize + DeserializeOwned + Send + Sync,
     LasL: LasReadWrite<Point, CSys> + Clone + Send + Sync + 'static,
     CSys: Clone + PartialEq + Send + Sync + 'static,
-    Sampl: Sampling<Point = Point, Raw = Raw> + Send + Clone + 'static,
-    Raw: RawSamplingEntry<Point = Point> + Send + 'static,
+    Sampl: Sampling<Point = Point, Raw = Raw> + Send + Sync + Clone + 'static,
+    Raw: RawSamplingEntry<Point = Point> + 'static,
 {
     type Writer = SensorPosWriter<Point, CSys>;
     type Reader = SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>;

@@ -99,6 +99,16 @@ where
         It: Iterator + ExactSizeIterator,
         It::Item: Borrow<Point>;
 
+    fn write_las_force_no_compression<W, It>(
+        &self,
+        las: Las<It, <Point::Position as Position>::Component, CSys>,
+        wr: W,
+    ) -> Result<(), WriteLasError>
+    where
+        W: Write + Seek + Send,
+        It: Iterator + ExactSizeIterator,
+        It::Item: Borrow<Point>;
+
     fn write_las_par(
         &self,
         las: Las<&[Point], <Point::Position as Position>::Component, CSys>,
@@ -219,7 +229,7 @@ where
 
         // compression
         if self.compression {
-            let chunk_size = (number_of_point_records / 16).clamp(50, 50_000);
+            let chunk_size = 50_000;
             let laz_vlr = LazVlrBuilder::default()
                 .with_point_format(format.to_u8().unwrap(), format.extra_bytes)
                 .unwrap()
@@ -293,6 +303,20 @@ where
             wr.write_all(point_data.as_slice())?;
         }
         Ok(())
+    }
+
+    fn write_las_force_no_compression<W, It>(
+        &self,
+        las: Las<It, <Point::Position as Position>::Component, I32CoordinateSystem>,
+        wr: W,
+    ) -> Result<(), WriteLasError>
+    where
+        W: Write + Seek + Send,
+        It: Iterator + ExactSizeIterator,
+        It::Item: Borrow<Point>,
+    {
+        let me = Self { compression: false };
+        me.write_las(las, wr)
     }
 
     fn write_las_par(

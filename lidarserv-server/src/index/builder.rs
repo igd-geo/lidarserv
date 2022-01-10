@@ -11,7 +11,6 @@ use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
 use lidarserv_common::index::sensor_pos::meta_tree::{MetaTree, MetaTreeIoError};
 use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
-use lidarserv_common::index::sensor_pos::partitioned_node::RustCellHasher;
 use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
 use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::nalgebra::Vector3;
@@ -128,8 +127,7 @@ fn build_sensor_position_index(
         coordinate_system,
         max_lod: LodLevel::from_level(10), // todo config for this
         max_delay: Duration::from_secs(1), // todo config for this
-        coarse_lod_steps: 5,               // todo config for this
-        hasher: RustCellHasher::from_state(settings.hash_state),
+        coarse_lod_steps: 3,               // todo config for this
     };
     let spi = SensorPosIndex::new(params);
 

@@ -12,6 +12,7 @@ use crate::index::{Node, NodeId, Reader};
 use crate::las::LasReadWrite;
 use crate::lru_cache::pager::CacheLoadError;
 use crate::nalgebra::Scalar;
+use crate::query::empty::EmptyQuery;
 use crate::query::{Query, QueryExt};
 use crossbeam_channel::{Receiver, TryRecvError};
 use nalgebra::min;
@@ -19,10 +20,12 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 pub struct SensorPosReader<GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Point, Sampl> {
+    query: Arc<dyn Query<Pos, CSys> + Send + Sync>,
     inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
     meta_tree: MetaTree<GridH, Comp>,
     updates: crossbeam_channel::Receiver<Update<Comp>>,
     lods: Vec<LodReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>>,
+    current_loading_lod: usize,
     update_counter: u32,
 }
 
@@ -55,29 +58,27 @@ where
         };
 
         // create reader
+        let query: Arc<dyn Query<Pos, CSys> + Send + Sync> = Arc::new(query);
         let mut result = SensorPosReader {
+            query,
             inner,
             meta_tree,
             updates,
             lods: vec![],
+            current_loading_lod: 0,
             update_counter: 0,
         };
 
         // create lod level readers
-        let query: Arc<dyn Query<Pos, CSys> + Send + Sync> = Arc::new(query);
         for lod_level in 0..=result.inner.max_lod.level() {
             result.lods.push(LodReader::new(
                 LodLevel::from_level(lod_level),
-                Arc::clone(&query),
                 Arc::clone(&result.inner),
             ));
-            let (fine, coarse) = Self::lod_layer_and_coarse(
-                &mut result.lods,
-                result.inner.coarse_lod_steps,
-                lod_level as usize,
-            );
-            fine.initial_query(&result.meta_tree, coarse);
         }
+
+        // set query, so that we start to load the query result in the first lod
+        result.set_query_arc(Arc::clone(&result.query));
 
         result
     }
@@ -105,14 +106,14 @@ where
         let influenced_lod_index =
             updated_node.lod().level() as usize + self.inner.coarse_lod_steps;
         if *updated_node.lod() == LodLevel::base() {
-            let iter_to = min(influenced_lod_index + 1, self.lods.len());
-            for index in 1..iter_to {
+            let iter_to = min(influenced_lod_index, self.current_loading_lod);
+            for index in 1..=iter_to {
                 let (fine, coarse) =
                     Self::lod_layer_and_coarse(&mut self.lods, self.inner.coarse_lod_steps, index);
                 assert_eq!(coarse.as_ref().unwrap().lod, *updated_node.lod());
                 fine.refresh_coarse(updated_node, coarse, &self.meta_tree)
             }
-        } else if influenced_lod_index < self.lods.len() {
+        } else if influenced_lod_index <= self.current_loading_lod {
             let (fine, coarse) = Self::lod_layer_and_coarse(
                 &mut self.lods,
                 self.inner.coarse_lod_steps,
@@ -124,10 +125,26 @@ where
     }
 
     fn set_query_arc(&mut self, query: Arc<dyn Query<Pos, CSys> + Send + Sync>) {
-        for i in 0..self.lods.len() {
-            let (lod_layer, coarse) =
-                Self::lod_layer_and_coarse(&mut self.lods, self.inner.coarse_lod_steps, i);
-            lod_layer.set_query(Arc::clone(&query), &self.meta_tree, coarse);
+        self.query = query;
+        self.current_loading_lod = 0;
+        if !self.lods.is_empty() {
+            self.lods[0].set_query(Arc::clone(&self.query), &self.meta_tree, None);
+        }
+        self.advance_current_loading_lod();
+    }
+
+    fn advance_current_loading_lod(&mut self) {
+        // load the next lod, if the current one is done.
+        while self.lods[self.current_loading_lod].is_fully_loaded()
+            && self.current_loading_lod + 1 < self.lods.len()
+        {
+            self.current_loading_lod += 1;
+            let (next_loading_lod, coarse) = Self::lod_layer_and_coarse(
+                &mut self.lods,
+                self.inner.coarse_lod_steps,
+                self.current_loading_lod,
+            );
+            next_loading_lod.set_query(Arc::clone(&self.query), &self.meta_tree, coarse);
         }
     }
 }
@@ -192,12 +209,21 @@ where
             let lod_index = update.node.lod().level() as usize;
             if lod_index < self.lods.len() {
                 self.update_counter += 1;
-                let (lod_layer, coarse_layer) = Self::lod_layer_and_coarse(
-                    &mut self.lods,
-                    self.inner.coarse_lod_steps,
-                    lod_index,
-                );
-                lod_layer.apply_update(&update, &self.meta_tree, coarse_layer, self.update_counter)
+                if lod_index <= self.current_loading_lod {
+                    let (lod_layer, coarse_layer) = Self::lod_layer_and_coarse(
+                        &mut self.lods,
+                        self.inner.coarse_lod_steps,
+                        lod_index,
+                    );
+                    lod_layer.apply_update(
+                        &update,
+                        &self.meta_tree,
+                        coarse_layer,
+                        self.update_counter,
+                    )
+                } else {
+                    self.lods[lod_index].apply_update_noquery(&update, self.update_counter);
+                }
             }
         }
     }
@@ -232,8 +258,12 @@ where
             self.update();
 
             // if there are things to do (load_one, remove_one, update_one) return early.
-            for lod in &self.lods {
-                if lod.is_dirty() {
+            for (lod_index, lod) in self.lods.iter().enumerate() {
+                if lod_index <= self.current_loading_lod {
+                    if lod.is_dirty() {
+                        return true;
+                    }
+                } else if lod.has_outdated_nodes() {
                     return true;
                 }
             }
@@ -251,12 +281,15 @@ where
         // load
         // start loading at lod0 and progressively get finer.
         let mut result = None;
-        for lod_index in 0..self.lods.len() {
+        for lod_index in 0..=self.current_loading_lod {
             if let Some(load) = self.lods[lod_index].load_one() {
                 result = Some(load);
                 break;
             }
         }
+
+        // load the next lod, if the current one is done.
+        self.advance_current_loading_lod();
 
         // if this lod is a coarse layer for another lod
         // notify that finer lod of the update so it can check, if the update influenced the query
@@ -268,7 +301,7 @@ where
     }
 
     fn remove_one(&mut self) -> Option<Self::NodeId> {
-        for lod_index in (0..self.lods.len()).rev() {
+        for lod_index in (0..=self.current_loading_lod).rev() {
             if let Some(remove) = self.lods[lod_index].remove_one() {
                 return Some(remove);
             }
@@ -332,13 +365,12 @@ where
 {
     pub fn new(
         lod: LodLevel,
-        query: Arc<dyn Query<Pos, CSys> + Send + Sync>,
         inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
     ) -> Self {
         LodReader {
             lod,
-            query,
             inner,
+            query: Arc::new(EmptyQuery::new()),
             loaded: HashMap::new(),
             dirty_node_to_replacements: HashMap::new(),
             replacement_to_dirty_node: HashMap::new(),
@@ -373,15 +405,6 @@ where
         }
     }
 
-    pub fn initial_query(
-        &mut self,
-        meta_tree: &MetaTree<GridH, Comp>,
-        coarse_level: Option<&mut Self>,
-    ) {
-        let query = Arc::clone(&self.query);
-        self.set_query(query, meta_tree, coarse_level);
-    }
-
     pub fn load_one(
         &mut self,
     ) -> Option<(MetaTreeNodeId, SensorPosNodeCollection<Sampl, Point, Comp>)> {
@@ -408,6 +431,49 @@ where
             }
         }
         node_to_remove
+    }
+
+    pub fn apply_update_noquery(&mut self, update: &Update<Comp>, update_counter: u32) {
+        let is_node_split =
+            update.replaced_by.len() != 1 || update.replaced_by[0].replace_with != update.node;
+
+        if let Some(base_node) = self.replacement_to_dirty_node.get(&update.node) {
+            // if the update is already dirty:
+            // update the replacement info
+            if is_node_split {
+                let (_, replacements) = self.dirty_node_to_replacements.get_mut(base_node).unwrap();
+                replacements.remove(&update.node);
+                for replacement in &update.replaced_by {
+                    replacements.insert(replacement.replace_with.clone());
+                }
+                let base_node = base_node.clone();
+                self.replacement_to_dirty_node.remove(&update.node);
+                for replacement in &update.replaced_by {
+                    self.replacement_to_dirty_node
+                        .insert(replacement.replace_with.clone(), base_node.clone());
+                }
+            }
+        } else if self.loaded.contains_key(&update.node) {
+            // if the node is not yet marked as dirty, but loaded -> mark as dirty
+            self.dirty_node_to_replacements.insert(
+                update.node.clone(),
+                (
+                    update_counter,
+                    update
+                        .replaced_by
+                        .iter()
+                        .map(|r| r.replace_with.clone())
+                        .collect(),
+                ),
+            );
+            for replacement in &update.replaced_by {
+                self.replacement_to_dirty_node
+                    .insert(replacement.replace_with.clone(), update.node.clone());
+            }
+
+            // reset update order, so it gets re-calculated next time update_one() is called.
+            self.update_order.clear();
+        }
     }
 
     pub fn apply_update(
@@ -526,6 +592,14 @@ where
         } else {
             None
         }
+    }
+
+    pub fn is_fully_loaded(&self) -> bool {
+        self.nodes_to_load.is_empty()
+    }
+
+    pub fn has_outdated_nodes(&self) -> bool {
+        !self.dirty_node_to_replacements.is_empty()
     }
 
     pub fn is_dirty(&self) -> bool {
@@ -767,7 +841,11 @@ where
             binary: loaded
                 .iter()
                 .map(|it| {
-                    it.get_binary(&self.inner.las_loader, self.inner.coordinate_system.clone())
+                    it.get_binary(
+                        &self.inner.las_loader,
+                        self.inner.coordinate_system.clone(),
+                        true,
+                    )
                 })
                 .collect(),
             nodes: loaded,

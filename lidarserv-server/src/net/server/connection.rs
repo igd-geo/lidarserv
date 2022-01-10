@@ -4,6 +4,7 @@ use crate::net::protocol::connection::Connection;
 use crate::net::protocol::messages::Message::IncrementalResult;
 use crate::net::protocol::messages::{CoordinateSystem, DeviceType, LasPointData, Message, Query};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
+use crossbeam_channel::RecvError;
 use lidarserv_common::geometry::bounding_box::{BaseAABB, OptionAABB};
 use lidarserv_common::geometry::grid::LodLevel;
 use lidarserv_common::geometry::position::{I32Position, Position};
@@ -14,10 +15,11 @@ use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use log::{debug, info};
 use std::io::Cursor;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Receiver;
+use tokio::sync::mpsc::error::SendError;
 
 pub async fn handle_connection(
     con: TcpStream,
@@ -26,6 +28,7 @@ pub async fn handle_connection(
 ) -> Result<(), LidarServerError> {
     let addr = con.peer_addr()?;
     info!("New connection: {}", addr);
+    con.set_nodelay(true)?;
 
     // send "Hello" message
     let mut con = Connection::new(con, addr, &mut shutdown).await?;
@@ -141,6 +144,7 @@ async fn viewer_mode(
     let sampling_factory = index.index_info().sampling_factory.clone();
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded();
     let (updates_sender, mut updates_receiver) = tokio::sync::mpsc::channel(1);
+    let (query_ack_sender, query_ack_receiver) = crossbeam_channel::unbounded();
 
     let send_task = tokio::spawn(async move {
         while let Some(message) = updates_receiver.recv().await {
@@ -154,43 +158,54 @@ async fn viewer_mode(
 
     // query
     let query_thread = thread::spawn(move || -> Result<(), LidarServerError> {
+        let mut sent_updates = 0;
+        let mut ackd_updates = 0;
         let mut reader = index.reader();
         let mut queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
-        while reader.blocking_update(&mut queries_receiver) {
+        'update_loop: while reader.blocking_update(&mut queries_receiver) {
             if let Some((node_id, data)) = reader.load_one() {
-                updates_sender
-                    .blocking_send(IncrementalResult {
-                        replaces: None,
-                        nodes: vec![(node_id, data.into_iter().map(LasPointData).collect())],
-                    })
-                    .unwrap();
+                match updates_sender.blocking_send(IncrementalResult {
+                    replaces: None,
+                    nodes: vec![(node_id, data.into_iter().map(LasPointData).collect())],
+                }) {
+                    Ok(_) => sent_updates += 1,
+                    Err(_) => break 'update_loop,
+                }
             }
             if let Some(node_id) = reader.remove_one() {
-                updates_sender
-                    .blocking_send(IncrementalResult {
-                        replaces: Some(node_id),
-                        nodes: vec![],
-                    })
-                    .unwrap();
+                match updates_sender.blocking_send(IncrementalResult {
+                    replaces: Some(node_id),
+                    nodes: vec![],
+                }) {
+                    Ok(_) => sent_updates += 1,
+                    Err(_) => break 'update_loop,
+                }
             }
             if let Some((node_id, replacements)) = reader.update_one() {
-                updates_sender
-                    .blocking_send(IncrementalResult {
-                        replaces: Some(node_id),
-                        nodes: replacements
-                            .into_iter()
-                            .map(|(replacement_node_id, replacement_node_data)| {
-                                (
-                                    replacement_node_id,
-                                    replacement_node_data
-                                        .into_iter()
-                                        .map(LasPointData)
-                                        .collect(),
-                                )
-                            })
-                            .collect(),
-                    })
-                    .unwrap();
+                match updates_sender.blocking_send(IncrementalResult {
+                    replaces: Some(node_id),
+                    nodes: replacements
+                        .into_iter()
+                        .map(|(replacement_node_id, replacement_node_data)| {
+                            (
+                                replacement_node_id,
+                                replacement_node_data
+                                    .into_iter()
+                                    .map(LasPointData)
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
+                }) {
+                    Ok(_) => sent_updates += 1,
+                    Err(_) => break 'update_loop,
+                }
+            }
+            while ackd_updates + 10 < sent_updates {
+                ackd_updates = match query_ack_receiver.recv() {
+                    Ok(v) => v,
+                    Err(_) => break 'update_loop,
+                };
             }
         }
         Ok(())
@@ -201,6 +216,10 @@ async fn viewer_mode(
         while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
             let query = match msg {
                 Message::Query(q) => q,
+                Message::ResultAck { update_number } => {
+                    query_ack_sender.send(update_number).ok();
+                    continue;
+                }
                 _ => {
                     return Err(LidarServerError::Protocol(
                         "Expected `Query` message or EOF.".into(),

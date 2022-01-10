@@ -56,16 +56,15 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
     let mut runs = HashMap::new();
 
     // "default run" with base settings
-    /*
     {
-        let result = evaluate(&base_config, &points, &coordinate_system, true, true);
+        let result = evaluate(&base_config, &points, &coordinate_system, true, true, false);
         runs.entry("default".to_string())
             .or_insert_with(Vec::new)
             .push(result);
-    }*/
+    }
 
     // modify task priority function
-    /*let task_priority_functions = [
+    let task_priority_functions = [
         "NrPoints",
         "TaskAge",
         "Lod",
@@ -78,7 +77,7 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
             task_priority_function: tpf.to_string(),
             ..base_config.clone()
         };
-        let results = evaluate(&config, &points, &coordinate_system, true, false);
+        let results = evaluate(&config, &points, &coordinate_system, true, false, false);
         runs.entry("task_priority_function".to_string())
             .or_insert_with(Vec::new)
             .push(results);
@@ -89,59 +88,49 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
             max_cache_size: 0,
             ..base_config.clone()
         };
-        let results = evaluate(&config, &points, &coordinate_system, true, false);
+        let results = evaluate(&config, &points, &coordinate_system, true, false, false);
         runs.entry("task_priority_function_low_cache".to_string())
             .or_insert_with(Vec::new)
             .push(results);
-    }*/
+    }
 
     // modify threads
-    /*for num_threads in [1, 2, 4, 8] {
+    for num_threads in [1, 2, 3, 4, 5, 6, 7, 8] {
         let config = Config {
             num_threads,
             ..base_config.clone()
         };
-        let results = evaluate(&config, &points, &coordinate_system, true, true);
-        runs.entry("num_threads".to_string())
-            .or_insert_with(Vec::new)
-            .push(results);
-    }*/
-    for num_threads in [8, 4, 2, 1] {
-        let config = Config {
-            num_threads,
-            ..base_config.clone()
-        };
-        let results = evaluate(&config, &points, &coordinate_system, false, true, true);
+        let results = evaluate(&config, &points, &coordinate_system, true, true, false);
         runs.entry("num_threads".to_string())
             .or_insert_with(Vec::new)
             .push(results);
     }
 
     // modify cache size
-    /*for max_cache_size in [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192] {
+    for max_cache_size in [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192] {
         let config = Config {
             max_cache_size,
             ..base_config.clone()
         };
-        let results = evaluate(&config, &points, &coordinate_system, true, true);
+        let results = evaluate(&config, &points, &coordinate_system, true, true, false);
         runs.entry("max_cache_size".to_string())
             .or_insert_with(Vec::new)
             .push(results);
-    }*/
+    }
 
     // modify node size
-    /*for max_node_size in [
+    for max_node_size in [
         3_125, 6_250, 12_500, 25_000, 50_000, 100_000, 200_000, 400_000,
     ] {
         let config = Config {
             max_node_size,
             ..base_config.clone()
         };
-        let results = evaluate(&config, &points, &coordinate_system, false, true);
+        let results = evaluate(&config, &points, &coordinate_system, false, true, false);
         runs.entry("max_node_size".to_string())
             .or_insert_with(Vec::new)
             .push(results);
-    }*/
+    }
 
     println!("{}", json!(runs))
 }

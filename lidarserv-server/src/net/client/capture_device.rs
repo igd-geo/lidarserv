@@ -29,6 +29,7 @@ impl CaptureDeviceClient {
     {
         let tcp_con = TcpStream::connect(addr).await?;
         let peer_addr = tcp_con.peer_addr()?;
+        tcp_con.set_nodelay(true)?;
         let mut connection = Connection::new(tcp_con, peer_addr, shutdown).await?;
 
         // exchange hello messages and check each others protocol compatibility

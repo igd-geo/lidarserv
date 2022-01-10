@@ -5,7 +5,6 @@ use crate::index::settings::{
     GeneralSettings, IndexSettings, IndexType, OctreeSettings, SensorPositionSettings,
 };
 use anyhow::Result;
-use lidarserv_common::index::sensor_pos::partitioned_node::RustCellHasher;
 
 pub fn run(init_options: InitOptions) -> Result<()> {
     // create the directory
@@ -29,7 +28,6 @@ pub fn run(init_options: InitOptions) -> Result<()> {
             }),
             Index::Bvg => IndexType::SensorPositionIndex(SensorPositionSettings {
                 max_nr_points_per_node: init_options.bvg_max_points_per_node,
-                hash_state: RustCellHasher::new_random().state(),
             }),
         },
     };

@@ -30,7 +30,6 @@ pub enum IndexType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SensorPositionSettings {
     pub max_nr_points_per_node: usize,
-    pub hash_state: (u64, u64),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

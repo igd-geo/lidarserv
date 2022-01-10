@@ -8,7 +8,6 @@ use lidarserv_common::index::octree::writer::TaskPriorityFunction;
 use lidarserv_common::index::octree::Octree;
 use lidarserv_common::index::sensor_pos::meta_tree::MetaTree;
 use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
-use lidarserv_common::index::sensor_pos::partitioned_node::RustCellHasher;
 use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
 use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_server::index::point::LasPoint;
@@ -77,7 +76,6 @@ pub fn create_sensor_pos_index(
         max_lod: LodLevel::from_level(10),
         max_delay: Duration::from_secs(1),
         coarse_lod_steps: 5,
-        hasher: RustCellHasher::from_state((83675784, 435659)),
     };
     SensorPosIndex::new(params)
 }

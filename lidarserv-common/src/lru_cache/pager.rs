@@ -5,7 +5,7 @@ use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 use std::mem;
 use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use thiserror::Error;
 use tracy_client::{create_plot, Plot};
 
@@ -73,6 +73,7 @@ static DEFAULT_TRACY_PLOT: Plot = create_plot!("Page LRU Cache size");
 pub struct PageManager<P, K, V, F, D> {
     loader: P,
     inner: Mutex<PageManagerInner<K, V, F, D>>,
+    wakeup: Condvar,
 }
 
 struct PageManagerInner<K, V, F, D> {
@@ -173,6 +174,24 @@ where
                 next_page_number: 0,
                 plot: &DEFAULT_TRACY_PLOT,
             }),
+            wakeup: Condvar::new(),
+        }
+    }
+
+    pub fn block_on_cache_size_external_wakeup(&self) {
+        self.wakeup.notify_all();
+    }
+
+    /// Blocks until the condition function Fn(current_size, max_size)->bool returns true.
+    /// This can be used to wait until the cache is empty enough to load more pages. (assuming that a second thread continuously cleans up the cache)
+    /// Or, the opposite use case, to wait until it is full enough to start the cleanup process.
+    pub fn block_on_cache_size<Cond>(&self, cond_fn: Cond)
+    where
+        Cond: Fn(usize, usize) -> bool,
+    {
+        let mut cache_lock = self.inner.lock().unwrap();
+        while !cond_fn(cache_lock.cache.len(), cache_lock.max_size) {
+            cache_lock = self.wakeup.wait(cache_lock).unwrap();
         }
     }
 
@@ -217,6 +236,7 @@ where
                 cache_lock.next_page_number += 1;
                 cache_lock.cache.insert(key.clone(), page);
                 cache_lock.plot_cache_size();
+                self.wakeup.notify_all();
             }
 
             // If the page already exists in the cache,
@@ -277,6 +297,7 @@ where
                     cache_lock.cache.insert(key.clone(), page);
                     cache_lock.plot_cache_size();
                     drop(cache_lock);
+                    self.wakeup.notify_all();
 
                     // load file
                     let mut file_lock = file.lock().unwrap();
@@ -342,6 +363,7 @@ where
         };
         cache_lock.cache.remove(&key);
         cache_lock.plot_cache_size();
+        self.wakeup.notify_all();
     }
 
     /// Like [Self::cleanup], just that it only removes a single page.
@@ -371,6 +393,7 @@ where
         if !page.dirty {
             cache_lock.cache.remove(&key);
             cache_lock.plot_cache_size();
+            self.wakeup.notify_all();
             return Ok(true);
         }
 
@@ -455,6 +478,7 @@ where
         //   the cache, it is also impossible to create even newer versions.
         cache_lock.cache.remove(&key);
         cache_lock.plot_cache_size();
+        self.wakeup.notify_all();
         drop(s3);
         drop(s);
 

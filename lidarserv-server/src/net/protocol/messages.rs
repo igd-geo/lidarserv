@@ -34,6 +34,10 @@ pub enum Message {
         replaces: Option<NodeId>,
         nodes: Vec<(NodeId, Vec<LasPointData>)>,
     },
+
+    /// Sent from the client to the server, as an acknowledgement of the update(s) it has processed so far
+    /// So that the server can slow down, if the client is too slow.
+    ResultAck { update_number: u64 },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

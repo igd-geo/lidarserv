@@ -9,6 +9,7 @@ use lidarserv_common::las::{I32LasReadWrite, Las, LasReadWrite};
 use lidarserv_common::nalgebra::Matrix4;
 use std::fmt::{Debug, Formatter};
 use std::io::Cursor;
+use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpStream, ToSocketAddrs};
@@ -16,6 +17,7 @@ use tokio::sync::broadcast::Receiver;
 
 pub struct ViewerClient<Stream> {
     connection: Connection<Stream>,
+    received_updates: Arc<Mutex<u64>>,
 }
 
 impl ViewerClient<TcpStream> {
@@ -25,6 +27,7 @@ impl ViewerClient<TcpStream> {
     {
         let tcp_con = TcpStream::connect(addr).await?;
         let peer_addr = tcp_con.peer_addr()?;
+        tcp_con.set_nodelay(true)?;
         let mut connection = Connection::new(tcp_con, peer_addr, shutdown).await?;
 
         // exchange hello messages and check each others protocol compatibility
@@ -69,7 +72,10 @@ impl ViewerClient<TcpStream> {
             }
         };
 
-        Ok(ViewerClient { connection })
+        Ok(ViewerClient {
+            connection,
+            received_updates: Arc::new(Mutex::new(0)),
+        })
     }
 
     pub fn into_split(self) -> (ViewerClient<OwnedReadHalf>, ViewerClient<OwnedWriteHalf>) {
@@ -77,9 +83,11 @@ impl ViewerClient<TcpStream> {
         (
             ViewerClient {
                 connection: read_half,
+                received_updates: Arc::clone(&self.received_updates),
             },
             ViewerClient {
                 connection: write_half,
+                received_updates: self.received_updates,
             },
         )
     }
@@ -109,6 +117,13 @@ impl<WriteStream> ViewerClient<WriteStream>
 where
     WriteStream: AsyncWrite + Unpin,
 {
+    pub async fn ack(&mut self) -> Result<(), LidarServerError> {
+        let update_number = *self.received_updates.lock().unwrap();
+        self.connection
+            .write_message(&Message::ResultAck { update_number })
+            .await
+    }
+
     pub async fn query_aabb(
         &mut self,
         global_aabb: &AABB<f64>,
@@ -155,6 +170,7 @@ where
         match self.connection.read_message(shutdown).await? {
             Message::IncrementalResult { replaces, nodes } => {
                 // read laz segments
+                *self.received_updates.lock().unwrap() += 1;
                 let las_reader = I32LasReadWrite::new(true); // use_compression parameter does not matter, when only used for reading
                 let mut insert_nodes = Vec::new();
                 for (insert_node_id, insert_node_las_segments) in nodes {
