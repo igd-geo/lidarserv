@@ -95,6 +95,7 @@ where
             .page_cache
             .flush()
             .map_err(|e| FlushError(format!("{}", e)))?;
+
         let mut directory = self.inner.page_cache.directory();
         directory
             .write_to_file()

@@ -1,4 +1,4 @@
-use crate::cli::Args;
+use crate::cli::{Args, PointColorArg};
 use anyhow::Result;
 use lidarserv_server::common::geometry::points::PointType;
 use lidarserv_server::common::geometry::position::Position;
@@ -15,8 +15,8 @@ use pasture_core::nalgebra::Vector3;
 use pasture_derive::PointType;
 use point_cloud_viewer::navigation::Matrices;
 use point_cloud_viewer::renderer::settings::{
-    BaseRenderSettings, ColorMap, PointCloudRenderSettings, PointColor, PointShape, PointSize,
-    ScalarAttributeColoring,
+    BaseRenderSettings, Color, ColorMap, PointCloudRenderSettings, PointColor, PointShape,
+    PointSize, ScalarAttributeColoring,
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::collections::HashMap;
@@ -43,12 +43,17 @@ fn main(args: Args) {
                 .unwrap();
             window
                 .set_default_point_cloud_settings(PointCloudRenderSettings {
-                    point_color: PointColor::ScalarAttribute(ScalarAttributeColoring {
-                        attribute: INTENSITY,
-                        color_map: ColorMap::blue_green(),
-                        min: 0.0,
-                        max: u16::MAX as f32,
-                    }),
+                    point_color: match args.point_color {
+                        PointColorArg::Fixed => PointColor::Fixed(Color::BLUE),
+                        PointColorArg::Intensity => {
+                            PointColor::ScalarAttribute(ScalarAttributeColoring {
+                                attribute: INTENSITY,
+                                color_map: ColorMap::fire(),
+                                min: 0.0,
+                                max: u16::MAX as f32,
+                            })
+                        }
+                    },
                     point_shape: PointShape::Round,
                     point_size: PointSize::Fixed(6.0),
                 })
@@ -203,7 +208,7 @@ async fn network_thread(
                             view_projection_matrix,
                             view_projection_matrix_inv,
                             camera_matrix.window_size.x,
-                            20.0,
+                            13.0,
                         )
                         .await
                         .unwrap()

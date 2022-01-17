@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -11,4 +12,27 @@ pub struct Args {
 
     #[structopt(long, short, default_value = "4567")]
     pub port: u16,
+
+    #[structopt(long, default_value = "fixed", possible_values = &["fixed", "intensity"])]
+    pub point_color: PointColorArg,
+}
+
+#[derive(Debug)]
+pub enum PointColorArg {
+    Fixed,
+    Intensity,
+}
+
+impl FromStr for PointColorArg {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "fixed" => Ok(PointColorArg::Fixed),
+            "intensity" => Ok(PointColorArg::Intensity),
+            _ => Err(anyhow::Error::msg(
+                "Invalid value - must be one of: 'fixed', 'intensity'",
+            )),
+        }
+    }
 }

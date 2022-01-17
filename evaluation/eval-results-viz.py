@@ -119,6 +119,21 @@ def plot_insertion_rate_by_node_size(test_runs):
     fig.savefig(f"sensor_pos_index-insertion_rate_by_node_size.pdf", format="pdf", bbox_inches="tight")
 
 
+def plot_query_time_by_node_size(test_runs):
+    fig: plt.Figure = plt.figure()
+    ax: plt.Axes = fig.subplots()
+    xs = make_x_node_size(ax, test_runs)
+    ys1 = [test_run["sensor_pos_index"]["query_performance"]["query_1"]["query_time_seconds"] + test_run["sensor_pos_index"]["query_performance"]["query_1"]["load_time_seconds"] for test_run in test_runs]
+    ys2 = [test_run["sensor_pos_index"]["query_performance"]["query_2"]["query_time_seconds"] + test_run["sensor_pos_index"]["query_performance"]["query_2"]["load_time_seconds"] for test_run in test_runs]
+    ys3 = [test_run["sensor_pos_index"]["query_performance"]["query_3"]["query_time_seconds"] + test_run["sensor_pos_index"]["query_performance"]["query_3"]["load_time_seconds"] for test_run in test_runs]
+    #ax.scatter(xs, ys1, label="Query 1")
+    ax.scatter(xs, ys2, label="Query 2")
+    ax.scatter(xs, ys3, label="Query 3")
+    ax.set_title("sensor_pos_index")
+    ax.legend()
+    fig.savefig(f"sensor_pos_index-query_time_by_node_size.pdf", format="pdf", bbox_inches="tight")
+
+
 def plot_latency_by_node_size(test_runs):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
@@ -258,7 +273,7 @@ def plot_latencies_by_disk_speed(data):
     ax.fill_between(xs_sensorpos_las, y1_sensorpos_las, y2_sensorpos_las, alpha=.2, linewidth=0)
     ax.plot(xs_sensorpos_las, y_sensorpos_las, label="sensor_pos_index no compression")
 
-    ax.set_ylim(bottom=0, top=0.4)
+    ax.set_ylim(bottom=0, top=0.125)
 
     ax.set_ylabel("Latency | seconds")
     ax.legend()
@@ -295,9 +310,9 @@ def main():
     mpl.rcParams['pdf.fonttype'] = 42
 
     # read file
-    with open("eval-results-5.json") as f:
+    with open("eval-results-4.json") as f:
         data = json.load(f)
-    with open("eval-disk-speed-results-6.json") as f:
+    with open("eval-disk-speed-results-7.json") as f:
         disk_speed_data = json.load(f)
 
     plot_insertion_rate_by_nr_threads(data["num_threads"], "octree_index")
@@ -313,6 +328,7 @@ def main():
     plot_insertion_rate_by_cache_size(data["max_cache_size"], "sensor_pos_index")
     plot_latency_by_cache_size(data["max_cache_size"], "sensor_pos_index")
     plot_insertion_rate_by_node_size(data["max_node_size"])
+    plot_query_time_by_node_size(data["max_node_size"])
     plot_latency_by_node_size(data["max_node_size"])
     plot_compare_insertion_rate(data["default"][0])
     plot_compare_latency(data["default"][0])

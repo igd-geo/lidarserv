@@ -503,7 +503,7 @@ fn update_query(
     // query
     let query = mini_mno::Query {
         camera: camera.clone(),
-        min_screen_point_distance: 2.5,
+        min_screen_point_distance: 2.0,
     };
     let query_result = octree.query(query);
 

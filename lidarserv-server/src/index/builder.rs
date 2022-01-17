@@ -127,7 +127,7 @@ fn build_sensor_position_index(
         coordinate_system,
         max_lod: LodLevel::from_level(10), // todo config for this
         max_delay: Duration::from_secs(1), // todo config for this
-        coarse_lod_steps: 3,               // todo config for this
+        coarse_lod_steps: 1,               // todo config for this
     };
     let spi = SensorPosIndex::new(params);
 

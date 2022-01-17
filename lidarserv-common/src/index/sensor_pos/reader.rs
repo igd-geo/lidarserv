@@ -756,7 +756,8 @@ where
                 .iter()
                 .filter(|p| {
                     node_bounds.contains(p.position())
-                    //sensor_pos_bounds.contains(&p.attribute::<SensorPositionAttribute<Pos>>().0)
+                        && sensor_pos_bounds
+                            .contains(&p.attribute::<SensorPositionAttribute<Pos>>().0)
                 })
                 .cloned()
                 .collect::<Vec<_>>()
