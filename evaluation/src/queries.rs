@@ -71,7 +71,7 @@ pub fn preset_query_3() -> ViewFrustumQuery {
     )
 }
 
-pub fn preset_query_4() -> BoundingBoxQuery<i32> {
+pub fn preset_query_4() -> BoundingBoxQuery {
     BoundingBoxQuery::new(
         AABB::new(
             Point3::new(-30000, 10000, -20000),

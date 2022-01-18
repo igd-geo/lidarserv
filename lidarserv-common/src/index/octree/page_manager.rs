@@ -1,54 +1,58 @@
 use crate::geometry::bounding_box::OptionAABB;
 use crate::geometry::grid::LeveledGridCell;
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, CoordinateSystem, Position};
+use crate::geometry::position::{I32CoordinateSystem, I32Position, Position};
 use crate::geometry::sampling::Sampling;
 use crate::index::octree::grid_cell_directory::GridCellDirectory;
 use crate::las::{Las, LasReadWrite, ReadLasError};
 use crate::lru_cache::pager::{CacheLoadError, IoError, PageFileHandle, PageLoader, PageManager};
-use nalgebra::Scalar;
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-type SharedNodeResult<Sampl, Point, Comp, CSys> =
-    Result<Arc<Node<Sampl, Point, Comp, CSys>>, ReadLasError>;
+type SharedNodeResult<Sampl, Point> = Result<Arc<Node<Sampl, Point>>, ReadLasError>;
 
-pub struct Page<Sampl, Point, Comp: Scalar, CSys> {
+pub struct OctreePageLoader<LasL, Page> {
+    loader: LasL,
+    base_path: PathBuf,
+    _phantom: PhantomData<fn(&Page) -> Page>,
+}
+
+pub struct OctreeFileHandle<LasL, Page> {
+    file_name: PathBuf,
+    loader: LasL,
+    _phantom: PhantomData<fn(&Page) -> Page>,
+}
+
+pub struct Page<Sampl, Point> {
     binary: RwLock<Option<Arc<Vec<u8>>>>,
-    node: RwLock<Option<SharedNodeResult<Sampl, Point, Comp, CSys>>>,
+    node: RwLock<Option<SharedNodeResult<Sampl, Point>>>,
 }
 
 #[derive(Clone)]
-pub struct Node<Sampl, Point, Comp: Scalar, CSys> {
+pub struct Node<Sampl, Point> {
     pub sampling: Sampl,
     pub bogus_points: Vec<Point>,
-    pub bounding_box: OptionAABB<Comp>,
-    pub coordinate_system: CSys,
+    pub bounding_box: OptionAABB<i32>,
+    pub coordinate_system: I32CoordinateSystem,
 }
 
-impl<Sampl, Point, Comp, CSys> Default for Page<Sampl, Point, Comp, CSys>
+impl<Sampl, Point> Default for Page<Sampl, Point>
 where
-    Point: PointType + Clone,
-    Point::Position: Position<Component = Comp>,
-    Comp: Component,
+    Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
-    CSys: Clone + PartialEq,
 {
     fn default() -> Self {
         Page::from_binary(vec![])
     }
 }
 
-impl<Sampl, Point, Comp, Pos, CSys> Page<Sampl, Point, Comp, CSys>
+impl<Sampl, Point> Page<Sampl, Point>
 where
-    Point: PointType<Position = Pos> + Clone,
-    Pos: Position<Component = Comp>,
-    Comp: Component,
+    Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
-    CSys: Clone + PartialEq,
 {
     pub fn from_binary(data: Vec<u8>) -> Self {
         Page {
@@ -57,7 +61,7 @@ where
         }
     }
 
-    pub fn from_node(node: Node<Sampl, Point, Comp, CSys>) -> Self {
+    pub fn from_node(node: Node<Sampl, Point>) -> Self {
         Page {
             binary: RwLock::new(None),
             node: RwLock::new(Some(Ok(Arc::new(node)))),
@@ -66,7 +70,7 @@ where
 
     pub fn get_binary<LasL>(&self, loader: &LasL) -> Arc<Vec<u8>>
     where
-        LasL: LasReadWrite<Point, CSys>,
+        LasL: LasReadWrite<Point>,
     {
         // try getting existing
         {
@@ -108,7 +112,7 @@ where
 
     pub fn get_points<LasL>(&self, loader: &LasL) -> Result<Vec<Point>, ReadLasError>
     where
-        LasL: LasReadWrite<Point, CSys>,
+        LasL: LasReadWrite<Point>,
     {
         // try to get points from node
         {
@@ -133,10 +137,10 @@ where
         &self,
         loader: &LasL,
         make_sampling: F,
-        coordinate_system: &CSys,
-    ) -> Result<Arc<Node<Sampl, Point, Comp, CSys>>, ReadLasError>
+        coordinate_system: &I32CoordinateSystem,
+    ) -> Result<Arc<Node<Sampl, Point>>, ReadLasError>
     where
-        LasL: LasReadWrite<Point, CSys>,
+        LasL: LasReadWrite<Point>,
         F: FnOnce() -> Sampl,
     {
         // try getting existing
@@ -213,22 +217,10 @@ where
         *self.binary.get_mut().unwrap() = Some(Arc::new(binary));
     }
 
-    pub fn set_node(&mut self, node: Node<Sampl, Point, Comp, CSys>) {
+    pub fn set_node(&mut self, node: Node<Sampl, Point>) {
         self.binary = RwLock::new(None);
         self.node = RwLock::new(Some(Ok(Arc::new(node))));
     }
-}
-
-pub struct OctreePageLoader<LasL, Page> {
-    loader: LasL,
-    base_path: PathBuf,
-    _phantom: PhantomData<fn(&Page) -> Page>,
-}
-
-pub struct OctreeFileHandle<LasL, Page> {
-    file_name: PathBuf,
-    loader: LasL,
-    _phantom: PhantomData<fn(&Page) -> Page>,
 }
 
 impl<LasL, Page> OctreePageLoader<LasL, Page> {
@@ -266,17 +258,13 @@ where
     }
 }
 
-impl<LasL, CSys, Point, Sampl, Pos, Comp> PageFileHandle
-    for OctreeFileHandle<LasL, Page<Sampl, Point, Comp, CSys>>
+impl<LasL, Point, Sampl> PageFileHandle for OctreeFileHandle<LasL, Page<Sampl, Point>>
 where
-    LasL: LasReadWrite<Point, CSys>,
-    CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq,
-    Point: PointType<Position = Pos> + Clone,
+    LasL: LasReadWrite<Point>,
+    Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
-    Pos: Position<Component = Comp>,
-    Comp: Component,
 {
-    type Data = Page<Sampl, Point, Comp, CSys>;
+    type Data = Page<Sampl, Point>;
 
     fn load(&mut self) -> Result<Self::Data, CacheLoadError> {
         let mut file = File::open(&self.file_name)?;
@@ -295,10 +283,10 @@ where
     }
 }
 
-pub type LasPageManager<LasL, Sampl, Point, Comp, CSys> = PageManager<
-    OctreePageLoader<LasL, Page<Sampl, Point, Comp, CSys>>,
+pub type LasPageManager<LasL, Sampl, Point> = PageManager<
+    OctreePageLoader<LasL, Page<Sampl, Point>>,
     LeveledGridCell,
-    Page<Sampl, Point, Comp, CSys>,
-    OctreeFileHandle<LasL, Page<Sampl, Point, Comp, CSys>>,
+    Page<Sampl, Point>,
+    OctreeFileHandle<LasL, Page<Sampl, Point>>,
     GridCellDirectory,
 >;

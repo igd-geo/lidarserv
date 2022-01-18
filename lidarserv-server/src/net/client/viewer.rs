@@ -176,7 +176,7 @@ where
                 for (insert_node_id, insert_node_las_segments) in nodes {
                     let mut points = Vec::new();
                     for las_segment in insert_node_las_segments {
-                        let las: Las<Vec<LasPoint>, _, _> = las_reader
+                        let las: Las<Vec<LasPoint>> = las_reader
                             .read_las(Cursor::new(las_segment.0.as_ref()))
                             .map_err(|e| {
                                 LidarServerError::Protocol(format!(

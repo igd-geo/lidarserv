@@ -1,11 +1,9 @@
 //! rhymes with "mate tea"
 
 use crate::geometry::bounding_box::AABB;
-use crate::geometry::grid::{GridCell, GridHierarchy, LeveledGridCell, LodLevel};
-use crate::geometry::position::{Component, Position};
+use crate::geometry::grid::{GridCell, I32GridHierarchy, LeveledGridCell, LodLevel};
+use crate::geometry::position::{Component, I32Position, Position};
 use crate::index::sensor_pos::{Replacement, Update};
-use crate::nalgebra::Scalar;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -16,20 +14,20 @@ use std::path::Path;
 use thiserror::Error;
 
 #[derive(Debug, Clone)]
-pub struct MetaTree<GridH, Comp: Scalar> {
-    sensor_grid_hierarchy: GridH,
-    lods: Vec<MetaTreeLod<Comp>>,
+pub struct MetaTree {
+    sensor_grid_hierarchy: I32GridHierarchy,
+    lods: Vec<MetaTreeLod>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MetaTreeLod<Comp: Scalar> {
-    depth: Vec<HashMap<GridCell, Node<Comp>>>,
+pub struct MetaTreeLod {
+    depth: Vec<HashMap<GridCell, Node>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Node<Comp: Scalar> {
+pub struct Node {
     pub is_leaf: bool,
-    pub bounds: AABB<Comp>,
+    pub bounds: AABB<i32>,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -39,8 +37,8 @@ pub struct MetaTreeNodeId {
 }
 
 #[derive(Debug, Clone)]
-pub struct SensorPositionQueryResult<Comp: Scalar> {
-    min_bounds: AABB<Comp>,
+pub struct SensorPositionQueryResult {
+    min_bounds: AABB<i32>,
     fallback_node: LeveledGridCell,
     node_ids: Vec<LeveledGridCell>,
 }
@@ -53,8 +51,8 @@ pub enum MetaTreeIoError {
     SerDe(#[source] Box<dyn StdError + Send + Sync>),
 }
 
-impl<GridH, Comp: Scalar> MetaTree<GridH, Comp> {
-    pub fn new(sensor_grid_hierarchy: GridH) -> Self {
+impl MetaTree {
+    pub fn new(sensor_grid_hierarchy: I32GridHierarchy) -> Self {
         MetaTree {
             sensor_grid_hierarchy,
             lods: vec![],
@@ -138,7 +136,7 @@ impl<GridH, Comp: Scalar> MetaTree<GridH, Comp> {
             .flatten()
     }
 
-    pub fn get(&self, node_id: &MetaTreeNodeId) -> Option<&Node<Comp>> {
+    pub fn get(&self, node_id: &MetaTreeNodeId) -> Option<&Node> {
         let lod = match self.lods.get(node_id.lod.level() as usize) {
             None => return None,
             Some(v) => v,
@@ -150,15 +148,12 @@ impl<GridH, Comp: Scalar> MetaTree<GridH, Comp> {
         depth.get(&node_id.node.pos)
     }
 
-    pub fn sensor_grid_hierarchy(&self) -> &GridH {
+    pub fn sensor_grid_hierarchy(&self) -> &I32GridHierarchy {
         &self.sensor_grid_hierarchy
     }
 }
 
-impl<GridH, Comp> MetaTree<GridH, Comp>
-where
-    Comp: Scalar + Serialize + DeserializeOwned,
-{
+impl MetaTree {
     pub fn write_to_file(&self, file_name: &Path) -> Result<(), MetaTreeIoError> {
         let file = File::create(file_name)?;
 
@@ -169,7 +164,7 @@ where
 
     pub fn load_from_file(
         file_name: &Path,
-        sensor_grid_hierarchy: GridH,
+        sensor_grid_hierarchy: I32GridHierarchy,
     ) -> Result<Self, MetaTreeIoError> {
         if !file_name.exists() {
             return Ok(Self::new(sensor_grid_hierarchy));
@@ -186,13 +181,8 @@ where
     }
 }
 
-impl<GridH, Comp, Pos> MetaTree<GridH, Comp>
-where
-    Comp: Component,
-    GridH: GridHierarchy<Component = Comp, Position = Pos>,
-    Pos: Position<Component = Comp>,
-{
-    pub fn node_center(&self, node: &MetaTreeNodeId) -> Pos where {
+impl MetaTree {
+    pub fn node_center(&self, node: &MetaTreeNodeId) -> I32Position where {
         let aabb = self
             .sensor_grid_hierarchy
             .get_leveled_cell_bounds(&node.node);
@@ -202,9 +192,9 @@ where
     /// Queries, which nodes should be loaded for a given sensor position.
     pub fn query_sensor_position(
         &self,
-        sensor_pos: &Pos,
+        sensor_pos: &I32Position,
         previous_split_levels: &[LodLevel],
-    ) -> SensorPositionQueryResult<Comp> {
+    ) -> SensorPositionQueryResult {
         // Node to start inserting points into, if a lod is completely empty.
         let lod0 = LodLevel::base();
 
@@ -262,7 +252,7 @@ where
             .is_leaf = false;
     }
 
-    pub fn set_node_aabb(&mut self, node: &MetaTreeNodeId, aabb: &AABB<Comp>) {
+    pub fn set_node_aabb(&mut self, node: &MetaTreeNodeId, aabb: &AABB<i32>) {
         let lod_level = node.lod.level() as usize;
         let depth_level = node.node.lod.level() as usize;
         while lod_level >= self.lods.len() {
@@ -301,7 +291,7 @@ where
         }
     }
 
-    pub(super) fn apply_update(&mut self, update: &Update<Comp>) {
+    pub(super) fn apply_update(&mut self, update: &Update) {
         for Replacement {
             replace_with,
             bounds,
@@ -313,20 +303,14 @@ where
     }
 }
 
-impl<Comp> MetaTreeLod<Comp>
-where
-    Comp: Component,
-{
-    fn query_sensor_position<Pos, GridH>(
+impl MetaTreeLod {
+    fn query_sensor_position(
         &self,
-        sensor_pos: &Pos,
-        sensor_grid_hierarchy: &GridH,
+        sensor_pos: &I32Position,
+        sensor_grid_hierarchy: &I32GridHierarchy,
         min_level: &LodLevel,
     ) -> LeveledGridCell
-    where
-        Pos: Position<Component = Comp>,
-        GridH: GridHierarchy<Component = Comp, Position = Pos>,
-    {
+where {
         for (depth, nodes) in self.depth.iter().enumerate() {
             let cell = sensor_grid_hierarchy
                 .level(&LodLevel::from_level(depth as u16))
@@ -352,14 +336,11 @@ where
     }
 }
 
-impl<Comp> SensorPositionQueryResult<Comp>
-where
-    Comp: Component,
-{
+impl SensorPositionQueryResult {
     /// Returns the bounds for the sensor position that this query result is valid for.
     /// This query result can be used, as long as the sensor stays within this bounding box.
     #[inline]
-    pub fn min_bounds(&self) -> &AABB<Comp> {
+    pub fn min_bounds(&self) -> &AABB<i32> {
         &self.min_bounds
     }
 
@@ -420,10 +401,7 @@ impl MetaTreeNodeId {
 #[cfg(test)]
 mod tests {
     use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
-    use crate::geometry::grid::{
-        F64GridHierarchy, GridCell, GridHierarchy, LeveledGridCell, LodLevel,
-    };
-    use crate::geometry::position::F64Position;
+    use crate::geometry::grid::{GridCell, I32GridHierarchy, LeveledGridCell, LodLevel};
     use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeLod, MetaTreeNodeId, Node};
     use nalgebra::Point3;
     use std::collections::HashMap;
@@ -433,7 +411,7 @@ mod tests {
     fn query() {
         let node = Node {
             is_leaf: false,
-            bounds: OptionAABB::new(Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 1.0, 1.0))
+            bounds: OptionAABB::new(Point3::new(0, 0, 0), Point3::new(1, 1, 1))
                 .into_aabb()
                 .unwrap(),
         };
@@ -475,32 +453,32 @@ mod tests {
             ],
         };
 
-        let grid_hierarchy = F64GridHierarchy::new(1.0);
-        let p1: F64Position = grid_hierarchy
+        let grid_hierarchy = I32GridHierarchy::new(0);
+        let p1 = grid_hierarchy
             .get_leveled_cell_bounds(&LeveledGridCell {
                 lod: LodLevel::from_level(0),
                 pos: GridCell { x: 2, y: 0, z: 0 },
             })
             .center();
-        let p2: F64Position = grid_hierarchy
+        let p2 = grid_hierarchy
             .get_leveled_cell_bounds(&LeveledGridCell {
                 lod: LodLevel::from_level(0),
                 pos: GridCell { x: 1, y: 0, z: 0 },
             })
             .center();
-        let p3: F64Position = grid_hierarchy
+        let p3 = grid_hierarchy
             .get_leveled_cell_bounds(&LeveledGridCell {
                 lod: LodLevel::from_level(1),
                 pos: GridCell { x: 0, y: 1, z: 0 },
             })
             .center();
-        let p4: F64Position = grid_hierarchy
+        let p4 = grid_hierarchy
             .get_leveled_cell_bounds(&LeveledGridCell {
                 lod: LodLevel::from_level(1),
                 pos: GridCell { x: 1, y: 0, z: 0 },
             })
             .center();
-        let p5: F64Position = grid_hierarchy
+        let p5 = grid_hierarchy
             .get_leveled_cell_bounds(&LeveledGridCell {
                 lod: LodLevel::from_level(2),
                 pos: GridCell { x: 0, y: 0, z: 0 },
@@ -547,7 +525,7 @@ mod tests {
     #[test]
     fn set_node_aabb() {
         let mut t = MetaTree {
-            sensor_grid_hierarchy: F64GridHierarchy::new(1.0),
+            sensor_grid_hierarchy: I32GridHierarchy::new(0),
             lods: vec![],
         };
         t.set_node_aabb(
@@ -558,7 +536,7 @@ mod tests {
                     pos: GridCell { x: 5, y: 6, z: 9 },
                 },
             },
-            &OptionAABB::new(Point3::new(1.0, 1.0, 1.0), Point3::new(4.0, 4.0, 4.0))
+            &OptionAABB::new(Point3::new(1, 1, 1), Point3::new(4, 4, 4))
                 .into_aabb()
                 .unwrap(),
         );
@@ -570,48 +548,36 @@ mod tests {
                         GridCell { x: 0, y: 0, z: 1 },
                         Node {
                             is_leaf: false,
-                            bounds: OptionAABB::new(
-                                Point3::new(1.0, 1.0, 1.0),
-                                Point3::new(4.0, 4.0, 4.0)
-                            )
-                            .into_aabb()
-                            .unwrap()
+                            bounds: OptionAABB::new(Point3::new(1, 1, 1), Point3::new(4, 4, 4))
+                                .into_aabb()
+                                .unwrap()
                         }
                     )]),
                     HashMap::from_iter([(
                         GridCell { x: 1, y: 1, z: 2 },
                         Node {
                             is_leaf: false,
-                            bounds: OptionAABB::new(
-                                Point3::new(1.0, 1.0, 1.0),
-                                Point3::new(4.0, 4.0, 4.0)
-                            )
-                            .into_aabb()
-                            .unwrap()
+                            bounds: OptionAABB::new(Point3::new(1, 1, 1), Point3::new(4, 4, 4))
+                                .into_aabb()
+                                .unwrap()
                         }
                     )]),
                     HashMap::from_iter([(
                         GridCell { x: 2, y: 3, z: 4 },
                         Node {
                             is_leaf: false,
-                            bounds: OptionAABB::new(
-                                Point3::new(1.0, 1.0, 1.0),
-                                Point3::new(4.0, 4.0, 4.0)
-                            )
-                            .into_aabb()
-                            .unwrap()
+                            bounds: OptionAABB::new(Point3::new(1, 1, 1), Point3::new(4, 4, 4))
+                                .into_aabb()
+                                .unwrap()
                         }
                     )]),
                     HashMap::from_iter([(
                         GridCell { x: 5, y: 6, z: 9 },
                         Node {
                             is_leaf: true,
-                            bounds: OptionAABB::new(
-                                Point3::new(1.0, 1.0, 1.0),
-                                Point3::new(4.0, 4.0, 4.0)
-                            )
-                            .into_aabb()
-                            .unwrap()
+                            bounds: OptionAABB::new(Point3::new(1, 1, 1), Point3::new(4, 4, 4))
+                                .into_aabb()
+                                .unwrap()
                         }
                     )]),
                 ]
@@ -626,7 +592,7 @@ mod tests {
                     pos: GridCell { x: 7, y: 4, z: 9 },
                 },
             },
-            &OptionAABB::new(Point3::new(2.0, 2.0, 2.0), Point3::new(5.0, 5.0, 5.0))
+            &OptionAABB::new(Point3::new(2, 2, 2), Point3::new(5, 5, 5))
                 .into_aabb()
                 .unwrap(),
         );
@@ -639,24 +605,18 @@ mod tests {
                         GridCell { x: 0, y: 0, z: 1 },
                         Node {
                             is_leaf: false,
-                            bounds: OptionAABB::new(
-                                Point3::new(1.0, 1.0, 1.0),
-                                Point3::new(5.0, 5.0, 5.0)
-                            )
-                            .into_aabb()
-                            .unwrap()
+                            bounds: OptionAABB::new(Point3::new(1, 1, 1), Point3::new(5, 5, 5))
+                                .into_aabb()
+                                .unwrap()
                         }
                     )]),
                     HashMap::from_iter([(
                         GridCell { x: 1, y: 1, z: 2 },
                         Node {
                             is_leaf: false,
-                            bounds: OptionAABB::new(
-                                Point3::new(1.0, 1.0, 1.0),
-                                Point3::new(5.0, 5.0, 5.0)
-                            )
-                            .into_aabb()
-                            .unwrap()
+                            bounds: OptionAABB::new(Point3::new(1, 1, 1), Point3::new(5, 5, 5))
+                                .into_aabb()
+                                .unwrap()
                         }
                     ),]),
                     HashMap::from_iter([
@@ -664,24 +624,18 @@ mod tests {
                             GridCell { x: 2, y: 3, z: 4 },
                             Node {
                                 is_leaf: false,
-                                bounds: OptionAABB::new(
-                                    Point3::new(1.0, 1.0, 1.0),
-                                    Point3::new(4.0, 4.0, 4.0)
-                                )
-                                .into_aabb()
-                                .unwrap()
+                                bounds: OptionAABB::new(Point3::new(1, 1, 1), Point3::new(4, 4, 4))
+                                    .into_aabb()
+                                    .unwrap()
                             }
                         ),
                         (
                             GridCell { x: 3, y: 2, z: 4 },
                             Node {
                                 is_leaf: false,
-                                bounds: OptionAABB::new(
-                                    Point3::new(2.0, 2.0, 2.0),
-                                    Point3::new(5.0, 5.0, 5.0)
-                                )
-                                .into_aabb()
-                                .unwrap()
+                                bounds: OptionAABB::new(Point3::new(2, 2, 2), Point3::new(5, 5, 5))
+                                    .into_aabb()
+                                    .unwrap()
                             }
                         )
                     ]),
@@ -690,24 +644,18 @@ mod tests {
                             GridCell { x: 5, y: 6, z: 9 },
                             Node {
                                 is_leaf: true,
-                                bounds: OptionAABB::new(
-                                    Point3::new(1.0, 1.0, 1.0),
-                                    Point3::new(4.0, 4.0, 4.0)
-                                )
-                                .into_aabb()
-                                .unwrap()
+                                bounds: OptionAABB::new(Point3::new(1, 1, 1), Point3::new(4, 4, 4))
+                                    .into_aabb()
+                                    .unwrap()
                             }
                         ),
                         (
                             GridCell { x: 7, y: 4, z: 9 },
                             Node {
                                 is_leaf: true,
-                                bounds: OptionAABB::new(
-                                    Point3::new(2.0, 2.0, 2.0),
-                                    Point3::new(5.0, 5.0, 5.0)
-                                )
-                                .into_aabb()
-                                .unwrap()
+                                bounds: OptionAABB::new(Point3::new(2, 2, 2), Point3::new(5, 5, 5))
+                                    .into_aabb()
+                                    .unwrap()
                             }
                         )
                     ]),

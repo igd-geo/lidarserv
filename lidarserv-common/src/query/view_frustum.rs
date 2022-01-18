@@ -1,7 +1,9 @@
 use crate::geometry::bounding_box::{BaseAABB, AABB};
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, CoordinateSystem, F64Position, Position};
+use crate::geometry::position::{
+    CoordinateSystem, F64Position, I32CoordinateSystem, I32Position, Position,
+};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::query::Query;
 use nalgebra::{Matrix4, Point3, Vector3, Vector4};
@@ -57,13 +59,12 @@ impl ViewFrustumQuery {
     }
 }
 
-impl<Pos, Comp, CSys> Query<Pos, CSys> for ViewFrustumQuery
-where
-    Pos: Position<Component = Comp>,
-    Comp: Component,
-    CSys: CoordinateSystem<Position = Pos>,
-{
-    fn max_lod_position(&self, position: &Pos, coordinate_system: &CSys) -> Option<LodLevel> {
+impl Query for ViewFrustumQuery {
+    fn max_lod_position(
+        &self,
+        position: &I32Position,
+        coordinate_system: &I32CoordinateSystem,
+    ) -> Option<LodLevel> {
         // intersection test with view frustum
         let position = position.decode(coordinate_system);
         let position_hom = Vector4::new(position.x, position.y, position.z, 1.0);
@@ -93,7 +94,11 @@ where
         Some(LodLevel::from_level(lod_level))
     }
 
-    fn max_lod_area(&self, bounds: &AABB<Comp>, coordinate_system: &CSys) -> Option<LodLevel> {
+    fn max_lod_area(
+        &self,
+        bounds: &AABB<i32>,
+        coordinate_system: &I32CoordinateSystem,
+    ) -> Option<LodLevel> {
         // convert aabb to global coordinates
         let min = coordinate_system.decode_position(&bounds.min());
         let max = coordinate_system.decode_position(&bounds.max());

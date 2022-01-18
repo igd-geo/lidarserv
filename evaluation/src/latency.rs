@@ -19,9 +19,9 @@ pub fn measure_latency<I, Q>(
     config: &Config,
 ) -> serde_json::value::Value
 where
-    I: Index<Point, I32CoordinateSystem>,
+    I: Index<Point>,
     I::Reader: Send + 'static,
-    Q: Query<I32Position, I32CoordinateSystem> + Send + Sync + 'static,
+    Q: Query + Send + Sync + 'static,
 {
     // query thread
     let reader = index.reader(query);
@@ -117,7 +117,7 @@ where
 
 pub fn insertion_thread<I>(mut writer: I::Writer, points: &[Point], config: &Config) -> Vec<Instant>
 where
-    I: Index<Point, I32CoordinateSystem>,
+    I: Index<Point>,
 {
     let points_per_second: usize = config.pps;
     let frames_per_second: usize = config.fps;
@@ -159,12 +159,10 @@ where
 
 pub fn read_thread<I>(
     mut reader: I::Reader,
-    mut queries: crossbeam_channel::Receiver<
-        Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
-    >,
+    mut queries: crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
 ) -> Vec<HashMap<usize, Instant>>
 where
-    I: Index<Point, I32CoordinateSystem>,
+    I: Index<Point>,
 {
     let max_lod_level = 10;
     let mut receive_times = Vec::new();

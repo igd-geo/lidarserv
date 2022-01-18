@@ -1,6 +1,6 @@
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::LodLevel;
-use crate::geometry::position::{Component, Position};
+use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::query::Query;
 
 /// A trivial query type, that will always have an empty query result.
@@ -13,16 +13,20 @@ impl EmptyQuery {
     }
 }
 
-impl<Pos, Comp, CSys> Query<Pos, CSys> for EmptyQuery
-where
-    Pos: Position<Component = Comp>,
-    Comp: Component,
-{
-    fn max_lod_position(&self, _position: &Pos, _coordinate_system: &CSys) -> Option<LodLevel> {
+impl Query for EmptyQuery {
+    fn max_lod_position(
+        &self,
+        _position: &I32Position,
+        _coordinate_system: &I32CoordinateSystem,
+    ) -> Option<LodLevel> {
         None
     }
 
-    fn max_lod_area(&self, _bounds: &AABB<Comp>, _coordinate_system: &CSys) -> Option<LodLevel> {
+    fn max_lod_area(
+        &self,
+        _bounds: &AABB<i32>,
+        _coordinate_system: &I32CoordinateSystem,
+    ) -> Option<LodLevel> {
         None
     }
 }

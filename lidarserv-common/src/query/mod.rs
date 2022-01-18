@@ -6,46 +6,48 @@ pub mod view_frustum;
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
-use crate::geometry::position::Position;
+use crate::geometry::position::{I32CoordinateSystem, I32Position};
 
-pub trait Query<Pos, CSys>
-where
-    Pos: Position,
-{
-    fn max_lod_position(&self, position: &Pos, coordinate_system: &CSys) -> Option<LodLevel>;
+pub trait Query {
+    fn max_lod_position(
+        &self,
+        position: &I32Position,
+        coordinate_system: &I32CoordinateSystem,
+    ) -> Option<LodLevel>;
 
     fn max_lod_area(
         &self,
-        bounds: &AABB<Pos::Component>,
-        coordinate_system: &CSys,
+        bounds: &AABB<i32>,
+        coordinate_system: &I32CoordinateSystem,
     ) -> Option<LodLevel>;
 }
 
-pub trait QueryExt<Pos, CSys>
-where
-    Pos: Position,
-{
+pub trait QueryExt {
     fn matches_node(
         &self,
-        bounds: &AABB<Pos::Component>,
-        coordinate_system: &CSys,
+        bounds: &AABB<i32>,
+        coordinate_system: &I32CoordinateSystem,
         lod: &LodLevel,
     ) -> bool;
 
-    fn matches_point<Point>(&self, point: &Point, coordinate_system: &CSys, lod: &LodLevel) -> bool
+    fn matches_point<Point>(
+        &self,
+        point: &Point,
+        coordinate_system: &I32CoordinateSystem,
+        lod: &LodLevel,
+    ) -> bool
     where
-        Point: PointType<Position = Pos>;
+        Point: PointType<Position = I32Position>;
 }
 
-impl<Pos, Q, CSys> QueryExt<Pos, CSys> for Q
+impl<Q> QueryExt for Q
 where
-    Pos: Position,
-    Q: Query<Pos, CSys> + ?Sized,
+    Q: Query + ?Sized,
 {
     fn matches_node(
         &self,
-        bounds: &AABB<Pos::Component>,
-        coordinate_system: &CSys,
+        bounds: &AABB<i32>,
+        coordinate_system: &I32CoordinateSystem,
         lod: &LodLevel,
     ) -> bool {
         match self.max_lod_area(bounds, coordinate_system) {
@@ -54,9 +56,14 @@ where
         }
     }
 
-    fn matches_point<Point>(&self, point: &Point, coordinate_system: &CSys, lod: &LodLevel) -> bool
+    fn matches_point<Point>(
+        &self,
+        point: &Point,
+        coordinate_system: &I32CoordinateSystem,
+        lod: &LodLevel,
+    ) -> bool
     where
-        Point: PointType<Position = Pos>,
+        Point: PointType<Position = I32Position>,
     {
         match self.max_lod_position(point.position(), coordinate_system) {
             None => false,

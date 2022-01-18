@@ -1,22 +1,21 @@
-use crate::geometry::grid::{GridHierarchy, LeveledGridCell, LodLevel};
+use crate::geometry::grid::{LeveledGridCell, LodLevel};
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, CoordinateSystem, Position};
+use crate::geometry::position::I32Position;
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
 use crate::index::{Node, NodeId, Reader, Update};
 use crate::las::LasReadWrite;
 use crate::lru_cache::pager::PageDirectory;
-use crate::nalgebra::Scalar;
 use crate::query::{Query, QueryExt};
 use crossbeam_channel::Receiver;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-pub struct OctreeReader<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF, Pos> {
-    pub(super) inner: Arc<Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>>,
+pub struct OctreeReader<Point, LasL, Sampl, SamplF> {
+    pub(super) inner: Arc<Inner<Point, LasL, Sampl, SamplF>>,
     update_cnt: u64,
-    query: Box<dyn Query<Pos, CSys> + Send + Sync>,
+    query: Box<dyn Query + Send + Sync>,
     changed_nodes_receiver: crossbeam_channel::Receiver<LeveledGridCell>,
     loaded: HashSet<LeveledGridCell>,
     frontier: HashMap<LeveledGridCell, FrontierElement>,
@@ -32,24 +31,21 @@ struct FrontierElement {
     exists: bool,
 }
 
-impl<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF, Pos>
-    OctreeReader<Point, GridH, LasL, Sampl, Comp, CSys, SamplF, Pos>
+pub struct OctreePage<Sampl, Point, LasL> {
+    page: Arc<Page<Sampl, Point>>,
+    loader: LasL,
+}
+
+impl<Point, LasL, Sampl, SamplF> OctreeReader<Point, LasL, Sampl, SamplF>
 where
-    Point: PointType<Position = Pos> + Clone,
-    GridH: GridHierarchy<Component = Comp, Position = Pos>,
-    LasL: LasReadWrite<Point, CSys> + Clone,
+    Point: PointType<Position = I32Position> + Clone,
+    LasL: LasReadWrite<Point> + Clone,
     Sampl: Sampling<Point = Point>,
-    Comp: Component,
-    CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
-    Pos: Position<Component = Comp>,
 {
-    pub(super) fn new<Q>(
-        query: Q,
-        inner: Arc<Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>>,
-    ) -> Self
+    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<Point, LasL, Sampl, SamplF>>) -> Self
     where
-        Q: Query<Pos, CSys> + Send + Sync + 'static,
+        Q: Query + Send + Sync + 'static,
     {
         // add subscription to changes
         let changed_nodes_receiver = {
@@ -98,8 +94,8 @@ where
 
     fn cell_matches_query_impl(
         cell: &LeveledGridCell,
-        query: &Box<dyn Query<Pos, CSys> + Send + Sync>,
-        inner: &Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>,
+        query: &Box<dyn Query + Send + Sync>,
+        inner: &Inner<Point, LasL, Sampl, SamplF>,
     ) -> bool {
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
         let lod = cell.lod;
@@ -178,7 +174,7 @@ where
         }
     }
 
-    pub fn set_query(&mut self, q: Box<dyn Query<Pos, CSys> + Send + Sync + 'static>) {
+    pub fn set_query(&mut self, q: Box<dyn Query + Send + Sync + 'static>) {
         self.query = q;
 
         {
@@ -221,7 +217,7 @@ where
             .collect();
     }
 
-    pub fn reload_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point, Comp, CSys>>)> {
+    pub fn reload_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>)> {
         let reload = match self.reload_queue.iter().min_by_key(|&(_, v)| *v) {
             None => return None,
             Some((k, _)) => *k,
@@ -231,7 +227,7 @@ where
         Some((reload, node))
     }
 
-    pub fn load_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point, Comp, CSys>>)> {
+    pub fn load_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>)> {
         // get a node to load
         let load = match self.load_queue.iter().next() {
             None => return None,
@@ -297,10 +293,8 @@ where
                     .map(|e| !e.matches_query)
                     .unwrap_or(false)
             });
-            if children_are_leaves {
-                if !self.cell_matches_query(&parent) {
-                    self.remove_queue.insert(parent);
-                }
+            if children_are_leaves && !self.cell_matches_query(&parent) {
+                self.remove_queue.insert(parent);
             }
         }
 
@@ -314,22 +308,17 @@ where
     }
 }
 
-impl<Point: PointType, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF, Pos> Reader<Point, CSys>
-    for OctreeReader<Point, GridH, LasL, Sampl, Comp, CSys, SamplF, Pos>
+impl<Point, LasL, Sampl, SamplF> Reader<Point> for OctreeReader<Point, LasL, Sampl, SamplF>
 where
-    Point: PointType<Position = Pos> + Clone,
-    GridH: GridHierarchy<Component = Comp, Position = Pos>,
-    LasL: LasReadWrite<Point, CSys> + Clone,
+    Point: PointType<Position = I32Position> + Clone,
+    LasL: LasReadWrite<Point> + Clone,
     Sampl: Sampling<Point = Point>,
-    Comp: Component,
-    CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
-    Pos: Position<Component = Comp>,
 {
     type NodeId = LeveledGridCell;
-    type Node = OctreePage<Sampl, Point, Comp, CSys, LasL>;
+    type Node = OctreePage<Sampl, Point, LasL>;
 
-    fn set_query<Q: Query<Point::Position, CSys> + 'static + Send + Sync>(&mut self, query: Q) {
+    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q) {
         OctreeReader::set_query(self, Box::new(query))
     }
 
@@ -337,10 +326,7 @@ where
         OctreeReader::update(self)
     }
 
-    fn blocking_update(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query<Point::Position, CSys> + Send + Sync>>,
-    ) -> bool {
+    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
         // make sure we've go the most recent query
         if let Some(q) = queries.try_iter().last() {
             self.set_query(q);
@@ -385,21 +371,13 @@ where
     }
 }
 
-pub struct OctreePage<Sampl, Point, Comp: Scalar, CSys, LasL> {
-    page: Arc<Page<Sampl, Point, Comp, CSys>>,
-    loader: LasL,
-}
-
-impl<Sampl, Point, Comp, CSys, Pos, LasL> OctreePage<Sampl, Point, Comp, CSys, LasL>
+impl<Sampl, Point, LasL> OctreePage<Sampl, Point, LasL>
 where
-    Point: PointType<Position = Pos> + Clone,
-    Pos: Position<Component = Comp>,
-    Comp: Component,
+    Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
-    CSys: Clone + PartialEq,
-    LasL: LasReadWrite<Point, CSys> + Clone,
+    LasL: LasReadWrite<Point> + Clone,
 {
-    pub fn from_page(page: Arc<Page<Sampl, Point, Comp, CSys>>, loader: &LasL) -> Self {
+    pub fn from_page(page: Arc<Page<Sampl, Point>>, loader: &LasL) -> Self {
         OctreePage {
             page,
             loader: loader.clone(),
@@ -407,14 +385,11 @@ where
     }
 }
 
-impl<Sampl, Point, Comp, CSys, Pos, LasL> Node for OctreePage<Sampl, Point, Comp, CSys, LasL>
+impl<Sampl, Point, LasL> Node for OctreePage<Sampl, Point, LasL>
 where
-    Point: PointType<Position = Pos> + Clone,
-    Pos: Position<Component = Comp>,
-    Comp: Component,
+    Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
-    CSys: Clone + PartialEq,
-    LasL: LasReadWrite<Point, CSys> + Clone,
+    LasL: LasReadWrite<Point> + Clone,
 {
     fn las_files(&self) -> Vec<Arc<Vec<u8>>> {
         vec![self.page.get_binary(&self.loader)]

@@ -7,8 +7,6 @@ use crate::las::helpers::{
     get_header_info_i32, init_las_header, read_las_string, read_point_data_i32,
     write_point_data_i32,
 };
-use crate::nalgebra::Scalar;
-use crate::span;
 use crate::utils::thread_pool::Threads;
 use crossbeam_deque::{Steal, Worker};
 use crossbeam_utils::CachePadded;
@@ -19,13 +17,9 @@ use laz::record::{
     RecordCompressor, RecordDecompressor, SequentialPointRecordCompressor,
     SequentialPointRecordDecompressor,
 };
-use laz::{
-    LasZipCompressor, LasZipDecompressor, LasZipError, LazItemRecordBuilder, LazItemType, LazVlr,
-    LazVlrBuilder,
-};
+use laz::{LasZipCompressor, LasZipDecompressor, LasZipError, LazVlr, LazVlrBuilder};
 use nalgebra::Point3;
 use std::borrow::Borrow;
-use std::cmp;
 use std::fmt::Debug;
 use std::io::{Cursor, Error, Read, Seek, SeekFrom, Write};
 use std::sync::Arc;
@@ -78,22 +72,18 @@ impl From<las::Error> for ReadLasError {
 const BOGUS_POINTS_VLR_USER_ID: &str = "BOGUS_POINTS";
 const BOGUS_POINTS_VLR_RECORD_ID: u16 = 1337;
 
-pub struct Las<Points, Component: Scalar, CSys> {
+pub struct Las<Points> {
     pub points: Points,
-    pub bounds: OptionAABB<Component>,
+    pub bounds: OptionAABB<i32>,
     pub non_bogus_points: Option<u32>,
-    pub coordinate_system: CSys,
+    pub coordinate_system: I32CoordinateSystem,
 }
 
-pub trait LasReadWrite<Point, CSys>
+pub trait LasReadWrite<Point>
 where
-    Point: PointType,
+    Point: PointType<Position = I32Position>,
 {
-    fn write_las<W, It>(
-        &self,
-        las: Las<It, <Point::Position as Position>::Component, CSys>,
-        wr: W,
-    ) -> Result<(), WriteLasError>
+    fn write_las<W, It>(&self, las: Las<It>, wr: W) -> Result<(), WriteLasError>
     where
         W: Write + Seek + Send,
         It: Iterator + ExactSizeIterator,
@@ -101,7 +91,7 @@ where
 
     fn write_las_force_no_compression<W, It>(
         &self,
-        las: Las<It, <Point::Position as Position>::Component, CSys>,
+        las: Las<It>,
         wr: W,
     ) -> Result<(), WriteLasError>
     where
@@ -109,25 +99,18 @@ where
         It: Iterator + ExactSizeIterator,
         It::Item: Borrow<Point>;
 
-    fn write_las_par(
-        &self,
-        las: Las<&[Point], <Point::Position as Position>::Component, CSys>,
-        thread_pool: &mut Threads,
-    ) -> Vec<u8>
+    fn write_las_par(&self, las: Las<&[Point]>, thread_pool: &mut Threads) -> Vec<u8>
     where
         Point: Sync;
 
     #[allow(clippy::type_complexity)]
-    fn read_las<R: Read + Seek + Send>(
-        &self,
-        rd: R,
-    ) -> Result<Las<Vec<Point>, <Point::Position as Position>::Component, CSys>, ReadLasError>;
+    fn read_las<R: Read + Seek + Send>(&self, rd: R) -> Result<Las<Vec<Point>>, ReadLasError>;
 
     fn read_las_par(
         &self,
         data: &[u8],
         thread_pool: &mut Threads,
-    ) -> Result<Las<Vec<Point>, <Point::Position as Position>::Component, CSys>, ReadLasError>
+    ) -> Result<Las<Vec<Point>>, ReadLasError>
     where
         Point: Send;
 }
@@ -165,15 +148,11 @@ impl I32LasReadWrite {
     }
 }
 
-impl<Point> LasReadWrite<Point, I32CoordinateSystem> for I32LasReadWrite
+impl<Point> LasReadWrite<Point> for I32LasReadWrite
 where
     Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
 {
-    fn write_las<W, It>(
-        &self,
-        las: Las<It, i32, I32CoordinateSystem>,
-        mut wr: W,
-    ) -> Result<(), WriteLasError>
+    fn write_las<W, It>(&self, las: Las<It>, mut wr: W) -> Result<(), WriteLasError>
     where
         W: Write + Seek + Send,
         It: Iterator + ExactSizeIterator,
@@ -307,7 +286,7 @@ where
 
     fn write_las_force_no_compression<W, It>(
         &self,
-        las: Las<It, <Point::Position as Position>::Component, I32CoordinateSystem>,
+        las: Las<It>,
         wr: W,
     ) -> Result<(), WriteLasError>
     where
@@ -319,11 +298,7 @@ where
         me.write_las(las, wr)
     }
 
-    fn write_las_par(
-        &self,
-        las: Las<&[Point], <Point::Position as Position>::Component, I32CoordinateSystem>,
-        thread_pool: &mut Threads,
-    ) -> Vec<u8>
+    fn write_las_par(&self, las: Las<&[Point]>, thread_pool: &mut Threads) -> Vec<u8>
     where
         Point: Sync,
     {
@@ -588,7 +563,7 @@ where
     fn read_las<R: Read + Seek + Send>(
         &self,
         mut read: R,
-    ) -> Result<Las<Vec<Point>, i32, I32CoordinateSystem>, ReadLasError> {
+    ) -> Result<Las<Vec<Point>>, ReadLasError> {
         // read header
         let header = las::raw::Header::read_from(&mut read)?;
 
@@ -689,10 +664,7 @@ where
         &self,
         data: &[u8],
         thread_pool: &mut Threads,
-    ) -> Result<
-        Las<Vec<Point>, <Point::Position as Position>::Component, I32CoordinateSystem>,
-        ReadLasError,
-    >
+    ) -> Result<Las<Vec<Point>>, ReadLasError>
     where
         Point: Send,
     {

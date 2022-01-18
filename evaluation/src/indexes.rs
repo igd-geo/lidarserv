@@ -1,6 +1,6 @@
 use crate::{Config, Point};
-use lidarserv_common::geometry::grid::{I32Grid, I32GridHierarchy, LodLevel};
-use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position};
+use lidarserv_common::geometry::grid::{I32GridHierarchy, LodLevel};
+use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::{GridCenterSampling, GridCenterSamplingFactory};
 use lidarserv_common::index::octree::grid_cell_directory::GridCellDirectory;
 use lidarserv_common::index::octree::page_manager::OctreePageLoader;
@@ -10,29 +10,18 @@ use lidarserv_common::index::sensor_pos::meta_tree::MetaTree;
 use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
 use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
 use lidarserv_common::las::I32LasReadWrite;
-use lidarserv_server::index::point::LasPoint;
 use log::error;
 use std::path::PathBuf;
 use std::time::Duration;
 
 pub type I32SensorPosIndex = SensorPosIndex<
-    I32GridHierarchy,
-    GridCenterSamplingFactory<I32GridHierarchy, Point, I32Position, i32>,
-    i32,
+    GridCenterSamplingFactory<Point>,
     I32LasReadWrite,
-    I32CoordinateSystem,
     Point,
-    GridCenterSampling<I32Grid, Point, I32Position, i32>,
+    GridCenterSampling<Point>,
 >;
-pub type I32Octree = Octree<
-    Point,
-    I32GridHierarchy,
-    I32LasReadWrite,
-    GridCenterSampling<I32Grid, Point, I32Position, i32>,
-    i32,
-    I32CoordinateSystem,
-    GridCenterSamplingFactory<I32GridHierarchy, Point, I32Position, i32>,
->;
+pub type I32Octree =
+    Octree<Point, I32LasReadWrite, GridCenterSampling<Point>, GridCenterSamplingFactory<Point>>;
 
 pub fn create_sensor_pos_index(
     coordinate_system: I32CoordinateSystem,

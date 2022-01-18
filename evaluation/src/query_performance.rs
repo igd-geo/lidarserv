@@ -10,7 +10,7 @@ use std::time::Instant;
 
 pub fn measure_query_performance<I>(mut index: I) -> serde_json::value::Value
 where
-    I: Index<Point, I32CoordinateSystem>,
+    I: Index<Point>,
 {
     json!({
         "query_1": measure_one_query(&mut index, preset_query_1()),
@@ -21,8 +21,8 @@ where
 
 fn measure_one_query<I, Q>(index: &mut I, query: Q) -> serde_json::value::Value
 where
-    I: Index<Point, I32CoordinateSystem>,
-    Q: Query<I32Position, I32CoordinateSystem> + Send + Sync + 'static,
+    I: Index<Point>,
+    Q: Query + Send + Sync + 'static,
 {
     index.flush().unwrap();
     let las_loader = I32LasReadWrite::new(true);

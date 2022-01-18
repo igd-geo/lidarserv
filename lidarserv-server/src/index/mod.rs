@@ -32,8 +32,7 @@ pub struct CoordinateSystemMismatchError;
 
 pub struct IndexInfo<'a> {
     pub coordinate_system: &'a I32CoordinateSystem,
-    pub sampling_factory:
-        &'a GridCenterSamplingFactory<I32GridHierarchy, LasPoint, I32Position, i32>,
+    pub sampling_factory: &'a GridCenterSamplingFactory<LasPoint>,
 }
 
 /// object safe wrapper for a point cloud index, otherwise very similar to [lidarserv_common::index::Index].
@@ -59,9 +58,7 @@ pub type Node = (NodeId, NodeData);
 pub trait DynReader: Send + Sync {
     fn blocking_update(
         &mut self,
-        queries: &mut crossbeam_channel::Receiver<
-            Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
-        >,
+        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
     ) -> bool;
 
     fn load_one(&mut self) -> Option<Node>;
@@ -71,13 +68,10 @@ pub trait DynReader: Send + Sync {
 
 impl DynIndex
     for SensorPosIndex<
-        I32GridHierarchy,
-        GridCenterSamplingFactory<I32GridHierarchy, LasPoint, I32Position, i32>,
-        i32,
+        GridCenterSamplingFactory<LasPoint>,
         I32LasReadWrite,
-        I32CoordinateSystem,
         LasPoint,
-        GridCenterSampling<I32Grid, LasPoint, I32Position, i32>,
+        GridCenterSampling<LasPoint>,
     >
 {
     fn index_info(&self) -> IndexInfo {
@@ -102,7 +96,7 @@ impl DynIndex
     }
 }
 
-impl DynWriter for SensorPosWriter<LasPoint, I32CoordinateSystem> {
+impl DynWriter for SensorPosWriter<LasPoint> {
     fn insert_points(
         &mut self,
         points: Vec<LasPoint>,
@@ -118,25 +112,18 @@ impl DynWriter for SensorPosWriter<LasPoint, I32CoordinateSystem> {
 
 impl DynReader
     for SensorPosReader<
-        I32GridHierarchy,
-        GridCenterSamplingFactory<I32GridHierarchy, LasPoint, I32Position, i32>,
-        i32,
+        GridCenterSamplingFactory<LasPoint>,
         I32LasReadWrite,
-        I32CoordinateSystem,
-        I32Position,
         LasPoint,
-        GridCenterSampling<I32Grid, LasPoint, I32Position, i32>,
+        GridCenterSampling<LasPoint>,
     >
 {
-    fn blocking_update(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>>,
-    ) -> bool {
-        Reader::<LasPoint, _>::blocking_update(self, queries)
+    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
+        Reader::<LasPoint>::blocking_update(self, queries)
     }
 
     fn load_one(&mut self) -> Option<Node> {
-        Reader::<LasPoint, _>::load_one(self).map(|(node_id, node)| {
+        Reader::<LasPoint>::load_one(self).map(|(node_id, node)| {
             let node_id = meta_tree_node_id_to_proto_node_id(&node_id);
             let node_data = node.las_files();
             (node_id, node_data)
@@ -144,13 +131,13 @@ impl DynReader
     }
 
     fn remove_one(&mut self) -> Option<NodeId> {
-        Reader::<LasPoint, _>::remove_one(self)
+        Reader::<LasPoint>::remove_one(self)
             .as_ref()
             .map(meta_tree_node_id_to_proto_node_id)
     }
 
     fn update_one(&mut self) -> Option<(NodeId, Vec<Node>)> {
-        Reader::<LasPoint, _>::update_one(self).map(|(node_id, replacements)| {
+        Reader::<LasPoint>::update_one(self).map(|(node_id, replacements)| {
             let node_id = meta_tree_node_id_to_proto_node_id(&node_id);
             let replacements = replacements
                 .into_iter()
@@ -205,12 +192,9 @@ fn leveled_grid_cell_to_proto_node_id(grid_cell: &LeveledGridCell) -> NodeId {
 impl DynIndex
     for Octree<
         LasPoint,
-        I32GridHierarchy,
         I32LasReadWrite,
-        GridCenterSampling<I32Grid, LasPoint, I32Position, i32>,
-        i32,
-        I32CoordinateSystem,
-        GridCenterSamplingFactory<I32GridHierarchy, LasPoint, I32Position, i32>,
+        GridCenterSampling<LasPoint>,
+        GridCenterSamplingFactory<LasPoint>,
     >
 {
     fn index_info(&self) -> IndexInfo {
@@ -236,12 +220,7 @@ impl DynIndex
     }
 }
 
-impl DynWriter
-    for (
-        I32CoordinateSystem,
-        OctreeWriter<LasPoint, I32GridHierarchy>,
-    )
-{
+impl DynWriter for (I32CoordinateSystem, OctreeWriter<LasPoint>) {
     fn insert_points(
         &mut self,
         points: Vec<LasPoint>,
@@ -258,19 +237,12 @@ impl DynWriter
 impl DynReader
     for OctreeReader<
         LasPoint,
-        I32GridHierarchy,
         I32LasReadWrite,
-        GridCenterSampling<I32Grid, LasPoint, I32Position, i32>,
-        i32,
-        I32CoordinateSystem,
-        GridCenterSamplingFactory<I32GridHierarchy, LasPoint, I32Position, i32>,
-        I32Position,
+        GridCenterSampling<LasPoint>,
+        GridCenterSamplingFactory<LasPoint>,
     >
 {
-    fn blocking_update(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>>,
-    ) -> bool {
+    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
         Reader::blocking_update(self, queries)
     }
 

@@ -8,9 +8,9 @@ use lidarserv_common::las::{LasExtraBytes, LasPointAttributes};
 
 /// Point type for the lidar server.
 #[derive(Debug, Clone)]
-pub struct GenericPoint<Position> {
+pub struct GenericPoint<Position, SensorPos> {
     position: Position,
-    sensor_pos: SensorPositionAttribute<Position>,
+    sensor_pos: SensorPos,
     las_attributes: Box<LasPointAttributes>,
 }
 
@@ -19,14 +19,17 @@ pub struct GenericPoint<Position> {
 /// meaningful in the context of some coordinate system
 /// ([lidarserv_common::geometry::position::I32CoordinateSystem]), that will apply some scale
 /// and offset transformation.
-pub type LasPoint = GenericPoint<I32Position>;
+pub type LasPoint = GenericPoint<I32Position, SensorPositionAttribute>;
 
 /// Point format with f64 coordinates in global space.
-pub type GlobalPoint = GenericPoint<F64Position>;
+#[derive(Clone, Debug, Default)]
+pub struct GlobalSensorPositionAttribute(pub F64Position);
+pub type GlobalPoint = GenericPoint<F64Position, GlobalSensorPositionAttribute>;
 
-impl<Pos> PointType for GenericPoint<Pos>
+impl<Pos, T> PointType for GenericPoint<Pos, T>
 where
     Pos: Position + Default,
+    T: Default,
 {
     type Position = Pos;
 
@@ -43,20 +46,34 @@ where
     }
 }
 
-impl<Pos> WithAttr<SensorPositionAttribute<Pos>> for GenericPoint<Pos>
+impl<Pos> WithAttr<GlobalSensorPositionAttribute>
+    for GenericPoint<Pos, GlobalSensorPositionAttribute>
 where
     Pos: Position,
 {
-    fn value(&self) -> &SensorPositionAttribute<Pos> {
+    fn value(&self) -> &GlobalSensorPositionAttribute {
         &self.sensor_pos
     }
 
-    fn set_value(&mut self, new_value: SensorPositionAttribute<Pos>) {
+    fn set_value(&mut self, new_value: GlobalSensorPositionAttribute) {
         self.sensor_pos = new_value;
     }
 }
 
-impl<Pos> WithAttr<LasPointAttributes> for GenericPoint<Pos> {
+impl<Pos> WithAttr<SensorPositionAttribute> for GenericPoint<Pos, SensorPositionAttribute>
+where
+    Pos: Position,
+{
+    fn value(&self) -> &SensorPositionAttribute {
+        &self.sensor_pos
+    }
+
+    fn set_value(&mut self, new_value: SensorPositionAttribute) {
+        self.sensor_pos = new_value;
+    }
+}
+
+impl<Pos, T> WithAttr<LasPointAttributes> for GenericPoint<Pos, T> {
     fn value(&self) -> &LasPointAttributes {
         self.las_attributes.as_ref()
     }
@@ -67,7 +84,7 @@ impl<Pos> WithAttr<LasPointAttributes> for GenericPoint<Pos> {
 }
 
 impl LasExtraBytes for LasPoint {
-    const NR_EXTRA_BYTES: usize = SensorPositionAttribute::<I32Position>::NR_EXTRA_BYTES;
+    const NR_EXTRA_BYTES: usize = SensorPositionAttribute::NR_EXTRA_BYTES;
 
     fn get_extra_bytes(&self) -> Vec<u8> {
         self.sensor_pos.get_extra_bytes()
@@ -86,7 +103,7 @@ impl GlobalPoint {
     ) -> Result<LasPoint, CoordinateSystemError> {
         let GlobalPoint {
             position,
-            sensor_pos: SensorPositionAttribute(sensor_position),
+            sensor_pos: GlobalSensorPositionAttribute(sensor_position),
             las_attributes,
         } = self;
         let global = F64CoordinateSystem::new();
@@ -116,7 +133,7 @@ impl GlobalPoint {
             .unwrap();
         GlobalPoint {
             position,
-            sensor_pos: SensorPositionAttribute(sensor_position),
+            sensor_pos: GlobalSensorPositionAttribute(sensor_position),
             las_attributes,
         }
     }

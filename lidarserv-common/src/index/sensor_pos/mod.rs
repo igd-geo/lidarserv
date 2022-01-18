@@ -6,10 +6,10 @@ pub mod reader;
 pub mod writer;
 
 use crate::geometry::bounding_box::AABB;
-use crate::geometry::grid::{GridHierarchy, LodLevel};
+use crate::geometry::grid::LodLevel;
 use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{Component, Position};
-use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
+use crate::geometry::position::{I32CoordinateSystem, I32Position};
+use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::PageManager;
 use crate::index::sensor_pos::point::SensorPositionAttribute;
@@ -18,84 +18,71 @@ use crate::index::sensor_pos::writer::SensorPosWriter;
 use crate::index::Index;
 use crate::las::LasReadWrite;
 use crate::lru_cache::pager::IoError;
-use crate::nalgebra::Scalar;
 use crate::query::Query;
 pub use las::Point as LasPoint;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use std::error::Error;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-pub struct SensorPosIndex<GridH, SamplF, Comp: Scalar, LasL, CSys, Point, Sampl> {
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
+pub struct SensorPosIndex<SamplF, LasL, Point, Sampl> {
+    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
 }
 
-pub struct SensorPosIndexParams<SamplF, GridH, Comp: Scalar, LasL, CSys, Point, Sampl> {
+pub struct SensorPosIndexParams<SamplF, LasL, Point, Sampl> {
     pub nr_threads: usize,
     pub max_node_size: usize,
     pub sampling_factory: SamplF,
-    pub page_manager: PageManager<Point, Comp, Sampl, LasL, CSys>,
+    pub page_manager: PageManager<Point, Sampl, LasL>,
     pub meta_tree_file: PathBuf,
-    pub meta_tree: MetaTree<GridH, Comp>,
+    pub meta_tree: MetaTree,
     pub las_loader: LasL,
-    pub coordinate_system: CSys,
+    pub coordinate_system: I32CoordinateSystem,
     pub max_lod: LodLevel,
     pub max_delay: Duration,
     pub coarse_lod_steps: usize,
 }
 
-struct Inner<GridH, SamplF, Comp: Scalar, LasL, CSys, Point, Sampl> {
+struct Inner<SamplF, LasL, Point, Sampl> {
     pub nr_threads: usize,
     pub max_node_size: usize,
-    pub page_manager: PageManager<Point, Comp, Sampl, LasL, CSys>,
+    pub page_manager: PageManager<Point, Sampl, LasL>,
     pub sampling_factory: SamplF,
     pub meta_tree_file: PathBuf,
     pub las_loader: LasL,
-    pub coordinate_system: CSys,
-    pub shared: RwLock<Shared<GridH, Comp>>,
+    pub coordinate_system: I32CoordinateSystem,
+    pub shared: RwLock<Shared>,
     pub max_lod: LodLevel,
     pub max_node_split_level: LodLevel,
     pub max_delay: Duration,
     pub coarse_lod_steps: usize,
 }
 
-struct Shared<GridH, Comp: Scalar> {
-    meta_tree: MetaTree<GridH, Comp>,
-    readers: Vec<crossbeam_channel::Sender<Update<Comp>>>,
+struct Shared {
+    meta_tree: MetaTree,
+    readers: Vec<crossbeam_channel::Sender<Update>>,
 }
 
 #[derive(Clone, Debug)]
-struct Update<Comp>
-where
-    Comp: Scalar,
-{
+struct Update {
     node: MetaTreeNodeId,
-    replaced_by: Vec<Replacement<Comp>>,
+    replaced_by: Vec<Replacement>,
 }
 
 #[derive(Clone, Debug)]
-struct Replacement<Comp: Scalar> {
+struct Replacement {
     replace_with: MetaTreeNodeId,
-    bounds: AABB<Comp>,
+    bounds: AABB<i32>,
 }
 
-impl<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>
-    SensorPosIndex<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>
+impl<SamplF, LasL, Point, Sampl> SensorPosIndex<SamplF, LasL, Point, Sampl>
 where
-    GridH: GridHierarchy<Component = Comp>,
-    Comp: Component,
-    CSys: Clone,
-    Point: PointType + Clone,
-    Point::Position: Position<Component = Comp>,
-    LasL: LasReadWrite<Point, CSys> + Clone,
+    Point: PointType<Position = I32Position> + Clone,
+    LasL: LasReadWrite<Point> + Clone,
     Sampl: Sampling<Point = Point>,
 {
-    pub fn new(
-        params: SensorPosIndexParams<SamplF, GridH, Comp, LasL, CSys, Point, Sampl>,
-    ) -> Self {
+    pub fn new(params: SensorPosIndexParams<SamplF, LasL, Point, Sampl>) -> Self {
         let SensorPosIndexParams {
             nr_threads,
             max_node_size,
@@ -134,7 +121,7 @@ where
         }
     }
 
-    pub fn coordinate_system(&self) -> &CSys {
+    pub fn coordinate_system(&self) -> &I32CoordinateSystem {
         &self.inner.coordinate_system
     }
 
@@ -147,26 +134,20 @@ where
     }
 }
 
-impl<GridH, SamplF, Point, Pos, Comp, LasL, CSys, Sampl, Raw> Index<Point, CSys>
-    for SensorPosIndex<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>
+impl<SamplF, Point, LasL, Sampl> Index<Point> for SensorPosIndex<SamplF, LasL, Point, Sampl>
 where
-    GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
-    Point: PointType<Position = Pos>
-        + WithAttr<SensorPositionAttribute<Pos>>
+    Point: PointType<Position = I32Position>
+        + WithAttr<SensorPositionAttribute>
         + Clone
         + Send
         + Sync
         + 'static,
-    Pos: Position<Component = Comp> + Clone + Sync,
-    Comp: Component + Serialize + DeserializeOwned + Send + Sync,
-    LasL: LasReadWrite<Point, CSys> + Clone + Send + Sync + 'static,
-    CSys: Clone + PartialEq + Send + Sync + 'static,
-    Sampl: Sampling<Point = Point, Raw = Raw> + Send + Sync + Clone + 'static,
-    Raw: RawSamplingEntry<Point = Point> + 'static,
+    LasL: LasReadWrite<Point> + Clone + Send + Sync + 'static,
+    Sampl: Sampling<Point = Point> + Send + Sync + Clone + 'static,
 {
-    type Writer = SensorPosWriter<Point, CSys>;
-    type Reader = SensorPosReader<GridH, SamplF, Comp, LasL, CSys, Pos, Point, Sampl>;
+    type Writer = SensorPosWriter<Point>;
+    type Reader = SensorPosReader<SamplF, LasL, Point, Sampl>;
 
     fn writer(&self) -> Self::Writer {
         let index_inner = Arc::clone(&self.inner);
@@ -175,7 +156,7 @@ where
 
     fn reader<Q>(&self, query: Q) -> Self::Reader
     where
-        Q: Query<Pos, CSys> + 'static + Send + Sync,
+        Q: Query + 'static + Send + Sync,
     {
         SensorPosReader::new(query, Arc::clone(&self.inner))
     }

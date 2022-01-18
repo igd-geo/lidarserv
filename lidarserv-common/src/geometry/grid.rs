@@ -1,7 +1,6 @@
 use crate::geometry::bounding_box::{BaseAABB, AABB};
-use crate::geometry::position::{F64Position, I32Position, Position};
+use crate::geometry::position::{I32Position, Position};
 use crate::nalgebra::Point3;
-use nalgebra::Scalar;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::mem;
@@ -55,53 +54,32 @@ impl LodLevel {
     }
 }
 
-/// A collection of grids, that get finer with each LOD.
-pub trait GridHierarchy: Debug {
-    type Component: Scalar;
-    type Position: Position<Component = Self::Component>;
-    type Grid: Grid<Component = Self::Component, Position = Self::Position>;
-
-    /// Returns the given hierarchy level.
-    fn level(&self, lod: &LodLevel) -> LevelGrid<Self::Grid>;
-
-    fn max_level(&self) -> LodLevel;
-
-    /// Returns the bounding box of the given cell
-    fn get_leveled_cell_bounds(&self, cell: &LeveledGridCell) -> AABB<Self::Component> {
-        self.level(&cell.lod).cell_bounds(&cell.pos)
-    }
+#[derive(Clone, Debug)]
+pub struct I32GridHierarchy {
+    shift: u16,
 }
 
-/// A partitioning of the space into cubic grid cells.
-pub trait Grid {
-    type Component: Scalar;
-    type Position: Position<Component = Self::Component>;
-
-    /// Calculates the bounds of the cell.
-    fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<Self::Component>;
-
-    /// Returns the cell, that contains the given position.
-    fn cell_at(&self, position: &Self::Position) -> GridCell;
+/// A partitioning of space into cubic grid cells.
+#[derive(Clone, Debug)]
+pub struct I32Grid {
+    shift: u8,
 }
 
 /// A specific level of a [GridHierarchy].
 /// Basically a grid, that also knows about its LOD within the GridHierarchy.
-pub struct LevelGrid<G> {
+pub struct LevelGrid {
     lod: LodLevel,
-    grid: G,
+    grid: I32Grid,
 }
 
-impl<G> LevelGrid<G>
-where
-    G: Grid,
-{
+impl LevelGrid {
     /// Construct a new [LevelGrid]
-    pub fn new(lod: LodLevel, grid: G) -> Self {
+    pub fn new(lod: LodLevel, grid: I32Grid) -> Self {
         LevelGrid { lod, grid }
     }
 
     /// Returns the cell within the [GridHierarchy], that contains the given position.
-    pub fn leveled_cell_at(&self, position: &G::Position) -> LeveledGridCell {
+    pub fn leveled_cell_at(&self, position: &I32Position) -> LeveledGridCell {
         LeveledGridCell {
             lod: self.lod,
             pos: self.grid.cell_at(position),
@@ -110,121 +88,47 @@ where
 
     /// Returns the underlying grid, essentially getting rid of the additional LOD information
     /// carried by the LevelGrid.
-    pub fn into_grid(self) -> G {
+    pub fn into_grid(self) -> I32Grid {
         self.grid
     }
-}
 
-impl<G: Grid> Grid for LevelGrid<G> {
-    type Component = G::Component;
-    type Position = G::Position;
-
+    /// Calculates the bounds of the cell.
     #[inline]
-    fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<Self::Component> {
+    fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<i32> {
         self.grid.cell_bounds(cell_pos)
     }
 
+    /// Returns the cell, that contains the given position.
     #[inline]
-    fn cell_at(&self, position: &Self::Position) -> GridCell {
+    fn cell_at(&self, position: &I32Position) -> GridCell {
         self.grid.cell_at(position)
     }
-}
-
-/// [GridHierarchy] for [f64] coordinates.
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-pub struct F64GridHierarchy {
-    base_size: f64,
-}
-
-/// [Grid] for [f64] coordinates.
-#[derive(Debug, Copy, Clone)]
-pub struct F64Grid {
-    cell_size: f64,
-}
-
-impl F64GridHierarchy {
-    /// Construct a new grid hierarchy.
-    /// Base Size is the size of the grid cells at LOD 0.
-    pub fn new(base_size: f64) -> Self {
-        F64GridHierarchy { base_size }
-    }
-}
-
-impl GridHierarchy for F64GridHierarchy {
-    type Component = f64;
-    type Position = F64Position;
-    type Grid = F64Grid;
-
-    fn level(&self, lod: &LodLevel) -> LevelGrid<Self::Grid> {
-        let cell_size = self.base_size * 0.5_f64.powi(lod.level() as i32);
-        LevelGrid::new(*lod, F64Grid { cell_size })
-    }
-
-    fn max_level(&self) -> LodLevel {
-        LodLevel::from_level(u16::MAX)
-    }
-}
-
-impl Grid for F64Grid {
-    type Component = f64;
-    type Position = F64Position;
-
-    fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<<Self::Position as Position>::Component> {
-        let min = Point3::new(
-            cell_pos.x as f64 * self.cell_size,
-            cell_pos.y as f64 * self.cell_size,
-            cell_pos.z as f64 * self.cell_size,
-        );
-        let max = Point3::new(
-            min.x + self.cell_size,
-            min.y + self.cell_size,
-            min.z + self.cell_size,
-        );
-        AABB::new(min, max)
-    }
-
-    fn cell_at(&self, position: &Self::Position) -> GridCell {
-        let x = (position.x() / self.cell_size).floor() as i32;
-        let y = (position.y() / self.cell_size).floor() as i32;
-        let z = (position.z() / self.cell_size).floor() as i32;
-        GridCell { x, y, z }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct I32GridHierarchy {
-    shift: u16,
-}
-
-#[derive(Clone, Debug)]
-pub struct I32Grid {
-    shift: u8,
 }
 
 impl I32GridHierarchy {
     pub fn new(shift: u16) -> Self {
         I32GridHierarchy { shift }
     }
+
+    /// Returns the given hierarchy level.
+    pub fn level(&self, lod: &LodLevel) -> LevelGrid {
+        let grid = I32Grid::new(&lod.finer_by(self.shift));
+        LevelGrid::new(*lod, grid)
+    }
+
+    pub fn max_level(&self) -> LodLevel {
+        LodLevel::from_level(31 - self.shift)
+    }
+
+    /// Returns the bounding box of the given cell
+    pub fn get_leveled_cell_bounds(&self, cell: &LeveledGridCell) -> AABB<i32> {
+        self.level(&cell.lod).cell_bounds(&cell.pos)
+    }
 }
 
 impl Default for I32GridHierarchy {
     fn default() -> Self {
         I32GridHierarchy::new(0)
-    }
-}
-
-impl GridHierarchy for I32GridHierarchy {
-    type Component = i32;
-    type Position = I32Position;
-    type Grid = I32Grid;
-
-    fn level(&self, lod: &LodLevel) -> LevelGrid<Self::Grid> {
-        let grid = I32Grid::new(&lod.finer_by(self.shift));
-        LevelGrid::new(*lod, grid)
-    }
-
-    fn max_level(&self) -> LodLevel {
-        LodLevel::from_level(31 - self.shift)
     }
 }
 
@@ -235,13 +139,9 @@ impl I32Grid {
             shift: 31 - lod.level() as u8,
         }
     }
-}
 
-impl Grid for I32Grid {
-    type Component = i32;
-    type Position = I32Position;
-
-    fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<Self::Component> {
+    /// Calculates the bounds of the cell.
+    pub fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<i32> {
         AABB::new(
             Point3::new(
                 cell_pos.x << self.shift,
@@ -256,7 +156,8 @@ impl Grid for I32Grid {
         )
     }
 
-    fn cell_at(&self, position: &Self::Position) -> GridCell {
+    /// Returns the cell, that contains the given position.
+    pub fn cell_at(&self, position: &I32Position) -> GridCell {
         GridCell {
             x: position.x() >> self.shift,
             y: position.y() >> self.shift,
@@ -402,90 +303,9 @@ impl LeveledGridCell {
 #[cfg(test)]
 mod tests {
     use crate::geometry::bounding_box::{BaseAABB, AABB};
-    use crate::geometry::grid::{
-        F64GridHierarchy, Grid, GridCell, GridHierarchy, I32Grid, LeveledGridCell, LodLevel,
-    };
-    use crate::geometry::position::{CoordinateSystem, F64Position, I32CoordinateSystem, Position};
+    use crate::geometry::grid::{GridCell, I32Grid, LeveledGridCell, LodLevel};
+    use crate::geometry::position::{CoordinateSystem, I32CoordinateSystem, Position};
     use crate::nalgebra::Point3;
-
-    #[test]
-    fn float_grid_cell_bounds() {
-        let hierarchy = F64GridHierarchy::new(2.5);
-
-        let level_0 = hierarchy.level(&LodLevel::base());
-
-        assert_eq!(
-            level_0.cell_bounds(&GridCell {
-                x: -3,
-                y: -2,
-                z: -1
-            }),
-            AABB::new(Point3::new(-7.5, -5.0, -2.5), Point3::new(-5.0, -2.5, 0.0))
-        );
-        assert_eq!(
-            level_0.cell_bounds(&GridCell { x: 0, y: 1, z: 2 }),
-            AABB::new(Point3::new(0.0, 2.5, 5.0), Point3::new(2.5, 5.0, 7.5))
-        );
-
-        let level_1 = hierarchy.level(&LodLevel::base().finer());
-        assert_eq!(
-            level_1.cell_bounds(&GridCell { x: 0, y: 1, z: 2 }),
-            AABB::new(Point3::new(0.0, 1.25, 2.5), Point3::new(1.25, 2.5, 3.75))
-        );
-    }
-
-    #[test]
-    fn float_grid_cell() {
-        let hierarchy = F64GridHierarchy::new(2.0);
-
-        let level_0 = hierarchy.level(&LodLevel::base());
-
-        assert_eq!(
-            level_0.leveled_cell_at(&F64Position::from_components(-6.0, -5.0, -4.0)),
-            LeveledGridCell {
-                lod: LodLevel::from_level(0),
-                pos: GridCell {
-                    x: -3,
-                    y: -3,
-                    z: -2
-                }
-            }
-        );
-        assert_eq!(
-            level_0.leveled_cell_at(&F64Position::from_components(-3.0, -2.0, -1.0)),
-            LeveledGridCell {
-                lod: LodLevel::from_level(0),
-                pos: GridCell {
-                    x: -2,
-                    y: -1,
-                    z: -1
-                }
-            }
-        );
-        assert_eq!(
-            level_0.leveled_cell_at(&F64Position::from_components(-0.0, 0.0, 1.0)),
-            LeveledGridCell {
-                lod: LodLevel::from_level(0),
-                pos: GridCell { x: 0, y: 0, z: 0 }
-            }
-        );
-        assert_eq!(
-            level_0.leveled_cell_at(&F64Position::from_components(2.0, 3.0, 4.0)),
-            LeveledGridCell {
-                lod: LodLevel::from_level(0),
-                pos: GridCell { x: 1, y: 1, z: 2 }
-            }
-        );
-
-        let level_1 = hierarchy.level(&LodLevel::base().finer());
-        assert_eq!(
-            level_1.leveled_cell_at(&F64Position::from_components(0.0, 1.0, 2.0)),
-            LeveledGridCell {
-                lod: LodLevel::from_level(1),
-                pos: GridCell { x: 0, y: 1, z: 2 }
-            }
-        );
-    }
 
     #[test]
     fn int_grid_cell() {

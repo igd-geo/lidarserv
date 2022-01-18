@@ -2,9 +2,9 @@ use crate::geometry::position::{I32Position, Position};
 use crate::las::LasExtraBytes;
 
 #[derive(Clone, Debug, Default)]
-pub struct SensorPositionAttribute<P>(pub P);
+pub struct SensorPositionAttribute(pub I32Position);
 
-impl LasExtraBytes for SensorPositionAttribute<I32Position> {
+impl LasExtraBytes for SensorPositionAttribute {
     const NR_EXTRA_BYTES: usize = 12;
 
     fn get_extra_bytes(&self) -> Vec<u8> {

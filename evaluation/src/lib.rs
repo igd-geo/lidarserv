@@ -30,9 +30,7 @@ pub fn read_points(coordinate_system: &I32CoordinateSystem, config: &Config) -> 
             let las_point = p.into_las_point(coordinate_system).unwrap();
             Point {
                 position: las_point.position().clone(),
-                sensor_position: las_point
-                    .attribute::<SensorPositionAttribute<I32Position>>()
-                    .clone(),
+                sensor_position: las_point.attribute::<SensorPositionAttribute>().clone(),
                 point_id: PointIdAttribute(id),
             }
         })

@@ -1,7 +1,7 @@
 use crate::geometry::bounding_box::BaseAABB;
-use crate::geometry::grid::{GridHierarchy, LodLevel};
+use crate::geometry::grid::LodLevel;
 use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{Component, Position};
+use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::page_manager::SensorPosPage;
@@ -12,12 +12,8 @@ use crate::index::Writer;
 use crate::las::{LasReadWrite, ReadLasError, WriteLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
 use crate::span;
-use crate::utils::thread_pool::Threads;
 use crossbeam_channel::{Receiver, Sender};
 use log::{error, trace};
-use nalgebra::{Point, Scalar};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::error::Error as StdError;
@@ -63,34 +59,29 @@ impl<K: Debug, V> From<CacheCleanupError<K, V>> for IndexError {
     }
 }
 
-pub struct SensorPosWriter<Point, CSys> {
+pub struct SensorPosWriter<Point> {
     coordinator_join: Option<JoinHandle<Result<(), IndexError>>>,
     new_points_sender: Option<Sender<Vec<Point>>>,
-    coordinate_system: CSys,
+    coordinate_system: I32CoordinateSystem,
     pending_points: Arc<AtomicUsize>,
 }
 
-impl<Point, Pos, Comp, CSys> SensorPosWriter<Point, CSys>
+impl<Point> SensorPosWriter<Point>
 where
-    Point: PointType<Position = Pos>
-        + WithAttr<SensorPositionAttribute<Pos>>
+    Point: PointType<Position = I32Position>
+        + WithAttr<SensorPositionAttribute>
         + Clone
         + Send
         + Sync
         + 'static,
-    Pos: Position<Component = Comp> + Clone + Sync,
-    Comp: Component + Send + Sync + Serialize + DeserializeOwned,
-    CSys: PartialEq + Send + Sync + 'static + Clone,
 {
-    pub(super) fn new<GridH, SamplF, LasL, Sampl, Raw>(
-        index_inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
+    pub(super) fn new<SamplF, LasL, Sampl>(
+        index_inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
     ) -> Self
     where
-        GridH: GridHierarchy<Position = Pos, Component = Comp> + Clone + Send + Sync + 'static,
         SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Sync + Send + 'static,
-        Sampl: Sampling<Point = Point, Raw = Raw> + Send + Sync + Clone + 'static,
-        Raw: RawSamplingEntry<Point = Point> + 'static,
-        LasL: LasReadWrite<Point, CSys> + Send + Sync + Clone + 'static,
+        Sampl: Sampling<Point = Point> + Send + Sync + Clone + 'static,
+        LasL: LasReadWrite<Point> + Send + Sync + Clone + 'static,
     {
         // main worker thread
         let (new_points_sender, new_points_receiver) = crossbeam_channel::unbounded();
@@ -109,12 +100,12 @@ where
         }
     }
 
-    pub fn coordinate_system(&self) -> &CSys {
+    pub fn coordinate_system(&self) -> &I32CoordinateSystem {
         &self.coordinate_system
     }
 }
 
-impl<Point, CSys> Writer<Point> for SensorPosWriter<Point, CSys>
+impl<Point> Writer<Point> for SensorPosWriter<Point>
 where
     Point: PointType,
 {
@@ -134,7 +125,7 @@ where
     }
 }
 
-impl<Point, CSys> Drop for SensorPosWriter<Point, CSys> {
+impl<Point> Drop for SensorPosWriter<Point> {
     fn drop(&mut self) {
         // close the channel for new points. That will make the writer threads stop.
         let sender = self.new_points_sender.take().unwrap();
@@ -149,27 +140,22 @@ impl<Point, CSys> Drop for SensorPosWriter<Point, CSys> {
     }
 }
 
-fn coordinator_thread<GridH, SamplF, Point, Sampl, Pos, Comp, LasL, CSys, Raw>(
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
+fn coordinator_thread<SamplF, Point, Sampl, LasL>(
+    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
     new_points_receiver: Receiver<Vec<Point>>,
-    mut meta_tree: MetaTree<GridH, Comp>,
+    mut meta_tree: MetaTree,
     pending_points: Arc<AtomicUsize>,
 ) -> Result<(), IndexError>
 where
-    Comp: Component + Send + Sync + Serialize + DeserializeOwned,
     SamplF: SamplingFactory<Sampling = Sampl, Point = Point> + Send + Sync + 'static,
-    Sampl: Sampling<Point = Point, Raw = Raw> + Send + Sync + Clone + 'static,
-    Raw: RawSamplingEntry<Point = Point>,
-    Point: PointType<Position = Pos>
-        + WithAttr<SensorPositionAttribute<Pos>>
+    Sampl: Sampling<Point = Point> + Send + Sync + Clone + 'static,
+    Point: PointType<Position = I32Position>
+        + WithAttr<SensorPositionAttribute>
         + Clone
         + Send
         + Sync
         + 'static,
-    Pos: Position<Component = Comp> + Clone + Sync,
-    GridH: GridHierarchy<Component = Comp, Position = Pos> + Send + Sync + 'static,
-    LasL: LasReadWrite<Point, CSys> + Send + Sync + Clone + 'static,
-    CSys: Clone + PartialEq + Send + Sync + 'static,
+    LasL: LasReadWrite<Point> + Send + Sync + Clone + 'static,
 {
     tracy_client::set_thread_name("Coordinator thread");
 
@@ -195,7 +181,7 @@ where
 
     // init
     let mut new_points = VecDeque::new();
-    let mut loaded_nodes = Vec::<PartitionedNode<Sampl, Point, Comp>>::new();
+    let mut loaded_nodes = Vec::<PartitionedNode<Sampl, Point>>::new();
     let mut previous_split_levels = Vec::new();
 
     'main: loop {
@@ -222,10 +208,7 @@ where
         // find the nodes to insert points into based on the current sensor position
         let s1 = span!("coordinator_thread: choose nodes");
         let first_point = &new_points[0][0];
-        let sensor_pos = first_point
-            .attribute::<SensorPositionAttribute<_>>()
-            .0
-            .clone();
+        let sensor_pos = first_point.attribute::<SensorPositionAttribute>().0.clone();
         let nodes = meta_tree.query_sensor_position(&sensor_pos, &previous_split_levels);
         previous_split_levels = nodes.split_levels();
         drop(s1);
@@ -237,7 +220,7 @@ where
         let mut nr_points = 0;
         'blocks: for block in new_points.iter() {
             for (point_index, point) in block.iter().enumerate() {
-                let sensor_pos = &point.attribute::<SensorPositionAttribute<_>>().0;
+                let sensor_pos = &point.attribute::<SensorPositionAttribute>().0;
                 if !bounds.contains(sensor_pos) {
                     nr_points += point_index;
                     break 'blocks;
@@ -331,7 +314,7 @@ where
         let last_lod_node = loaded_nodes.len() - 1;
         for node in &mut loaded_nodes[..last_lod_node] {
             worker_buffer = node.insert_points(worker_buffer, |p, q| {
-                q.set_attribute(p.attribute::<SensorPositionAttribute<Pos>>().clone());
+                q.set_attribute(p.attribute::<SensorPositionAttribute>().clone());
             });
         }
         loaded_nodes[last_lod_node].insert_bogus_points(worker_buffer);
@@ -494,24 +477,20 @@ where
     Ok(())
 }
 
-fn apply_updates<Point, Sampl, GridH, SamplF, Comp: Scalar, LasL, CSys, Pos, Raw>(
+fn apply_updates<Point, Sampl, SamplF, LasL, Raw>(
     base_node: MetaTreeNodeId,
-    replace_with: PartitionedNode<Sampl, Point, Comp>,
-    replace_with_split: Vec<PartitionedNodeSplitter<Point, Pos, Raw>>,
-    inner: &Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>,
-    meta_tree: &mut MetaTree<GridH, Comp>,
-    notify_sender: &crossbeam_channel::Sender<Update<Comp>>,
+    replace_with: PartitionedNode<Sampl, Point>,
+    replace_with_split: Vec<PartitionedNodeSplitter<Point, Raw>>,
+    inner: &Inner<SamplF, LasL, Point, Sampl>,
+    meta_tree: &mut MetaTree,
+    notify_sender: &crossbeam_channel::Sender<Update>,
 ) -> Result<(), IndexError>
 where
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
     Sampl: Sampling<Point = Point, Raw = Raw> + Send + Clone,
-    Point: PointType<Position = Pos> + Send + Clone,
-    Comp: Component + Send + Sync,
-    Pos: Position<Component = Comp> + Sync,
+    Point: PointType<Position = I32Position> + Send + Clone,
     Raw: RawSamplingEntry<Point = Point>,
-    LasL: LasReadWrite<Point, CSys> + Sync + Clone,
-    CSys: Sync + Clone,
-    GridH: GridHierarchy<Component = Comp, Position = Pos>,
+    LasL: LasReadWrite<Point> + Sync + Clone,
 {
     let mut aabbs = vec![(
         replace_with.node_id().clone(),
@@ -562,13 +541,10 @@ where
     Ok(())
 }
 
-fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>(
-    changes_receiver: crossbeam_channel::Receiver<Update<Comp>>,
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
-) where
-    Comp: Component,
-    GridH: GridHierarchy<Component = Comp>,
-{
+fn notify_readers_thread<SamplF, LasL, Point, Sampl>(
+    changes_receiver: crossbeam_channel::Receiver<Update>,
+    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
+) {
     for change in changes_receiver {
         let mut shared = inner.shared.write().unwrap();
 
@@ -590,15 +566,12 @@ fn notify_readers_thread<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>(
     }
 }
 
-fn cache_cleanup_thread<GridH, SamplF, Comp, LasL, CSys, Point, Sampl, Pos>(
-    inner: Arc<Inner<GridH, SamplF, Comp, LasL, CSys, Point, Sampl>>,
+fn cache_cleanup_thread<SamplF, LasL, Point, Sampl>(
+    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
     shutdown: Arc<AtomicBool>,
 ) where
-    Comp: Component,
-    CSys: Clone,
-    LasL: LasReadWrite<Point, CSys> + Clone,
-    Point: PointType<Position = Pos> + Clone,
-    Pos: Position<Component = Comp>,
+    LasL: LasReadWrite<Point> + Clone,
+    Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
 {
     loop {

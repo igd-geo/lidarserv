@@ -1,5 +1,6 @@
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
+use crate::geometry::position::I32Position;
 use crate::query::Query;
 use std::error::Error;
 use std::sync::Arc;
@@ -7,18 +8,18 @@ use std::sync::Arc;
 pub mod octree;
 pub mod sensor_pos;
 
-pub trait Index<Point, CSys>
+pub trait Index<Point>
 where
-    Point: PointType,
+    Point: PointType<Position = I32Position>,
 {
     type Writer: Writer<Point>;
-    type Reader: Reader<Point, CSys>;
+    type Reader: Reader<Point>;
 
     /// Return a point writer, that can insert points into this index.
     fn writer(&self) -> Self::Writer;
     fn reader<Q>(&self, query: Q) -> Self::Reader
     where
-        Q: Query<Point::Position, CSys> + 'static + Send + Sync;
+        Q: Query + 'static + Send + Sync;
     fn flush(&mut self) -> Result<(), Box<dyn Error>>;
 }
 
@@ -35,22 +36,20 @@ where
     fn insert(&mut self, points: Vec<Point>);
 }
 
-pub trait Reader<Point, CSys>
+pub trait Reader<Point>
 where
     Point: PointType,
 {
     type NodeId: NodeId;
     type Node: Node;
 
-    fn set_query<Q: Query<Point::Position, CSys> + 'static + Send + Sync>(&mut self, query: Q);
+    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q);
 
     fn update(&mut self);
 
     fn blocking_update(
         &mut self,
-        queries: &mut crossbeam_channel::Receiver<
-            Box<dyn Query<Point::Position, CSys> + Send + Sync>,
-        >,
+        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
     ) -> bool;
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node)>;

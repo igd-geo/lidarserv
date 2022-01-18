@@ -3,9 +3,9 @@ pub mod page_manager;
 pub mod reader;
 pub mod writer;
 
-use crate::geometry::grid::{GridHierarchy, LeveledGridCell, LodLevel};
+use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, CoordinateSystem, Position};
+use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::grid_cell_directory::GridCellDirectory;
 use crate::index::octree::page_manager::{LasPageManager, OctreePageLoader, Page};
@@ -13,43 +13,38 @@ use crate::index::octree::reader::OctreeReader;
 use crate::index::octree::writer::{OctreeWriter, TaskPriorityFunction};
 use crate::index::Index;
 use crate::las::LasReadWrite;
-use crate::nalgebra::Scalar;
 use crate::query::Query;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
-struct Inner<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> {
+struct Inner<Point, LasL, Sampl, SamplF> {
     num_threads: u16,
     priority_function: TaskPriorityFunction,
     max_lod: LodLevel,
     max_bogus_inner: usize,
     max_bogus_leaf: usize,
-    node_hierarchy: GridH,
+    node_hierarchy: I32GridHierarchy,
     subscriptions: Mutex<Vec<crossbeam_channel::Sender<LeveledGridCell>>>,
-    page_cache: LasPageManager<LasL, Sampl, Point, Comp, CSys>,
+    page_cache: LasPageManager<LasL, Sampl, Point>,
     sample_factory: SamplF,
     loader: LasL,
-    coordinate_system: CSys,
+    coordinate_system: I32CoordinateSystem,
 }
 
-pub struct Octree<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> {
-    inner: Arc<Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>>,
+pub struct Octree<Point, LasL, Sampl, SamplF> {
+    inner: Arc<Inner<Point, LasL, Sampl, SamplF>>,
 }
 
 #[derive(Error, Debug)]
 #[error("Error while flushing to disk: {0}")]
 pub struct FlushError(String);
 
-impl<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF, Pos>
-    Octree<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>
+impl<Point, LasL, Sampl, SamplF> Octree<Point, LasL, Sampl, SamplF>
 where
-    LasL: LasReadWrite<Point, CSys> + Clone,
-    CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq,
-    Point: PointType<Position = Pos> + Clone,
+    LasL: LasReadWrite<Point> + Clone,
+    Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
-    Comp: Component,
-    Pos: Position<Component = Comp>,
 {
     pub fn new(
         num_threads: u16,
@@ -57,13 +52,13 @@ where
         max_lod: LodLevel,
         max_bogus_inner: usize,
         max_bogus_leaf: usize,
-        node_hierarchy: GridH,
-        page_loader: OctreePageLoader<LasL, Page<Sampl, Point, Comp, CSys>>,
+        node_hierarchy: I32GridHierarchy,
+        page_loader: OctreePageLoader<LasL, Page<Sampl, Point>>,
         page_directory: GridCellDirectory,
         max_cache_size: usize,
         sample_factory: SamplF,
         loader: LasL,
-        coordinate_system: CSys,
+        coordinate_system: I32CoordinateSystem,
     ) -> Self {
         Octree {
             inner: Arc::new(Inner {
@@ -82,7 +77,7 @@ where
         }
     }
 
-    pub fn coordinate_system(&self) -> &CSys {
+    pub fn coordinate_system(&self) -> &I32CoordinateSystem {
         &self.inner.coordinate_system
     }
 
@@ -105,20 +100,15 @@ where
     }
 }
 
-impl<Point, GridH, LasL, Sampl, Comp, CSys, SamplF, Pos> Index<Point, CSys>
-    for Octree<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>
+impl<Point, LasL, Sampl, SamplF> Index<Point> for Octree<Point, LasL, Sampl, SamplF>
 where
-    Point: PointType<Position = Pos> + Clone + Send + Sync + 'static,
-    Pos: Position<Component = Comp>,
-    GridH: GridHierarchy<Component = Comp, Position = Pos> + Clone + Send + Sync + 'static,
-    LasL: LasReadWrite<Point, CSys> + Clone + Send + Sync + 'static,
+    Point: PointType<Position = I32Position> + Clone + Send + Sync + 'static,
+    LasL: LasReadWrite<Point> + Clone + Send + Sync + 'static,
     Sampl: Sampling<Point = Point> + Clone + Send + Sync + 'static,
-    Comp: Component + Send + Sync,
-    CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq + Send + Sync + 'static,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
 {
-    type Writer = OctreeWriter<Point, GridH>;
-    type Reader = OctreeReader<Point, GridH, LasL, Sampl, Comp, CSys, SamplF, Pos>;
+    type Writer = OctreeWriter<Point>;
+    type Reader = OctreeReader<Point, LasL, Sampl, SamplF>;
 
     fn writer(&self) -> Self::Writer {
         OctreeWriter::new(Arc::clone(&self.inner))
@@ -126,7 +116,7 @@ where
 
     fn reader<Q>(&self, query: Q) -> Self::Reader
     where
-        Q: Query<Pos, CSys> + 'static + Send + Sync,
+        Q: Query + 'static + Send + Sync,
     {
         OctreeReader::new(query, Arc::clone(&self.inner))
     }

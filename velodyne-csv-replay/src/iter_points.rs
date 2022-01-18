@@ -6,7 +6,7 @@ use lidarserv_server::common::geometry::position::F64Position;
 use lidarserv_server::common::index::sensor_pos::point::SensorPositionAttribute;
 use lidarserv_server::common::las::LasPointAttributes;
 use lidarserv_server::common::nalgebra::{Matrix4, Vector3, Vector4};
-use lidarserv_server::index::point::GlobalPoint;
+use lidarserv_server::index::point::{GlobalPoint, GlobalSensorPositionAttribute};
 use log::error;
 use std::f64::consts::PI;
 use std::fs::File;
@@ -102,7 +102,7 @@ pub fn iter_points(
             let position = trajectory_position + point_position;
             let mut global_point =
                 GlobalPoint::new(F64Position::new(position.x, position.y, position.z));
-            global_point.set_attribute(SensorPositionAttribute(F64Position::new(
+            global_point.set_attribute(GlobalSensorPositionAttribute(F64Position::new(
                 trajectory_position.x,
                 trajectory_position.y,
                 trajectory_position.z,

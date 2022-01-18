@@ -1,34 +1,32 @@
 use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
-use crate::geometry::grid::GridHierarchy;
 use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{Component, Position};
+use crate::geometry::position::{I32Position, Position};
 use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::point::SensorPositionAttribute;
-use nalgebra::Scalar;
 use std::mem;
 use std::time::Instant;
 
 #[derive(Clone)]
-pub struct PartitionedNode<Sampl, Point, Comp: Scalar> {
+pub struct PartitionedNode<Sampl, Point> {
     sampling: Sampl,
     bogus: Vec<Point>,
-    bounds: OptionAABB<Comp>,
+    bounds: OptionAABB<i32>,
     node_id: MetaTreeNodeId,
     dirty_since: Option<Instant>,
 }
 
-pub struct PartitionedNodeSplitter<Point, Pos, Raw> {
+pub struct PartitionedNodeSplitter<Point, Raw> {
     sampled: Vec<Raw>,
     bogus: Vec<Point>,
     node_id: MetaTreeNodeId,
-    replaces_base_node_at: Option<Pos>,
+    replaces_base_node_at: Option<I32Position>,
 }
 
-impl<Sampl, Point, Comp> PartitionedNode<Sampl, Point, Comp>
+impl<Sampl, Point> PartitionedNode<Sampl, Point>
 where
-    Sampl: Sampling,
-    Comp: Component,
+    Sampl: Sampling<Point = Point>,
+    Point: PointType<Position = I32Position>,
 {
     pub fn new<SamplF>(node_id: MetaTreeNodeId, sampling_factory: &SamplF, dirty: bool) -> Self
     where
@@ -47,7 +45,7 @@ where
         &self.node_id
     }
 
-    pub fn bounds(&self) -> &OptionAABB<Comp> {
+    pub fn bounds(&self) -> &OptionAABB<i32> {
         &self.bounds
     }
 
@@ -80,16 +78,11 @@ where
     pub fn dirty_since(&self) -> &Option<Instant> {
         &self.dirty_since
     }
-}
 
-impl<Sampl, Point, Comp> PartitionedNode<Sampl, Point, Comp>
-where
-    Comp: Component,
-    Sampl: Sampling<Point = Point>,
-    Point: std::clone::Clone + PointType,
-    Point::Position: Position<Component = Comp>,
-{
-    pub fn get_las_points(&self) -> (Vec<Point>, OptionAABB<Comp>, u32) {
+    pub fn get_las_points(&self) -> (Vec<Point>, OptionAABB<i32>, u32)
+    where
+        Point: Clone,
+    {
         let mut points = self.sampling.clone_points();
         let non_bogus_points = points.len() as u32;
         points.append(&mut self.bogus.clone());
@@ -154,7 +147,7 @@ where
     pub fn drain_into_splitter(
         &mut self,
         sensor_position: Point::Position,
-    ) -> PartitionedNodeSplitter<Point, Point::Position, Sampl::Raw> {
+    ) -> PartitionedNodeSplitter<Point, Sampl::Raw> {
         self.mark_dirty();
         PartitionedNodeSplitter {
             sampled: self.sampling.drain_raw(),
@@ -165,12 +158,10 @@ where
     }
 }
 
-impl<Point, Pos, Raw, Comp> PartitionedNodeSplitter<Point, Pos, Raw>
+impl<Point, Raw> PartitionedNodeSplitter<Point, Raw>
 where
     Raw: RawSamplingEntry<Point = Point>,
-    Point: PointType<Position = Pos>,
-    Pos: Position<Component = Comp>,
-    Comp: Component,
+    Point: PointType<Position = I32Position>,
 {
     pub fn node_id(&self) -> &MetaTreeNodeId {
         &self.node_id
@@ -184,10 +175,9 @@ where
         self.replaces_base_node_at.is_some()
     }
 
-    pub fn split<GridH>(mut self, meta_tree: &MetaTree<GridH, Comp>) -> [Self; 8]
+    pub fn split(mut self, meta_tree: &MetaTree) -> [Self; 8]
     where
-        GridH: GridHierarchy<Position = Pos, Component = Comp>,
-        Point: WithAttr<SensorPositionAttribute<Pos>>,
+        Point: WithAttr<SensorPositionAttribute>,
     {
         // center of the node is where to split
         let node_center = meta_tree.node_center(&self.node_id);
@@ -211,14 +201,14 @@ where
 
         // split sampled points
         for point in self.sampled {
-            let sensor_pos = point.point().attribute::<SensorPositionAttribute<Pos>>();
+            let sensor_pos = point.point().attribute::<SensorPositionAttribute>();
             let child_index = node_select_child(&node_center, &sensor_pos.0);
             children[child_index].sampled.push(point);
         }
 
         // split bogus points
         for point in self.bogus {
-            let sensor_pos = point.attribute::<SensorPositionAttribute<Pos>>();
+            let sensor_pos = point.attribute::<SensorPositionAttribute>();
             let child_index = node_select_child(&node_center, &sensor_pos.0);
             children[child_index].bogus.push(point);
         }
@@ -229,7 +219,7 @@ where
     pub fn into_node<SamplF, Sampl>(
         self,
         sampling_factory: &SamplF,
-    ) -> PartitionedNode<Sampl, Point, Comp>
+    ) -> PartitionedNode<Sampl, Point>
     where
         SamplF: SamplingFactory<Sampling = Sampl>,
         Sampl: Sampling<Point = Point, Raw = Raw>,

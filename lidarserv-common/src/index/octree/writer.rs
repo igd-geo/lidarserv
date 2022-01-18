@@ -1,13 +1,12 @@
-use crate::geometry::grid::{GridHierarchy, LeveledGridCell, LodLevel};
+use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, CoordinateSystem, Position};
+use crate::geometry::position::{Component, I32Position, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
 use crate::index::Writer;
 use crate::las::{LasReadWrite, ReadLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
-use crate::nalgebra::Scalar;
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, Ordering};
@@ -61,10 +60,10 @@ struct Inboxes<Point> {
     priority_function: TaskPriorityFunction,
 }
 
-pub struct OctreeWriter<Point, GridH> {
+pub struct OctreeWriter<Point> {
     inboxes: Arc<Mutex<Inboxes<Point>>>,
     threads: Vec<thread::JoinHandle<Result<(), IndexingThreadError>>>,
-    node_hierarchy: GridH,
+    node_hierarchy: I32GridHierarchy,
 }
 
 #[derive(Error, Debug)]
@@ -85,8 +84,8 @@ enum WriterTaskError {
     ReadLasError(#[from] ReadLasError),
 }
 
-struct OctreeWorkerThread<Point, GridH, LasL, Sampl, Comp: Scalar, CSys, SamplF> {
-    inner: Arc<Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>>,
+struct OctreeWorkerThread<Point, LasL, Sampl, SamplF> {
+    inner: Arc<Inner<Point, LasL, Sampl, SamplF>>,
     inboxes: Arc<Mutex<Inboxes<Point>>>,
 
     /// cond var for waking up worker thread,
@@ -262,16 +261,11 @@ impl<P> Inboxes<P> {
     }
 }
 
-impl<Point, GridH, LasL, Sampl, Comp, CSys, Pos, SamplF>
-    OctreeWorkerThread<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>
+impl<Point, LasL, Sampl, SamplF> OctreeWorkerThread<Point, LasL, Sampl, SamplF>
 where
-    Point: PointType<Position = Pos> + Clone,
-    Pos: Position<Component = Comp>,
-    GridH: GridHierarchy<Component = Comp, Position = Pos>,
-    LasL: LasReadWrite<Point, CSys> + Clone,
+    Point: PointType<Position = I32Position> + Clone,
+    LasL: LasReadWrite<Point> + Clone,
     Sampl: Sampling<Point = Point> + Clone,
-    Comp: Component,
-    CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
     pub fn thread(&self) -> Result<(), IndexingThreadError> {
@@ -406,7 +400,7 @@ where
             Vec::with_capacity(children_points.len()),
             Vec::with_capacity(children_points.len()),
         ];
-        let center: Pos = self
+        let center: I32Position = self
             .inner
             .node_hierarchy
             .get_leveled_cell_bounds(&node_id)
@@ -437,18 +431,15 @@ where
     }
 }
 
-impl<Point, GridH> OctreeWriter<Point, GridH> {
-    pub(super) fn new<LasL, Sampl, Comp, CSys, SamplF, Pos>(
-        inner: Arc<Inner<Point, GridH, LasL, Sampl, Comp, CSys, SamplF>>,
-    ) -> Self
+impl<Point> OctreeWriter<Point>
+where
+    Point: PointType<Position = I32Position>,
+{
+    pub(super) fn new<LasL, Sampl, SamplF>(inner: Arc<Inner<Point, LasL, Sampl, SamplF>>) -> Self
     where
-        Point: PointType<Position = Pos> + Clone + Send + Sync + 'static,
-        Pos: Position<Component = Comp>,
-        GridH: GridHierarchy<Component = Comp, Position = Pos> + Clone + Send + Sync + 'static,
-        LasL: LasReadWrite<Point, CSys> + Clone + Send + Sync + 'static,
+        Point: Clone + Send + Sync + 'static,
+        LasL: LasReadWrite<Point> + Clone + Send + Sync + 'static,
         Sampl: Sampling<Point = Point> + Clone + Send + Sync + 'static,
-        Comp: Component + Send + Sync,
-        CSys: CoordinateSystem<Position = Pos> + Clone + PartialEq + Send + Sync + 'static,
         SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
     {
         let condvar = Arc::new(Condvar::new());
@@ -478,11 +469,7 @@ impl<Point, GridH> OctreeWriter<Point, GridH> {
         }
     }
 
-    pub fn insert_many<Pos>(&mut self, points: Vec<Point>)
-    where
-        GridH: GridHierarchy<Position = Pos>,
-        Point: PointType<Position = Pos> + Clone,
-    {
+    pub fn insert_many(&mut self, points: Vec<Point>) {
         let mut points_by_cell: HashMap<LeveledGridCell, Vec<Point>> = HashMap::new();
         for point in points.into_iter() {
             let cell = self
@@ -515,10 +502,9 @@ impl<Point, GridH> OctreeWriter<Point, GridH> {
     }
 }
 
-impl<Point, GridH, Pos> Writer<Point> for OctreeWriter<Point, GridH>
+impl<Point> Writer<Point> for OctreeWriter<Point>
 where
-    GridH: GridHierarchy<Position = Pos>,
-    Point: PointType<Position = Pos> + Clone,
+    Point: PointType<Position = I32Position> + Clone,
 {
     fn backlog_size(&self) -> usize {
         self.nr_points_waiting()
@@ -529,7 +515,7 @@ where
     }
 }
 
-impl<Point, GridH> Drop for OctreeWriter<Point, GridH> {
+impl<Point> Drop for OctreeWriter<Point> {
     fn drop(&mut self) {
         // tell worker threads to stop
         {

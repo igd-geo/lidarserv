@@ -12,7 +12,7 @@ pub fn measure_insertion_rate<I>(
     config: &Config,
 ) -> (serde_json::value::Value, f64)
 where
-    I: Index<Point, I32CoordinateSystem>,
+    I: Index<Point>,
 {
     let target_point_pressure: usize = config.target_point_pressure;
     let mut writer = index.writer();

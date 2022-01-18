@@ -100,7 +100,7 @@ impl CaptureDeviceClient {
                 let mut las_data = Vec::new();
                 let encoder = I32LasReadWrite::new(self.use_compression);
                 let cursor = Cursor::new(&mut las_data);
-                LasReadWrite::<LasPoint, _>::write_las(
+                LasReadWrite::<LasPoint>::write_las(
                     &encoder,
                     Las {
                         points: las_points.iter(),

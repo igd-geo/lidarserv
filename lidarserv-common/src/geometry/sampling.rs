@@ -1,7 +1,7 @@
-use crate::geometry::grid::{GridCell, LodLevel};
+use crate::geometry::grid::{GridCell, I32Grid, I32GridHierarchy, LodLevel};
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, Position};
-use std::collections::hash_map::{Entry, Values};
+use crate::geometry::position::{Component, I32Position, Position};
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
 
@@ -19,7 +19,7 @@ pub trait SamplingFactory {
 /// Samples incoming points and stores the selected ones.
 pub trait Sampling {
     type Point: PointType;
-    type Raw: RawSamplingEntry;
+    type Raw: RawSamplingEntry<Point = Self::Point>;
 
     /// Return the number of points, that have been selected by the sampling.
     fn len(&self) -> usize;
@@ -94,34 +94,32 @@ pub trait RawSamplingEntry {
 }
 
 #[derive(Clone)]
-pub struct GridCenterEntry<Point, Position, Distance> {
+pub struct GridCenterEntry<Point> {
     point: Point,
-    center: Position,
-    center_distance: Distance,
+    center: I32Position,
+    center_distance: i32,
 }
 
 #[derive(Clone)]
-pub struct GridCenterRawEntry<Point, Position, Distance> {
+pub struct GridCenterRawEntry<Point> {
     cell: GridCell,
-    entry: GridCenterEntry<Point, Position, Distance>,
+    entry: GridCenterEntry<Point>,
 }
 
 #[derive(Clone)]
-pub struct GridCenterSampling<Grid, Point, Position, Distance> {
-    grid: Grid,
-    points: HashMap<GridCell, GridCenterEntry<Point, Position, Distance>>,
+pub struct GridCenterSampling<Point> {
+    grid: I32Grid,
+    points: HashMap<GridCell, GridCenterEntry<Point>>,
     dirty: bool,
 }
 
 #[derive(Clone, Debug)]
-pub struct GridCenterSamplingFactory<GridHierarchy, Point, Position, Distance> {
-    grid_hierarchy: GridHierarchy,
-
-    #[allow(clippy::type_complexity)]
-    _phantom: PhantomData<fn() -> (Point, Position, Distance)>,
+pub struct GridCenterSamplingFactory<Point> {
+    grid_hierarchy: I32GridHierarchy,
+    _phantom: PhantomData<fn() -> Point>,
 }
 
-impl<Point, Position, Distance> RawSamplingEntry for GridCenterRawEntry<Point, Position, Distance> {
+impl<Point> RawSamplingEntry for GridCenterRawEntry<Point> {
     type Cell = GridCell;
     type Point = Point;
 
@@ -134,10 +132,8 @@ impl<Point, Position, Distance> RawSamplingEntry for GridCenterRawEntry<Point, P
     }
 }
 
-impl<GridHierarchy, Point, Position, Distance>
-    GridCenterSamplingFactory<GridHierarchy, Point, Position, Distance>
-{
-    pub fn new(point_grid_hierarchy: GridHierarchy) -> Self {
+impl<Point> GridCenterSamplingFactory<Point> {
+    pub fn new(point_grid_hierarchy: I32GridHierarchy) -> Self {
         GridCenterSamplingFactory {
             grid_hierarchy: point_grid_hierarchy,
             _phantom: PhantomData,
@@ -145,18 +141,12 @@ impl<GridHierarchy, Point, Position, Distance>
     }
 }
 
-impl<GridHierarchy, Point, Position, Distance> SamplingFactory
-    for GridCenterSamplingFactory<GridHierarchy, Point, Position, Distance>
+impl<Point> SamplingFactory for GridCenterSamplingFactory<Point>
 where
-    GridHierarchy: super::grid::GridHierarchy,
-    Distance: PartialOrd,
-    Position: super::position::Position<Component = Distance>,
-    Position::Component: Component,
-    Point: PointType<Position = Position>,
-    GridHierarchy::Grid: super::grid::Grid<Position = Position, Component = Position::Component>,
+    Point: PointType<Position = I32Position>,
 {
     type Point = Point;
-    type Sampling = GridCenterSampling<GridHierarchy::Grid, Point, Position, Distance>;
+    type Sampling = GridCenterSampling<Point>;
 
     fn build(&self, level: &LodLevel) -> Self::Sampling {
         GridCenterSampling {
@@ -167,17 +157,12 @@ where
     }
 }
 
-impl<Grid, Point, Position, Distance> Sampling
-    for GridCenterSampling<Grid, Point, Position, Distance>
+impl<Point> Sampling for GridCenterSampling<Point>
 where
-    Distance: PartialOrd + Component,
-    Position: super::position::Position<Component = Distance>,
-    Position::Component: Component,
-    Point: PointType<Position = Position>,
-    Grid: super::grid::Grid<Position = Position, Component = Position::Component>,
+    Point: PointType<Position = I32Position>,
 {
     type Point = Point;
-    type Raw = GridCenterRawEntry<Point, Position, Distance>;
+    type Raw = GridCenterRawEntry<Point>;
 
     fn len(&self) -> usize {
         self.points.len()
@@ -188,10 +173,10 @@ where
     ) -> <<Self::Point as PointType>::Position as crate::geometry::position::Position>::Component
     {
         let example_cell = self.grid.cell_bounds(&GridCell { x: 0, y: 0, z: 0 });
-        let min = example_cell.min::<Position>();
-        let max = example_cell.max::<Position>();
-        let p1 = Position::from_components(min.x(), min.y(), min.z());
-        let p2 = Position::from_components(max.x(), min.y(), min.z());
+        let min = example_cell.min::<I32Position>();
+        let max = example_cell.max::<I32Position>();
+        let p1 = I32Position::from_components(min.x(), min.y(), min.z());
+        let p2 = I32Position::from_components(max.x(), min.y(), min.z());
         p1.distance_to(&p2)
     }
 
@@ -259,7 +244,7 @@ where
                 }
                 Entry::Vacant(v) => {
                     // this is a new cell.
-                    let center: Position = grid.cell_bounds(&cell).center();
+                    let center: I32Position = grid.cell_bounds(&cell).center();
                     let center_distance = center.distance_to(point.position());
                     v.insert(GridCenterEntry {
                         point,
