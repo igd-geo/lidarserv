@@ -94,6 +94,7 @@ where
         result
     }
 
+    #[allow(clippy::type_complexity)] // only internal anyways
     fn lod_layer_and_coarse(
         lods: &mut Vec<LodReader<SamplF, LasL, Point, Sampl>>,
         coarse_lod_steps: usize,
@@ -110,7 +111,7 @@ where
             return (&mut lods[lod_index], None);
         };
         let (first, second) = lods.split_at_mut(lod_index as usize);
-        return (&mut second[0], Some(&mut first[coarse_lod_level]));
+        (&mut second[0], Some(&mut first[coarse_lod_level]))
     }
 
     fn update_coarse(&mut self, updated_node: &MetaTreeNodeId) {
@@ -859,6 +860,6 @@ impl<Sampl, Point> Default for SensorPosNodeCollection<Sampl, Point> {
 
 impl NodeId for MetaTreeNodeId {
     fn lod(&self) -> LodLevel {
-        MetaTreeNodeId::lod(self).clone()
+        *MetaTreeNodeId::lod(self)
     }
 }

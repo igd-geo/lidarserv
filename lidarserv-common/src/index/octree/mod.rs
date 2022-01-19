@@ -32,6 +32,21 @@ struct Inner<Point, LasL, Sampl, SamplF> {
     coordinate_system: I32CoordinateSystem,
 }
 
+pub struct OctreeParams<Point, LasL, Sampl, SamplF> {
+    pub num_threads: u16,
+    pub priority_function: TaskPriorityFunction,
+    pub max_lod: LodLevel,
+    pub max_bogus_inner: usize,
+    pub max_bogus_leaf: usize,
+    pub node_hierarchy: I32GridHierarchy,
+    pub page_loader: OctreePageLoader<LasL, Page<Sampl, Point>>,
+    pub page_directory: GridCellDirectory,
+    pub max_cache_size: usize,
+    pub sample_factory: SamplF,
+    pub loader: LasL,
+    pub coordinate_system: I32CoordinateSystem,
+}
+
 pub struct Octree<Point, LasL, Sampl, SamplF> {
     inner: Arc<Inner<Point, LasL, Sampl, SamplF>>,
 }
@@ -46,20 +61,21 @@ where
     Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
 {
-    pub fn new(
-        num_threads: u16,
-        priority_function: TaskPriorityFunction,
-        max_lod: LodLevel,
-        max_bogus_inner: usize,
-        max_bogus_leaf: usize,
-        node_hierarchy: I32GridHierarchy,
-        page_loader: OctreePageLoader<LasL, Page<Sampl, Point>>,
-        page_directory: GridCellDirectory,
-        max_cache_size: usize,
-        sample_factory: SamplF,
-        loader: LasL,
-        coordinate_system: I32CoordinateSystem,
-    ) -> Self {
+    pub fn new(params: OctreeParams<Point, LasL, Sampl, SamplF>) -> Self {
+        let OctreeParams {
+            num_threads,
+            priority_function,
+            max_lod,
+            max_bogus_inner,
+            max_bogus_leaf,
+            node_hierarchy,
+            page_loader,
+            page_directory,
+            max_cache_size,
+            sample_factory,
+            loader,
+            coordinate_system,
+        } = params;
         Octree {
             inner: Arc::new(Inner {
                 num_threads,

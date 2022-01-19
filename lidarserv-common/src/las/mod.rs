@@ -394,12 +394,12 @@ where
         for _ in 0..thread_pool.num_threads() {
             let worker_queue = Worker::new_fifo();
             let stealer = worker_queue.stealer();
-            worker_queues.push(Some(worker_queue));
+            worker_queues.push(worker_queue);
             stealers.push(stealer);
         }
         for (i, chunk) in chunks.into_iter().enumerate() {
             let thread_id = i % worker_queues.len();
-            worker_queues[thread_id].as_mut().unwrap().push((
+            worker_queues[thread_id].push((
                 chunk,
                 las_slices[i].take().unwrap(),
                 laz_slices[i].take().unwrap(),
@@ -408,10 +408,9 @@ where
 
         // worker thread args
         let mut args = Vec::new();
-        for thread_id in 0..thread_pool.num_threads() {
-            args.push((worker_queues[thread_id].take().unwrap(), stealers.clone()));
+        for queue in worker_queues {
+            args.push((queue, stealers.clone()))
         }
-        drop(worker_queues);
         drop(stealers);
 
         let results = thread_pool
@@ -539,10 +538,11 @@ where
         if self.compression {
             let nr_chunks = compressed_chunks.len();
             let mut chunk_table = ChunkTable::with_capacity(nr_chunks);
-            for i in 0..nr_chunks {
+
+            for compressed_chunk in &compressed_chunks {
                 chunk_table.push(ChunkTableEntry {
                     point_count: chunk_size as u64, // we can ignore the point count, because it is only relevant for variably sized chunks. We are using fixed size chunks, in which case the point count is not written into the chunk table.
-                    byte_count: compressed_chunks[i].len() as u64,
+                    byte_count: compressed_chunk.len() as u64,
                 });
             }
             chunk_table.write_to(&mut cursor, &laz_vlr).unwrap();
@@ -550,8 +550,8 @@ where
 
         // header
         for points_by_return in results {
-            for i in 0..5 {
-                header.number_of_points_by_return[i] += points_by_return[i];
+            for (i, count) in points_by_return.iter().enumerate() {
+                header.number_of_points_by_return[i] += count;
             }
         }
         cursor.seek(SeekFrom::Start(0)).unwrap(); // unwrap: address 0 is always valid
@@ -810,7 +810,7 @@ where
         let results = thread_pool
             .execute_with_args(
                 worker_queues,
-                |thread_id, worker_queue| -> Result<(), ReadLasError> {
+                |_, worker_queue| -> Result<(), ReadLasError> {
                     loop {
                         // get a chunk to process
                         let next = if let Some(chunk) = worker_queue.pop() {

@@ -94,13 +94,13 @@ impl LevelGrid {
 
     /// Calculates the bounds of the cell.
     #[inline]
-    fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<i32> {
+    pub fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<i32> {
         self.grid.cell_bounds(cell_pos)
     }
 
     /// Returns the cell, that contains the given position.
     #[inline]
-    fn cell_at(&self, position: &I32Position) -> GridCell {
+    pub fn cell_at(&self, position: &I32Position) -> GridCell {
         self.grid.cell_at(position)
     }
 }
@@ -291,12 +291,12 @@ impl LeveledGridCell {
             y: (cell_1.pos.y + 1) * multiplier,
             z: (cell_1.pos.z + 1) * multiplier,
         };
-        return min.x <= cell_2.pos.x
+        min.x <= cell_2.pos.x
             && cell_2.pos.x < max.x
             && min.y <= cell_2.pos.y
             && cell_2.pos.y < max.y
             && min.z <= cell_2.pos.z
-            && cell_2.pos.z < max.z;
+            && cell_2.pos.z < max.z
     }
 }
 

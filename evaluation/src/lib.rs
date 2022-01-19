@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::point::{Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
-use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position};
+use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::index::sensor_pos::point::SensorPositionAttribute;
 use log::info;
 use nalgebra::Vector3;
@@ -45,7 +45,7 @@ pub fn reset_data_folder(config: &Config) {
     std::fs::create_dir(&data_folder).unwrap();
     let mut octree = data_folder.clone();
     octree.push("octree");
-    let mut sensorpos = data_folder.clone();
+    let mut sensorpos = data_folder;
     sensorpos.push("sensorpos");
     std::fs::create_dir(&octree).unwrap();
     std::fs::create_dir(&sensorpos).unwrap();

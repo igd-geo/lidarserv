@@ -95,7 +95,7 @@ where
         mut points: Vec<Point>,
         nr_non_bogus_points: usize,
     ) -> Self {
-        let mut this = Self::new(node_id.clone(), sampling_factory, false);
+        let mut this = Self::new(node_id, sampling_factory, false);
         if points.is_empty() {
             return this;
         }
@@ -113,7 +113,7 @@ where
 
     pub fn insert_points<Patch>(
         &mut self,
-        mut points_to_insert: Vec<Point>,
+        points_to_insert: Vec<Point>,
         patch_rejected: Patch,
     ) -> Vec<Point>
     where
@@ -151,7 +151,7 @@ where
         self.mark_dirty();
         PartitionedNodeSplitter {
             sampled: self.sampling.drain_raw(),
-            bogus: mem::replace(&mut self.bogus, Vec::new()),
+            bogus: mem::take(&mut self.bogus),
             node_id: self.node_id.clone(),
             replaces_base_node_at: Some(sensor_position),
         }
@@ -175,7 +175,7 @@ where
         self.replaces_base_node_at.is_some()
     }
 
-    pub fn split(mut self, meta_tree: &MetaTree) -> [Self; 8]
+    pub fn split(self, meta_tree: &MetaTree) -> [Self; 8]
     where
         Point: WithAttr<SensorPositionAttribute>,
     {

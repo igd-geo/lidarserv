@@ -68,7 +68,7 @@ impl Query for ViewFrustumQuery {
         // intersection test with view frustum
         let position = position.decode(coordinate_system);
         let position_hom = Vector4::new(position.x, position.y, position.z, 1.0);
-        let clip_position_hom = &self.view_projection_matrix * &position_hom;
+        let clip_position_hom = self.view_projection_matrix * position_hom;
         let clip_position = clip_position_hom.xyz() / clip_position_hom.w;
         if clip_position.x < -1.0
             || clip_position.x > 1.0
@@ -111,7 +111,7 @@ impl Query for ViewFrustumQuery {
         ))
         .map(|clip_v| {
             let clip_v_hom = Vector4::new(clip_v.x, clip_v.y, clip_v.z, 1.0);
-            let world_v_hom = &self.view_projection_matrix_inv * &clip_v_hom;
+            let world_v_hom = self.view_projection_matrix_inv * clip_v_hom;
             let world_v = world_v_hom.xyz() / world_v_hom.w;
             world_v.into()
         });
@@ -143,7 +143,7 @@ impl Query for ViewFrustumQuery {
         let (mut min_d_point, min_d) = aabb_vertices
             .points()
             .iter()
-            .map(|p| (p.clone(), near_clipping_plane.signed_distance(p)))
+            .map(|p| (*p, near_clipping_plane.signed_distance(p)))
             .min_by(|(_, a), (_, b)| {
                 // f64::total_cmp is still unstable... :(
                 if a < b {

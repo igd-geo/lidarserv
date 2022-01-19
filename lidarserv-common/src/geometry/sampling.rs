@@ -1,6 +1,6 @@
 use crate::geometry::grid::{GridCell, I32Grid, I32GridHierarchy, LodLevel};
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, I32Position, Position};
+use crate::geometry::position::{I32Position, Position};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;

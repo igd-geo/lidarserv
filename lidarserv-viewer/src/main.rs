@@ -140,6 +140,9 @@ fn main(args: Args) {
     );
 }
 
+#[allow(clippy::assign_op_pattern)]
+// the 'a = a * x' syntax is better than 'a *= x' for matrix multiplication, to make clear
+// what is the left and what is the right operand. Therefore silenced that clippy lint...
 fn forward_camera(
     receiver: crossbeam_channel::Receiver<Matrices>,
     sender: tokio::sync::mpsc::Sender<Matrices>,

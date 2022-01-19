@@ -1,6 +1,5 @@
 use crate::{Config, Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
-use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position};
 use lidarserv_common::index::{Index, Node, NodeId, Reader, Writer};
 use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
 use lidarserv_common::query::Query;
@@ -36,11 +35,10 @@ where
     let receive_times = rt.join().unwrap();
 
     // calculate per-lod mean and median
-    let max_lod_level = 10;
     let mut delays = Vec::new();
-    for lod_index in 0..max_lod_level {
+    for rt in &receive_times {
         let mut lod_delays = Vec::new();
-        for (point_index, received_at) in receive_times[lod_index].iter() {
+        for (point_index, received_at) in rt {
             let delay = *received_at - insertion_times[*point_index];
             lod_delays.push(delay.as_secs_f64())
         }
@@ -49,7 +47,7 @@ where
     let per_lod_stats = delays
         .into_iter()
         .map(|mut point_latencies| {
-            if point_latencies.len() > 0 {
+            if !point_latencies.is_empty() {
                 point_latencies.sort_by(|a, b| {
                     if a < b {
                         Ordering::Less
@@ -77,10 +75,10 @@ where
 
     // calculate overall latency stats
     let mut delays = Vec::new();
-    'point_loop: for point_index in 0..points.len() {
-        for lod_index in 0..max_lod_level {
-            if let Some(received_at) = receive_times[lod_index].get(&point_index) {
-                let delay = *received_at - insertion_times[point_index];
+    'point_loop: for (point_index, insertion_time) in insertion_times.into_iter().enumerate() {
+        for t in &receive_times {
+            if let Some(received_at) = t.get(&point_index) {
+                let delay = *received_at - insertion_time;
                 delays.push(delay.as_secs_f64());
                 continue 'point_loop;
             }
@@ -93,7 +91,7 @@ where
             Ordering::Greater
         }
     });
-    let overall_stats = if delays.len() > 0 {
+    let overall_stats = if !delays.is_empty() {
         let median = delays[delays.len() / 2];
         let mean = delays.iter().cloned().sum::<f64>() / delays.len() as f64;
         let quantiles = quantiles(&delays);
@@ -218,7 +216,7 @@ where
     receive_times
 }
 
-fn quantiles(data: &Vec<f64>) -> serde_json::Value {
+fn quantiles(data: &[f64]) -> serde_json::Value {
     let items = [0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100]
         .into_iter()
         .map(|percent| {
@@ -230,7 +228,7 @@ fn quantiles(data: &Vec<f64>) -> serde_json::Value {
     json!(items)
 }
 
-fn quantile(data: &Vec<f64>, frac: f64) -> f64 {
+fn quantile(data: &[f64], frac: f64) -> f64 {
     let index_float = frac * (data.len() - 1) as f64;
     let index_l = (index_float as usize).clamp(0, data.len() - 1);
     let index_r = (index_l + 1).clamp(0, data.len() - 1);

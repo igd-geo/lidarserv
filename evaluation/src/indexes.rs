@@ -5,7 +5,7 @@ use lidarserv_common::geometry::sampling::{GridCenterSampling, GridCenterSamplin
 use lidarserv_common::index::octree::grid_cell_directory::GridCellDirectory;
 use lidarserv_common::index::octree::page_manager::OctreePageLoader;
 use lidarserv_common::index::octree::writer::TaskPriorityFunction;
-use lidarserv_common::index::octree::Octree;
+use lidarserv_common::index::octree::{Octree, OctreeParams};
 use lidarserv_common::index::sensor_pos::meta_tree::MetaTree;
 use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
 use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
@@ -32,7 +32,6 @@ pub fn create_sensor_pos_index(
     let mut meta_tree_file = data_folder.clone();
     meta_tree_file.push("meta.bin");
 
-    let nr_threads = config.num_threads;
     let max_cache_size = config.max_cache_size;
 
     let point_grid_hierarchy = I32GridHierarchy::new(17);
@@ -82,9 +81,9 @@ pub fn create_octree_index(coordinate_system: I32CoordinateSystem, config: &Conf
     directory_file_name.push("directory.bin");
     let page_directory = GridCellDirectory::new(&max_lod, directory_file_name).unwrap();
 
-    Octree::new(
-        config.num_threads,
-        match config.task_priority_function.as_str() {
+    Octree::new(OctreeParams {
+        num_threads: config.num_threads,
+        priority_function: match config.task_priority_function.as_str() {
             "Lod" => TaskPriorityFunction::Lod,
             "TaskAge" => TaskPriorityFunction::TaskAge,
             "NewestPoint" => TaskPriorityFunction::NewestPoint,
@@ -99,14 +98,14 @@ pub fn create_octree_index(coordinate_system: I32CoordinateSystem, config: &Conf
             }
         },
         max_lod,
-        config.max_bogus_inner,
-        config.max_bogus_leaf,
+        max_bogus_inner: config.max_bogus_inner,
+        max_bogus_leaf: config.max_bogus_leaf,
         node_hierarchy,
         page_loader,
         page_directory,
-        config.max_cache_size,
+        max_cache_size: config.max_cache_size,
         sample_factory,
-        las_loader,
+        loader: las_loader,
         coordinate_system,
-    )
+    })
 }

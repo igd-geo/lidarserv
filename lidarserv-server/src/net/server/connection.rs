@@ -4,7 +4,6 @@ use crate::net::protocol::connection::Connection;
 use crate::net::protocol::messages::Message::IncrementalResult;
 use crate::net::protocol::messages::{CoordinateSystem, DeviceType, LasPointData, Message, Query};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
-use crossbeam_channel::RecvError;
 use lidarserv_common::geometry::bounding_box::{BaseAABB, OptionAABB};
 use lidarserv_common::geometry::grid::LodLevel;
 use lidarserv_common::geometry::position::{I32Position, Position};
@@ -15,11 +14,10 @@ use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use log::{debug, info};
 use std::io::Cursor;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread;
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Receiver;
-use tokio::sync::mpsc::error::SendError;
 
 pub async fn handle_connection(
     con: TcpStream,
@@ -215,7 +213,7 @@ async fn viewer_mode(
     let receive_queries = async move {
         while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
             let query = match msg {
-                Message::Query(q) => q,
+                Message::Query(q) => *q,
                 Message::ResultAck { update_number } => {
                     query_ack_sender.send(update_number).ok();
                     continue;

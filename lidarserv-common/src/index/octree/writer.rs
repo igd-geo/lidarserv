@@ -1,6 +1,6 @@
 use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::PointType;
-use crate::geometry::position::{Component, I32Position, Position};
+use crate::geometry::position::{I32Position, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
@@ -341,6 +341,7 @@ where
         }
     }
 
+    #[allow(clippy::type_complexity)] // only internal anyways
     fn writer_task(
         &self,
         node_id: LeveledGridCell,

@@ -1,5 +1,4 @@
 use crate::{Config, Point};
-use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::index::{Index, Writer};
 use nalgebra::min;
 use serde_json::json;

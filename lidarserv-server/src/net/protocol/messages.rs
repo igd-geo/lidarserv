@@ -27,7 +27,7 @@ pub enum Message {
     InsertPoints { data: LasPointData },
 
     /// Sent from the client to server in Viewer mode, to set or update the query.
-    Query(Query),
+    Query(Box<Query>),
 
     /// Sent from the server to the client with some update to the current query result.
     IncrementalResult {
@@ -55,6 +55,7 @@ pub enum CoordinateSystem {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum Query {
     AabbQuery {
         min_bounds: Vector3<f64>,

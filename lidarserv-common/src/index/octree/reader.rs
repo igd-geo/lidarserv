@@ -76,25 +76,25 @@ where
     fn add_root(&mut self, cell: LeveledGridCell) {
         let matches_query = self.cell_matches_query(&cell);
         self.frontier.insert(
-            cell.clone(),
+            cell,
             FrontierElement {
                 matches_query,
                 exists: true,
             },
         );
         if matches_query {
-            self.load_queue.insert(cell.clone());
+            self.load_queue.insert(cell);
         }
         self.known_root_nodes.insert(cell);
     }
 
     fn cell_matches_query(&self, cell: &LeveledGridCell) -> bool {
-        Self::cell_matches_query_impl(cell, &self.query, self.inner.as_ref())
+        Self::cell_matches_query_impl(cell, self.query.as_ref(), self.inner.as_ref())
     }
 
     fn cell_matches_query_impl(
         cell: &LeveledGridCell,
-        query: &Box<dyn Query + Send + Sync>,
+        query: &(dyn Query + Send + Sync),
         inner: &Inner<Point, LasL, Sampl, SamplF>,
     ) -> bool {
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
@@ -125,7 +125,7 @@ where
             if let Some(elem) = self.frontier.get_mut(change) {
                 elem.exists = true;
                 if elem.matches_query {
-                    self.load_queue.insert(change.clone());
+                    self.load_queue.insert(*change);
                 }
             }
         }
@@ -183,7 +183,7 @@ where
             } = self;
             for (cell, elem) in frontier {
                 elem.matches_query =
-                    Self::cell_matches_query_impl(cell, query, self.inner.as_ref());
+                    Self::cell_matches_query_impl(cell, query.as_ref(), self.inner.as_ref());
             }
         }
 
@@ -192,7 +192,7 @@ where
             .iter()
             .filter_map(|(cell, elem)| {
                 if elem.exists && elem.matches_query {
-                    Some(cell.clone())
+                    Some(*cell)
                 } else {
                     None
                 }
@@ -231,12 +231,12 @@ where
         // get a node to load
         let load = match self.load_queue.iter().next() {
             None => return None,
-            Some(e) => e.clone(),
+            Some(e) => *e,
         };
         self.load_queue.remove(&load);
 
         // update the set of loaded nodes
-        self.loaded.insert(load.clone());
+        self.loaded.insert(load);
 
         // update the frontier (remove this node, but add children)
         // and schedule the children that can be loaded immediately for their initial loading
@@ -245,7 +245,7 @@ where
             let exists = self.inner.page_cache.directory().exists(&child);
             let matches_query = self.cell_matches_query(&child);
             if exists && matches_query {
-                self.load_queue.insert(child.clone());
+                self.load_queue.insert(child);
             }
             self.frontier.insert(
                 child,
@@ -265,7 +265,7 @@ where
         // get a node to remove
         let remove = match self.remove_queue.iter().next() {
             None => return None,
-            Some(e) => e.clone(),
+            Some(e) => *e,
         };
         self.remove_queue.remove(&remove);
 
@@ -275,7 +275,7 @@ where
 
         // shrink frontier
         self.frontier.insert(
-            remove.clone(),
+            remove,
             FrontierElement {
                 matches_query: false,
                 exists: true,
@@ -289,7 +289,7 @@ where
         if let Some(parent) = remove.parent() {
             let children_are_leaves = parent.children().iter().all(|c| {
                 self.frontier
-                    .get(&c)
+                    .get(c)
                     .map(|e| !e.matches_query)
                     .unwrap_or(false)
             });
@@ -343,7 +343,7 @@ where
 
             // if there is nothing to do:
             // wait for something to happen (either a new query, or an update to come in).
-            match self.wait_update_or(&queries) {
+            match self.wait_update_or(queries) {
                 None => (),
                 Some(Ok(query)) => {
                     if let Some(q) = queries.try_iter().last() {

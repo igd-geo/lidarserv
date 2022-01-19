@@ -3,7 +3,6 @@ use anyhow::Result;
 use itertools::Itertools;
 use lidarserv_server::common::geometry::points::PointType;
 use lidarserv_server::common::geometry::position::F64Position;
-use lidarserv_server::common::index::sensor_pos::point::SensorPositionAttribute;
 use lidarserv_server::common::las::LasPointAttributes;
 use lidarserv_server::common::nalgebra::{Matrix4, Vector3, Vector4};
 use lidarserv_server::index::point::{GlobalPoint, GlobalSensorPositionAttribute};

@@ -1,6 +1,6 @@
 use crate::geometry::bounding_box::OptionAABB;
 use crate::geometry::points::PointType;
-use crate::geometry::position::{I32CoordinateSystem, I32Position, Position};
+use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::partitioned_node::PartitionedNode;
@@ -10,7 +10,6 @@ use crate::lru_cache::pager::{
     CacheLoadError, IoError, PageDirectory, PageFileHandle, PageLoader,
     PageManager as GenericPageManager,
 };
-use crate::nalgebra::Scalar;
 use crate::span;
 use crate::utils::thread_pool::Threads;
 use std::collections::HashSet;
@@ -259,7 +258,7 @@ where
         let points = Self::binary_to_points(&binary, las_loader)?;
         let points = Arc::new(points);
         *points_lock = Some(Arc::clone(&points));
-        return Ok(points);
+        Ok(points)
     }
 
     pub fn get_node<LasL, SamplF>(

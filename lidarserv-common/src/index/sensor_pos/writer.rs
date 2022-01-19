@@ -280,7 +280,7 @@ where
                         // if the newly loaded node replaces a previous one, we  also need to
                         // write that to disk.
                         let s3 = span!("coordinator_thread::: save old node");
-                        let mut old_node = mem::replace(&mut loaded_nodes[lod_level], node);
+                        let old_node = mem::replace(&mut loaded_nodes[lod_level], node);
                         if old_node.is_dirty() {
                             apply_updates(
                                 old_node.node_id().clone(),
@@ -310,7 +310,7 @@ where
         // insert points into each lod, top-to-bottom
         // until no points are left in all worker buffers.
         let s1 = span!("coordinator_thread: insert points");
-        assert!(loaded_nodes.len() > 0);
+        assert!(!loaded_nodes.is_empty());
         let last_lod_node = loaded_nodes.len() - 1;
         for node in &mut loaded_nodes[..last_lod_node] {
             worker_buffer = node.insert_points(worker_buffer, |p, q| {

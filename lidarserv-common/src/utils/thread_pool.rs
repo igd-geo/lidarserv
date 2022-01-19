@@ -1,5 +1,4 @@
 use crate::span;
-use crossbeam_channel::Select;
 use std::cell::UnsafeCell;
 use std::pin::Pin;
 use std::thread::JoinHandle;
@@ -41,10 +40,6 @@ pub struct ExecuteJoinHandle<Data, Arg, Ret> {
     #[allow(dead_code)]
     task: Pin<Box<Task<Data, Arg, Ret>>>,
     done_receivers: Vec<crossbeam_channel::Receiver<Ret>>,
-}
-
-pub struct ExecuteJoinIter<Data, Arg, Ret> {
-    handle: ExecuteJoinHandle<Data, Arg, Ret>,
 }
 
 impl Threads {
@@ -224,34 +219,11 @@ impl<Task, Arg, Ret> ExecuteJoinHandle<Task, Arg, Ret> {
     pub fn join(mut self) -> Vec<Ret> {
         self.join_impl()
     }
-
-    pub fn into_iter(self) -> ExecuteJoinIter<Task, Arg, Ret> {
-        ExecuteJoinIter { handle: self }
-    }
 }
 
 impl<Task, Arg, Ret> Drop for ExecuteJoinHandle<Task, Arg, Ret> {
     fn drop(&mut self) {
         self.join_impl();
-    }
-}
-
-impl<Task, Arg, Ret> Iterator for ExecuteJoinIter<Task, Arg, Ret> {
-    type Item = Ret;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.handle.done_receivers.is_empty() {
-            return None;
-        }
-        let mut sel = Select::new();
-        for r in &self.handle.done_receivers {
-            sel.recv(r);
-        }
-        let op = sel.select();
-        let index = op.index();
-        let result = op.recv(&self.handle.done_receivers[index]).unwrap();
-        self.handle.done_receivers.swap_remove(index);
-        Some(result)
     }
 }
 

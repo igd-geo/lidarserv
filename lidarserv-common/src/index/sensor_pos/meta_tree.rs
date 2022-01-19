@@ -2,7 +2,7 @@
 
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::{GridCell, I32GridHierarchy, LeveledGridCell, LodLevel};
-use crate::geometry::position::{Component, I32Position, Position};
+use crate::geometry::position::I32Position;
 use crate::index::sensor_pos::{Replacement, Update};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;

@@ -9,11 +9,11 @@ use crate::index::DynIndex;
 use lidarserv_common::geometry::grid::I32GridHierarchy;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
+use lidarserv_common::index::octree::OctreeParams;
 use lidarserv_common::index::sensor_pos::meta_tree::{MetaTree, MetaTreeIoError};
 use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
 use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
 use lidarserv_common::las::I32LasReadWrite;
-use lidarserv_common::nalgebra::Vector3;
 use std::path::Path;
 use std::time::Duration;
 use thiserror::Error;
@@ -59,20 +59,20 @@ fn build_octree_index(
         genaral_settings.las_offset,
     );
 
-    let octree = Octree::new(
-        genaral_settings.nr_threads as u16,
-        settings.priority_function,
-        settings.max_lod,
-        settings.max_bogus_inner,
-        settings.max_bogus_leaf,
+    let octree = Octree::new(OctreeParams {
+        num_threads: genaral_settings.nr_threads as u16,
+        priority_function: settings.priority_function,
+        max_lod: settings.max_lod,
+        max_bogus_inner: settings.max_bogus_inner,
+        max_bogus_leaf: settings.max_bogus_leaf,
         node_hierarchy,
         page_loader,
         page_directory,
-        genaral_settings.max_cache_size,
+        max_cache_size: genaral_settings.max_cache_size,
         sample_factory,
-        las_loader,
+        loader: las_loader,
         coordinate_system,
-    );
+    });
     Ok(Box::new(octree))
 }
 

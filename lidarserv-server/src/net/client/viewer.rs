@@ -133,11 +133,11 @@ where
         let min = global_aabb.min::<F64Position>().decode(&csys);
         let max = global_aabb.max::<F64Position>().decode(&csys);
         self.connection
-            .write_message(&Message::Query(Query::AabbQuery {
+            .write_message(&Message::Query(Box::new(Query::AabbQuery {
                 min_bounds: min.coords,
                 max_bounds: max.coords,
                 lod_level: lod.level(),
-            }))
+            })))
             .await
     }
 
@@ -149,12 +149,12 @@ where
         min_distance_pixels: f64,
     ) -> Result<(), LidarServerError> {
         self.connection
-            .write_message(&Message::Query(Query::ViewFrustumQuery {
+            .write_message(&Message::Query(Box::new(Query::ViewFrustumQuery {
                 view_projection_matrix,
                 view_projection_matrix_inv,
                 window_width_pixels,
                 min_distance_pixels,
-            }))
+            })))
             .await
     }
 }

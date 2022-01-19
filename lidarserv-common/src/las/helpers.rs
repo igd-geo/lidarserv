@@ -145,8 +145,10 @@ where
         let mut point = P::new(position);
 
         // set las point attributes
-        let mut las_attr = LasPointAttributes::default();
-        las_attr.intensity = raw.intensity;
+        let mut las_attr = LasPointAttributes {
+            intensity: raw.intensity,
+            ..Default::default()
+        };
         if let Flags::TwoByte(b1, b2) = raw.flags {
             las_attr.return_number = (b1 & 0xE0) >> 5;
             las_attr.number_of_returns = (b1 & 0x1C) >> 2;

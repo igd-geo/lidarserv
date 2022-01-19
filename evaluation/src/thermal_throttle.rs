@@ -23,7 +23,7 @@ pub fn get_fans_rpm() -> Result<Vec<(String, u32)>, Box<dyn Error>> {
     };
     let hwmons = parse_hwmons()?;
     for (_, _, hwmon) in &hwmons {
-        for (_, fan) in hwmon.fans() {
+        for fan in hwmon.fans().values() {
             let rpm = fan.read_input()?.as_rpm();
             let name = fan.name();
             all_fans.push((name, rpm));
