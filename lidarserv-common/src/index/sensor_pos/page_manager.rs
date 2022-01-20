@@ -1,17 +1,16 @@
 use crate::geometry::bounding_box::OptionAABB;
-use crate::geometry::points::PointType;
+use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
 use crate::index::sensor_pos::partitioned_node::PartitionedNode;
 use crate::index::sensor_pos::writer::IndexError;
-use crate::las::{Las, LasReadWrite, ReadLasError};
+use crate::las::{I32LasReadWrite, Las, LasExtraBytes, LasPointAttributes, ReadLasError};
 use crate::lru_cache::pager::{
     CacheLoadError, IoError, PageDirectory, PageFileHandle, PageLoader,
     PageManager as GenericPageManager,
 };
 use crate::span;
-use crate::utils::thread_pool::Threads;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{Cursor, ErrorKind, Read, Write};
@@ -32,11 +31,11 @@ pub struct SimplePoints<Point> {
     pub non_bogus_points: u32,
 }
 
-pub struct Loader<LasL, Sampl> {
+pub struct Loader<Sampl> {
     base_path: PathBuf,
     extension: &'static str,
     coordinate_system: I32CoordinateSystem,
-    las_loader: LasL,
+    las_loader: I32LasReadWrite,
     _phantom: PhantomData<fn() -> Sampl>,
 }
 
@@ -44,10 +43,10 @@ pub struct FileIdDirectory {
     files: HashSet<MetaTreeNodeId>,
 }
 
-pub struct FileHandle<LasL, Sampl> {
+pub struct FileHandle<Sampl> {
     file_name: PathBuf,
     coordinate_system: I32CoordinateSystem,
-    las_loader: LasL,
+    las_loader: I32LasReadWrite,
     _phantom: PhantomData<Sampl>,
 }
 
@@ -80,7 +79,7 @@ impl<Sampl, Point> SensorPosPage<Sampl, Point> {
 }
 impl<Sampl, Point> SensorPosPage<Sampl, Point>
 where
-    Point: PointType<Position = I32Position> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point>,
 {
     pub fn exists(&self) -> bool {
@@ -105,33 +104,21 @@ where
             .unwrap_or(false)
     }
 
-    fn points_to_binary<LasL>(
+    fn points_to_binary(
         points: &Arc<SimplePoints<Point>>,
-        las_loader: &LasL,
+        las_loader: &I32LasReadWrite,
         coordinate_system: I32CoordinateSystem,
-        for_transmission: bool,
-    ) -> Vec<u8>
-    where
-        LasL: LasReadWrite<Point>,
-    {
-        let mut data = Vec::new();
+    ) -> Vec<u8> {
         if !points.points.is_empty() {
-            let las = Las {
+            las_loader.write_las::<Point, _>(Las {
                 points: points.points.iter(),
                 bounds: points.bounds.clone(),
                 non_bogus_points: Some(points.non_bogus_points),
                 coordinate_system,
-            };
-            let cursor = Cursor::new(&mut data);
-            if for_transmission {
-                las_loader
-                    .write_las_force_no_compression(las, cursor)
-                    .unwrap(); // unwrap: writing to a cursor does not throw i/o errors
-            } else {
-                las_loader.write_las(las, cursor).unwrap(); // unwrap: writing to a cursor does not throw i/o errors
-            }
+            })
+        } else {
+            Vec::new()
         }
-        data
     }
 
     fn node_to_points(node: &Arc<PartitionedNode<Sampl, Point>>) -> SimplePoints<Point> {
@@ -159,13 +146,10 @@ where
         )
     }
 
-    fn binary_to_points<LasL>(
+    fn binary_to_points(
         binary: &Arc<Vec<u8>>,
-        las_loader: &LasL,
-    ) -> Result<SimplePoints<Point>, ReadLasError>
-    where
-        LasL: LasReadWrite<Point>,
-    {
+        las_loader: &I32LasReadWrite,
+    ) -> Result<SimplePoints<Point>, ReadLasError> {
         if binary.is_empty() {
             Ok(SimplePoints {
                 points: vec![],
@@ -182,15 +166,11 @@ where
         }
     }
 
-    pub fn get_binary<LasL>(
+    pub fn get_binary(
         &self,
-        las_loader: &LasL,
+        las_loader: &I32LasReadWrite,
         coordinate_system: I32CoordinateSystem,
-        for_transmission: bool,
-    ) -> Arc<Vec<u8>>
-    where
-        LasL: LasReadWrite<Point>,
-    {
+    ) -> Arc<Vec<u8>> {
         // try to get existing node data
         let mut bin_lock = self.binary.lock().unwrap();
         if let Some(arc) = bin_lock.as_ref() {
@@ -212,19 +192,16 @@ where
             }
         };
 
-        let data = Self::points_to_binary(&points, las_loader, coordinate_system, for_transmission);
+        let data = Self::points_to_binary(&points, las_loader, coordinate_system);
         let data = Arc::new(data);
         *bin_lock = Some(Arc::clone(&data));
         data
     }
 
-    pub fn get_points<LasL>(
+    pub fn get_points(
         &self,
-        las_loader: &LasL,
-    ) -> Result<Arc<SimplePoints<Point>>, ReadLasError>
-    where
-        LasL: LasReadWrite<Point>,
-    {
+        las_loader: &I32LasReadWrite,
+    ) -> Result<Arc<SimplePoints<Point>>, ReadLasError> {
         {
             // try to get existing points data
             let mut points_lock = self.points.lock().unwrap();
@@ -261,14 +238,13 @@ where
         Ok(points)
     }
 
-    pub fn get_node<LasL, SamplF>(
+    pub fn get_node<SamplF>(
         &self,
         node_id: MetaTreeNodeId,
         sampling_factory: &SamplF,
-        las_loader: &LasL,
+        las_loader: &I32LasReadWrite,
     ) -> Result<Arc<PartitionedNode<Sampl, Point>>, IndexError>
     where
-        LasL: LasReadWrite<Point>,
         SamplF: SamplingFactory<Sampling = Sampl>,
     {
         // try to get existing node
@@ -315,156 +291,9 @@ where
     }
 }
 
-impl<Sampl, Point> SensorPosPage<Sampl, Point>
+impl<Sampl, Point> PageFileHandle for FileHandle<Sampl>
 where
-    Sampl: Sampling<Point = Point> + Send + Clone,
-    Sampl::Raw: Send,
-    Point: PointType<Position = I32Position> + Send + Sync + Clone,
-{
-    fn points_to_binary_par<LasL>(
-        points: &Arc<SimplePoints<Point>>,
-        las_loader: &LasL,
-        coordinate_system: I32CoordinateSystem,
-        threads: &mut Threads,
-    ) -> Vec<u8>
-    where
-        LasL: LasReadWrite<Point>,
-    {
-        if points.points.is_empty() {
-            Vec::new()
-        } else {
-            las_loader.write_las_par(
-                Las {
-                    points: &points.points,
-                    bounds: points.bounds.clone(),
-                    non_bogus_points: Some(points.non_bogus_points),
-                    coordinate_system,
-                },
-                threads,
-            )
-        }
-    }
-
-    fn binary_to_points_par<LasL>(
-        binary: &Arc<Vec<u8>>,
-        las_loader: &LasL,
-        threads: &mut Threads,
-    ) -> Result<SimplePoints<Point>, ReadLasError>
-    where
-        LasL: LasReadWrite<Point>,
-    {
-        if binary.is_empty() {
-            Ok(SimplePoints {
-                points: vec![],
-                bounds: OptionAABB::empty(),
-                non_bogus_points: 0,
-            })
-        } else {
-            let las = las_loader.read_las_par(binary.as_slice(), threads)?;
-            Ok(SimplePoints {
-                points: las.points,
-                bounds: las.bounds,
-                non_bogus_points: las.non_bogus_points.unwrap_or(u32::MAX),
-            })
-        }
-    }
-
-    pub fn get_binary_par<LasL>(
-        &self,
-        threads: &mut Threads,
-        las_loader: &LasL,
-        coordinate_system: I32CoordinateSystem,
-    ) -> Arc<Vec<u8>>
-    where
-        LasL: LasReadWrite<Point> + Sync,
-    {
-        // try to get existing node data
-        let mut binary_lock = self.binary.lock().unwrap();
-        if let Some(arc) = binary_lock.as_ref() {
-            return Arc::clone(arc);
-        }
-
-        // try to convert from points
-        let points = {
-            let mut points_lock = self.points.lock().unwrap();
-            if let Some(points) = points_lock.as_ref() {
-                Arc::clone(points)
-            } else {
-                // second unwrap: must be Some(_), if self.binary and self.points both are None.
-                let node = Arc::clone(self.node.lock().unwrap().as_ref().unwrap());
-                let points = Self::node_to_points(&node);
-                let points = Arc::new(points);
-                *points_lock = Some(Arc::clone(&points));
-                points
-            }
-        };
-        let binary = Self::points_to_binary_par(&points, las_loader, coordinate_system, threads);
-        let binary = Arc::new(binary);
-        *binary_lock = Some(Arc::clone(&binary));
-        binary
-    }
-
-    pub fn get_node_par<SamplF, LasL>(
-        &self,
-        node_id: MetaTreeNodeId,
-        sampling_factory: &SamplF,
-        las_loader: &LasL,
-        threads: &mut Threads,
-    ) -> Result<Arc<PartitionedNode<Sampl, Point>>, IndexError>
-    where
-        LasL: LasReadWrite<Point> + Sync,
-        SamplF: SamplingFactory<Sampling = Sampl> + Sync,
-    {
-        // try to get existing node
-        {
-            let node_lock = self.node.lock().unwrap();
-            if let Some(node) = node_lock.as_ref() {
-                return Ok(Arc::clone(node));
-            }
-        }
-
-        // try to convert from points
-        {
-            let points = self.points.lock().unwrap().as_ref().map(Arc::clone);
-            let mut node_lock = self.node.lock().unwrap();
-            if let Some(node) = node_lock.as_ref() {
-                return Ok(Arc::clone(node));
-            }
-            if let Some(points) = points {
-                let node = Self::points_to_node(&points, node_id, sampling_factory);
-                let node = Arc::new(node);
-                *node_lock = Some(Arc::clone(&node));
-                return Ok(node);
-            }
-        }
-
-        // convert from binary
-        let binary = Arc::clone(self.binary.lock().unwrap().as_ref().unwrap());
-        let mut points_lock = self.points.lock().unwrap();
-        let mut node_lock = self.node.lock().unwrap();
-        if let Some(node) = node_lock.as_ref() {
-            return Ok(Arc::clone(node));
-        }
-        let points = if let Some(points) = points_lock.as_ref() {
-            Arc::clone(points)
-        } else {
-            let points = Self::binary_to_points_par(&binary, las_loader, threads)?;
-            let points = Arc::new(points);
-            *points_lock = Some(Arc::clone(&points));
-            points
-        };
-        drop(points_lock);
-        let node = Self::points_to_node(&points, node_id, sampling_factory);
-        let node = Arc::new(node);
-        *node_lock = Some(Arc::clone(&node));
-        Ok(node)
-    }
-}
-
-impl<Sampl, LasL, Point> PageFileHandle for FileHandle<LasL, Sampl>
-where
-    LasL: LasReadWrite<Point>,
-    Point: PointType<Position = I32Position> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point>,
 {
     type Data = SensorPosPage<Sampl, Point>;
@@ -487,7 +316,7 @@ where
     }
 
     fn store(&mut self, data: &Self::Data) -> Result<(), IoError> {
-        let bytes = data.get_binary(&self.las_loader, self.coordinate_system.clone(), false);
+        let bytes = data.get_binary(&self.las_loader, self.coordinate_system.clone());
         if !bytes.is_empty() {
             let s = span!("BinDataFileHandle::store: write and sync");
             s.emit_value(bytes.len() as u64);
@@ -514,12 +343,12 @@ where
     }
 }
 
-impl<LasL, Sampl> Loader<LasL, Sampl> {
+impl<Sampl> Loader<Sampl> {
     pub fn new(
         base_path: PathBuf,
         compressed: bool,
         coordinate_system: I32CoordinateSystem,
-        las_loader: LasL,
+        las_loader: I32LasReadWrite,
     ) -> Self {
         Loader {
             base_path,
@@ -531,15 +360,13 @@ impl<LasL, Sampl> Loader<LasL, Sampl> {
     }
 }
 
-impl<LasL, Sampl, Point> PageLoader for Loader<LasL, Sampl>
+impl<Sampl, Point> PageLoader for Loader<Sampl>
 where
-    // ok
-    LasL: LasReadWrite<Point> + Clone,
-    Point: PointType<Position = I32Position> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point>,
 {
     type FileName = MetaTreeNodeId;
-    type FileHandle = FileHandle<LasL, Sampl>;
+    type FileHandle = FileHandle<Sampl>;
 
     fn open(&self, file: &Self::FileName) -> Self::FileHandle {
         let filename = format!(
@@ -596,10 +423,10 @@ impl PageDirectory for FileIdDirectory {
     }
 }
 
-pub type PageManager<Point, Sampl, LasL> = GenericPageManager<
-    Loader<LasL, Sampl>,
+pub type PageManager<Point, Sampl> = GenericPageManager<
+    Loader<Sampl>,
     MetaTreeNodeId,
     SensorPosPage<Sampl, Point>,
-    FileHandle<LasL, Sampl>,
+    FileHandle<Sampl>,
     FileIdDirectory,
 >;

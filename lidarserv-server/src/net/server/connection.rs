@@ -7,7 +7,7 @@ use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::{BaseAABB, OptionAABB};
 use lidarserv_common::geometry::grid::LodLevel;
 use lidarserv_common::geometry::position::{I32Position, Position};
-use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
+use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::nalgebra::Point3;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use lidarserv_common::query::view_frustum::ViewFrustumQuery;

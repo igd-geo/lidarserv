@@ -5,7 +5,7 @@ use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::AABB;
 use lidarserv_common::geometry::grid::LodLevel;
 use lidarserv_common::geometry::position::{F64CoordinateSystem, F64Position, Position};
-use lidarserv_common::las::{I32LasReadWrite, Las, LasReadWrite};
+use lidarserv_common::las::{I32LasReadWrite, Las};
 use lidarserv_common::nalgebra::Matrix4;
 use std::fmt::{Debug, Formatter};
 use std::io::Cursor;

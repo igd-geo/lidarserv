@@ -9,7 +9,7 @@ use crate::index::sensor_pos::partitioned_node::{PartitionedNode, PartitionedNod
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::{Inner, Replacement, Update};
 use crate::index::Writer;
-use crate::las::{LasReadWrite, ReadLasError, WriteLasError};
+use crate::las::{LasExtraBytes, LasPointAttributes, ReadLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
 use crate::span;
 use crossbeam_channel::{Receiver, Sender};
@@ -42,12 +42,6 @@ pub enum IndexError {
     },
 
     #[error(transparent)]
-    WriteLas {
-        #[from]
-        source: WriteLasError,
-    },
-
-    #[error(transparent)]
     Other(Box<dyn StdError + Send + Sync>),
 }
 
@@ -70,18 +64,17 @@ impl<Point> SensorPosWriter<Point>
 where
     Point: PointType<Position = I32Position>
         + WithAttr<SensorPositionAttribute>
+        + WithAttr<LasPointAttributes>
+        + LasExtraBytes
         + Clone
         + Send
         + Sync
         + 'static,
 {
-    pub(super) fn new<SamplF, LasL, Sampl>(
-        index_inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
-    ) -> Self
+    pub(super) fn new<SamplF, Sampl>(index_inner: Arc<Inner<SamplF, Point, Sampl>>) -> Self
     where
         SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Sync + Send + 'static,
         Sampl: Sampling<Point = Point> + Send + Sync + Clone + 'static,
-        LasL: LasReadWrite<Point> + Send + Sync + Clone + 'static,
     {
         // main worker thread
         let (new_points_sender, new_points_receiver) = crossbeam_channel::unbounded();
@@ -140,8 +133,8 @@ impl<Point> Drop for SensorPosWriter<Point> {
     }
 }
 
-fn coordinator_thread<SamplF, Point, Sampl, LasL>(
-    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
+fn coordinator_thread<SamplF, Point, Sampl>(
+    inner: Arc<Inner<SamplF, Point, Sampl>>,
     new_points_receiver: Receiver<Vec<Point>>,
     mut meta_tree: MetaTree,
     pending_points: Arc<AtomicUsize>,
@@ -151,11 +144,12 @@ where
     Sampl: Sampling<Point = Point> + Send + Sync + Clone + 'static,
     Point: PointType<Position = I32Position>
         + WithAttr<SensorPositionAttribute>
+        + WithAttr<LasPointAttributes>
+        + LasExtraBytes
         + Clone
         + Send
         + Sync
         + 'static,
-    LasL: LasReadWrite<Point> + Send + Sync + Clone + 'static,
 {
     tracy_client::set_thread_name("Coordinator thread");
 
@@ -477,20 +471,23 @@ where
     Ok(())
 }
 
-fn apply_updates<Point, Sampl, SamplF, LasL, Raw>(
+fn apply_updates<Point, Sampl, SamplF, Raw>(
     base_node: MetaTreeNodeId,
     replace_with: PartitionedNode<Sampl, Point>,
     replace_with_split: Vec<PartitionedNodeSplitter<Point, Raw>>,
-    inner: &Inner<SamplF, LasL, Point, Sampl>,
+    inner: &Inner<SamplF, Point, Sampl>,
     meta_tree: &mut MetaTree,
     notify_sender: &crossbeam_channel::Sender<Update>,
 ) -> Result<(), IndexError>
 where
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
     Sampl: Sampling<Point = Point, Raw = Raw> + Send + Clone,
-    Point: PointType<Position = I32Position> + Send + Clone,
+    Point: PointType<Position = I32Position>
+        + WithAttr<LasPointAttributes>
+        + LasExtraBytes
+        + Send
+        + Clone,
     Raw: RawSamplingEntry<Point = Point>,
-    LasL: LasReadWrite<Point> + Sync + Clone,
 {
     let mut aabbs = vec![(
         replace_with.node_id().clone(),
@@ -541,9 +538,9 @@ where
     Ok(())
 }
 
-fn notify_readers_thread<SamplF, LasL, Point, Sampl>(
+fn notify_readers_thread<SamplF, Point, Sampl>(
     changes_receiver: crossbeam_channel::Receiver<Update>,
-    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
+    inner: Arc<Inner<SamplF, Point, Sampl>>,
 ) {
     for change in changes_receiver {
         let mut shared = inner.shared.write().unwrap();
@@ -566,12 +563,11 @@ fn notify_readers_thread<SamplF, LasL, Point, Sampl>(
     }
 }
 
-fn cache_cleanup_thread<SamplF, LasL, Point, Sampl>(
-    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
+fn cache_cleanup_thread<SamplF, Point, Sampl>(
+    inner: Arc<Inner<SamplF, Point, Sampl>>,
     shutdown: Arc<AtomicBool>,
 ) where
-    LasL: LasReadWrite<Point> + Clone,
-    Point: PointType<Position = I32Position> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point>,
 {
     loop {

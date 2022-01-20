@@ -1,11 +1,11 @@
 use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
-use crate::geometry::points::PointType;
+use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32Position, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
 use crate::index::Writer;
-use crate::las::{LasReadWrite, ReadLasError};
+use crate::las::{LasExtraBytes, LasPointAttributes, ReadLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
 use log::info;
 use serde::{Deserialize, Serialize};
@@ -84,8 +84,8 @@ enum WriterTaskError {
     ReadLasError(#[from] ReadLasError),
 }
 
-struct OctreeWorkerThread<Point, LasL, Sampl, SamplF> {
-    inner: Arc<Inner<Point, LasL, Sampl, SamplF>>,
+struct OctreeWorkerThread<Point, Sampl, SamplF> {
+    inner: Arc<Inner<Point, Sampl, SamplF>>,
     inboxes: Arc<Mutex<Inboxes<Point>>>,
 
     /// cond var for waking up worker thread,
@@ -261,10 +261,9 @@ impl<P> Inboxes<P> {
     }
 }
 
-impl<Point, LasL, Sampl, SamplF> OctreeWorkerThread<Point, LasL, Sampl, SamplF>
+impl<Point, Sampl, SamplF> OctreeWorkerThread<Point, Sampl, SamplF>
 where
-    Point: PointType<Position = I32Position> + Clone,
-    LasL: LasReadWrite<Point> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point> + Clone,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
@@ -434,12 +433,11 @@ where
 
 impl<Point> OctreeWriter<Point>
 where
-    Point: PointType<Position = I32Position>,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
 {
-    pub(super) fn new<LasL, Sampl, SamplF>(inner: Arc<Inner<Point, LasL, Sampl, SamplF>>) -> Self
+    pub(super) fn new<Sampl, SamplF>(inner: Arc<Inner<Point, Sampl, SamplF>>) -> Self
     where
         Point: Clone + Send + Sync + 'static,
-        LasL: LasReadWrite<Point> + Clone + Send + Sync + 'static,
         Sampl: Sampling<Point = Point> + Clone + Send + Sync + 'static,
         SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
     {
@@ -505,7 +503,7 @@ where
 
 impl<Point> Writer<Point> for OctreeWriter<Point>
 where
-    Point: PointType<Position = I32Position> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
 {
     fn backlog_size(&self) -> usize {
         self.nr_points_waiting()

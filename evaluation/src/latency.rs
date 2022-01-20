@@ -1,7 +1,7 @@
 use crate::{Config, Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::index::{Index, Node, NodeId, Reader, Writer};
-use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
+use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::query::Query;
 use serde_json::json;
 use std::cmp::{min, Ordering};

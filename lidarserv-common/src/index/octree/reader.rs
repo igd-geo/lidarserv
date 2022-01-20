@@ -1,19 +1,22 @@
 use crate::geometry::grid::{LeveledGridCell, LodLevel};
 use crate::geometry::points::PointType;
+use crate::geometry::points::WithAttr;
 use crate::geometry::position::I32Position;
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
 use crate::index::{Node, NodeId, Reader, Update};
-use crate::las::LasReadWrite;
+use crate::las::I32LasReadWrite;
+use crate::las::LasExtraBytes;
+use crate::las::LasPointAttributes;
 use crate::lru_cache::pager::PageDirectory;
 use crate::query::{Query, QueryExt};
 use crossbeam_channel::Receiver;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-pub struct OctreeReader<Point, LasL, Sampl, SamplF> {
-    pub(super) inner: Arc<Inner<Point, LasL, Sampl, SamplF>>,
+pub struct OctreeReader<Point, Sampl, SamplF> {
+    pub(super) inner: Arc<Inner<Point, Sampl, SamplF>>,
     update_cnt: u64,
     query: Box<dyn Query + Send + Sync>,
     changed_nodes_receiver: crossbeam_channel::Receiver<LeveledGridCell>,
@@ -31,19 +34,18 @@ struct FrontierElement {
     exists: bool,
 }
 
-pub struct OctreePage<Sampl, Point, LasL> {
+pub struct OctreePage<Sampl, Point> {
     page: Arc<Page<Sampl, Point>>,
-    loader: LasL,
+    loader: I32LasReadWrite,
 }
 
-impl<Point, LasL, Sampl, SamplF> OctreeReader<Point, LasL, Sampl, SamplF>
+impl<Point, Sampl, SamplF> OctreeReader<Point, Sampl, SamplF>
 where
-    Point: PointType<Position = I32Position> + Clone,
-    LasL: LasReadWrite<Point> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point>,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
-    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<Point, LasL, Sampl, SamplF>>) -> Self
+    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<Point, Sampl, SamplF>>) -> Self
     where
         Q: Query + Send + Sync + 'static,
     {
@@ -95,7 +97,7 @@ where
     fn cell_matches_query_impl(
         cell: &LeveledGridCell,
         query: &(dyn Query + Send + Sync),
-        inner: &Inner<Point, LasL, Sampl, SamplF>,
+        inner: &Inner<Point, Sampl, SamplF>,
     ) -> bool {
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
         let lod = cell.lod;
@@ -308,15 +310,14 @@ where
     }
 }
 
-impl<Point, LasL, Sampl, SamplF> Reader<Point> for OctreeReader<Point, LasL, Sampl, SamplF>
+impl<Point, Sampl, SamplF> Reader<Point> for OctreeReader<Point, Sampl, SamplF>
 where
-    Point: PointType<Position = I32Position> + Clone,
-    LasL: LasReadWrite<Point> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point>,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
     type NodeId = LeveledGridCell;
-    type Node = OctreePage<Sampl, Point, LasL>;
+    type Node = OctreePage<Sampl, Point>;
 
     fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q) {
         OctreeReader::set_query(self, Box::new(query))
@@ -371,13 +372,12 @@ where
     }
 }
 
-impl<Sampl, Point, LasL> OctreePage<Sampl, Point, LasL>
+impl<Sampl, Point> OctreePage<Sampl, Point>
 where
     Point: PointType<Position = I32Position> + Clone,
     Sampl: Sampling<Point = Point>,
-    LasL: LasReadWrite<Point> + Clone,
 {
-    pub fn from_page(page: Arc<Page<Sampl, Point>>, loader: &LasL) -> Self {
+    pub fn from_page(page: Arc<Page<Sampl, Point>>, loader: &I32LasReadWrite) -> Self {
         OctreePage {
             page,
             loader: loader.clone(),
@@ -385,11 +385,10 @@ where
     }
 }
 
-impl<Sampl, Point, LasL> Node for OctreePage<Sampl, Point, LasL>
+impl<Sampl, Point> Node for OctreePage<Sampl, Point>
 where
-    Point: PointType<Position = I32Position> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point>,
-    LasL: LasReadWrite<Point> + Clone,
 {
     fn las_files(&self) -> Vec<Arc<Vec<u8>>> {
         vec![self.page.get_binary(&self.loader)]

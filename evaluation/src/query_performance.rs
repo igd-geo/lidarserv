@@ -1,7 +1,7 @@
 use crate::queries::{preset_query_1, preset_query_2, preset_query_3};
 use crate::Point;
 use lidarserv_common::index::{Index, Node, Reader};
-use lidarserv_common::las::{I32LasReadWrite, LasReadWrite};
+use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::query::Query;
 use serde_json::json;
 use std::io::Cursor;

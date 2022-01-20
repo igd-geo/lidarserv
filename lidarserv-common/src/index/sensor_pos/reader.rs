@@ -9,7 +9,7 @@ use crate::index::sensor_pos::page_manager::{SensorPosPage, SimplePoints};
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::{Inner, Update};
 use crate::index::{Node, NodeId, Reader};
-use crate::las::LasReadWrite;
+use crate::las::{LasExtraBytes, LasPointAttributes};
 use crate::lru_cache::pager::CacheLoadError;
 use crate::query::empty::EmptyQuery;
 use crate::query::{Query, QueryExt};
@@ -18,19 +18,19 @@ use nalgebra::min;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-pub struct SensorPosReader<SamplF, LasL, Point, Sampl> {
+pub struct SensorPosReader<SamplF, Point, Sampl> {
     query: Arc<dyn Query + Send + Sync>,
-    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
+    inner: Arc<Inner<SamplF, Point, Sampl>>,
     meta_tree: MetaTree,
     updates: crossbeam_channel::Receiver<Update>,
-    lods: Vec<LodReader<SamplF, LasL, Point, Sampl>>,
+    lods: Vec<LodReader<SamplF, Point, Sampl>>,
     current_loading_lod: usize,
     update_counter: u32,
 }
 
-struct LodReader<SamplF, LasL, Point, Sampl> {
+struct LodReader<SamplF, Point, Sampl> {
     query: Arc<dyn Query + Send + Sync>,
-    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
+    inner: Arc<Inner<SamplF, Point, Sampl>>,
     lod: LodLevel,
     loaded: HashMap<MetaTreeNodeId, SensorPosNodeCollection<Sampl, Point>>,
     dirty_node_to_replacements: HashMap<MetaTreeNodeId, (u32, HashSet<MetaTreeNodeId>)>,
@@ -49,14 +49,17 @@ pub struct SensorPosNodeCollection<Sampl, Point> {
     binary: Vec<Arc<Vec<u8>>>,
 }
 
-impl<SamplF, LasL, Point, Sampl> SensorPosReader<SamplF, LasL, Point, Sampl>
+impl<SamplF, Point, Sampl> SensorPosReader<SamplF, Point, Sampl>
 where
-    Point: PointType<Position = I32Position> + WithAttr<SensorPositionAttribute> + Clone,
-    LasL: LasReadWrite<Point> + Clone,
+    Point: PointType<Position = I32Position>
+        + WithAttr<SensorPositionAttribute>
+        + WithAttr<LasPointAttributes>
+        + LasExtraBytes
+        + Clone,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
     Sampl: Sampling<Point = Point>,
 {
-    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<SamplF, LasL, Point, Sampl>>) -> Self
+    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<SamplF, Point, Sampl>>) -> Self
     where
         Q: Query + 'static + Send + Sync,
     {
@@ -96,12 +99,12 @@ where
 
     #[allow(clippy::type_complexity)] // only internal anyways
     fn lod_layer_and_coarse(
-        lods: &mut Vec<LodReader<SamplF, LasL, Point, Sampl>>,
+        lods: &mut Vec<LodReader<SamplF, Point, Sampl>>,
         coarse_lod_steps: usize,
         lod_index: usize,
     ) -> (
-        &mut LodReader<SamplF, LasL, Point, Sampl>,
-        Option<&mut LodReader<SamplF, LasL, Point, Sampl>>,
+        &mut LodReader<SamplF, Point, Sampl>,
+        Option<&mut LodReader<SamplF, Point, Sampl>>,
     ) {
         let coarse_lod_level = if coarse_lod_steps <= lod_index {
             lod_index - coarse_lod_steps
@@ -161,10 +164,13 @@ where
     }
 }
 
-impl<SamplF, LasL, Point, Sampl> Reader<Point> for SensorPosReader<SamplF, LasL, Point, Sampl>
+impl<SamplF, Point, Sampl> Reader<Point> for SensorPosReader<SamplF, Point, Sampl>
 where
-    LasL: LasReadWrite<Point> + Clone,
-    Point: PointType<Position = I32Position> + WithAttr<SensorPositionAttribute> + Clone,
+    Point: PointType<Position = I32Position>
+        + WithAttr<SensorPositionAttribute>
+        + WithAttr<LasPointAttributes>
+        + LasExtraBytes
+        + Clone,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
     Sampl: Sampling<Point = Point>,
 {
@@ -343,14 +349,17 @@ where
     }
 }
 
-impl<SamplF, LasL, Point, Sampl> LodReader<SamplF, LasL, Point, Sampl>
+impl<SamplF, Point, Sampl> LodReader<SamplF, Point, Sampl>
 where
-    LasL: LasReadWrite<Point> + Clone,
-    Point: PointType<Position = I32Position> + WithAttr<SensorPositionAttribute> + Clone,
+    Point: PointType<Position = I32Position>
+        + WithAttr<SensorPositionAttribute>
+        + WithAttr<LasPointAttributes>
+        + LasExtraBytes
+        + Clone,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
     Sampl: Sampling<Point = Point>,
 {
-    pub fn new(lod: LodLevel, inner: Arc<Inner<SamplF, LasL, Point, Sampl>>) -> Self {
+    pub fn new(lod: LodLevel, inner: Arc<Inner<SamplF, Point, Sampl>>) -> Self {
         LodReader {
             lod,
             inner,
@@ -823,11 +832,7 @@ where
             binary: loaded
                 .iter()
                 .map(|it| {
-                    it.get_binary(
-                        &self.inner.las_loader,
-                        self.inner.coordinate_system.clone(),
-                        true,
-                    )
+                    it.get_binary(&self.inner.las_loader, self.inner.coordinate_system.clone())
                 })
                 .collect(),
             nodes: loaded,

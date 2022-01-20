@@ -15,7 +15,6 @@ use lidarserv_common::index::sensor_pos::writer::SensorPosWriter;
 use lidarserv_common::index::sensor_pos::SensorPosIndex;
 use lidarserv_common::index::Node as IndexNode;
 use lidarserv_common::index::{Reader, Writer as CommonWriter};
-use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::query::empty::EmptyQuery;
 use lidarserv_common::query::Query;
 use std::error::Error;
@@ -67,12 +66,7 @@ pub trait DynReader: Send + Sync {
 }
 
 impl DynIndex
-    for SensorPosIndex<
-        GridCenterSamplingFactory<LasPoint>,
-        I32LasReadWrite,
-        LasPoint,
-        GridCenterSampling<LasPoint>,
-    >
+    for SensorPosIndex<GridCenterSamplingFactory<LasPoint>, LasPoint, GridCenterSampling<LasPoint>>
 {
     fn index_info(&self) -> IndexInfo {
         IndexInfo {
@@ -111,12 +105,7 @@ impl DynWriter for SensorPosWriter<LasPoint> {
 }
 
 impl DynReader
-    for SensorPosReader<
-        GridCenterSamplingFactory<LasPoint>,
-        I32LasReadWrite,
-        LasPoint,
-        GridCenterSampling<LasPoint>,
-    >
+    for SensorPosReader<GridCenterSamplingFactory<LasPoint>, LasPoint, GridCenterSampling<LasPoint>>
 {
     fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
         Reader::<LasPoint>::blocking_update(self, queries)
@@ -190,12 +179,7 @@ fn leveled_grid_cell_to_proto_node_id(grid_cell: &LeveledGridCell) -> NodeId {
 }
 
 impl DynIndex
-    for Octree<
-        LasPoint,
-        I32LasReadWrite,
-        GridCenterSampling<LasPoint>,
-        GridCenterSamplingFactory<LasPoint>,
-    >
+    for Octree<LasPoint, GridCenterSampling<LasPoint>, GridCenterSamplingFactory<LasPoint>>
 {
     fn index_info(&self) -> IndexInfo {
         IndexInfo {
@@ -235,12 +219,7 @@ impl DynWriter for (I32CoordinateSystem, OctreeWriter<LasPoint>) {
 }
 
 impl DynReader
-    for OctreeReader<
-        LasPoint,
-        I32LasReadWrite,
-        GridCenterSampling<LasPoint>,
-        GridCenterSamplingFactory<LasPoint>,
-    >
+    for OctreeReader<LasPoint, GridCenterSampling<LasPoint>, GridCenterSamplingFactory<LasPoint>>
 {
     fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
         Reader::blocking_update(self, queries)

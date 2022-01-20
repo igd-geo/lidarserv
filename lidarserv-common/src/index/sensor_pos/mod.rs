@@ -16,7 +16,7 @@ use crate::index::sensor_pos::point::SensorPositionAttribute;
 use crate::index::sensor_pos::reader::SensorPosReader;
 use crate::index::sensor_pos::writer::SensorPosWriter;
 use crate::index::Index;
-use crate::las::LasReadWrite;
+use crate::las::{I32LasReadWrite, LasExtraBytes, LasPointAttributes};
 use crate::lru_cache::pager::IoError;
 use crate::query::Query;
 pub use las::Point as LasPoint;
@@ -26,31 +26,31 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-pub struct SensorPosIndex<SamplF, LasL, Point, Sampl> {
-    inner: Arc<Inner<SamplF, LasL, Point, Sampl>>,
+pub struct SensorPosIndex<SamplF, Point, Sampl> {
+    inner: Arc<Inner<SamplF, Point, Sampl>>,
 }
 
-pub struct SensorPosIndexParams<SamplF, LasL, Point, Sampl> {
+pub struct SensorPosIndexParams<SamplF, Point, Sampl> {
     pub nr_threads: usize,
     pub max_node_size: usize,
     pub sampling_factory: SamplF,
-    pub page_manager: PageManager<Point, Sampl, LasL>,
+    pub page_manager: PageManager<Point, Sampl>,
     pub meta_tree_file: PathBuf,
     pub meta_tree: MetaTree,
-    pub las_loader: LasL,
+    pub las_loader: I32LasReadWrite,
     pub coordinate_system: I32CoordinateSystem,
     pub max_lod: LodLevel,
     pub max_delay: Duration,
     pub coarse_lod_steps: usize,
 }
 
-struct Inner<SamplF, LasL, Point, Sampl> {
+struct Inner<SamplF, Point, Sampl> {
     pub nr_threads: usize,
     pub max_node_size: usize,
-    pub page_manager: PageManager<Point, Sampl, LasL>,
+    pub page_manager: PageManager<Point, Sampl>,
     pub sampling_factory: SamplF,
     pub meta_tree_file: PathBuf,
-    pub las_loader: LasL,
+    pub las_loader: I32LasReadWrite,
     pub coordinate_system: I32CoordinateSystem,
     pub shared: RwLock<Shared>,
     pub max_lod: LodLevel,
@@ -76,13 +76,12 @@ struct Replacement {
     bounds: AABB<i32>,
 }
 
-impl<SamplF, LasL, Point, Sampl> SensorPosIndex<SamplF, LasL, Point, Sampl>
+impl<SamplF, Point, Sampl> SensorPosIndex<SamplF, Point, Sampl>
 where
-    Point: PointType<Position = I32Position> + Clone,
-    LasL: LasReadWrite<Point> + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
     Sampl: Sampling<Point = Point>,
 {
-    pub fn new(params: SensorPosIndexParams<SamplF, LasL, Point, Sampl>) -> Self {
+    pub fn new(params: SensorPosIndexParams<SamplF, Point, Sampl>) -> Self {
         let SensorPosIndexParams {
             nr_threads,
             max_node_size,
@@ -134,20 +133,21 @@ where
     }
 }
 
-impl<SamplF, Point, LasL, Sampl> Index<Point> for SensorPosIndex<SamplF, LasL, Point, Sampl>
+impl<SamplF, Point, Sampl> Index<Point> for SensorPosIndex<SamplF, Point, Sampl>
 where
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl> + Send + Sync + 'static,
     Point: PointType<Position = I32Position>
         + WithAttr<SensorPositionAttribute>
+        + WithAttr<LasPointAttributes>
+        + LasExtraBytes
         + Clone
         + Send
         + Sync
         + 'static,
-    LasL: LasReadWrite<Point> + Clone + Send + Sync + 'static,
     Sampl: Sampling<Point = Point> + Send + Sync + Clone + 'static,
 {
     type Writer = SensorPosWriter<Point>;
-    type Reader = SensorPosReader<SamplF, LasL, Point, Sampl>;
+    type Reader = SensorPosReader<SamplF, Point, Sampl>;
 
     fn writer(&self) -> Self::Writer {
         let index_inner = Arc::clone(&self.inner);

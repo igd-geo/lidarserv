@@ -14,14 +14,9 @@ use log::error;
 use std::path::PathBuf;
 use std::time::Duration;
 
-pub type I32SensorPosIndex = SensorPosIndex<
-    GridCenterSamplingFactory<Point>,
-    I32LasReadWrite,
-    Point,
-    GridCenterSampling<Point>,
->;
-pub type I32Octree =
-    Octree<Point, I32LasReadWrite, GridCenterSampling<Point>, GridCenterSamplingFactory<Point>>;
+pub type I32SensorPosIndex =
+    SensorPosIndex<GridCenterSamplingFactory<Point>, Point, GridCenterSampling<Point>>;
+pub type I32Octree = Octree<Point, GridCenterSampling<Point>, GridCenterSamplingFactory<Point>>;
 
 pub fn create_sensor_pos_index(
     coordinate_system: I32CoordinateSystem,
