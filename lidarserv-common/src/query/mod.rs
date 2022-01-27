@@ -1,6 +1,5 @@
 pub mod bounding_box;
 pub mod empty;
-pub mod lod;
 pub mod view_frustum;
 
 use crate::geometry::bounding_box::AABB;
