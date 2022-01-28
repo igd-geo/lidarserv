@@ -1,6 +1,6 @@
 mod helpers;
 
-use crate::geometry::bounding_box::OptionAABB;
+use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32CoordinateSystem, I32Position, Position};
 use crate::las::helpers::{
@@ -9,10 +9,12 @@ use crate::las::helpers::{
 };
 use las::point::Format;
 use las::Vlr;
+use laz::laszip::ChunkTable;
 use laz::{LasZipCompressor, LasZipDecompressor, LasZipError, LazVlr, LazVlrBuilder};
 use nalgebra::Point3;
 use std::borrow::Borrow;
 use std::fmt::Debug;
+use std::io::SeekFrom::Start;
 use std::io::{Cursor, Error, Read, Seek, SeekFrom, Write};
 use std::sync::Arc;
 use thiserror::Error;
@@ -303,4 +305,182 @@ impl I32LasReadWrite {
             coordinate_system,
         })
     }
+}
+
+pub fn async_write_compressed_las_with_variable_chunk_size<Point, W>(
+    chunks: crossbeam_channel::Receiver<Vec<Point>>,
+    coordinate_system: &I32CoordinateSystem,
+    mut write: W,
+) -> Result<(), std::io::Error>
+where
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+    W: Write + Seek + Send,
+{
+    // header
+    let (mut header, format) = init_las_header(
+        Point::NR_EXTRA_BYTES as u16,
+        true,
+        Point3::new(-1.0, -1.0, -1.0),
+        Point3::new(1.0, 1.0, 1.0),
+        coordinate_system,
+    );
+    let header_pos = write.seek(SeekFrom::Current(0))?;
+    match header.write_to(&mut write) {
+        Ok(_) => {}
+        Err(las::Error::Io(e)) => return Err(e),
+        Err(_) => unreachable!(),
+    }
+
+    // las vlr
+    let laz_vlr = LazVlrBuilder::default()
+        .with_point_format(format.to_u8().unwrap(), format.extra_bytes)
+        .unwrap()
+        .with_variable_chunk_size()
+        .build();
+    let vlr = {
+        let mut laz_vlr_data = Cursor::new(Vec::new());
+        laz_vlr.write_to(&mut laz_vlr_data).unwrap(); // unwrap: cursor will not throw i/o errors
+        Vlr {
+            user_id: LazVlr::USER_ID.to_string(),
+            record_id: LazVlr::RECORD_ID,
+            description: LazVlr::DESCRIPTION.to_string(),
+            data: laz_vlr_data.into_inner(),
+        }
+    };
+    header.number_of_variable_length_records += 1;
+    header.offset_to_point_data += vlr.len(false) as u32;
+    vlr.into_raw(false).unwrap().write_to(&mut write).unwrap();
+
+    // points
+    let mut aabb = OptionAABB::empty();
+    {
+        let mut compressor = LasZipCompressor::new(&mut write, laz_vlr).unwrap();
+        compressor.compress_chunks(chunks.iter().map(|chunk| {
+            // update aabb
+            for point in &chunk {
+                aabb.extend(point.position())
+            }
+
+            // update number of points
+            header.number_of_point_records += chunk.len() as u32;
+
+            // encode point data
+            let mut point_data = Vec::with_capacity(chunk.len() * format.len() as usize);
+            let number_of_points_by_return = write_point_data_i32::<_, Point, _>(
+                Cursor::new(&mut point_data),
+                chunk.iter(),
+                &format,
+            )
+            .unwrap(); // unwrap: cursor will not throw i/o errors
+
+            // update number of points by return
+            for (i, nr_points) in number_of_points_by_return.into_iter().enumerate() {
+                header.number_of_points_by_return[i] += nr_points;
+            }
+
+            point_data
+        }))?;
+        compressor.done()?;
+    }
+
+    // update header
+    if let Some(aabb) = aabb.into_aabb() {
+        let min = aabb.min::<I32Position>().decode(coordinate_system);
+        let max = aabb.max::<I32Position>().decode(coordinate_system);
+        header.min_x = min.x;
+        header.min_y = min.y;
+        header.min_z = min.z;
+        header.max_x = max.x;
+        header.max_y = max.y;
+        header.max_z = max.z;
+    }
+    write.seek(Start(header_pos))?;
+    match header.write_to(&mut write) {
+        Ok(_) => {}
+        Err(las::Error::Io(e)) => return Err(e),
+        Err(_) => unreachable!(),
+    }
+
+    Ok(())
+}
+
+/// Splits a laz file into multiple ones, one file per chunk. This is done efficiently without
+/// de-compressing and re-compressing the point data.
+pub fn async_split_compressed_las<R>(
+    sender: crossbeam_channel::Sender<Vec<u8>>,
+    mut read: R,
+) -> Result<(), ReadLasError>
+where
+    R: Read + Seek,
+{
+    // read header
+    let mut header = las::raw::Header::read_from(&mut read)?;
+    let format = Format::new(header.point_data_record_format)?;
+    if !format.is_compressed {
+        return Err(ReadLasError::FileFormat {
+            desc: "Expected compressed las".to_string(),
+        });
+    }
+
+    // read vlrs
+    let mut vlrs = Vec::new();
+    for _ in 0..header.number_of_variable_length_records {
+        let vlr = las::raw::Vlr::read_from(&mut read, false)?;
+        vlrs.push(vlr);
+    }
+
+    // find laszip vlr
+    let vlr = if let Some(v) = vlrs.iter().find(|it| {
+        read_las_string(&it.user_id)
+            .map(|uid| uid == LazVlr::USER_ID)
+            .unwrap_or(false)
+            && it.record_id == LazVlr::RECORD_ID
+    }) {
+        v
+    } else {
+        return Err(ReadLasError::FileFormat {
+            desc: "Missing LasZip VLR.".to_string(),
+        });
+    };
+    let laszip_vlr = LazVlr::read_from(vlr.data.as_slice())?;
+
+    // read chunk table
+    read.seek(Start(header.offset_to_point_data as u64))?;
+    let chunk_table = ChunkTable::read_from(&mut read, &laszip_vlr)?;
+
+    // split chunks into individual laz files
+    let mut laz_vlr_data = Vec::new();
+    vlr.write_to(Cursor::new(&mut laz_vlr_data))?;
+    header.number_of_variable_length_records = 1;
+    header.offset_to_point_data = header.header_size as u32 + laz_vlr_data.len() as u32;
+    for chunk_table_entry in &chunk_table {
+        // read chunk
+        let mut chunk_data = vec![0_u8; chunk_table_entry.byte_count as usize];
+        read.read_exact(&mut chunk_data)?;
+
+        // chunk table for the single-chunk split file
+        let mut new_chunk_table = ChunkTable::with_capacity(1);
+        new_chunk_table.push(*chunk_table_entry);
+
+        // construct laz file with only this chunk
+        let nr_points = chunk_table_entry.point_count as u32;
+        header.number_of_points_by_return = [nr_points, 0, 0, 0, 0];
+        header.number_of_point_records = nr_points;
+        let mut write = Cursor::new(Vec::new());
+        header.write_to(&mut write)?; // write header
+        write.write_all(&laz_vlr_data)?; // write laz vlr
+        write.write_all(
+            &(header.offset_to_point_data as u64 + 8 + chunk_table_entry.byte_count).to_le_bytes(),
+        )?; // write chunk table offset
+        write.write_all(&chunk_data)?; // write point data
+        new_chunk_table.write_to(&mut write, &laszip_vlr)?; // write chunk table
+
+        // send
+        match sender.send(write.into_inner()) {
+            Ok(_) => (),
+            Err(_) => return Ok(()), // if the corresponding receiver is closed, we can just stop.
+        }
+    }
+
+    Ok(())
 }

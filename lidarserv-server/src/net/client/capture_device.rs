@@ -43,7 +43,7 @@ impl CaptureDeviceClient {
                 if protocol_version != PROTOCOL_VERSION {
                     return Err(LidarServerError::Protocol(format!(
                         "Protocol version mismatch (Server: {}, Client: {}).",
-                        protocol_version, protocol_version
+                        protocol_version, PROTOCOL_VERSION
                     )));
                 }
             }
@@ -105,6 +105,10 @@ impl CaptureDeviceClient {
                 })
             }
         };
+        self.insert_raw_point_data(data).await
+    }
+
+    pub async fn insert_raw_point_data(&mut self, data: Vec<u8>) -> Result<(), LidarServerError> {
         self.connection
             .write_message(&Message::InsertPoints {
                 data: LasPointData(Arc::new(data)),
