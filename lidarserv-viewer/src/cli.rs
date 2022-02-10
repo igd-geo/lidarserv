@@ -15,6 +15,12 @@ pub struct Args {
 
     #[structopt(long, default_value = "fixed", possible_values = &["fixed", "intensity"])]
     pub point_color: PointColorArg,
+
+    #[structopt(long, default_value = "10")]
+    pub point_size: f32,
+
+    #[structopt(long, default_value = "10")]
+    pub point_distance: f64,
 }
 
 #[derive(Debug)]

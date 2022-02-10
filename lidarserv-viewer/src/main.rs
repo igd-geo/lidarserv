@@ -55,7 +55,7 @@ fn main(args: Args) {
                         }
                     },
                     point_shape: PointShape::Round,
-                    point_size: PointSize::Fixed(6.0),
+                    point_size: PointSize::Fixed(args.point_size),
                 })
                 .unwrap();
 
@@ -211,7 +211,7 @@ async fn network_thread(
                             view_projection_matrix,
                             view_projection_matrix_inv,
                             camera_matrix.window_size.x,
-                            13.0,
+                            args.point_distance,
                         )
                         .await
                         .unwrap()
