@@ -90,7 +90,7 @@ impl DynIndex
     }
 }
 
-impl DynWriter for SensorPosWriter<LasPoint> {
+impl DynWriter for SensorPosWriter<GridCenterSampling<LasPoint>, LasPoint> {
     fn insert_points(
         &mut self,
         points: Vec<LasPoint>,

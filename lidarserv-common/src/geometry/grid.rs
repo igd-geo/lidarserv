@@ -54,13 +54,13 @@ impl LodLevel {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct I32GridHierarchy {
     shift: u16,
 }
 
 /// A partitioning of space into cubic grid cells.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct I32Grid {
     shift: u8,
 }

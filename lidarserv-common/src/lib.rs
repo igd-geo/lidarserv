@@ -1,5 +1,7 @@
 #![deny(unused_must_use)]
 
+extern crate core;
+
 pub mod geometry;
 pub mod index;
 pub mod las;

@@ -76,6 +76,14 @@ impl<Sampl, Point> SensorPosPage<Sampl, Point> {
             node: Mutex::new(Some(Arc::new(node))),
         }
     }
+
+    pub fn new_from_points(points: SimplePoints<Point>) -> Self {
+        SensorPosPage {
+            binary: Mutex::new(None),
+            points: Mutex::new(Some(Arc::new(points))),
+            node: Mutex::new(None),
+        }
+    }
 }
 impl<Sampl, Point> SensorPosPage<Sampl, Point>
 where

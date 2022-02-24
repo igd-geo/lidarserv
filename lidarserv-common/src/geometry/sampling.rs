@@ -91,6 +91,7 @@ pub trait RawSamplingEntry {
 
     fn cell(&self) -> &Self::Cell;
     fn point(&self) -> &Self::Point;
+    fn into_point(self) -> Self::Point;
 }
 
 #[derive(Clone)]
@@ -129,6 +130,10 @@ impl<Point> RawSamplingEntry for GridCenterRawEntry<Point> {
 
     fn point(&self) -> &Self::Point {
         &self.entry.point
+    }
+
+    fn into_point(self) -> Self::Point {
+        self.entry.point
     }
 }
 

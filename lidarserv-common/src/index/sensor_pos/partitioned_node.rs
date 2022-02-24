@@ -1,8 +1,10 @@
 use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
+use crate::geometry::grid::I32GridHierarchy;
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32Position, Position};
 use crate::geometry::sampling::{RawSamplingEntry, Sampling, SamplingFactory};
-use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeNodeId};
+use crate::index::sensor_pos::meta_tree::MetaTreeNodeId;
+use crate::index::sensor_pos::page_manager::SimplePoints;
 use crate::index::sensor_pos::point::SensorPositionAttribute;
 use std::mem;
 use std::time::Instant;
@@ -175,12 +177,14 @@ where
         self.replaces_base_node_at.is_some()
     }
 
-    pub fn split(self, meta_tree: &MetaTree) -> [Self; 8]
+    pub fn split(self, sensor_grid_hierarchy: &I32GridHierarchy) -> [Self; 8]
     where
         Point: WithAttr<SensorPositionAttribute>,
     {
         // center of the node is where to split
-        let node_center = meta_tree.node_center(&self.node_id);
+        let node_center = sensor_grid_hierarchy
+            .get_leveled_cell_bounds(self.node_id.tree_node())
+            .center();
 
         // prepare children to insert points into
         let mut children = self
@@ -243,6 +247,30 @@ where
         node.bogus = self.bogus;
 
         node
+    }
+
+    pub fn into_points(self) -> SimplePoints<Point> {
+        let Self {
+            sampled, mut bogus, ..
+        } = self;
+
+        // points
+        let mut points = Vec::new();
+        points.extend(sampled.into_iter().map(|raw| raw.into_point()));
+        let non_bogus_points = points.len() as u32;
+        points.append(&mut bogus);
+
+        // aabb
+        let mut bounds = OptionAABB::empty();
+        for point in &points {
+            bounds.extend(point.position());
+        }
+
+        SimplePoints {
+            points,
+            bounds,
+            non_bogus_points,
+        }
     }
 }
 

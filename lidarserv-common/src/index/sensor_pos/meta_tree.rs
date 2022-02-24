@@ -16,11 +16,17 @@ use thiserror::Error;
 #[derive(Debug, Clone)]
 pub struct MetaTree {
     sensor_grid_hierarchy: I32GridHierarchy,
-    lods: Vec<MetaTreeLod>,
+    lods: Vec<MetaTreeLevel>,
+}
+
+pub struct MetaTreePart {
+    lod: LodLevel,
+    sensor_grid_hierarchy: I32GridHierarchy,
+    tree: MetaTreeLevel,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MetaTreeLod {
+struct MetaTreeLevel {
     depth: Vec<HashMap<GridCell, Node>>,
 }
 
@@ -59,6 +65,48 @@ impl MetaTree {
         }
     }
 
+    pub fn split_into_parts(self, min_nr_parts: usize) -> Vec<MetaTreePart> {
+        // turn existing LODs into parts
+        let mut parts = self
+            .lods
+            .into_iter()
+            .enumerate()
+            .map(|(lod_level, lod_tree)| MetaTreePart {
+                lod: LodLevel::from_level(lod_level as u16),
+                sensor_grid_hierarchy: self.sensor_grid_hierarchy.clone(),
+                tree: lod_tree,
+            })
+            .collect::<Vec<_>>();
+
+        // fill up with empty parts until min_nr_parts is reached
+        while parts.len() < min_nr_parts {
+            parts.push(MetaTreePart {
+                lod: LodLevel::from_level(parts.len() as u16),
+                sensor_grid_hierarchy: self.sensor_grid_hierarchy.clone(),
+                tree: MetaTreeLevel { depth: vec![] },
+            })
+        }
+        parts
+    }
+
+    pub fn recombine_parts(parts: Vec<MetaTreePart>) -> Self {
+        assert!(!parts.is_empty());
+        let sensor_grid_hierarchy = parts[0].sensor_grid_hierarchy.clone();
+
+        MetaTree {
+            lods: parts
+                .into_iter()
+                .enumerate()
+                .map(|(idx, p)| {
+                    assert_eq!(p.lod.level() as usize, idx);
+                    assert_eq!(p.sensor_grid_hierarchy, sensor_grid_hierarchy);
+                    p.tree
+                })
+                .collect(),
+            sensor_grid_hierarchy,
+        }
+    }
+
     pub fn nodes(&self) -> impl Iterator<Item = MetaTreeNodeId> + '_ {
         self.lods
             .iter()
@@ -82,32 +130,6 @@ impl MetaTree {
                         )
                     })
             })
-    }
-
-    pub fn root_nodes(&self) -> impl Iterator<Item = MetaTreeNodeId> + '_ {
-        self.lods
-            .iter()
-            .enumerate()
-            .map(|(lod_level, lod_nodes)| {
-                if lod_nodes.depth.is_empty() {
-                    None
-                } else {
-                    let lod = LodLevel::from_level(lod_level as u16);
-                    Some(
-                        lod_nodes.depth[0]
-                            .iter()
-                            .map(move |(pos, _)| MetaTreeNodeId {
-                                lod,
-                                node: LeveledGridCell {
-                                    lod: LodLevel::base(),
-                                    pos: *pos,
-                                },
-                            }),
-                    )
-                }
-            })
-            .flatten()
-            .flatten()
     }
 
     pub fn root_nodes_for_lod(&self, lod: &LodLevel) -> impl Iterator<Item = MetaTreeNodeId> + '_ {
@@ -151,9 +173,7 @@ impl MetaTree {
     pub fn sensor_grid_hierarchy(&self) -> &I32GridHierarchy {
         &self.sensor_grid_hierarchy
     }
-}
 
-impl MetaTree {
     pub fn write_to_file(&self, file_name: &Path) -> Result<(), MetaTreeIoError> {
         let file = File::create(file_name)?;
 
@@ -179,9 +199,7 @@ impl MetaTree {
             lods,
         })
     }
-}
 
-impl MetaTree {
     pub fn node_center(&self, node: &MetaTreeNodeId) -> I32Position where {
         let aabb = self
             .sensor_grid_hierarchy
@@ -243,52 +261,13 @@ impl MetaTree {
         }
     }
 
-    pub fn split_node(&mut self, node: &MetaTreeNodeId) {
-        let lod_level = node.lod.level() as usize;
-        let depth = node.node.lod.level() as usize;
-        self.lods[lod_level].depth[depth]
-            .get_mut(&node.node.pos)
-            .unwrap()
-            .is_leaf = false;
-    }
-
     pub fn set_node_aabb(&mut self, node: &MetaTreeNodeId, aabb: &AABB<i32>) {
         let lod_level = node.lod.level() as usize;
-        let depth_level = node.node.lod.level() as usize;
         while lod_level >= self.lods.len() {
-            self.lods.push(MetaTreeLod { depth: vec![] })
+            self.lods.push(MetaTreeLevel { depth: vec![] })
         }
         let lod = &mut self.lods[lod_level];
-        while depth_level >= lod.depth.len() {
-            lod.depth.push(HashMap::new());
-        }
-        let depth = &mut lod.depth[depth_level];
-        match depth.entry(node.node.pos) {
-            Entry::Occupied(mut o) => o.get_mut().bounds.extend_union(aabb),
-            Entry::Vacant(v) => {
-                v.insert(Node {
-                    is_leaf: true,
-                    bounds: aabb.clone(),
-                });
-            }
-        }
-        let mut lod_node = node.node;
-        while let Some(parent) = lod_node.parent() {
-            lod_node = parent;
-            let depth = &mut lod.depth[lod_node.lod.level() as usize];
-            match depth.entry(lod_node.pos) {
-                Entry::Occupied(mut o) => {
-                    o.get_mut().bounds.extend_union(aabb);
-                    o.get_mut().is_leaf = false;
-                }
-                Entry::Vacant(v) => {
-                    v.insert(Node {
-                        is_leaf: false,
-                        bounds: aabb.clone(),
-                    });
-                }
-            }
-        }
+        lod.set_node_aabb(&node.node, aabb);
     }
 
     pub(super) fn apply_update(&mut self, update: &Update) {
@@ -303,14 +282,13 @@ impl MetaTree {
     }
 }
 
-impl MetaTreeLod {
+impl MetaTreeLevel {
     fn query_sensor_position(
         &self,
         sensor_pos: &I32Position,
         sensor_grid_hierarchy: &I32GridHierarchy,
         min_level: &LodLevel,
-    ) -> LeveledGridCell
-where {
+    ) -> LeveledGridCell {
         for (depth, nodes) in self.depth.iter().enumerate() {
             let cell = sensor_grid_hierarchy
                 .level(&LodLevel::from_level(depth as u16))
@@ -333,6 +311,74 @@ where {
         sensor_grid_hierarchy
             .level(&LodLevel::from_level(self.depth.len() as u16))
             .leveled_cell_at(sensor_pos)
+    }
+
+    pub fn set_node_aabb(&mut self, node: &LeveledGridCell, aabb: &AABB<i32>) {
+        // set/extend aabbb of node itself
+        let depth_level = node.lod.level() as usize;
+        while depth_level >= self.depth.len() {
+            self.depth.push(HashMap::new());
+        }
+        let depth = &mut self.depth[depth_level];
+        match depth.entry(node.pos) {
+            Entry::Occupied(mut o) => o.get_mut().bounds.extend_union(aabb),
+            Entry::Vacant(v) => {
+                v.insert(Node {
+                    is_leaf: true,
+                    bounds: aabb.clone(),
+                });
+            }
+        }
+
+        // set/extend aabb of parents
+        let mut node = *node;
+        while let Some(parent) = node.parent() {
+            node = parent;
+            let depth = &mut self.depth[node.lod.level() as usize];
+            match depth.entry(node.pos) {
+                Entry::Occupied(mut o) => {
+                    o.get_mut().bounds.extend_union(aabb);
+                    o.get_mut().is_leaf = false;
+                }
+                Entry::Vacant(v) => {
+                    v.insert(Node {
+                        is_leaf: false,
+                        bounds: aabb.clone(),
+                    });
+                }
+            }
+        }
+    }
+}
+
+impl MetaTreePart {
+    pub fn query_sensor_position(
+        &self,
+        sensor_pos: &I32Position,
+        previous_node: Option<&MetaTreeNodeId>,
+    ) -> MetaTreeNodeId {
+        let node = self.tree.query_sensor_position(
+            sensor_pos,
+            &self.sensor_grid_hierarchy,
+            &previous_node
+                .map(|n| n.node.lod.coarser())
+                .flatten()
+                .unwrap_or_else(LodLevel::base),
+        );
+
+        MetaTreeNodeId {
+            lod: self.lod,
+            node,
+        }
+    }
+
+    pub fn set_node_aabb(&mut self, node: &MetaTreeNodeId, aabb: &AABB<i32>) {
+        assert_eq!(node.lod, self.lod);
+        self.tree.set_node_aabb(&node.node, aabb);
+    }
+
+    pub fn sensor_pos_hierarchy(&self) -> &I32GridHierarchy {
+        &self.sensor_grid_hierarchy
     }
 }
 
@@ -402,7 +448,7 @@ impl MetaTreeNodeId {
 mod tests {
     use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
     use crate::geometry::grid::{GridCell, I32GridHierarchy, LeveledGridCell, LodLevel};
-    use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeLod, MetaTreeNodeId, Node};
+    use crate::index::sensor_pos::meta_tree::{MetaTree, MetaTreeLevel, MetaTreeNodeId, Node};
     use nalgebra::Point3;
     use std::collections::HashMap;
     use std::iter::FromIterator;
@@ -416,7 +462,7 @@ mod tests {
                 .unwrap(),
         };
 
-        let t = MetaTreeLod {
+        let t = MetaTreeLevel {
             depth: vec![
                 HashMap::from_iter([
                     (
@@ -542,7 +588,7 @@ mod tests {
         );
         assert_eq!(
             t.lods,
-            vec![MetaTreeLod {
+            vec![MetaTreeLevel {
                 depth: vec![
                     HashMap::from_iter([(
                         GridCell { x: 0, y: 0, z: 1 },
@@ -599,7 +645,7 @@ mod tests {
 
         assert_eq!(
             t.lods,
-            vec![MetaTreeLod {
+            vec![MetaTreeLevel {
                 depth: vec![
                     HashMap::from_iter([(
                         GridCell { x: 0, y: 0, z: 1 },

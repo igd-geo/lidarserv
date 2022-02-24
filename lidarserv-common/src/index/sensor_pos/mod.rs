@@ -146,7 +146,7 @@ where
         + 'static,
     Sampl: Sampling<Point = Point> + Send + Sync + Clone + 'static,
 {
-    type Writer = SensorPosWriter<Point>;
+    type Writer = SensorPosWriter<Sampl, Point>;
     type Reader = SensorPosReader<SamplF, Point, Sampl>;
 
     fn writer(&self) -> Self::Writer {
