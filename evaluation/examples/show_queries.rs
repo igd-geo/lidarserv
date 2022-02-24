@@ -5,7 +5,7 @@ use evaluation::point::Point;
 use evaluation::queries::{preset_query_1, preset_query_2, preset_query_3, preset_query_4};
 use evaluation::{read_points, reset_data_folder};
 use lidarserv_common::geometry::points::PointType;
-use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position, Position};
+use lidarserv_common::geometry::position::{I32CoordinateSystem, Position};
 use lidarserv_common::index::Index;
 use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::query::empty::EmptyQuery;
@@ -15,7 +15,7 @@ use pasture_core::containers::{PerAttributeVecPointStorage, PointBuffer};
 use pasture_core::layout::PointType as PasturePointType;
 use pasture_derive::PointType;
 use point_cloud_viewer::renderer::settings::{
-    BaseRenderSettings, Color, PointCloudRenderSettings, PointColor, PointShape, PointSize,
+    BaseRenderSettings, Color, PointCloudRenderSettings, PointColor, PointSize,
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 
@@ -42,28 +42,20 @@ fn main() {
             // run queries
             let queries = vec![
                 (
-                    Box::new(preset_query_1())
-                        as Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
-                    Box::new(preset_query_1())
-                        as Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
+                    Box::new(preset_query_1()) as Box<dyn Query + Send + Sync>,
+                    Box::new(preset_query_1()) as Box<dyn Query + Send + Sync>,
                 ),
                 (
-                    Box::new(preset_query_2())
-                        as Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
-                    Box::new(preset_query_2())
-                        as Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
+                    Box::new(preset_query_2()) as Box<dyn Query + Send + Sync>,
+                    Box::new(preset_query_2()) as Box<dyn Query + Send + Sync>,
                 ),
                 (
-                    Box::new(preset_query_3())
-                        as Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
-                    Box::new(preset_query_3())
-                        as Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
+                    Box::new(preset_query_3()) as Box<dyn Query + Send + Sync>,
+                    Box::new(preset_query_3()) as Box<dyn Query + Send + Sync>,
                 ),
                 (
-                    Box::new(preset_query_4())
-                        as Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
-                    Box::new(preset_query_4())
-                        as Box<dyn Query<I32Position, I32CoordinateSystem> + Send + Sync>,
+                    Box::new(preset_query_4()) as Box<dyn Query + Send + Sync>,
+                    Box::new(preset_query_4()) as Box<dyn Query + Send + Sync>,
                 ),
             ];
             let las_loader = I32LasReadWrite::new(false);

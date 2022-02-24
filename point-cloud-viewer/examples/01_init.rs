@@ -7,7 +7,7 @@ fn main() {
     // In the future, there could be more backends to choose from, e.g. one that use Vulkan, or
     // Metal on MacOS.
     // Every backend has its own options. We will just go with the default options here.
-    let mut options = point_cloud_viewer::renderer::backends::glium::GliumRenderOptions::default();
+    let options = point_cloud_viewer::renderer::backends::glium::GliumRenderOptions::default();
 
     // The `run` method from the `RenderThreadBuilderExt` trait starts the render thread with the
     // selected backend.

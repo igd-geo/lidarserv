@@ -1,3 +1,4 @@
+use crate::utils::{attributes_example_point_cloud, small_example_point_cloud};
 use pasture_core::math::AABB;
 use pasture_core::nalgebra::Point3;
 use point_cloud_viewer::renderer::backends::glium::GliumRenderOptions;
@@ -8,7 +9,7 @@ use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::thread::sleep;
 use std::time::Duration;
 
-mod utils;
+pub mod utils;
 
 fn main() {
     GliumRenderOptions::default().run(|render_thread| {
@@ -22,13 +23,13 @@ fn main() {
             .unwrap();
 
         // add point clouds
-        let point_buffer = utils::small_example_point_cloud(Point3::new(0.0, 0.0, 0.0), 30);
+        let point_buffer = small_example_point_cloud(Point3::new(0.0, 0.0, 0.0), 30);
         let point_cloud_id_1 = window.add_point_cloud(&point_buffer).unwrap();
-        let point_buffer = utils::small_example_point_cloud(Point3::new(10.0, 10.0, 0.0), 300);
+        let point_buffer = small_example_point_cloud(Point3::new(10.0, 10.0, 0.0), 300);
         let point_cloud_id_2 = window.add_point_cloud(&point_buffer).unwrap();
-        let point_buffer = utils::attributes_example_point_cloud(Point3::new(5.0, 5.0, 0.0));
+        let point_buffer = attributes_example_point_cloud(Point3::new(5.0, 5.0, 0.0));
         let point_cloud_id_3 = window.add_point_cloud(&point_buffer).unwrap();
-        let point_buffer = utils::attributes_example_point_cloud(Point3::new(3.8, 5.0, 0.0));
+        let point_buffer = attributes_example_point_cloud(Point3::new(3.8, 5.0, 0.0));
         let point_cloud_id_4 = window.add_point_cloud(&point_buffer).unwrap();
 
         // Moving the camera

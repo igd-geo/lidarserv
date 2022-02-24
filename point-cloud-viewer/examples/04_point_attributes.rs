@@ -1,3 +1,4 @@
+use crate::utils::attributes_example_point_cloud;
 use pasture_core::layout::attributes;
 use pasture_core::nalgebra::Point3;
 use point_cloud_viewer::renderer::settings::{
@@ -6,7 +7,7 @@ use point_cloud_viewer::renderer::settings::{
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 
-mod utils;
+pub mod utils;
 
 fn main() {
     point_cloud_viewer::renderer::backends::glium::GliumRenderOptions::default().run(
@@ -32,7 +33,7 @@ fn main() {
             // It takes an additional parameter, that lets us specify, which attributes to upload,
             // in addition to the point positions, that will *always* be uploaded.
             // Here we upload the position and intensity attributes of a point buffer:
-            let point_buffer = utils::attributes_example_point_cloud(Point3::new(1.1, 1.1, 0.0));
+            let point_buffer = attributes_example_point_cloud(Point3::new(1.1, 1.1, 0.0));
             let point_cloud_id_1 = window
                 .add_point_cloud_with_attributes(&point_buffer, &[&attributes::INTENSITY])
                 .unwrap();
@@ -63,7 +64,7 @@ fn main() {
 
             // The function `add_point_cloud_with_attributes_and_settings` is a shortcut, that
             // allows us, to perform both these steps at once:
-            let point_buffer = utils::attributes_example_point_cloud(Point3::new(0.0, 1.1, 0.0));
+            let point_buffer = attributes_example_point_cloud(Point3::new(0.0, 1.1, 0.0));
             window
                 .add_point_cloud_with_attributes_and_settings(
                     &point_buffer,
@@ -97,7 +98,7 @@ fn main() {
                 Color::YELLOW,
                 Color::BLACK,
             ]);
-            let point_buffer = utils::attributes_example_point_cloud(Point3::new(-1.1, 1.1, 0.0));
+            let point_buffer = attributes_example_point_cloud(Point3::new(-1.1, 1.1, 0.0));
             window
                 .add_point_cloud_with_attributes_and_settings(
                     &point_buffer,
@@ -119,7 +120,7 @@ fn main() {
             // Here, we want a well defined color for every (integer) value.
             // This is possible, by switching from `PointColor::ScalarAttribute` to
             // `PointColor::CategoricalAttribute`:
-            let point_buffer = utils::attributes_example_point_cloud(Point3::new(0.55, 0.0, 0.0));
+            let point_buffer = attributes_example_point_cloud(Point3::new(0.55, 0.0, 0.0));
             window
                 .add_point_cloud_with_attributes_and_settings(
                     &point_buffer,
@@ -158,7 +159,7 @@ fn main() {
                 .with_color(12, Color::RED)
                 .with_color(13, Color::GREEN)
                 .with_color(14, Color::BLUE);
-            let point_buffer = utils::attributes_example_point_cloud(Point3::new(-0.55, 0.0, 0.0));
+            let point_buffer = attributes_example_point_cloud(Point3::new(-0.55, 0.0, 0.0));
             window
                 .add_point_cloud_with_attributes_and_settings(
                     &point_buffer,

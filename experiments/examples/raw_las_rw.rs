@@ -1,5 +1,5 @@
 use las::point::Format;
-use las::{Builder, Header, Point, Version, Vlr, Write};
+use las::{Version, Vlr, Write};
 use laz::{LasZipCompressor, LasZipDecompressor, LazItemRecordBuilder, LazItemType, LazVlr};
 use lidarserv_common::nalgebra::Point3;
 use std::error::Error;
@@ -117,7 +117,7 @@ fn write_compressed(points: Vec<Point3<i32>>) -> Result<Vec<u8>, Box<dyn Error>>
     };
     let vlr = {
         let mut laz_vlr_data = Cursor::new(Vec::new());
-        laz_vlr.write_to(&mut laz_vlr_data);
+        laz_vlr.write_to(&mut laz_vlr_data).unwrap();
         Vlr {
             user_id: LazVlr::USER_ID.to_string(),
             record_id: LazVlr::RECORD_ID,
@@ -175,15 +175,15 @@ fn write_compressed(points: Vec<Point3<i32>>) -> Result<Vec<u8>, Box<dyn Error>>
 
     // compress points
     let mut compressor = LasZipCompressor::new(write, laz_vlr)?;
-    compressor.compress_many(point_data.as_slice());
-    compressor.done();
+    compressor.compress_many(point_data.as_slice()).unwrap();
+    compressor.done().unwrap();
     drop(compressor);
 
     Ok(data)
 }
 
 fn read_las_string(las_str: &[u8]) -> Result<String, FromUtf8Error> {
-    let mut bytes = las_str
+    let bytes = las_str
         .iter()
         .take_while(|byte| **byte != 0)
         .cloned()
@@ -232,7 +232,7 @@ fn read(data: Vec<u8>) -> Result<Vec<Point3<i32>>, Box<dyn Error>> {
             header.point_data_record_length as usize
                 * header.number_of_point_records as usize
         ];
-        decompressor.decompress_many(data.as_mut_slice());
+        decompressor.decompress_many(data.as_mut_slice()).unwrap();
         read = Cursor::new(data);
     } else {
         read.seek(SeekFrom::Start(header.offset_to_point_data as u64))?;

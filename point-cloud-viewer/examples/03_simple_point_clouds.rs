@@ -1,12 +1,13 @@
+use crate::utils::small_example_point_cloud;
 use pasture_core::nalgebra::Point3;
 use point_cloud_viewer::renderer::settings::{
-    BaseRenderSettings, Color, PointCloudRenderSettings, PointColor, PointShape, PointSize,
+    Color, PointCloudRenderSettings, PointColor, PointShape, PointSize,
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::thread::sleep;
 use std::time::Duration;
 
-mod utils;
+pub mod utils;
 
 fn main() {
     point_cloud_viewer::renderer::backends::glium::GliumRenderOptions::default().run(
@@ -15,7 +16,7 @@ fn main() {
 
             // The simplest way to add a point cloud is the `add_point_cloud` function of the window.
             // It takes a point buffer with the points to visualize, and returns a point cloud ID.
-            let point_buffer = utils::small_example_point_cloud(Point3::origin(), 100);
+            let point_buffer = small_example_point_cloud(Point3::origin(), 100);
             let point_cloud_id = window.add_point_cloud(&point_buffer).unwrap();
 
             // The point cloud id can be used, to reference the point cloud later.
@@ -25,10 +26,10 @@ fn main() {
 
             // Should we want to update the points of a point cloud,
             // then we can re-upload a new point buffer to the GPU, by using `update_point_cloud`:
-            let empty_point_buffer = utils::small_example_point_cloud(Point3::origin(), 0);
+            let empty_point_buffer = small_example_point_cloud(Point3::origin(), 0);
             let point_cloud_id = window.add_point_cloud(&empty_point_buffer).unwrap();
             for i in 0..100 {
-                let new_point_buffer = utils::small_example_point_cloud(Point3::origin(), i);
+                let new_point_buffer = small_example_point_cloud(Point3::origin(), i);
                 window
                     .update_point_cloud(point_cloud_id, &new_point_buffer, &[])
                     .unwrap();
@@ -61,9 +62,9 @@ fn main() {
             // As the name suggests, `set_default_point_cloud_settings` will equally influence
             // all point clouds.
             // Here, we add three point clouds, and make all points grey:
-            let point_buf_1 = utils::small_example_point_cloud(Point3::new(0.0, -0.5, 0.0), 50);
-            let point_buf_2 = utils::small_example_point_cloud(Point3::new(0.0, 0.1, 0.0), 50);
-            let point_buf_3 = utils::small_example_point_cloud(Point3::new(0.0, 0.7, 0.0), 50);
+            let point_buf_1 = small_example_point_cloud(Point3::new(0.0, -0.5, 0.0), 50);
+            let point_buf_2 = small_example_point_cloud(Point3::new(0.0, 0.1, 0.0), 50);
+            let point_buf_3 = small_example_point_cloud(Point3::new(0.0, 0.7, 0.0), 50);
             let point_cloud_id_1 = window.add_point_cloud(&point_buf_1).unwrap();
             let point_cloud_id_2 = window.add_point_cloud(&point_buf_2).unwrap();
             let point_cloud_id_3 = window.add_point_cloud(&point_buf_3).unwrap();
