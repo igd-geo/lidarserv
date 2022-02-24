@@ -112,7 +112,7 @@ impl Component for f64 {
 
 impl Component for i32 {
     fn center(x1: Self, x2: Self) -> Self {
-        (x1 + x2) / 2
+        x1 / 2 + x2 / 2
     }
 }
 

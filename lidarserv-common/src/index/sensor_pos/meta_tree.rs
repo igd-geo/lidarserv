@@ -499,7 +499,7 @@ mod tests {
             ],
         };
 
-        let grid_hierarchy = I32GridHierarchy::new(0);
+        let grid_hierarchy = I32GridHierarchy::new(2);
         let p1 = grid_hierarchy
             .get_leveled_cell_bounds(&LeveledGridCell {
                 lod: LodLevel::from_level(0),
