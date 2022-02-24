@@ -369,6 +369,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unusual_byte_groupings)] // bits are intentionally grouped like this
     fn int_grid_cell_bounds() {
         let grid = I32Grid::new(&LodLevel::from_level(2));
 

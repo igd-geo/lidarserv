@@ -37,7 +37,7 @@ fn main() {
     let points_back = read(data).unwrap();
     println!("{:?}", points_back);
 
-    let data = write_compressed_baseline(points.clone()).unwrap();
+    let data = write_compressed_baseline(points).unwrap();
     std::fs::write("example_write_baseline.laz", &data).unwrap();
 
     let points_back = read(data).unwrap();
@@ -56,9 +56,9 @@ fn write(points: Vec<Point3<i32>>) -> Result<Vec<u8>, Box<dyn Error>> {
     let lidarserv_data = "LIDARSERV".bytes().collect::<Vec<_>>();
     lidarserv[..lidarserv_data.len()].copy_from_slice(lidarserv_data.as_slice());
     let header = las::raw::Header {
-        version: version.clone(),
-        system_identifier: lidarserv.clone(),
-        generating_software: lidarserv.clone(),
+        version,
+        system_identifier: lidarserv,
+        generating_software: lidarserv,
         header_size: version.header_size(),
         offset_to_point_data: version.header_size() as u32,
         number_of_variable_length_records: 0,
@@ -131,9 +131,9 @@ fn write_compressed(points: Vec<Point3<i32>>) -> Result<Vec<u8>, Box<dyn Error>>
     let lidarserv_data = "LIDARSERV".bytes().collect::<Vec<_>>();
     lidarserv[..lidarserv_data.len()].copy_from_slice(lidarserv_data.as_slice());
     let header = las::raw::Header {
-        version: version.clone(),
-        system_identifier: lidarserv.clone(),
-        generating_software: lidarserv.clone(),
+        version,
+        system_identifier: lidarserv,
+        generating_software: lidarserv,
         header_size: version.header_size(),
         offset_to_point_data: version.header_size() as u32 + vlr.len(false) as u32,
         number_of_variable_length_records: 1,

@@ -273,7 +273,6 @@ impl<C: Scalar> Debug for AABB<C> {
 mod tests {
     use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
     use crate::geometry::position::{F64Position, Position};
-    use crate::geometry::test::Point;
     use crate::nalgebra::Point3;
 
     #[test]
@@ -323,16 +322,16 @@ mod tests {
 
     #[test]
     fn intersects() {
-        let mut aabb = OptionAABB::new(Point3::new(2.0, 4.0, 1.0), Point3::new(4.0, 5.0, 2.0))
+        let aabb = OptionAABB::new(Point3::new(2.0, 4.0, 1.0), Point3::new(4.0, 5.0, 2.0))
             .into_aabb()
             .unwrap();
-        let mut other1 = OptionAABB::new(Point3::new(4.5, 5.5, 2.5), Point3::new(5.0, 6.0, 6.0))
+        let other1 = OptionAABB::new(Point3::new(4.5, 5.5, 2.5), Point3::new(5.0, 6.0, 6.0))
             .into_aabb()
             .unwrap();
-        let mut other2 = OptionAABB::new(Point3::new(4.0, 5.0, 2.0), Point3::new(5.0, 6.0, 6.0))
+        let other2 = OptionAABB::new(Point3::new(4.0, 5.0, 2.0), Point3::new(5.0, 6.0, 6.0))
             .into_aabb()
             .unwrap();
-        let mut other3 = OptionAABB::new(Point3::new(2.5, 4.5, 0.0), Point3::new(3.5, 6.0, 3.0))
+        let other3 = OptionAABB::new(Point3::new(2.5, 4.5, 0.0), Point3::new(3.5, 6.0, 3.0))
             .into_aabb()
             .unwrap();
         assert!(!aabb.intersects(&other1));

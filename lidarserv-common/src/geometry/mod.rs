@@ -8,7 +8,6 @@ pub mod sampling;
 pub mod test {
     use crate::geometry::points::PointType;
     use crate::geometry::position::{F64Position, Position};
-    use nalgebra::Point3;
 
     /// Trivial point type that can be used for unit tests
     #[derive(Debug)]

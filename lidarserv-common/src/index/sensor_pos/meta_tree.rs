@@ -492,7 +492,7 @@ mod tests {
                         GridCell { x: 1, y: 0, z: 0 },
                         Node {
                             is_leaf: true,
-                            ..node.clone()
+                            ..node
                         },
                     ),
                 ]),

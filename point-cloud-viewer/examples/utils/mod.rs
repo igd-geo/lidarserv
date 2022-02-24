@@ -42,7 +42,7 @@ pub fn attributes_example_point_cloud(center: Point3<f64>) -> impl PointBuffer {
     for x in 0..130 {
         for y in 0..130 {
             let intensity = (x as f64 / 130.0 * 100.0) as u16;
-            let classification = y / 10 as u8;
+            let classification = y / 10;
             let px = x as f64 / 130.0 - 0.5;
             let py = y as f64 / 130.0 - 0.5;
             let pz = ((x as f64 - 65.0).powi(2) + (y as f64 - 64.0).powi(2))

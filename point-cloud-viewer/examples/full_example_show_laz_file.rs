@@ -353,8 +353,7 @@ mod mini_mno {
                         + aabb.max().coords.component_mul(&factor_max);
                     let point_hom = Vector4::new(point.x, point.y, point.z, 1.0);
                     let point_screen_hom = view_projection_matrix * point_hom;
-                    let point_screen = point_screen_hom.xyz() / point_screen_hom.w;
-                    point_screen
+                    point_screen_hom.xyz() / point_screen_hom.w
                 })
                 .collect::<Vec<Vector3<f64>>>();
             let view_frustum_in_world = cube
@@ -363,8 +362,7 @@ mod mini_mno {
                     let point = v * 2.0 - Vector3::new(1.0, 1.0, 1.0);
                     let point_hom = Vector4::new(point.x, point.y, point.z, 1.0);
                     let point_world_hom = view_projection_matrix_inv * point_hom;
-                    let point_world = point_world_hom.xyz() / point_world_hom.w;
-                    point_world
+                    point_world_hom.xyz() / point_world_hom.w
                 })
                 .collect::<Vec<Vector3<f64>>>();
             if cell_on_screen.iter().all(|p| p.x < -1.0) {
@@ -451,7 +449,7 @@ mod mini_mno {
             let mut lod0 = HashMap::new();
             for point in points {
                 let cell = GridCell::root_at_point(&point);
-                lod0.entry(cell).or_insert(Vec::new()).push(point);
+                lod0.entry(cell).or_insert_with(Vec::new).push(point);
             }
             let mut todo = lod0.into_iter().collect::<Vec<_>>();
             while let Some((cell, cell_points)) = todo.pop() {
@@ -469,7 +467,7 @@ mod mini_mno {
         }
 
         pub fn take_dirty(&mut self) -> HashSet<GridCell> {
-            mem::replace(&mut self.dirty, HashSet::new())
+            mem::take(&mut self.dirty)
         }
 
         pub fn query(&self, query: Query) -> HashSet<GridCell> {
