@@ -1,5 +1,7 @@
 # Lidar Serv
 
+<video controls src="./img/mno.mp4"></video>
+
 ## Building
 
 The project is built with cargo:
@@ -38,7 +40,9 @@ cargo install --path ./evaluation
 
 ## Tutorial
 
-The point cloud server is the main component, that manages the point cloud. Any point cloud project is started, by initializing a new index:
+### Create a new indexed point cloud
+
+The lidar server is the main component, that manages the point cloud. Any point cloud project is started, by initializing a new index:
 
 ```shell
 lidarserv-server init my-pointcloud
@@ -58,11 +62,75 @@ The most important ones are:
 The options are stored in `my-pointcloud/settings.json`. You can change the options later by editing this file. 
 However, note that not all options can be changed after the index has been created.
 
+### Start the lidar server
+
 After creating a point cloud, we can start the server like so:
 
 ```shell
 lidarserv-server serve my-pointcloud
 ```
+
+If needed, you can use the optional parameters `-h` and `-p` to bind to a specific host and port number. The default is to listen on `::1` (IPv6 loopback address), port `4567`.
+
+### Insert points
+
+The point cloud that is currently being served is still empty. In order to insert points, a LiDAR scanner 
+can connect and stream in its captured points to the server. The server will then index and store the received 
+points.
+
+Here, we will use the `velodyne-csv-replay` tool to emulate a LiDAR scanner by replaying a previously captured LiDAR 
+dataset. The dataset consists of two csv files, `trajectory.txt` and `points.txt`. Please refer to section [CSV LiDAR captures](#CSV-LiDAR-captures) for an in depth description of the file formats. Here is an example for how the contents of the two files look:
+
+`trajectory.txt`:
+```csv
+Timestamp Distance Easting Northing Altitude Latitude Longitude Altitude Roll Pitch Heading Velocity_Easting Velocity_Northing Velocity_Down
+1720 0.0 412880.0778701233 5318706.438465869 293.18469233020437 48.015708664806255 7.831739127285349 293.18469233020437 14.30153383419094 -4.994178990936039 -110.9734934213208 -0.06 -0.023 0.013000000000000001
+1720 0.0 412880.0778701233 5318706.438465869 293.18469233020437 48.015708664806255 7.831739127285349 293.18469233020437 14.30153383419094 -4.994178990936039 -110.9734934213208 -0.06 -0.023 0.013000000000000001
+1720 0.0 412880.0778701233 5318706.438465869 293.18469233020437 48.015708664806255 7.831739127285349 293.18469233020437 14.30153383419094 -4.994178990936039 -110.9734934213208 -0.06 -0.023 0.013000000000000001
+```
+
+`points.txt`:
+```csv
+Timestamp point_3d_x point_3d_y point_3d_z Intensity Polar_Angle
+1707.49593 1.01496763 0.727449579 -0.220185889 0.137254902 395.63 
+1707.49593 0.998263499 0.715015937 0.0143595437 0.141176471 395.6125 
+1707.49594 1.00160911 0.71694949 -0.187826059 0.121568627 395.595 
+```
+
+As a first step, we convert this dataset to a `*.laz` file. The resulting LAZ file can be used to replay the point data more efficiently. With the LiDAR server running, execute the following command:
+
+```shell
+velodyne-csv-replay convert --points-file /path/to/points.txt --trajectory-file /path/to/trajectory.txt -x 412785.340004 -y 5318821.784996 -z 290.0 --fps=5 --output-file preconv.laz
+```
+
+| Option                                                      | Description                                                                                                                       |
+|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `--points-file points.txt --trajectory-file trajectory.txt` | Input files                                                                                                                       |
+| `--output-file preconf.laz`                                 | Output file                                                                                                                       |
+| `-x 412785.340004 -y 5318821.784996 -z 290.0`               | Moves the point cloud, so that the given coordinate becomes the origin.                                                           |
+| `--fps 5`                                                   | Frames per second, at which the point will be replayed later. Higher fps values lead to more frames with fewer points per frame.  |
+
+This produces the file `preconf.laz`.
+
+Note, that the files produced by `velodyne-csv-replay convert` are no ordinary LAZ files. They contain trajectory information for each point and use specific scale and shift values in the LAS header that the server requested. This means, that it is not possible, to use arbitrary LAZ files - you have to either use the conversion tool or build your own LAZ files according to the rules in section [Preprocessed LAZ file](#Preprocessed-LAZ-file).
+
+We can now send the point cloud to the LiDAR server with the following command:
+
+```shell
+velodyne-csv-replay replay --fps 5 preconv.laz
+```
+
+This will stream the contents of `preconv.laz` to the LiDAR server, in the same speed, that the points originally got captured by the sensor.
+
+### Viewer
+
+## Data formats (`velodyne-csv-replay`)
+
+### CSV LiDAR captures
+
+### Preprocessed LAZ file
+
+## Protocol
 
 ## Usages
 
