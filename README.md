@@ -1,6 +1,6 @@
 # Lidar Serv
 
-<div><video controls src="./img/mno.mp4" muted="false"></video></div>
+![](img/mno.mp4)
 
 ## Building
 
