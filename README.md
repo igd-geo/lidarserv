@@ -135,11 +135,7 @@ While the replay command is still running, we can start the viewer to get a live
 lidarserv-viewer
 ```
 
-## Data formats (`velodyne-csv-replay`)
-
-### CSV LiDAR captures
-
-### Preprocessed LAZ file
+## CSV LiDAR captures
 
 ## Protocol
 
@@ -151,14 +147,14 @@ Through this protocol, it is possible to
  
 The protocol has no built-in security (authentication & authorisation, encryption, ...). Make sure, that only trusted clients can access the server.
 
-### Byte layer
+### Binary layer
 
 After the TCP connection is established, each peer sends the following 18 byte magic number. 
 By verifying the magic number sent by the server, the client can make sure, that it is indeed connected to a compatible
 LiDAR Server speaking the same protocol, and not some other arbitrary network service.
 
-| Index | Length | Type        | Field                                                                                      |
-|-------|--------|-------------|--------------------------------------------------------------------------------------------|
+| Index | Length | Type        | Field                                                                                                            |
+|-------|--------|-------------|------------------------------------------------------------------------------------------------------------------|
 | 0     | 18     | Binary data | Magic number. <br/>HEX: "4C 69 64 61 72 53 65 72 76 20 50 72 6F 74 6F 63 6F 6C" <br/>ASCII: "LidarServ Protocol" |
 
 
@@ -174,15 +170,219 @@ The remaining communication consists of message frames, sent in both direction (
 
 ### Message layer
 
-Insert points:
+The messages sent on the binary layer are [CBOR](https://cbor.io/) encoded message objects. Since CBOR is a binary data format, we will use JSON or [CBOR Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610#appendix-G) in this documentation to format message contents.
+
+The protocol begins with an initialisation phase. After the initialisation is complete, it can continue in two different protocol modes: 
+ - CaptureDevice Mode: New points are streamed from the client to the server, that will be added to the point cloud.
+ - Viewer Mode: The client can subscribe to a query. The server will return the matching subset of the point cloud and incrementally update the query result, whenever new points are indexed.
+ 
+#### Message: Hello
+
+First, both the server and the client send a `Hello` message to each other:
+
+```json
+{
+  "Hello": {
+    "protocol_version": 1
+  }
+}
+```
+
+The message contains the protocol version, that the peer speaks. After the Hello messages have been exchanged, the compatibility between both protocol versions is determined. If one of the peers deems the protocol versions as incompatible, the connection is closed again.
+
+If both peers speak the same protocol version, they are obviously compatible to each other. If the protocol versions are different, there is still the chance, that the newer version is backwards compatible to the older version. Since the peer speaking the older protocol version usually has no knowledge about newer protocol versions and their backwards compatibility, it is always the task of the peer with the newer protocol version to determine if the protocol versions are compatible.
+
+Therefore, if the client receives a Hello message from the server, it should behave like this:
+
+ - If `server_protocol_version == own_protocol_version` - Client and server use the same protocol version: Continue normally.
+ - If `server_protocol_version < own_protocol_version` - Client is connected to an older server: The client should test, if it is backwards compatible to the server's protocol version. If it is, continue normally. Otherwise: Close the connection.
+ - If `server_protocol_version > own_protocol_version` - Client is connected to a newer Server: The server will check, if it can be backwards compatible to the client's protocol version. The client should continue normally, but expect the server to close the connection.
+
+The current protocol version (that is described in this document) has the version number `1`.
+
+#### Message: PointCloudInfo
+
+After the Hello messages have been exchanged, the server sends some general metadata about the point cloud, that it manages.
+
+```json
+{
+  "PointCloudInfo": {
+    "coordinate_system": {
+      "I32CoordinateSystem": {
+        "scale": [1.0, 1.0, 1.0],
+        "offset": [0.0, 0.0, 0.0]
+      }
+    }
+  }
+}
+```
+
+As of now, the metadata only contains the `coordinate_system` used by the server for storing/transmitting point data. Also, `I32CoordinateSystem` is the only supported type of coordinate system. The `scale` and `offset` values define the transformation between the `i32` representation of the coordinates and the actual global coordinates.
+
+This metadata is especially important for the CaptureDevice mode, as any LAS-encoded point data sent to the server **MUST** use these values for the corresponding fields in the LAS file header.
+
+#### Message: ConnectionMode
+
+The initialisation phase ends with the client sending the protocol mode to the server, that it wishes to proceed with.
+
+Switch to CaptureDevice mode:
+
+```json
+{
+  "ConnectionMode": {
+    "device": "CaptureDevice"
+  }
+}
+```
+
+Switch to Viewer mode:
+
+```json
+{
+  "ConnectionMode": {
+    "device": "Viewer"
+  }
+}
+```
+
+#### CaptureDevice mode
+
+In CaptureDevice mode, the client streams point data to the server, that will be indexed and added to the point cloud.
 
 ![](img/mermaid-diagram-insert-points.svg)
 [Diagram source](https://mermaid-js.github.io/mermaid-live-editor/edit/#pako:eNqNkcFqwzAMhl_F-Jy9QA6F0QwW2EZZrrkIW93EHCmz5cIoffc5cwotg1KfpF_fb8nW0TrxaFub8DsjO-wIPiJMI5tyZohKjmZgNS_UPb6bATlJ_F8dMB5w1d9E0UhJrzxNRVrTMylBoARKwtVyCT5sNmf0GUOQSlSp1C7Re4idEOs2SPY97-Vmu60wo1umei2fUnKYNUfs8EAO73rblcMst1RbEJlrdKN9zwmj_s2bKozsbWMnjBOQL0s6LvJo9RMnHG1bQg_xa7QjnwqXZw-KT55Uom33EBI2FrLK8MPOthoznqF1yyt1-gUsHK6Y)
 
-Query:
+##### Message: InsertPoints
+
+In the CaptureDevice mode, the client repeatedly sends InsertPoints messages to the server:
+
+```edn
+{
+  "InsertPoints": {
+    "data": h'DE AD BE EF' /binary LAS-encoded point data/
+  }
+}
+```
+
+The point data is encoded in the LAS format. The data may (but does not have to) be LasZIP compressed. The value for scale and offset in the LAS header **MUST** match the values that the server provided as part of the PointCloudInfo message. See section [Encoding of point data](#encoding-of-point-data) for further encoding rules.
+
+#### Viewer mode
+
+In Viewer mode, the client can subscribe to a query. 
+
+The client starts with an empty todo
+
+The server will return the query result and keep it up-to-date as new points are added to the point cloud.
 
 ![](img/mermaid-diagram-query.svg)
 [Diagram source](https://mermaid-js.github.io/mermaid-live-editor/edit/#pako:eNp9kk1OwzAQha8SeUt6AS8qoYJEF6BCJVbZjOwpWHVmgjMGVVXvjqNJiCIoXo3f-8bPf2fj2KOxpsePjOTwLsBbgrahqowOkgQXOiCp9pg-Mf3WXwN-TfoTC1ZcsJGu1bTVloIEiKEHCUwKq7dar5W11QPGyOqpVLxpgf-8HQeSTeTst3TgK4tvmAjdkP5YDmyvbFvVemrSaTV0KBmZO63-DHnOmE6zv6QXe7-Zb8YlbJEE4gv2Ocqy4SdiNWYodOuOM4fkdVIKU5sWUwvBlzc9D3Jj5L0ENMaW0kM6NqahS-Fy50Hw3gfhZOwBYo-1gSy8P5EzVlLGCRo_xUhdvgF9-7pg)
+
+##### Message: Query
+
+The first action for the client after entering the Viewer protocol mode is to subscribe to a query using the `Query` message. At any later point in time, the client can re-send the `query
+ message in order to update the query subscription.
+
+AABB-Queries:
+```json
+{
+  "Query": {
+    "AabbQuery": {
+      "min_bounds": [0.0, 0.0, 0.0],
+      "max_bounds": [5.0, 5.0, 5.0],
+      "lod_level": 5
+    }
+  }
+}
+```
+
+ViewFrustumQuery-Queries:
+```json
+{
+  "Query": {
+    "ViewFrustumQuery": {
+      "view_projection_matrix": [
+        1.2840488017219491,     1.045301427691423e-16, 4.329788940746688e-17, 4.3297802811774664e-17,
+        -7.862531274888896e-17, 1.7071067811865472,    0.707108195401524,     0.7071067811865476,
+        -7.913561719330721e-33, 1.7071067811865475,    -0.7071081954015239,   -0.7071067811865475,
+        1.1917566422486195e-29, 0.0,                   667.9741663425807,     681.6049150647954
+      ],
+      "view_projection_matrix_inv": [
+        0.7787865995894931,     -4.76869258203062e-17, -4.7996429837981346e-33, 0.0,
+        1.7934537145592993e-17, 0.2928932188134524,    0.2928932188134525,      0.0,
+        2.1648879756985935e-15, 35.35530370398832,     -35.35530370398832,      -0.07335620517825471,
+        -2.1215945026671e-15,   -34.64826763347989,    34.64826763347988,       0.07335635189081177
+      ],
+      "window_width_pixels": 500.0,
+      "min_distance_pixels": 10.0
+    }
+  }
+}
+```
+
+##### Message: IncrementalResult
+
+Add node:
+```json
+{
+ "IncrementalResult": {
+  "replaces": null,
+  "nodes": [
+   [{"lod_level": 3, "id":  h'00 00 00 00 00 00 00 00 00 00 00 00 00 00 /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
+  ]
+ }
+}
+```
+
+Remove node:
+```json
+{
+ "IncrementalResult": {
+  "replaces": {"lod_level": 3, "id":  h'01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E /14 byte node id/'},
+  "nodes": []
+ }
+}
+```
+
+Reload node:
+```json
+{
+ "IncrementalResult": {
+  "replaces": {"lod_level": 3, "id":  h'01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E /14 byte node id/'},
+  "nodes": [
+   [{"lod_level": 3, "id":  h'01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
+  ]
+ }
+}
+```
+
+Split node:
+```json
+{
+ "IncrementalResult": {
+  "replaces": {"lod_level": 3, "id":  h'01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E /14 byte node id/'},
+  "nodes": [
+   [{"lod_level": 3, "id":  h'E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
+   [{"lod_level": 3, "id":  h'F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
+   [{"lod_level": 3, "id":  h'3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
+  ]
+ }
+}
+```
+
+##### Message: ResultAck
+
+```json
+{
+ "ResultAck": {
+  "update_number": 123
+ }
+}
+```
+
+## Encoding of point data
+
+- LAS 1.2
+- trajectory extra data
 
 ## Usages
 
