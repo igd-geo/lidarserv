@@ -80,7 +80,7 @@ can connect and stream in its captured points to the server. The server will the
 points.
 
 Here, we will use the `velodyne-csv-replay` tool to emulate a LiDAR scanner by replaying a previously captured LiDAR 
-dataset. The dataset consists of two csv files, `trajectory.txt` and `points.txt`. Please refer to section [CSV LiDAR captures](#CSV-LiDAR-captures) for an in depth description of the file formats. Here is an example for how the contents of the two files look:
+dataset. The dataset consists of two csv files, `trajectory.txt` and `points.txt`. Please refer to section [CSV LiDAR captures](#csv-lidar-captures) for an in depth description of the file formats. Here is an example for how the contents of the two files look:
 
 `trajectory.txt`:
 ```csv
@@ -113,7 +113,7 @@ velodyne-csv-replay convert --points-file /path/to/points.txt --trajectory-file 
 
 This produces the file `preconf.laz`.
 
-Note, that the files produced by `velodyne-csv-replay convert` are no ordinary LAZ files. They contain trajectory information for each point and use specific scale and shift values in the LAS header that the server requested. This means, that it is not possible, to use arbitrary LAZ files - you have to either use the conversion tool or build your own LAZ files according to the rules in section [Preprocessed LAZ file](#Preprocessed-LAZ-file).
+Note, that the files produced by `velodyne-csv-replay convert` are no ordinary LAZ files. They contain trajectory information for each point and use specific scale and shift values in the LAS header that the server requested. This means, that it is not possible, to use arbitrary LAZ files - you have to either use the conversion tool or build your own LAZ files according to the rules in section [Preprocessed LAZ file](#preprocessed-laz-file).
 
 We can now send the point cloud to the LiDAR server with the following command:
 
@@ -123,7 +123,13 @@ velodyne-csv-replay replay --fps 5 preconv.laz
 
 This will stream the contents of `preconv.laz` to the LiDAR server, in the same speed, that the points originally got captured by the sensor.
 
-### Viewer
+### View the point cloud
+
+While the replay command is still running, we can start the viewer to get a live visualisation of the growing point cloud:
+
+```shell
+lidarserv-viewer
+```
 
 ## Data formats (`velodyne-csv-replay`)
 
@@ -132,6 +138,75 @@ This will stream the contents of `preconv.laz` to the LiDAR server, in the same 
 ### Preprocessed LAZ file
 
 ## Protocol
+
+This section describes the communication protocol used by the LiDAR Server and its clients. It contains all information necessary to develop additional client applications interacting with the LiDAR Server.
+
+Through this protocol, it is possible to
+ - Stream points to the server for insertion into the point cloud.
+ - Access the point cloud by subscribing to queries.
+ 
+The protocol has no built-in security (authentication & authorisation, encryption, ...). Make sure, that only trusted clients can access the server.
+
+### Byte layer
+
+After the TCP connection is established, each peer sends the following 18 byte magic number. 
+By verifying the magic number sent by the server, the client can make sure, that it is indeed connected to a compatible
+LiDAR Server speaking the same protocol, and not some other arbitrary network service.
+
+| Index | Length | Type        | Field                                                                                      |
+|-------|--------|-------------|--------------------------------------------------------------------------------------------|
+| 0     | 18     | Binary data | Magic number. <br/>HEX: "4C 69 64 61 72 53 65 72 76 20 50 72 6F 74 6F 63 6F 6C" <br/>ASCII: "LidarServ Protocol" |
+
+
+After this, the connection is regarded as established. Further protocol version compatibility checking will be done as 
+the first message in the messages layer.
+
+The remaining communication consists of message frames, sent in both direction (client to server or server to client).
+
+| Index | Length | Type                                   | Field                |
+|-------|--------|----------------------------------------|----------------------|
+| 0     | 8      | Unsigned 64-Bit Integer, little endian | Message size (`len`) |
+| 8     | `len`  | Binary data                            | CBor encoded message |
+
+### Message layer
+
+Insert points:
+
+```mermaid
+sequenceDiagram
+    participant LiDAR Sensor
+    participant Server
+    Note over LiDAR Sensor,Server: Initialisation
+    LiDAR Sensor->>Server: Hello
+    Server->>LiDAR Sensor: Hello
+    Server->>LiDAR Sensor: PointCloudInfo
+    LiDAR Sensor->>Server: ConnectionMode: CaptureDevice
+    Note over LiDAR Sensor,Server: CaptureDevice Mode
+    loop
+        LiDAR Sensor->>Server: InsertPoints
+    end
+```
+
+Query:
+
+```mermaid
+sequenceDiagram
+    participant Server
+    participant Viewer
+    Note over Server,Viewer: Initialisation
+    Viewer->>Server: Hello
+    Server->>Viewer: Hello
+    Server->>Viewer: PointCloudInfo
+    Viewer->>Server: ConnectionMode: Viewer
+    Note over Viewer,Server: Viewer Mode
+    loop
+        Viewer->>Server: Query
+        loop
+            Server->>+Viewer: IncrementalResult
+            Viewer->>-Server:ResultAck
+        end
+    end
+```
 
 ## Usages
 
