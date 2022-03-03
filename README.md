@@ -3,6 +3,8 @@
 ![](img/mno.mp4)
 ![](img/bvg.mp4)
 
+[[_TOC_]]
+
 ## Building
 
 The project is built with cargo:
