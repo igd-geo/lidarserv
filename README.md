@@ -172,41 +172,13 @@ The remaining communication consists of message frames, sent in both direction (
 
 Insert points:
 
-```mermaid
-sequenceDiagram
-    participant LiDAR Sensor
-    participant Server
-    Note over LiDAR Sensor,Server: Initialisation
-    LiDAR Sensor->>Server: Hello
-    Server->>LiDAR Sensor: Hello
-    Server->>LiDAR Sensor: PointCloudInfo
-    LiDAR Sensor->>Server: ConnectionMode: CaptureDevice
-    Note over LiDAR Sensor,Server: CaptureDevice Mode
-    loop
-        LiDAR Sensor->>Server: InsertPoints
-    end
-```
+![](img/mermaid-diagram-insert-points.svg)
+[Diagram source](https://mermaid-js.github.io/mermaid-live-editor/edit/#pako:eNqNkcFqwzAMhl_F-Jy9QA6F0QwW2EZZrrkIW93EHCmz5cIoffc5cwotg1KfpF_fb8nW0TrxaFub8DsjO-wIPiJMI5tyZohKjmZgNS_UPb6bATlJ_F8dMB5w1d9E0UhJrzxNRVrTMylBoARKwtVyCT5sNmf0GUOQSlSp1C7Re4idEOs2SPY97-Vmu60wo1umei2fUnKYNUfs8EAO73rblcMst1RbEJlrdKN9zwmj_s2bKozsbWMnjBOQL0s6LvJo9RMnHG1bQg_xa7QjnwqXZw-KT55Uom33EBI2FrLK8MPOthoznqF1yyt1-gUsHK6Y)
 
 Query:
 
-```mermaid
-sequenceDiagram
-    participant Server
-    participant Viewer
-    Note over Server,Viewer: Initialisation
-    Viewer->>Server: Hello
-    Server->>Viewer: Hello
-    Server->>Viewer: PointCloudInfo
-    Viewer->>Server: ConnectionMode: Viewer
-    Note over Viewer,Server: Viewer Mode
-    loop
-        Viewer->>Server: Query
-        loop
-            Server->>+Viewer: IncrementalResult
-            Viewer->>-Server:ResultAck
-        end
-    end
-```
+![](img/mermaid-diagram-query.svg)
+[Diagram source](https://mermaid-js.github.io/mermaid-live-editor/edit/#pako:eNp9kk1OwzAQha8SeUt6AS8qoYJEF6BCJVbZjOwpWHVmgjMGVVXvjqNJiCIoXo3f-8bPf2fj2KOxpsePjOTwLsBbgrahqowOkgQXOiCp9pg-Mf3WXwN-TfoTC1ZcsJGu1bTVloIEiKEHCUwKq7dar5W11QPGyOqpVLxpgf-8HQeSTeTst3TgK4tvmAjdkP5YDmyvbFvVemrSaTV0KBmZO63-DHnOmE6zv6QXe7-Zb8YlbJEE4gv2Ocqy4SdiNWYodOuOM4fkdVIKU5sWUwvBlzc9D3Jj5L0ENMaW0kM6NqahS-Fy50Hw3gfhZOwBYo-1gSy8P5EzVlLGCRo_xUhdvgF9-7pg)
 
 ## Usages
 
