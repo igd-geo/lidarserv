@@ -268,19 +268,24 @@ The point data is encoded in the LAS format. The data may (but does not have to)
 
 #### Viewer mode
 
-In Viewer mode, the client can subscribe to a query. 
+In Viewer mode, the client can subscribe to a query. The server will return the query result and keep it up-to-date as new points are added to the point cloud.
 
-The client starts with an empty todo
-
-The server will return the query result and keep it up-to-date as new points are added to the point cloud.
+The client starts with an empty query result. The server will send a series of `IncrementalResult` messages that contain 
+instructions for the client of how to update the current query result. Like this, the server keeps the 
+client-side query result in sync with the actual query result, updating it whenever new points are added to the point 
+cloud, or after the query has been changed by the client.
 
 ![](img/mermaid-diagram-query.svg)
 [Diagram source](https://mermaid-js.github.io/mermaid-live-editor/edit/#pako:eNp9kk1OwzAQha8SeUt6AS8qoYJEF6BCJVbZjOwpWHVmgjMGVVXvjqNJiCIoXo3f-8bPf2fj2KOxpsePjOTwLsBbgrahqowOkgQXOiCp9pg-Mf3WXwN-TfoTC1ZcsJGu1bTVloIEiKEHCUwKq7dar5W11QPGyOqpVLxpgf-8HQeSTeTst3TgK4tvmAjdkP5YDmyvbFvVemrSaTV0KBmZO63-DHnOmE6zv6QXe7-Zb8YlbJEE4gv2Ocqy4SdiNWYodOuOM4fkdVIKU5sWUwvBlzc9D3Jj5L0ENMaW0kM6NqahS-Fy50Hw3gfhZOwBYo-1gSy8P5EzVlLGCRo_xUhdvgF9-7pg)
 
 ##### Message: Query
 
-The first action for the client after entering the Viewer protocol mode is to subscribe to a query using the `Query` message. At any later point in time, the client can re-send the `query
+The first action for the client after entering the Viewer protocol mode is to subscribe to a query using the `Query` message. At any later point in time, the client can re-send the query
  message in order to update the query subscription.
+
+Two types of queries are supported: Aabb Queries select all points of a fixed LOD within a certain bounding box. 
+View Frustum Queries select all points inside the View Frustum of a virtual camera, with LODs depending on the 
+distance to the camera, so that a fixed point density is reached on screen.
 
 AABB-Queries:
 ```json
@@ -319,7 +324,27 @@ ViewFrustumQuery-Queries:
 }
 ```
 
+Here, the `view_projection_matrix` projects points from world space into clip space which ranges from -1 to 1 on all 
+three axes. The coordinate system is oriented such that smaller z values are closer to the camera. For example, the min distance plane is at `z = -1`. 
+
+The `view_projection_matrix_inv` is the inversion of the projection matrix and projects coordinates from clip space back into world space.
+
+The values `window_width_pixels` and `min_distance_pixels` control the point density on screen. 
+The `window_width_pixels` is used for the conversion from clip space (`[-1, 1]`) to screen space (`[0, window_width_pixels]`).
+The query engine will keep loading more LODs, until the distance between neighbouring points on screen is smaller than `min_distance_pixels`.
+As a result, two neighbouring points on screen will be closer than `min_distance_pixels` pixels, making `min_distance_pixels`
+actually a maximum value / upper bound. The `min` in `min_distance_pixels` refers to it being the minimum value at which 
+the query engine keeps loading finer LODs.
+
 ##### Message: IncrementalResult
+
+The server sends updates to the query result using the `IncrementalResult` message.
+
+In general, the query result consists out of a set of nodes. 
+Each node is identified by its lod (level of detail) and a 14 byte id. Note, that the id value alone does not uniquely identify a node, it only identifies a node within its level of detail. 
+The point data of a node is stored in the LAS or LAZ format. One node might contain multiple las files.
+
+The `IncrementalResult` has two fields: The field `nodes` contains a list of nodes with their point data that should be added to the query result. The `replaces` field optionally contains a node, that should be removed from the query result.
 
 Add node:
 ```json
@@ -327,7 +352,10 @@ Add node:
  "IncrementalResult": {
   "replaces": null,
   "nodes": [
-   [{"lod_level": 3, "id":  h'00 00 00 00 00 00 00 00 00 00 00 00 00 00 /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
+   [
+    {"lod_level": 3, "id":  h'00 00 00 00 00 00 00 00 00 00 00 00 00 00 /14 byte node id/'}, 
+    [h'DEAD BEEF /LAS point data/']
+   ]
   ]
  }
 }
@@ -343,33 +371,51 @@ Remove node:
 }
 ```
 
-Reload node:
+Reload node: (after points have been added)
 ```json
 {
  "IncrementalResult": {
   "replaces": {"lod_level": 3, "id":  h'01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E /14 byte node id/'},
   "nodes": [
-   [{"lod_level": 3, "id":  h'01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
+   [
+    {"lod_level": 3, "id":  h'01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E /14 byte node id/'}, 
+    [h'DEAD BEEF /LAS point data/']
+   ]
   ]
  }
 }
 ```
 
-Split node:
+Split node: (specific to the sensor position index)
 ```json
 {
  "IncrementalResult": {
   "replaces": {"lod_level": 3, "id":  h'01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E /14 byte node id/'},
   "nodes": [
-   [{"lod_level": 3, "id":  h'E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
-   [{"lod_level": 3, "id":  h'F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
-   [{"lod_level": 3, "id":  h'3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A /14 byte node id/'}, [h'DEAD BEEF /LAS point data/']],
+   [
+    {"lod_level": 3, "id":  h'E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 /14 byte node id/'}, 
+    [h'DEAD BEEF /LAS point data/']
+   ],
+   [
+    {"lod_level": 3, "id":  h'F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 F2 /14 byte node id/'}, 
+    [h'DEAD BEEF /LAS point data/']
+   ],
+   [
+    {"lod_level": 3, "id":  h'3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A 3A /14 byte node id/'}, 
+    [h'DEAD BEEF /LAS point data/']
+   ]
   ]
  }
 }
 ```
 
 ##### Message: ResultAck
+
+The `ResultAck` message exists to ensure, that the server does not send `IncrementalResult`s faster than the client can receive and process. 
+
+The TCP/IP connection between server and client acts as a fifo buffer, where multiple messages can be "in flight". If the client updates the query, it still has to process all in-flight `IncrementalResult` messages before it sees the first message from the server, that respects the new query. If there are many in-flight messages, this can lead to obvious visible delays in the client application. To avoid this, the server throttles its `IncrementalResult` messages so that the number of in-flight messages is limited to 10 or less.
+
+To know the number of in-flight messages, the server keeps track of how many `IncrementalResult` messages it has sent out and subtracts the number of `IncrementalResult` messages that the client has processed. The `ResultAck` message tells the server, how many `IncrementalResult` messages the client has processed. The client should keep track of this number and periodically send it to the server - optimally after every processed update, but at least after each 10 updates.
 
 ```json
 {
