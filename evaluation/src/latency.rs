@@ -1,4 +1,5 @@
-use crate::{Config, Point, PointIdAttribute};
+use crate::settings::SingleLatencyMeasurement;
+use crate::{Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::index::{Index, Node, NodeId, Reader, Writer};
 use lidarserv_common::las::I32LasReadWrite;
@@ -15,7 +16,7 @@ pub fn measure_latency<I, Q>(
     index: I,
     points: &[Point],
     query: Q,
-    config: &Config,
+    config: &SingleLatencyMeasurement,
 ) -> serde_json::value::Value
 where
     I: Index<Point>,
@@ -108,17 +109,22 @@ where
     };
 
     json!({
+        "settings": config,
         "all_lods": overall_stats,
         "per_lod_level": per_lod_stats,
     })
 }
 
-pub fn insertion_thread<I>(mut writer: I::Writer, points: &[Point], config: &Config) -> Vec<Instant>
+pub fn insertion_thread<I>(
+    mut writer: I::Writer,
+    points: &[Point],
+    config: &SingleLatencyMeasurement,
+) -> Vec<Instant>
 where
     I: Index<Point>,
 {
-    let points_per_second: usize = config.pps;
-    let frames_per_second: usize = config.fps;
+    let points_per_second: usize = config.points_per_sec;
+    let frames_per_second: usize = config.frames_per_sec;
     let mut read_pos = 0;
     let started_at = Instant::now();
     let mut last_insert = started_at;

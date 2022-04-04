@@ -1,0 +1,16 @@
+data_folder = "data/evaluation"
+output_file = "evaluation/results/sensorpos_parallelisation_%d_%i.json"
+points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
+trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
+offset = [412785.340004, 5318821.784996, 290.0]
+
+[defaults]
+type = "SensorPosTree"
+query_perf.enable = false
+
+[runs.num_threads]
+num_threads = [1, 2, 3, 4, 5, 6, 7, 8]
+
+[runs.num_threads_no_compression]
+compression = [false]
+num_threads = [1, 2, 3, 4, 5, 6, 7, 8]

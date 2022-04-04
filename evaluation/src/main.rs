@@ -1,39 +1,139 @@
-use evaluation::config::Config;
 use evaluation::indexes::{create_octree_index, create_sensor_pos_index};
 use evaluation::insertion_rate::measure_insertion_rate;
 use evaluation::latency::measure_latency;
 use evaluation::point::Point;
 use evaluation::queries::preset_query_2;
 use evaluation::query_performance::measure_query_performance;
+use evaluation::settings::{Base, EvaluationScript, MultiRun, SystemUnderTest};
 use evaluation::thermal_throttle::processor_cooldown;
-use evaluation::{read_points, reset_data_folder};
+use evaluation::{read_points, reset_data_folder, settings};
 use lidarserv_common::geometry::position::I32CoordinateSystem;
-use log::{info, warn};
+use lidarserv_common::index::Index;
+use log::{error, info, warn};
 use nalgebra::Vector3;
 use serde_json::json;
+use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use time::macros::format_description;
+use time::OffsetDateTime;
 
 fn main() {
     // init
     dotenv::dotenv().unwrap();
     pretty_env_logger::init();
-    let base_config = Config::from_env();
+
+    // parse cli
+    let args: Vec<_> = std::env::args_os().collect();
+    let input_file = match args.len().cmp(&2) {
+        Ordering::Less => {
+            error!("Missing argument 'input file'");
+            return;
+        }
+        Ordering::Greater => {
+            error!("Too many arguments. Expected a path to the input file as the only argument.");
+            return;
+        }
+        Ordering::Equal => {
+            let mut args = args;
+            args.pop().unwrap()
+        }
+    };
+
+    // read input file
+    let mut f = std::fs::File::open(input_file).unwrap();
+    let mut config_toml = String::new();
+    f.read_to_string(&mut config_toml).unwrap();
+    let config: EvaluationScript = match toml::from_str(&config_toml) {
+        Ok(r) => r,
+        Err(e) => {
+            if let Some((row, col)) = e.line_col() {
+                eprintln!("{}:{} - {}", row, col, e);
+            } else {
+                eprintln!("?:? - {}", e);
+            }
+            return;
+        }
+    };
 
     // read point data
     let coordinate_system = I32CoordinateSystem::from_las_transform(
         Vector3::new(0.001, 0.001, 0.001),
         Vector3::new(0.0, 0.0, 0.0),
     );
-    let points = read_points(&coordinate_system, &base_config);
+    let points = read_points(&coordinate_system, &config.base);
 
-    let is_simple = std::env::args().any(|arg| arg == "simple");
-    if is_simple {
-        run_simple(base_config, points, coordinate_system);
-    } else {
-        run_full(base_config, points, coordinate_system);
+    // run tests
+    let mut all_results = HashMap::new();
+    for (name, mut run) in config.runs.clone() {
+        info!("=== {} ===", name);
+        run.apply_defaults(&config.defaults);
+        let mut run_results = Vec::new();
+        for index in &run.index {
+            let result = match index.typ {
+                SystemUnderTest::Octree => evaluate(&points, &run, &config.base, || {
+                    create_octree_index(coordinate_system.clone(), &config.base, &index)
+                }),
+                SystemUnderTest::SensorPosTree => evaluate(&points, &run, &config.base, || {
+                    create_sensor_pos_index(coordinate_system.clone(), &config.base, &index)
+                }),
+            };
+            run_results.push(json!({
+                "index": index,
+                "results": result,
+            }));
+        }
+        all_results.insert(name, run_results);
     }
+
+    // write results to file
+    let output = json!(all_results);
+    println!("{}", &output);
+    let out_file_name = get_output_filename(&config.base.output_file_pattern);
+    let out_file = match std::fs::File::create(out_file_name) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("Could not open output file for writing: {}", e);
+            return;
+        }
+    };
+    match serde_json::to_writer_pretty(out_file, &output) {
+        Ok(_) => (),
+        Err(e) => error!("Could not write output file: {}", e),
+    };
 }
 
+fn get_output_filename(pattern: &str) -> PathBuf {
+    // replace date
+    let now = match OffsetDateTime::now_local() {
+        Ok(v) => v,
+        Err(_) => OffsetDateTime::now_utc(),
+    };
+    let date_str = now
+        .date()
+        .format(&format_description!(
+            "[year repr:full]-[month padding:zero repr:numerical]-[day padding:zero]"
+        ))
+        .unwrap_or_else(|_| "%d".into());
+    let with_date = pattern.replace("%d", &date_str);
+
+    // replace file number
+    if !with_date.contains("%i") {
+        return with_date.into();
+    }
+    for i in 1.. {
+        let with_index = with_date.replace("%i", &i.to_string());
+        let path = Path::new(&with_index);
+        if !path.exists() {
+            return with_index.into();
+        }
+    }
+    panic!("No free file name found")
+}
+
+/*
 fn run_simple(base_config: Config, points: Vec<Point>, coordinate_system: I32CoordinateSystem) {
     let mut runs = HashMap::new();
 
@@ -49,7 +149,7 @@ fn run_simple(base_config: Config, points: Vec<Point>, coordinate_system: I32Coo
             .push(result);
     }
 
-    println!("{}", json!(runs))
+    println!("{}", json!(runs));
 }
 
 fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32CoordinateSystem) {
@@ -133,129 +233,66 @@ fn run_full(base_config: Config, points: Vec<Point>, coordinate_system: I32Coord
     }
 
     println!("{}", json!(runs))
-}
+}*/
 
-fn evaluate_octree(
-    config: &Config,
+fn evaluate<I, F>(
     points: &[Point],
-    coordinate_system: &I32CoordinateSystem,
-    force_skip_latency: bool,
-) -> serde_json::Value {
+    run: &MultiRun,
+    base_config: &Base,
+    make_index: F,
+) -> serde_json::Value
+where
+    I: Index<Point>,
+    I::Reader: Send + 'static,
+    F: Fn() -> I,
+{
     // measure insertion rate
-    reset_data_folder(config);
+    let mut index = make_index();
+    reset_data_folder(base_config);
     processor_cooldown();
-    info!("Measuring octree insertion rate...");
-    let mut octree_index = create_octree_index(coordinate_system.clone(), config);
-    let (octree_insertion_rate, max_pps) =
-        measure_insertion_rate(&mut octree_index, points, config);
-    info!("Results: {}", &octree_insertion_rate);
+    info!("Measuring insertion rate...");
+    let (result_insertion_rate, max_pps) =
+        measure_insertion_rate(&mut index, points, &run.insertion_rate.single());
+    info!("Results: {}", &result_insertion_rate);
 
     // measure query performance
-    processor_cooldown();
-    info!("Measuring octree query perf...");
-    let octree_query_perf = measure_query_performance(octree_index);
-    info!("Results: {}", &octree_query_perf);
-
-    // measure latency
-    let octree_latency = if force_skip_latency {
-        None as Option<serde_json::Value>
-    } else if config.pps as f64 > max_pps {
-        warn!(
-            "Skipping latency measurement, because the indexer is too slow for {} points/sec.",
-            config.pps
-        );
-        None as Option<serde_json::Value>
-    } else {
-        reset_data_folder(config);
+    let result_query_perf = if run.query_perf.single().is_some() {
         processor_cooldown();
-        info!("Measuring octree latency...");
-        let octree_latency = {
-            let index = create_octree_index(coordinate_system.clone(), config);
-            let query = preset_query_2();
-            measure_latency(index, points, query, config)
-        };
-        info!("Results: {}", &octree_latency);
-        Some(octree_latency)
+        info!("Measuring query perf...");
+        let sensorpos_query_perf = measure_query_performance(index);
+        info!("Results: {}", &sensorpos_query_perf);
+        sensorpos_query_perf
+    } else {
+        serde_json::Value::Null
     };
 
-    json!({
-        "latency": octree_latency,
-        "insertion_rate": octree_insertion_rate,
-        "query_performance": octree_query_perf
-    })
-}
-
-fn evaluate_sensor_pos_index(
-    config: &Config,
-    points: &[Point],
-    coordinate_system: &I32CoordinateSystem,
-    force_skip_latency: bool,
-) -> serde_json::Value {
-    // measure insertion rate
-    reset_data_folder(config);
-    processor_cooldown();
-    info!("Measuring sensorpos insertion rate...");
-    let mut sensor_pos_index = create_sensor_pos_index(coordinate_system.clone(), config);
-    let (sensorpos_insertion_rate, max_pps) =
-        measure_insertion_rate(&mut sensor_pos_index, points, config);
-    info!("Results: {}", &sensorpos_insertion_rate);
-
-    // measure query performance
-    processor_cooldown();
-    info!("Measuring sensorpos query perf...");
-    let sensorpos_query_perf = measure_query_performance(sensor_pos_index);
-    info!("Results: {}", &sensorpos_query_perf);
-
     // measure latency
-    let sensorpos_latency = if force_skip_latency {
-        None as Option<serde_json::Value>
-    } else if config.pps as f64 > max_pps {
-        warn!(
-            "Skipping latency measurement, because the indexer is too slow for {} points/sec.",
-            config.pps
-        );
-        None as Option<serde_json::Value>
-    } else {
-        reset_data_folder(config);
+    let mut results_latency = vec![];
+    for measurement_settings in &run.latency {
+        if measurement_settings.points_per_sec as f64 > max_pps {
+            warn!(
+                "Skipping latency measurement with {} points/sec, because the indexer is too slow (only reached {} points/sec).",
+                measurement_settings.points_per_sec, max_pps
+            );
+            continue;
+        }
+        reset_data_folder(base_config);
         processor_cooldown();
-        info!("Measuring sensorpos latency...");
-        let sensorpos_latency = {
-            let index = create_sensor_pos_index(coordinate_system.clone(), config);
+        info!(
+            "Measuring latency at {} points/sec...",
+            measurement_settings.points_per_sec
+        );
+        let result_latency = {
+            let index = make_index();
             let query = preset_query_2();
-            measure_latency(index, points, query, config)
+            measure_latency(index, points, query, &measurement_settings)
         };
-        info!("Results: {}", &sensorpos_latency);
-        Some(sensorpos_latency)
-    };
+        results_latency.push(result_latency);
+    }
 
     json!({
-        "latency": sensorpos_latency,
-        "insertion_rate": sensorpos_insertion_rate,
-        "query_performance": sensorpos_query_perf
+        "latency": results_latency,
+        "insertion_rate": result_insertion_rate,
+        "query_performance": result_query_perf
     })
-}
-
-fn evaluate(
-    config: &Config,
-    points: &[Point],
-    coordinate_system: &I32CoordinateSystem,
-    octree: bool,
-    sensorpos: bool,
-    force_skip_latency: bool,
-) -> serde_json::Value {
-    info!("Configuration: {:#?}", config);
-
-    let mut result = HashMap::new();
-    if octree {
-        let octree_results = evaluate_octree(config, points, coordinate_system, force_skip_latency);
-        result.insert("octree_index".to_string(), octree_results);
-    }
-    if sensorpos {
-        let sensorpos_results =
-            evaluate_sensor_pos_index(config, points, coordinate_system, force_skip_latency);
-        result.insert("sensor_pos_index".to_string(), sensorpos_results);
-    }
-    result.insert("config".to_string(), json!(config));
-
-    json!(result)
 }

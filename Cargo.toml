@@ -7,5 +7,6 @@ members = [
     "velodyne-csv-replay",
     "point-cloud-viewer",
     "experiments",
-    "evaluation"
+    "evaluation",
+    "default-functions-derive"
 ]

@@ -1,4 +1,5 @@
-use crate::{Config, Point};
+use crate::settings::SingleInsertionRateMeasurement;
+use crate::Point;
 use lidarserv_common::index::{Index, Writer};
 use nalgebra::min;
 use serde_json::json;
@@ -8,12 +9,12 @@ use std::time::{Duration, Instant};
 pub fn measure_insertion_rate<I>(
     index: &mut I,
     points: &[Point],
-    config: &Config,
+    settings: &SingleInsertionRateMeasurement,
 ) -> (serde_json::value::Value, f64)
 where
     I: Index<Point>,
 {
-    let target_point_pressure: usize = config.target_point_pressure;
+    let target_point_pressure = settings.target_point_pressure;
     let mut writer = index.writer();
     let mut read_pos = 0;
     let time_start = Instant::now();
@@ -48,6 +49,7 @@ where
     let pps = nr_points as f64 / (duration + finalize_duration).as_secs_f64();
     (
         json!({
+            "settings": settings,
             "duration_seconds": duration.as_secs_f64(),
             "duration_cleanup_seconds": finalize_duration.as_secs_f64(),
             "nr_points": nr_points,

@@ -34,7 +34,7 @@ struct LockedTask {
     nr_points: usize,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum TaskPriorityFunction {
     NrPoints,
     Lod,
