@@ -191,20 +191,20 @@ values for the full evaluation across all for all runs.
 The following table gives an overview of all keys, that can occur in a `[runs.*]` 
 section or in the `[defaults]` section:
 
-| Key                                    | Type                                                                          | Description                                                                                                             |
-|----------------------------------------|-------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| `type`                                 | Enum: `"Octree"` or `"SensorPosTree"`                                         | Which index structure to test.                                                                                          |
-| `num_threads`                          | Integer                                                                       | Number of worker threads used for indexing.                                                                             |
-| `cache_size`                           | Integer                                                                       | Number of nodes, that fitr into the node LRU cache.                                                                     |
-| `compression`                          | Boolean                                                                       | Weather to enable LasZIP compression (`*.laz`) for storing the point data.                                              |
-| `priority_function`                    | Enum: `"NrPoints"` or `"Lod"` or `"TaskAge"` or `"NrPointsWeightedByTaskAge"` | (Octree index:) The priority function that the octree index uses.                                                       |
-| `nr_bogus_points`                      | \[Integer, Integer\]                                                          | (Octree index:) The maximum number of bogus points that a node can store, for inner nodes and leaf nodes, respectively. |
-| `node_size`                            | Integer                                                                       | (Sensor pos index:) Number of points, at which a node split is performed.                                               |
-| `insertion_rate.target_point_pressure` | Integer                                                                       | Always fill up the internal buffers to this number of points.                                                           |
-| `latency.enable`                       | Boolean                                                                       | Weather to do the latency measurement                                                                                   |
-| `latency.points_per_sec`               | Integer                                                                       | How quickly to insert points when measuring the latency.                                                                |
-| `latency.frames_per_sec`               | Integer                                                                       | How many times per second to insert points when measuring the latency,                                                  |
-| `query_perf.enable`                    | Boolean                                                                       | Weather to measure the query performance                                                                                |
+| Key                                    | Type                 | Description                                                                                                                                                |
+|----------------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `type`                                 | String               | Which index structure to test. Possible values: `"Octree"` or `"SensorPosTree"`                                                                            |
+| `num_threads`                          | Integer              | Number of worker threads used for indexing.                                                                                                                |
+| `cache_size`                           | Integer              | Number of nodes, that fitr into the node LRU cache.                                                                                                        |
+| `compression`                          | Boolean              | Weather to enable LasZIP compression (`*.laz`) for storing the point data.                                                                                 |
+| `priority_function`                    | String               | (Octree index:) The priority function that the octree index uses. Possible values: `"NrPoints"` or `"Lod"` or `"TaskAge"` or `"NrPointsWeightedByTaskAge"` |
+| `nr_bogus_points`                      | \[Integer, Integer\] | (Octree index:) The maximum number of bogus points that a node can store, for inner nodes and leaf nodes, respectively.                                    |
+| `node_size`                            | Integer              | (Sensor pos index:) Number of points, at which a node split is performed.                                                                                  |
+| `insertion_rate.target_point_pressure` | Integer              | Always fill up the internal buffers to this number of points.                                                                                              |
+| `latency.enable`                       | Boolean              | Weather to do the latency measurement                                                                                                                      |
+| `latency.points_per_sec`               | Integer              | How quickly to insert points when measuring the latency.                                                                                                   |
+| `latency.frames_per_sec`               | Integer              | How many times per second to insert points when measuring the latency,                                                                                     |
+| `query_perf.enable`                    | Boolean              | Weather to measure the query performance                                                                                                                   |
 
 TODO: visualisation
 
