@@ -135,6 +135,79 @@ While the replay command is still running, we can start the viewer to get a live
 lidarserv-viewer
 ```
 
+## Evaluation
+
+To evaluate the indexer, the `evaluation` executable performs a few measurements of the indexer's performance.
+
+It takes the path to a configuration file as its first and only argument. The configuration file is used to define, 
+which tests to run:
+
+```shell
+evaluation example.toml
+```
+
+```toml
+# FILE example.toml
+data_folder = "data/evaluation"
+output_file = "evaluation/results/evaluation_%d_%i.json"
+points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
+trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
+offset = [412785.340004, 5318821.784996, 290.0]
+
+[defaults]
+type = "Octree"
+priority_function = "NrPointsWeightedByTaskAge"
+num_threads = 4
+cache_size = 500
+node_size = 10000
+compression = true
+nr_bogus_points = [0, 0]
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = true
+latency.enable = true
+latency.points_per_sec = 300000
+latency.frames_per_sec = 50
+
+[runs.example]
+compression = [true, false]
+cache_size = [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+```
+
+The file begins with a few mandatory file paths:
+
+ - `data_folder`: Working directory where the indexes are stored.
+ - `output_file`: File that the results will be written to after the evaluation finished. You should double-check this filename, because it can be quite disappointing if you run an evaluation for several hours and in the end all results are lost because the results file cannot be written. The filename can contain two placeholders:
+   - `%d` Will be replaced by the current date.
+   - `%i` Will be replaced by an ascending sequence of numbers. (Each time the evaluation is executed, `%i` is incremented by 1)
+ - `points_file`, `trajectory_file`: Files containing the point data to use for the tests.
+ - `offset`: New origin of the point data.
+
+The evaluation consists of several runs. Each run is configured in its own section `[runs.*]`. The example above only 
+defines a single run called `example`, in the `[runs.example]` section. Each run will execute tests for all possible 
+combinations of values defined in its section. In the example above, each of the listed `cache_size` values will be 
+tested both with compression enabled and disabled. The `[defaults]` section can be used to configure default 
+values for the full evaluation across all for all runs.
+
+The following table gives an overview of all keys, that can occur in a `[runs.*]` 
+section or in the `[defaults]` section:
+
+| Key                                    | Type                                                                          | Description                                                                                                             |
+|----------------------------------------|-------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `type`                                 | Enum: `"Octree"` or `"SensorPosTree"`                                         | Which index structure to test.                                                                                          |
+| `num_threads`                          | Integer                                                                       | Number of worker threads used for indexing.                                                                             |
+| `cache_size`                           | Integer                                                                       | Number of nodes, that fitr into the node LRU cache.                                                                     |
+| `compression`                          | Boolean                                                                       | Weather to enable LasZIP compression (`*.laz`) for storing the point data.                                              |
+| `priority_function`                    | Enum: `"NrPoints"` or `"Lod"` or `"TaskAge"` or `"NrPointsWeightedByTaskAge"` | (Octree index:) The priority function that the octree index uses.                                                       |
+| `nr_bogus_points`                      | \[Integer, Integer\]                                                          | (Octree index:) The maximum number of bogus points that a node can store, for inner nodes and leaf nodes, respectively. |
+| `node_size`                            | Integer                                                                       | (Sensor pos index:) Number of points, at which a node split is performed.                                               |
+| `insertion_rate.target_point_pressure` | Integer                                                                       | Always fill up the internal buffers to this number of points.                                                           |
+| `latency.enable`                       | Boolean                                                                       | Weather to do the latency measurement                                                                                   |
+| `latency.points_per_sec`               | Integer                                                                       | How quickly to insert points when measuring the latency.                                                                |
+| `latency.frames_per_sec`               | Integer                                                                       | How many times per second to insert points when measuring the latency,                                                  |
+| `query_perf.enable`                    | Boolean                                                                       | Weather to measure the query performance                                                                                |
+
+TODO: visualisation
+
 ## CSV LiDAR captures
 
 ## Protocol
@@ -342,7 +415,7 @@ The server sends updates to the query result using the `IncrementalResult` messa
 
 In general, the query result consists out of a set of nodes. 
 Each node is identified by its lod (level of detail) and a 14 byte id. Note, that the id value alone does not uniquely identify a node, it only identifies a node within its level of detail. 
-The point data of a node is stored in the LAS or LAZ format. One node might contain multiple las files.
+The point data of a node is stored in the LAS or LAZ format. One node might consist of multiple las files. Having more than one LAS/LAZ file is an edge-case that should not happen frequently though. The normal behaviour is, that each node has exactly one point data file.
 
 The `IncrementalResult` has two fields: The field `nodes` contains a list of nodes with their point data that should be added to the query result. The `replaces` field optionally contains a node, that should be removed from the query result.
 
@@ -371,7 +444,7 @@ Remove node:
 }
 ```
 
-Reload node: (after points have been added)
+Reload node: (after points have been added - basically replaces the node by the new version of itself)
 ```json
 {
  "IncrementalResult": {
@@ -413,7 +486,7 @@ Split node: (specific to the sensor position index)
 
 The `ResultAck` message exists to ensure, that the server does not send `IncrementalResult`s faster than the client can receive and process. 
 
-The TCP/IP connection between server and client acts as a fifo buffer, where multiple messages can be "in flight". If the client updates the query, it still has to process all in-flight `IncrementalResult` messages before it sees the first message from the server, that respects the new query. If there are many in-flight messages, this can lead to obvious visible delays in the client application. To avoid this, the server throttles its `IncrementalResult` messages so that the number of in-flight messages is limited to 10 or less.
+The TCP/IP connection between server and client acts as a fifo buffer, where multiple messages can be "in flight". If the client updates the query, it still has to process all in-flight messages before it sees the first `IncrementalResult`, that respects the new query. If there are many in-flight messages, this can lead to visible delays in the client application. To avoid this, the server throttles its `IncrementalResult` messages so that the number of in-flight messages is limited to 10 or less.
 
 To know the number of in-flight messages, the server keeps track of how many `IncrementalResult` messages it has sent out and subtracts the number of `IncrementalResult` messages that the client has processed. The `ResultAck` message tells the server, how many `IncrementalResult` messages the client has processed. The client should keep track of this number and periodically send it to the server - optimally after every processed update, but at least after each 10 updates.
 
