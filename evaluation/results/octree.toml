@@ -15,6 +15,7 @@ latency.points_per_sec = 300000
 latency.frames_per_sec = 50
 
 # just run once with default settings
+# and fine-grained latency analysis
 [runs.general]
 query_perf.enable = true
 latency.enable = true
@@ -22,7 +23,7 @@ latency.points_per_sec = [200_000, 300_000, 400_000, 500_000, 600_000, 700_000, 
 
 # test how well it scales with the number of worker threads
 [runs.parallelisation]
-num_threads = [1, 2, 3, 4, 5, 6, 7, 8]
+num_threads = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 
 # test different task priority functions
 [runs.prio_fn_simple]
