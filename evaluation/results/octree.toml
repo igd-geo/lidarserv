@@ -33,7 +33,7 @@ latency.points_per_sec = [300_000, 500_000, 700_000, 900_000, 1_100_000]    # on
 
 # the priority functions perform a lot differently without caching.
 # test different task priority functions with no cache
-[runs.prio_fn_low_cache]
+[runs.prio_fn_no_cache]
 priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
 cache_size = [0]
 
@@ -42,7 +42,7 @@ cache_size = [0]
 # the NrPoints priority function has
 [runs.prio_fn_with_bogus]
 priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
-nr_bogus_points = [[5_000, 5_000]]
+nr_bogus_points = [[5_000, 5_000], [10_000, 10_000], [20_000, 20_000]]
 
 # show influence of cache size on indexing performance
 [runs.cache]

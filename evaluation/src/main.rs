@@ -22,7 +22,7 @@ use time::OffsetDateTime;
 
 fn main() {
     // init
-    dotenv::dotenv().unwrap();
+    dotenv::dotenv().ok();
     pretty_env_logger::init();
 
     // parse cli

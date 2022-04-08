@@ -1,0 +1,6401 @@
+{
+  "cache": [
+    {
+      "index": {
+        "cache_size": 8,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 7.880740986,
+          "duration_seconds": 303.818441056,
+          "insertion_rate_points_per_sec": 246974.00389593287,
+          "nr_points": 76981595,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 16,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 3.59924538,
+          "duration_seconds": 301.875320734,
+          "insertion_rate_points_per_sec": 201516.30881448617,
+          "nr_points": 61558107,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 32,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 7.533476058,
+          "duration_seconds": 302.268277801,
+          "insertion_rate_points_per_sec": 219245.46311933926,
+          "nr_points": 67922629,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 64,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 12.461676457,
+          "duration_seconds": 303.112502154,
+          "insertion_rate_points_per_sec": 232562.26578178542,
+          "nr_points": 73390646,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 128,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 5.502520784,
+          "duration_seconds": 303.868744697,
+          "insertion_rate_points_per_sec": 262582.7026103983,
+          "nr_points": 81235543,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 256,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 4.718810186,
+          "duration_seconds": 300.161006091,
+          "insertion_rate_points_per_sec": 290915.6305690514,
+          "nr_points": 88694304,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 512,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 3.935902258,
+          "duration_seconds": 210.56496086,
+          "insertion_rate_points_per_sec": 418796.2635403571,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 1024,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 4.0617405,
+          "duration_seconds": 143.453848035,
+          "insertion_rate_points_per_sec": 608967.2345284793,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 2048,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 5.6081508079999995,
+          "duration_seconds": 132.933167747,
+          "insertion_rate_points_per_sec": 648414.2127197759,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 4096,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 2.651164447,
+          "duration_seconds": 111.172706163,
+          "insertion_rate_points_per_sec": 789220.7453372948,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 8192,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 4.577480061,
+          "duration_seconds": 88.415606868,
+          "insertion_rate_points_per_sec": 966009.0117084363,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    }
+  ],
+  "general": [
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 6.233987603,
+          "duration_seconds": 213.826508128,
+          "insertion_rate_points_per_sec": 408215.7485903787,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [
+          {
+            "all_lods": {
+              "mean_latency_seconds": 0.06397830183364284,
+              "median_latency_seconds": 0.050772243,
+              "nr_points": 774537,
+              "quantiles": [
+                {
+                  "percent": 0,
+                  "value": 0.000898334
+                },
+                {
+                  "percent": 10,
+                  "value": 0.011890723
+                },
+                {
+                  "percent": 20,
+                  "value": 0.01956324380000002
+                },
+                {
+                  "percent": 25,
+                  "value": 0.024131284
+                },
+                {
+                  "percent": 30,
+                  "value": 0.02905382939999998
+                },
+                {
+                  "percent": 40,
+                  "value": 0.038535853
+                },
+                {
+                  "percent": 50,
+                  "value": 0.050772243
+                },
+                {
+                  "percent": 60,
+                  "value": 0.06638139839999996
+                },
+                {
+                  "percent": 70,
+                  "value": 0.086127735
+                },
+                {
+                  "percent": 75,
+                  "value": 0.098479483
+                },
+                {
+                  "percent": 80,
+                  "value": 0.109572674
+                },
+                {
+                  "percent": 90,
+                  "value": 0.13341793
+                },
+                {
+                  "percent": 100,
+                  "value": 2.4361037420000002
+                }
+              ]
+            },
+            "per_lod_level": [
+              {
+                "mean_latency_seconds": 0.02661762014491191,
+                "median_latency_seconds": 0.018668302,
+                "nr_points": 2781,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.000950597
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.001401025
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.001486403
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.001530232
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.001586861
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.006525626
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.018668302
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.028098709
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.036078012999999985
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.039387983
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.044084537
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.06097335
+                  },
+                  {
+                    "percent": 100,
+                    "value": 0.484369337
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.24567476328768123,
+                "median_latency_seconds": 0.01352172,
+                "nr_points": 8280,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.000898334
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.002092677
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.004079265
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.005594423
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.006445287099999999
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.00950467
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.01352172
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.018453027399999995
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.026027888
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.03122736
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.03794445
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.06477384490000002
+                  },
+                  {
+                    "percent": 100,
+                    "value": 160.592275699
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.31727885532648353,
+                "median_latency_seconds": 0.018091201,
+                "nr_points": 22920,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.000918252
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.0049036237
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.0081253544
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.00981029575
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.011217306
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.014281482600000003
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.018091201
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.02324361239999999
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.029662841000000002
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.03395447
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.040616564
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.06771662860000018
+                  },
+                  {
+                    "percent": 100,
+                    "value": 172.906890681
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.3004799679676559,
+                "median_latency_seconds": 0.022489723,
+                "nr_points": 64060,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.000935919
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.0084078759
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.012155449
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.013837038
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.01567326
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.018837634
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.022489723
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.027667933
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.034409284
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.038972415
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.04751834620000006
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.076215125
+                  },
+                  {
+                    "percent": 100,
+                    "value": 176.267415518
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.32655322821799,
+                "median_latency_seconds": 0.031223586,
+                "nr_points": 128594,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.000915184
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.0102992218
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.015231299800000007
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.017776774
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.020159903
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.025766515000000004
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.031223586
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.037279775
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.044769062
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.050598818
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.059912071
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.09461393
+                  },
+                  {
+                    "percent": 100,
+                    "value": 178.546110173
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.18712881906294027,
+                "median_latency_seconds": 0.04171106,
+                "nr_points": 120132,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.000920716
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.009627796400000001
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.017519292
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.022142249
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.026413921
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.034711201
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.04171106
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.048627999
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.057097714
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.06304183
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.07250056
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.1286263940000009
+                  },
+                  {
+                    "percent": 100,
+                    "value": 179.576377218
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.15842049715387865,
+                "median_latency_seconds": 0.062044574,
+                "nr_points": 158609,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.00101719
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.018958572
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.030195053
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.035728254
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.040459123
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.052002754
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.062044574
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.074983389
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.090608626
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.101195715
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.116593879
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.16740150180000055
+                  },
+                  {
+                    "percent": 100,
+                    "value": 107.135413652
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.1508359964435822,
+                "median_latency_seconds": 0.087872002,
+                "nr_points": 134925,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.00462175
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.024101963
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.047139857
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.055691516
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.062246138
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.073815364
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.087872002
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.101147111
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.113776997
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.123005962
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.134754128
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.186135947
+                  },
+                  {
+                    "percent": 100,
+                    "value": 62.595266199
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.14086342491604703,
+                "median_latency_seconds": 0.109935369,
+                "nr_points": 82392,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.005223721
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.025923748
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.054150513
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.069008153
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.07994263
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.09712416
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.109935369
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.12128260400000002
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.133825076
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.139539015
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.147794831
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.182801271
+                  },
+                  {
+                    "percent": 100,
+                    "value": 4.49290756
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.14871567685650347,
+                "median_latency_seconds": 0.120940241,
+                "nr_points": 60281,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.006214411
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.02092015
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.059605194
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.080200363
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.089652071
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.106464616
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.120940241
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.130643856
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.146811977
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.152460609
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.161097933
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.266838466
+                  },
+                  {
+                    "percent": 100,
+                    "value": 2.449800193
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12765410583561862,
+                "median_latency_seconds": 0.125685821,
+                "nr_points": 62694,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.008071366
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.01572067
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.045685821
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.050539177
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.080183577
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.114319255
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.125685821
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.130086992
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.149230644
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.154248318
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.162046895
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.20083543000000004
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.510539177
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "enable": true,
+              "frames_per_sec": 50,
+              "points_per_sec": 200000
+            }
+          },
+          {
+            "all_lods": {
+              "mean_latency_seconds": 0.07101630979013213,
+              "median_latency_seconds": 0.059409489,
+              "nr_points": 746668,
+              "quantiles": [
+                {
+                  "percent": 0,
+                  "value": 0.001025224
+                },
+                {
+                  "percent": 10,
+                  "value": 0.014401398
+                },
+                {
+                  "percent": 20,
+                  "value": 0.023892754
+                },
+                {
+                  "percent": 25,
+                  "value": 0.0293202285
+                },
+                {
+                  "percent": 30,
+                  "value": 0.034549422
+                },
+                {
+                  "percent": 40,
+                  "value": 0.045845389
+                },
+                {
+                  "percent": 50,
+                  "value": 0.059409489
+                },
+                {
+                  "percent": 60,
+                  "value": 0.076240398
+                },
+                {
+                  "percent": 70,
+                  "value": 0.092108467
+                },
+                {
+                  "percent": 75,
+                  "value": 0.100318184
+                },
+                {
+                  "percent": 80,
+                  "value": 0.108076371
+                },
+                {
+                  "percent": 90,
+                  "value": 0.141204578
+                },
+                {
+                  "percent": 100,
+                  "value": 2.930588328
+                }
+              ]
+            },
+            "per_lod_level": [
+              {
+                "mean_latency_seconds": 0.038449388747597874,
+                "median_latency_seconds": 0.024695224,
+                "nr_points": 2706,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001025224
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.00190726
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.002246084
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.005160732750000001
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.0086136185
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.015945816
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.024695224
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.036622913
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.04943151499999999
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.05645431425
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.066815574
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.08972883300000001
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.574131518
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.19445975180481914,
+                "median_latency_seconds": 0.029580624,
+                "nr_points": 7885,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001846037
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.004626593400000002
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.0094055182
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.011292377
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.013637453
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.02018199260000001
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.029580624
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.041284417
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.054749607599999986
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.062016443
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.06976958000000007
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.091923718
+                  },
+                  {
+                    "percent": 100,
+                    "value": 107.080167367
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.2297310454056551,
+                "median_latency_seconds": 0.021362801,
+                "nr_points": 22386,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001873188
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.005285307
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.007062039
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.008394542999999999
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.010322707
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.015966193
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.021362801
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.029133015
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.039696932
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.04778389975
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.057230115
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.089634823
+                  },
+                  {
+                    "percent": 100,
+                    "value": 115.262887461
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.2237764076008208,
+                "median_latency_seconds": 0.02854194,
+                "nr_points": 62606,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001151919
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.010350219
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.01364139
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.015647455
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.017383865
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.02215553
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.02854194
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.036047471
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.04826604
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.056364658
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.065659601
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.09834616
+                  },
+                  {
+                    "percent": 100,
+                    "value": 117.219405392
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.24668034242744605,
+                "median_latency_seconds": 0.039083808,
+                "nr_points": 126263,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001119978
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.012985076999999998
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.019473134000000003
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.022653374
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.026064348
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.032165117
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.039083808
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.046721381000000006
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.05863549259999995
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.066628526
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.076068941
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.12616158
+                  },
+                  {
+                    "percent": 100,
+                    "value": 118.752022292
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.16124602339980995,
+                "median_latency_seconds": 0.065933738,
+                "nr_points": 116805,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001844605
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.01730837880000002
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.030182711
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.035559314
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.040716709
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.052030167
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.065933738
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.07856568019999963
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.089828322
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.096280704
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.103743304
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.13883576860000002
+                  },
+                  {
+                    "percent": 100,
+                    "value": 119.434997327
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.136512214634631,
+                "median_latency_seconds": 0.077596408,
+                "nr_points": 151135,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001398068
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.017602769
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.031821478
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.03866816
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.04549241
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.061577911
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.077596408
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.091982097
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.103363968
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.110666426
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.120493704
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.166677511
+                  },
+                  {
+                    "percent": 100,
+                    "value": 71.452892934
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12141218502136811,
+                "median_latency_seconds": 0.079168653,
+                "nr_points": 126187,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.006260436
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.016969397
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.030024347
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.037052454
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.043515437
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.060209952
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.079168653
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.095024679
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.111026087
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.117533894
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.127681799
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.177161202
+                  },
+                  {
+                    "percent": 100,
+                    "value": 41.839997341
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.1239456794132314,
+                "median_latency_seconds": 0.096600883,
+                "nr_points": 75116,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.008268493
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.02607051
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.041583083
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.051609954
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.060107924
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.077723462
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.096600883
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.112332826
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.133060028
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.145216599
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.160573898
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.202004603
+                  },
+                  {
+                    "percent": 100,
+                    "value": 3.042818102
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.13016194789580068,
+                "median_latency_seconds": 0.102162215,
+                "nr_points": 56416,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.007177881
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.032879127
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.051278762
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.060460223
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.066733054
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.084735261
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.102162215
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.128557103
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.151278762
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.163725706
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.176042102
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.233109185
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.802269859
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.13038397640757832,
+                "median_latency_seconds": 0.107359867,
+                "nr_points": 62694,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.01151515
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.047359867
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.0663416
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.087359867
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.087359867
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.106417319
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.107359867
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.147359867
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.156029586
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.159450416
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.179309142
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.21350330699999998
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.082140208
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "enable": true,
+              "frames_per_sec": 50,
+              "points_per_sec": 300000
+            }
+          },
+          {
+            "all_lods": {
+              "mean_latency_seconds": 0.1596725136191571,
+              "median_latency_seconds": 0.075062574,
+              "nr_points": 684353,
+              "quantiles": [
+                {
+                  "percent": 0,
+                  "value": 0.001507141
+                },
+                {
+                  "percent": 10,
+                  "value": 0.022008576
+                },
+                {
+                  "percent": 20,
+                  "value": 0.03609008
+                },
+                {
+                  "percent": 25,
+                  "value": 0.041399395
+                },
+                {
+                  "percent": 30,
+                  "value": 0.048243069
+                },
+                {
+                  "percent": 40,
+                  "value": 0.060388423
+                },
+                {
+                  "percent": 50,
+                  "value": 0.075062574
+                },
+                {
+                  "percent": 60,
+                  "value": 0.09206686
+                },
+                {
+                  "percent": 70,
+                  "value": 0.116218077
+                },
+                {
+                  "percent": 75,
+                  "value": 0.13063339
+                },
+                {
+                  "percent": 80,
+                  "value": 0.147600683
+                },
+                {
+                  "percent": 90,
+                  "value": 0.20878114599999997
+                },
+                {
+                  "percent": 100,
+                  "value": 13.239511126
+                }
+              ]
+            },
+            "per_lod_level": [
+              {
+                "mean_latency_seconds": 0.11041906453077303,
+                "median_latency_seconds": 0.057532374,
+                "nr_points": 2031,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.00166588
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.013236544
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.023607236
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.029028642
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.035307865
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.046436555
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.057532374
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.071045602
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.091239228
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.1039791115
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.119668302
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.181292316
+                  },
+                  {
+                    "percent": 100,
+                    "value": 4.271839531
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.35320929648584826,
+                "median_latency_seconds": 0.064168642,
+                "nr_points": 5759,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002504863
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.014464041800000002
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.024793538
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.029636128
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.0363779322
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.049252293
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.064168642
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.08500931459999997
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.12498163099999998
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.161217638
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.2222496632000006
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.529164257
+                  },
+                  {
+                    "percent": 100,
+                    "value": 80.334180718
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.48963315739818825,
+                "median_latency_seconds": 0.064915134,
+                "nr_points": 16791,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001748873
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.015779936
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.025304745
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.030144419
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.03573416
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.048160741
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.064915134
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.093869072
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.157592429
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.231525152
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.375604128
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.955346498
+                  },
+                  {
+                    "percent": 100,
+                    "value": 90.018842684
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.643707075071472,
+                "median_latency_seconds": 0.07481519,
+                "nr_points": 47179,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001507141
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.01628057
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.025206029600000006
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.030488994
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.035867092
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.050870465
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.07481519
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.12894607
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.319608341
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.48717390650000003
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.722679927
+                  },
+                  {
+                    "percent": 90,
+                    "value": 1.659589543
+                  },
+                  {
+                    "percent": 100,
+                    "value": 87.791348358
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.5031673791366092,
+                "median_latency_seconds": 0.07114223,
+                "nr_points": 108457,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002458141
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.019187931
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.029407279
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.034280722
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.039134361
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.05270886320000001
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.07114223
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.11167877559999996
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.223343737
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.339596255
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.562266636
+                  },
+                  {
+                    "percent": 90,
+                    "value": 1.305177936
+                  },
+                  {
+                    "percent": 100,
+                    "value": 88.940456145
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.14798715930749645,
+                "median_latency_seconds": 0.061054597,
+                "nr_points": 112479,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002201876
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.021748538
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.034252192
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.038967867
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.043687489
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.052492082999999995
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.061054597
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.071935721
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.086820561
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.0981269145
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.111603292
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.165616219
+                  },
+                  {
+                    "percent": 100,
+                    "value": 89.452209993
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.1335901307318195,
+                "median_latency_seconds": 0.078342926,
+                "nr_points": 143524,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002594392
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.024421952
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.039047572
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.046069281
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.05296718
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.064226364
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.078342926
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.093279598
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.110056086
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.120884452
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.134657386
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.186799368
+                  },
+                  {
+                    "percent": 100,
+                    "value": 53.635035207
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12270355953530389,
+                "median_latency_seconds": 0.083458452,
+                "nr_points": 117688,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.006678866
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.028433732999999996
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.042191066
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.049726585
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.055962364
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.068061278
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.083458452
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.101614286
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.12580217
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.135619915
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.146806881
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.1819861
+                  },
+                  {
+                    "percent": 100,
+                    "value": 31.399172126
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12140931430094386,
+                "median_latency_seconds": 0.097643744,
+                "nr_points": 69769,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.008818989
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.028889394
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.048767923
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.059308506
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.06693708
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.081252696
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.097643744
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.117643744
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.141506929
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.151784647
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.163347629
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.19678277700000002
+                  },
+                  {
+                    "percent": 100,
+                    "value": 2.347917029
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12789809909208155,
+                "median_latency_seconds": 0.106354687,
+                "nr_points": 53304,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.009018716
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.032454865
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.053818698
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.065456489
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.076393371
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.091003104
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.106354687
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.133481493
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.157736519
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.165487605
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.176402604
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.22575787600000002
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.3605888830000001
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.1303508356849173,
+                "median_latency_seconds": 0.118812964,
+                "nr_points": 62694,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.019817531
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.038812964
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.05676711599999999
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.073483864
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.076767116
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.09676711599999999
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.118812964
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.154233205
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.161603949
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.178812964
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.21348386400000002
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.219536319
+                  },
+                  {
+                    "percent": 100,
+                    "value": 0.842833678
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "enable": true,
+              "frames_per_sec": 50,
+              "points_per_sec": 400000
+            }
+          }
+        ],
+        "query_performance": {
+          "query_1": {
+            "load_time_seconds": 0.034897337,
+            "nr_nodes": 21,
+            "nr_points": 8318,
+            "query_time_seconds": 0.000447071
+          },
+          "query_2": {
+            "load_time_seconds": 0.392492658,
+            "nr_nodes": 72,
+            "nr_points": 363333,
+            "query_time_seconds": 0.002273521
+          },
+          "query_3": {
+            "load_time_seconds": 0.539422211,
+            "nr_nodes": 48,
+            "nr_points": 783476,
+            "query_time_seconds": 0.00136811
+          }
+        }
+      }
+    }
+  ],
+  "parallelisation": [
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 1,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 7.866473275,
+          "duration_seconds": 304.589205869,
+          "insertion_rate_points_per_sec": 146026.96972895192,
+          "nr_points": 45626956,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 2,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 10.457525529,
+          "duration_seconds": 303.366220302,
+          "insertion_rate_points_per_sec": 239721.68772885966,
+          "nr_points": 75230358,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 3,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 4.207264913,
+          "duration_seconds": 278.85834361,
+          "insertion_rate_points_per_sec": 317354.55419233965,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 6.51231151,
+          "duration_seconds": 213.078590623,
+          "insertion_rate_points_per_sec": 409088.71509435854,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 5,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 4.987222666,
+          "duration_seconds": 189.819483767,
+          "insertion_rate_points_per_sec": 461134.84307017963,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 6,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 3.428716149,
+          "duration_seconds": 161.680539285,
+          "insertion_rate_points_per_sec": 544077.0704456909,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 7,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 2.634720162,
+          "duration_seconds": 135.373180525,
+          "insertion_rate_points_per_sec": 650920.4150836124,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 8,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 3.723205546,
+          "duration_seconds": 237.037185524,
+          "insertion_rate_points_per_sec": 373118.5167159897,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 9,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 2.299656022,
+          "duration_seconds": 102.082880911,
+          "insertion_rate_points_per_sec": 860605.2567745174,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 10,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 3.199359289,
+          "duration_seconds": 91.830452956,
+          "insertion_rate_points_per_sec": 945305.03510204,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 11,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 2.201336623,
+          "duration_seconds": 86.06866964,
+          "insertion_rate_points_per_sec": 1017697.4467674283,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 12,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 1.692311169,
+          "duration_seconds": 80.591351752,
+          "insertion_rate_points_per_sec": 1091737.494552804,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 13,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 2.604035912,
+          "duration_seconds": 73.012414033,
+          "insertion_rate_points_per_sec": 1187997.5860456272,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 14,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 1.843130484,
+          "duration_seconds": 66.255916623,
+          "insertion_rate_points_per_sec": 1319139.750352924,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 15,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 1.532810793,
+          "duration_seconds": 66.751992183,
+          "insertion_rate_points_per_sec": 1315551.2805912795,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 16,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 1.920920852,
+          "duration_seconds": 59.753278791,
+          "insertion_rate_points_per_sec": 1456559.8016673399,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    }
+  ],
+  "prio_fn_no_cache": [
+    {
+      "index": {
+        "cache_size": 0,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPoints",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 38.126339759,
+          "duration_seconds": 301.825175935,
+          "insertion_rate_points_per_sec": 59835.32963068066,
+          "nr_points": 20341111,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 0,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "TaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 5.347519946,
+          "duration_seconds": 302.518257861,
+          "insertion_rate_points_per_sec": 86369.33662912442,
+          "nr_points": 26590163,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 0,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 5.245573159,
+          "duration_seconds": 303.41221907,
+          "insertion_rate_points_per_sec": 243887.12320001904,
+          "nr_points": 75277661,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 0,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "Lod",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 6.992269567,
+          "duration_seconds": 302.199875784,
+          "insertion_rate_points_per_sec": 246677.79937752328,
+          "nr_points": 76270838,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    }
+  ],
+  "prio_fn_simple": [
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPoints",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 106.25410004,
+          "duration_seconds": 137.287599575,
+          "insertion_rate_points_per_sec": 368857.4077540319,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [
+          {
+            "all_lods": {
+              "mean_latency_seconds": 0.06883724335619541,
+              "median_latency_seconds": 0.056312991,
+              "nr_points": 748079,
+              "quantiles": [
+                {
+                  "percent": 0,
+                  "value": 0.001377456
+                },
+                {
+                  "percent": 10,
+                  "value": 0.014810234
+                },
+                {
+                  "percent": 20,
+                  "value": 0.023922252
+                },
+                {
+                  "percent": 25,
+                  "value": 0.028447532
+                },
+                {
+                  "percent": 30,
+                  "value": 0.033340193
+                },
+                {
+                  "percent": 40,
+                  "value": 0.043697739
+                },
+                {
+                  "percent": 50,
+                  "value": 0.056312991
+                },
+                {
+                  "percent": 60,
+                  "value": 0.072694235
+                },
+                {
+                  "percent": 70,
+                  "value": 0.089321801
+                },
+                {
+                  "percent": 75,
+                  "value": 0.098684858
+                },
+                {
+                  "percent": 80,
+                  "value": 0.109006668
+                },
+                {
+                  "percent": 90,
+                  "value": 0.138095923
+                },
+                {
+                  "percent": 100,
+                  "value": 6.568677711
+                }
+              ]
+            },
+            "per_lod_level": [
+              {
+                "mean_latency_seconds": 0.03845879780546328,
+                "median_latency_seconds": 0.030199785,
+                "nr_points": 2709,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001377456
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.00184532
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.0021739808
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.004920005
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.007877452
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.019783405000000007
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.030199785
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.038391778200000004
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.0484733158
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.054424887
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.061680465000000004
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.08955697820000001
+                  },
+                  {
+                    "percent": 100,
+                    "value": 2.519299805
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.18403280647707104,
+                "median_latency_seconds": 0.020639712,
+                "nr_points": 8003,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002024363
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.004796852
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.006830751000000001
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.008479395
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.010474409599999998
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.0153344916
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.020639712
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.028091626
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.036128369599999974
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.042135415
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.0487160536
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.076099898
+                  },
+                  {
+                    "percent": 100,
+                    "value": 107.065354639
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.22915242367577837,
+                "median_latency_seconds": 0.023938552,
+                "nr_points": 22426,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001386021
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.0075655135
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.010379816
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.012054207
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.013967208
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.018573311
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.023938552
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.030710693
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.038974115
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.04587554875
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.053303516
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.082982234
+                  },
+                  {
+                    "percent": 100,
+                    "value": 115.288652288
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.22246776390515027,
+                "median_latency_seconds": 0.031645988,
+                "nr_points": 62805,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001455638
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.010878867
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.014654096
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.016840254
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.018961516
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.024577905
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.031645988
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.039607216
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.050681401
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.057340895
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.065468143
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.09228277299999997
+                  },
+                  {
+                    "percent": 100,
+                    "value": 117.23703571
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.23774905258958454,
+                "median_latency_seconds": 0.034489513,
+                "nr_points": 126565,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002215248
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.011823448
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.01786713
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.020681053
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.023250549399999997
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.028491009
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.034489513
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.042032929
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.05249047319999986
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.059848846
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.07014872220000057
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.1053013112000005
+                  },
+                  {
+                    "percent": 100,
+                    "value": 118.819976103
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.15552467235115752,
+                "median_latency_seconds": 0.058221858,
+                "nr_points": 117393,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002389653
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.017019668
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.027818562
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.032479172
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.03675844
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.045980301
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.058221858
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.070690684
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.083078867
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.090048073
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.098074556
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.131731035
+                  },
+                  {
+                    "percent": 100,
+                    "value": 119.535685771
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.13446196985495504,
+                "median_latency_seconds": 0.075577183,
+                "nr_points": 151583,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.003389354
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.016733674
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.027426771999999995
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.034549411
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.042320322
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.058984104000000086
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.075577183
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.089481037
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.101716033
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.10877468
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.117776154
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.163824465
+                  },
+                  {
+                    "percent": 100,
+                    "value": 71.471386723
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12553508234658334,
+                "median_latency_seconds": 0.076505265,
+                "nr_points": 125238,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.005469225
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.021722289
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.033888293
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.038722271
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.047169621
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.058849158
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.076505265
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.098192067
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.1184917
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.12851707
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.137733964
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.1762151241000012
+                  },
+                  {
+                    "percent": 100,
+                    "value": 41.806360292
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12445168257460483,
+                "median_latency_seconds": 0.098497408,
+                "nr_points": 76421,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.008755588
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.031556894
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.046074867
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.054757918
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.0638053
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.080291166
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.098497408
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.115408271
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.135739398
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.144749309
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.155010456
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.190281947
+                  },
+                  {
+                    "percent": 100,
+                    "value": 2.934936537
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.13619604932235058,
+                "median_latency_seconds": 0.111505656,
+                "nr_points": 56002,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.0079658
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.03559989
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.054576194
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.058782787
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.069409735
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.085832853
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.111505656
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.132882051
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.156878962
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.165782112
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.184074799
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.237627771
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.773134024
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12470915881812059,
+                "median_latency_seconds": 0.109006668,
+                "nr_points": 62694,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.011530904
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.037764837
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.049006668
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.089006668
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.089006668
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.096375109
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.109006668
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.129006668
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.149006668
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.149006668
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.170263105
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.22267454
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.087903384
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "enable": true,
+              "frames_per_sec": 50,
+              "points_per_sec": 300000
+            }
+          }
+        ],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "TaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 1.6433138619999998,
+          "duration_seconds": 185.8705422,
+          "insertion_rate_points_per_sec": 479069.4505812823,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [
+          {
+            "all_lods": {
+              "mean_latency_seconds": 0.09138945882228178,
+              "median_latency_seconds": 0.068327856,
+              "nr_points": 737562,
+              "quantiles": [
+                {
+                  "percent": 0,
+                  "value": 0.00109316
+                },
+                {
+                  "percent": 10,
+                  "value": 0.015986221
+                },
+                {
+                  "percent": 20,
+                  "value": 0.026975808
+                },
+                {
+                  "percent": 25,
+                  "value": 0.03240716
+                },
+                {
+                  "percent": 30,
+                  "value": 0.038302446
+                },
+                {
+                  "percent": 40,
+                  "value": 0.051446532
+                },
+                {
+                  "percent": 50,
+                  "value": 0.068327856
+                },
+                {
+                  "percent": 60,
+                  "value": 0.085878552
+                },
+                {
+                  "percent": 70,
+                  "value": 0.10378091
+                },
+                {
+                  "percent": 75,
+                  "value": 0.114537228
+                },
+                {
+                  "percent": 80,
+                  "value": 0.128413736
+                },
+                {
+                  "percent": 90,
+                  "value": 0.188966308
+                },
+                {
+                  "percent": 100,
+                  "value": 1.160740903
+                }
+              ]
+            },
+            "per_lod_level": [
+              {
+                "mean_latency_seconds": 0.045279702026975725,
+                "median_latency_seconds": 0.031089367,
+                "nr_points": 2632,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.00109316
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.0019251488999999999
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.004573242
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.00947649175
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.013564511999999997
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.021620755600000006
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.031084961
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.040986824
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.0557097513
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.06533294025
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.07770391620000003
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.10908937850000004
+                  },
+                  {
+                    "percent": 100,
+                    "value": 0.314816657
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.2161607759797717,
+                "median_latency_seconds": 0.036157172,
+                "nr_points": 7712,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001829016
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.00486273
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.0075088408
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.010823053
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.015296187
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.025661535000000003
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.036151327999999996
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.050561203
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.067284895
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.076858438
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.090384877
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.15294657790000044
+                  },
+                  {
+                    "percent": 100,
+                    "value": 107.084204559
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.2815423706573045,
+                "median_latency_seconds": 0.044311446,
+                "nr_points": 21611,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001926523
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.012824194
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.019124801
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.022206783
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.025075742
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.033137866
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.044311446
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.059079649
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.077456889
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.090385785
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.111638116
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.232430184
+                  },
+                  {
+                    "percent": 100,
+                    "value": 115.366701013
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.2790818581646267,
+                "median_latency_seconds": 0.04349912,
+                "nr_points": 60981,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001280102
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.008503076
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.01279966
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.016448121
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.020317804
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.030885428
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.04349912
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.058314883
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.079861605
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.099918098
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.146390089
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.347627473
+                  },
+                  {
+                    "percent": 100,
+                    "value": 117.155558066
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.30798657284352216,
+                "median_latency_seconds": 0.048908935,
+                "nr_points": 122953,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001163117
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.013379853000000004
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.021183666
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.024838674
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.029087052199999998
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.037236274
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.048908935
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.069569114
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.099220623
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.123973089
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.199926797
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.437779088
+                  },
+                  {
+                    "percent": 100,
+                    "value": 119.074609474
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.16383409291352666,
+                "median_latency_seconds": 0.055652794,
+                "nr_points": 116396,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001199756
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.016521614
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.026291496
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.03142784
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.035284548
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.044308866
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.055652794
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.071632315
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.090855004
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.099354914
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.109308368
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.173752129
+                  },
+                  {
+                    "percent": 100,
+                    "value": 119.450408496
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.13912055344900184,
+                "median_latency_seconds": 0.079433951,
+                "nr_points": 151440,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.00309223
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.018706967
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.03336859
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.041689537
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.049471131
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.064892977
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.079433951
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.090059058
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.10263034999999998
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.110359517
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.120750731
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.186512474
+                  },
+                  {
+                    "percent": 100,
+                    "value": 71.47656874
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12810447784772996,
+                "median_latency_seconds": 0.083594106,
+                "nr_points": 124850,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.006280777
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.022195745
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.033897648
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.041396137
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.048342575
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.067733249
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.083594106
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.100007962
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.116126672
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.12332491
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.135072005
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.202600371
+                  },
+                  {
+                    "percent": 100,
+                    "value": 41.802213552
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.14080349656080401,
+                "median_latency_seconds": 0.110402584,
+                "nr_points": 73945,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.007566176
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.041618719
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.056958624
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.064848499
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.072839067
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.085581859
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.110402584
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.14322283
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.158843222
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.166576091
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.17965194499999998
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.226997342
+                  },
+                  {
+                    "percent": 100,
+                    "value": 3.013278559
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.14755352737047733,
+                "median_latency_seconds": 0.118652585,
+                "nr_points": 54195,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.007754792
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.023392416
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.051614494
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.060591499
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.079389544
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.103690814
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.118652585
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.14175614
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.18156572179999625
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.198274738
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.207125772
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.285220534
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.8127999099999998
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.14406713956804104,
+                "median_latency_seconds": 0.120383752,
+                "nr_points": 62694,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.01429999
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.028966308
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.048966308
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.048966308
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.07346361
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.09346361
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.120383752
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.157955565
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.200383752
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.21429999
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.220383752
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.257955565
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.1058352
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "enable": true,
+              "frames_per_sec": 50,
+              "points_per_sec": 300000
+            }
+          }
+        ],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 5.579795197,
+          "duration_seconds": 222.990630396,
+          "insertion_rate_points_per_sec": 393017.42457249516,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [
+          {
+            "all_lods": {
+              "mean_latency_seconds": 0.10542327363984257,
+              "median_latency_seconds": 0.062769738,
+              "nr_points": 724947,
+              "quantiles": [
+                {
+                  "percent": 0,
+                  "value": 0.001242479
+                },
+                {
+                  "percent": 10,
+                  "value": 0.017357853
+                },
+                {
+                  "percent": 20,
+                  "value": 0.028078248000000014
+                },
+                {
+                  "percent": 25,
+                  "value": 0.032965644
+                },
+                {
+                  "percent": 30,
+                  "value": 0.037551899
+                },
+                {
+                  "percent": 40,
+                  "value": 0.048934112
+                },
+                {
+                  "percent": 50,
+                  "value": 0.062769738
+                },
+                {
+                  "percent": 60,
+                  "value": 0.080132348
+                },
+                {
+                  "percent": 70,
+                  "value": 0.099082054
+                },
+                {
+                  "percent": 75,
+                  "value": 0.110802463
+                },
+                {
+                  "percent": 80,
+                  "value": 0.124038925
+                },
+                {
+                  "percent": 90,
+                  "value": 0.161288871
+                },
+                {
+                  "percent": 100,
+                  "value": 8.554517281
+                }
+              ]
+            },
+            "per_lod_level": [
+              {
+                "mean_latency_seconds": 0.08354197987318845,
+                "median_latency_seconds": 0.040954089,
+                "nr_points": 2208,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001468637
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.007082793100000001
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.0156737054
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.01956879675
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.023596268899999998
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.032017861
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.040920831000000005
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.050928266
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.06412978379999998
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.07700419800000001
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.0900402474
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.1378377454
+                  },
+                  {
+                    "percent": 100,
+                    "value": 3.6130231310000003
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.2947114836863044,
+                "median_latency_seconds": 0.032626471,
+                "nr_points": 6586,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001242479
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.006377101
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.012254242
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.015222362
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.0187261425
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.025500806
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.032626471
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.041467504
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.054274926
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.06383844775
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.076869197
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.156093057
+                  },
+                  {
+                    "percent": 100,
+                    "value": 107.088566892
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.4232209542256639,
+                "median_latency_seconds": 0.045937916,
+                "nr_points": 18922,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001524667
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.013227208600000004
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.021662938
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.026130245
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.0302035068
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.037520229
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.0459323805
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.057976558600000005
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.074720915
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.08359339125
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.093414663
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.3847292950000007
+                  },
+                  {
+                    "percent": 100,
+                    "value": 116.94500172
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.494485528132714,
+                "median_latency_seconds": 0.04260262,
+                "nr_points": 53189,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001900317
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.013035213000000002
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.020462936
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.023628739
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.0268516632
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.0345516472
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.04260262
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.0538586944
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.070577384
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.084601976
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.109263522
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.7739598746000027
+                  },
+                  {
+                    "percent": 100,
+                    "value": 117.245717491
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.268926178487062,
+                "median_latency_seconds": 0.037426738,
+                "nr_points": 124107,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001730981
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.011551178
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.017396291
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.020830563
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.023849284
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.030334086
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.037426738
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.047658336
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.061667684
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.071815354
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.084311928
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.143706764
+                  },
+                  {
+                    "percent": 100,
+                    "value": 119.399276292
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.1781597073930764,
+                "median_latency_seconds": 0.061702067,
+                "nr_points": 113945,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002125452
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.019193293
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.03086671
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.036268294
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.04137870099999999
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.050802693
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.061702067
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.074922549
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.091695832
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.100406223
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.112578306
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.2432549696000001
+                  },
+                  {
+                    "percent": 100,
+                    "value": 119.848577208
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.1516050693735826,
+                "median_latency_seconds": 0.079574592,
+                "nr_points": 148510,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002297799
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.017817336200000006
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.030719445
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.036650898
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.043049721
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.062124335
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.079574592
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.094168254
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.108288682
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.115459119
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.1259398
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.2152897683000002
+                  },
+                  {
+                    "percent": 100,
+                    "value": 71.812135047
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12722836560702805,
+                "median_latency_seconds": 0.082356326,
+                "nr_points": 125562,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.006705482
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.022344383
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.035489056
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.042151484
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.047224338
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.062275012000000005
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.082356326
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.100067482
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.118744183
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.127296627
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.137082904
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.18222586680000394
+                  },
+                  {
+                    "percent": 100,
+                    "value": 41.771375275
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.12863980318379956,
+                "median_latency_seconds": 0.096504623,
+                "nr_points": 75274,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.007513945
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.032155324
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.051379857
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.057948446
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.06444835
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.080617077
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.096504623
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.122213451
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.143724685
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.154847036
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.167803716
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.195810115
+                  },
+                  {
+                    "percent": 100,
+                    "value": 2.9942154690000002
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.13348837287092946,
+                "median_latency_seconds": 0.110172049,
+                "nr_points": 55578,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.006729601
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.029989449
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.049989449
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.056886591
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.063194189
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.082909129
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.110172049
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.134014873
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.155464999
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.163307482
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.177317988
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.251269205
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.6782589959999998
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.13921749527640398,
+                "median_latency_seconds": 0.143655742,
+                "nr_points": 62694,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.011882081
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.037391169
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.053202366
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.074442252
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.094442252
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.123655742
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.143655742
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.159366723
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.174272802
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.175861607
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.194272802
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.21945936699999996
+                  },
+                  {
+                    "percent": 100,
+                    "value": 1.071882081
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "enable": true,
+              "frames_per_sec": 50,
+              "points_per_sec": 300000
+            }
+          }
+        ],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          0,
+          0
+        ],
+        "num_threads": 4,
+        "priority_function": "Lod",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 1.531188266,
+          "duration_seconds": 230.375136439,
+          "insertion_rate_points_per_sec": 387363.9932600906,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [
+          {
+            "all_lods": {
+              "mean_latency_seconds": 0.9374124564570011,
+              "median_latency_seconds": 0.119685423,
+              "nr_points": 621224,
+              "quantiles": [
+                {
+                  "percent": 0,
+                  "value": 0.000954439
+                },
+                {
+                  "percent": 10,
+                  "value": 0.021552137
+                },
+                {
+                  "percent": 20,
+                  "value": 0.035166831
+                },
+                {
+                  "percent": 25,
+                  "value": 0.043131113
+                },
+                {
+                  "percent": 30,
+                  "value": 0.052084544
+                },
+                {
+                  "percent": 40,
+                  "value": 0.07854415000000023
+                },
+                {
+                  "percent": 50,
+                  "value": 0.119685423
+                },
+                {
+                  "percent": 60,
+                  "value": 0.263761041
+                },
+                {
+                  "percent": 70,
+                  "value": 1.046116573
+                },
+                {
+                  "percent": 75,
+                  "value": 1.589757756
+                },
+                {
+                  "percent": 80,
+                  "value": 1.8076376939999999
+                },
+                {
+                  "percent": 90,
+                  "value": 2.4334630160000774
+                },
+                {
+                  "percent": 100,
+                  "value": 16.395702127
+                }
+              ]
+            },
+            "per_lod_level": [
+              {
+                "mean_latency_seconds": 0.25121049975277443,
+                "median_latency_seconds": 0.039398238,
+                "nr_points": 1622,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.000954439
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.002217864
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.01340631
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.01844056475
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.022654572399999996
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.0302278284
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.0393136285
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.051053924
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.07371636449999996
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.09312768800000001
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.1237416898000001
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.36971517130000003
+                  },
+                  {
+                    "percent": 100,
+                    "value": 13.563488235
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.5381291958458686,
+                "median_latency_seconds": 0.033238926,
+                "nr_points": 5119,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001229461
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.007367553
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.013224399
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.0164342425
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.019029376
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.025836217
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.033238926
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.04358246
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.06416299619999999
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.07861362
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.109299599
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.5998210823999992
+                  },
+                  {
+                    "percent": 100,
+                    "value": 107.06938721
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.7444770290989149,
+                "median_latency_seconds": 0.050114135,
+                "nr_points": 15023,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001662868
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.0120026016
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.021129666800000002
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.0250252295
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.02909763
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.037599838
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.050114135
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.061750253
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.08461577579999992
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.1099502
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.19582980680000045
+                  },
+                  {
+                    "percent": 90,
+                    "value": 1.1761853204000003
+                  },
+                  {
+                    "percent": 100,
+                    "value": 119.258700576
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 1.0205574359337093,
+                "median_latency_seconds": 0.056952496,
+                "nr_points": 41922,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001239911
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.014928109900000005
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.023505417600000002
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.027944056
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.032885506
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.043351413
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.056952496
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.078388099
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.136641848
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.244638997
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.47703584
+                  },
+                  {
+                    "percent": 90,
+                    "value": 2.634593986500001
+                  },
+                  {
+                    "percent": 100,
+                    "value": 117.336784854
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.7761940276161635,
+                "median_latency_seconds": 0.048624413,
+                "nr_points": 102628,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001901442
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.012512637200000003
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.020025888
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.024067508
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.027911263
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.03627464
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.048624413
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.075441958
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.148434111
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.22538823875
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.413684807
+                  },
+                  {
+                    "percent": 90,
+                    "value": 1.6022360669999998
+                  },
+                  {
+                    "percent": 100,
+                    "value": 118.817573421
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.9118253093046355,
+                "median_latency_seconds": 0.074297996,
+                "nr_points": 95548,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.001265858
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.021458185
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.03121710140000003
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.036133631
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.041396942
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.054975215
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.074297996
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.10219292699999999
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.223551284
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.392659885
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.747043049
+                  },
+                  {
+                    "percent": 90,
+                    "value": 3.347428146
+                  },
+                  {
+                    "percent": 100,
+                    "value": 119.492837901
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 1.4812548335438929,
+                "median_latency_seconds": 0.182329931,
+                "nr_points": 111111,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.002532569
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.026766899
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.0490802
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.062370187
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.076118476
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.108387122
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.182329931
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.55701845
+                  },
+                  {
+                    "percent": 70,
+                    "value": 1.383447295
+                  },
+                  {
+                    "percent": 75,
+                    "value": 2.0480155165
+                  },
+                  {
+                    "percent": 80,
+                    "value": 2.780126536
+                  },
+                  {
+                    "percent": 90,
+                    "value": 5.482275839
+                  },
+                  {
+                    "percent": 100,
+                    "value": 71.58343487
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.32342827495620435,
+                "median_latency_seconds": 0.104129348,
+                "nr_points": 114642,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.006321881
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.02696335
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.041427858
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.047780733
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.055613855
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.078019948
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.104129348
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.127108258
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.151928688
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.210263787
+                  },
+                  {
+                    "percent": 80,
+                    "value": 0.387973275
+                  },
+                  {
+                    "percent": 90,
+                    "value": 0.997131829
+                  },
+                  {
+                    "percent": 100,
+                    "value": 48.84546482
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 0.5779034393714846,
+                "median_latency_seconds": 0.173225164,
+                "nr_points": 67323,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.006313519
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.043672805
+                  },
+                  {
+                    "percent": 20,
+                    "value": 0.069676859
+                  },
+                  {
+                    "percent": 25,
+                    "value": 0.084749275
+                  },
+                  {
+                    "percent": 30,
+                    "value": 0.102019328
+                  },
+                  {
+                    "percent": 40,
+                    "value": 0.133810457
+                  },
+                  {
+                    "percent": 50,
+                    "value": 0.173225164
+                  },
+                  {
+                    "percent": 60,
+                    "value": 0.342240902
+                  },
+                  {
+                    "percent": 70,
+                    "value": 0.638723826
+                  },
+                  {
+                    "percent": 75,
+                    "value": 0.775460937
+                  },
+                  {
+                    "percent": 80,
+                    "value": 1.042089479
+                  },
+                  {
+                    "percent": 90,
+                    "value": 1.7805192029999999
+                  },
+                  {
+                    "percent": 100,
+                    "value": 3.767950306
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 1.8894685472470354,
+                "median_latency_seconds": 1.80943911,
+                "nr_points": 44547,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.026929335
+                  },
+                  {
+                    "percent": 10,
+                    "value": 0.809757756
+                  },
+                  {
+                    "percent": 20,
+                    "value": 1.157128684
+                  },
+                  {
+                    "percent": 25,
+                    "value": 1.262118136
+                  },
+                  {
+                    "percent": 30,
+                    "value": 1.389757756
+                  },
+                  {
+                    "percent": 40,
+                    "value": 1.638859122
+                  },
+                  {
+                    "percent": 50,
+                    "value": 1.80943911
+                  },
+                  {
+                    "percent": 60,
+                    "value": 1.9478333230000002
+                  },
+                  {
+                    "percent": 70,
+                    "value": 2.319446348
+                  },
+                  {
+                    "percent": 75,
+                    "value": 2.519446348
+                  },
+                  {
+                    "percent": 80,
+                    "value": 2.6994463479999995
+                  },
+                  {
+                    "percent": 90,
+                    "value": 3.156928904
+                  },
+                  {
+                    "percent": 100,
+                    "value": 4.538859122
+                  }
+                ]
+              },
+              {
+                "mean_latency_seconds": 1.839825312472363,
+                "median_latency_seconds": 1.894794675,
+                "nr_points": 62694,
+                "quantiles": [
+                  {
+                    "percent": 0,
+                    "value": 0.738725377
+                  },
+                  {
+                    "percent": 10,
+                    "value": 1.6076376940000001
+                  },
+                  {
+                    "percent": 20,
+                    "value": 1.7076376940000002
+                  },
+                  {
+                    "percent": 25,
+                    "value": 1.7187253770000002
+                  },
+                  {
+                    "percent": 30,
+                    "value": 1.794794675
+                  },
+                  {
+                    "percent": 40,
+                    "value": 1.8076376939999999
+                  },
+                  {
+                    "percent": 50,
+                    "value": 1.894794675
+                  },
+                  {
+                    "percent": 60,
+                    "value": 1.907637694
+                  },
+                  {
+                    "percent": 70,
+                    "value": 1.947637694
+                  },
+                  {
+                    "percent": 75,
+                    "value": 1.967637694
+                  },
+                  {
+                    "percent": 80,
+                    "value": 1.987595647
+                  },
+                  {
+                    "percent": 90,
+                    "value": 2.007637694
+                  },
+                  {
+                    "percent": 100,
+                    "value": 2.82749902
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "enable": true,
+              "frames_per_sec": 50,
+              "points_per_sec": 300000
+            }
+          }
+        ],
+        "query_performance": null
+      }
+    }
+  ],
+  "prio_fn_with_bogus": [
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          5000,
+          5000
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPoints",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 22.896497198,
+          "duration_seconds": 62.167081591,
+          "insertion_rate_points_per_sec": 1056059.0240721996,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          10000,
+          10000
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPoints",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 17.992726313,
+          "duration_seconds": 54.063806369,
+          "insertion_rate_points_per_sec": 1246690.0176344514,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          20000,
+          20000
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPoints",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 13.090203115,
+          "duration_seconds": 48.373565245,
+          "insertion_rate_points_per_sec": 1461546.5728336608,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          5000,
+          5000
+        ],
+        "num_threads": 4,
+        "priority_function": "TaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 0.622012756,
+          "duration_seconds": 64.664272541,
+          "insertion_rate_points_per_sec": 1375972.9105636205,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          10000,
+          10000
+        ],
+        "num_threads": 4,
+        "priority_function": "TaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 0.868893841,
+          "duration_seconds": 56.906365996,
+          "insertion_rate_points_per_sec": 1554855.144804911,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          20000,
+          20000
+        ],
+        "num_threads": 4,
+        "priority_function": "TaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 0.502442282,
+          "duration_seconds": 54.821335063,
+          "insertion_rate_points_per_sec": 1623753.1909617295,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          5000,
+          5000
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 0.992391336,
+          "duration_seconds": 62.905730801,
+          "insertion_rate_points_per_sec": 1405865.4150648816,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          10000,
+          10000
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 1.0326059459999999,
+          "duration_seconds": 56.902461348,
+          "insertion_rate_points_per_sec": 1550566.2493517704,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          20000,
+          20000
+        ],
+        "num_threads": 4,
+        "priority_function": "NrPointsWeightedByTaskAge",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 1.047958929,
+          "duration_seconds": 51.176657779,
+          "insertion_rate_points_per_sec": 1720111.4275720306,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          5000,
+          5000
+        ],
+        "num_threads": 4,
+        "priority_function": "Lod",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 0.47472941,
+          "duration_seconds": 71.943939462,
+          "insertion_rate_points_per_sec": 1240455.8299570289,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          10000,
+          10000
+        ],
+        "num_threads": 4,
+        "priority_function": "Lod",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 0.711084959,
+          "duration_seconds": 67.084839086,
+          "insertion_rate_points_per_sec": 1325037.7698277745,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    },
+    {
+      "index": {
+        "cache_size": 500,
+        "compression": true,
+        "node_size": 10000,
+        "nr_bogus_points": [
+          20000,
+          20000
+        ],
+        "num_threads": 4,
+        "priority_function": "Lod",
+        "type": "Octree"
+      },
+      "results": {
+        "insertion_rate": {
+          "duration_cleanup_seconds": 0.594243783,
+          "duration_seconds": 61.814116108,
+          "insertion_rate_points_per_sec": 1439425.1051765713,
+          "nr_points": 89832160,
+          "nr_times_to_slow": 0,
+          "settings": {
+            "target_point_pressure": 1000000
+          }
+        },
+        "latency": [],
+        "query_performance": null
+      }
+    }
+  ]
+}
