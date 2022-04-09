@@ -207,6 +207,7 @@ section or in the `[defaults]` section:
 | `query_perf.enable`                    | Boolean              | Weather to measure the query performance                                                                                                                   |
 
 TODO: visualisation
+![](evaluation/results/octree_2022-04-08_1.json.diagrams/mno-insertion_rate_by_priority_function.pdf)
 
 ## CSV LiDAR captures
 
