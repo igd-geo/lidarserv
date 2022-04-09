@@ -137,9 +137,9 @@ lidarserv-viewer
 
 ## Evaluation
 
-To evaluate the indexer, the `evaluation` executable performs a few measurements of the indexer's performance.
+The evaluation is a two-step process: First, the `evaluation` executable is used to measure the performance of the index with varying parameters. The results are saved in a `*.json` file, from which the python script `eval-results-viz.py` generates various diagrams that can be used in a publication.
 
-It takes the path to a configuration file as its first and only argument. The configuration file is used to define, 
+The `evaluation` executable takes the path to a configuration file as its first and only argument. The configuration file is used to define, 
 which tests to run:
 
 ```shell
@@ -206,7 +206,20 @@ section or in the `[defaults]` section:
 | `latency.frames_per_sec`               | Integer              | How many times per second to insert points when measuring the latency,                                                                                     |
 | `query_perf.enable`                    | Boolean              | Weather to measure the query performance                                                                                                                   |
 
-TODO: visualisation
+There are three kind of performance measurements, that the evaluation executable can do:
+
+ - Insertion rate: The insertion rate is always measured. It is the indexing throughput that the index can archive, measured in points per second. To measure the insertion rate, we have to consider the number of points that are currently "waiting for insertion" - points that have been passed to the indexer but not stored in a node yet. For the octree index, these are for example the points in the inboxes of all nodes. To measure the insertion rate, we repeatedly pass as many points to the indexer as needed to top up the waiting points to a certain fixed number (the `insertion_rate.target_point_pressure` parameter). Two times are measured: In the json results file, `duration_seconds` is the time needed to pass all points to the index, `duration_cleanup_seconds` is the time to process the remaining waiting points and write all cached nodes to disk.
+ - Query performance: Measures the execution time for a query on the index. Three different queries are tested, that at the moment are hard-coded in `evaluation/src/queries.rs`. The queries re-use the index that has been built when measuring the insertion rate, and are executed after the insertion process has completed.
+ - Latency: Measures the time between points being passed to the index and them becoming visible in queries. This test inserts points into the index at a fixed rate, controlled by the `latency.points_per_sec` and `latency.frames_per_sec` parameters. If the indexing throughput measured during the insertion rate test is not high enough for `latency.points_per_sec`, then the latency test will be skipped. Concurrently to inserting the points, a second thread executes a query. For each point, the time stamp when it was passed to the index and when we first see it in a query is recorded to calculate this points latency value. The results contain various statistics of all point latencies (mean, median, percentiles).
+
+In order to visualize the results, the python script at `evaluation/eval-results-viz.py` can be used. It needs python 3.6 or newer, as well as the matplotlib library. You can either install matplotlib manually (`pip install matplotlib`), or use the [pipenv](https://pipenv.pypa.io/en/latest/) file at the root of this repository:
+
+```shell
+pipenv install
+pipenv run python evaluation/eval-results-viz.py
+```
+
+The script takes no parameters. You will need to modify the constants at the top to specify the path to the input `*.json` file. Various types of diagrams can be generated easily using the `plot_XXX_by_YYY` helper functions. Just tweak the main function depending on which diagrams you want. For the input file `path/to/data.json`, a folder named `path/to/data.json.diagrams` will be created containing the rendered diagrams as pdf.
 
 ## CSV LiDAR captures
 
