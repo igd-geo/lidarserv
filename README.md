@@ -221,17 +221,7 @@ pipenv run python evaluation/eval-results-viz.py
 
 The script takes no parameters. You will need to modify the constants at the top to specify the path to the input `*.json` file. Various types of diagrams can be generated easily using the `plot_XXX_by_YYY` helper functions. Just tweak the main function depending on which diagrams you want. For the input file `path/to/data.json`, a folder named `path/to/data.json.diagrams` will be created containing the rendered diagrams as pdf.
 
-<div>
-<iframe src="evaluation/results/octree_2022-04-08_1.json.diagrams/mno-insertion_rate_by_cache_size.pdf" height="200" width="300"></iframe>
-</div>
-
-<div>
-<object data="evaluation/results/octree_2022-04-08_1.json.diagrams/mno-insertion_rate_by_cache_size.pdf"/>
-</div>
-
-<div>
-<embed src="evaluation/results/octree_2022-04-08_1.json.diagrams/mno-insertion_rate_by_cache_size.pdf" type="application/pdf" style="height: -webkit-fill-available;width: -webkit-fill-available"/>
-</div>
+Look [here](evaluation/results/octree_2022-04-08_1.json.diagrams/) for a few examples.
 
 ## CSV LiDAR captures
 
