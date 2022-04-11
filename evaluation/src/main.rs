@@ -7,6 +7,7 @@ use evaluation::query_performance::measure_query_performance;
 use evaluation::settings::{Base, EvaluationScript, MultiRun, SystemUnderTest};
 use evaluation::thermal_throttle::processor_cooldown;
 use evaluation::{read_points, reset_data_folder, settings};
+use git_version::git_version;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::index::Index;
 use log::{error, info, warn};
@@ -17,13 +18,21 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use time::format_description::well_known::Rfc3339;
 use time::macros::format_description;
 use time::OffsetDateTime;
+
+const VERSION: &str = git_version!(
+    prefix = "git:",
+    cargo_prefix = "cargo:",
+    fallback = "unknown"
+);
 
 fn main() {
     // init
     dotenv::dotenv().ok();
     pretty_env_logger::init();
+    let started_at = time::OffsetDateTime::now_utc();
 
     // parse cli
     let args: Vec<_> = std::env::args_os().collect();
@@ -43,7 +52,7 @@ fn main() {
     };
 
     // read input file
-    let mut f = std::fs::File::open(input_file).unwrap();
+    let mut f = std::fs::File::open(&input_file).unwrap();
     let mut config_toml = String::new();
     f.read_to_string(&mut config_toml).unwrap();
     let config: EvaluationScript = match toml::from_str(&config_toml) {
@@ -89,7 +98,20 @@ fn main() {
     }
 
     // write results to file
-    let output = json!(all_results);
+    let hostname = gethostname::gethostname().to_string_lossy().into_owned();
+    let date = started_at
+        .format(&Rfc3339)
+        .unwrap_or_else(|_| "unknown".to_string());
+    let input_file_str = input_file.to_string_lossy().into_owned();
+    let output = json!({
+        "env": {
+            "version": VERSION,
+            "hostname": hostname,
+            "started_at": date,
+            "input_file": input_file_str,
+        },
+        "runs": all_results
+    });
     println!("{}", &output);
     let out_file_name = get_output_filename(&config.base.output_file_pattern);
     let out_file = match std::fs::File::create(out_file_name) {

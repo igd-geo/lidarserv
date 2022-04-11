@@ -20,6 +20,8 @@ toml = "0.5.8"
 crossbeam-channel = "0.5.1"
 default-functions-derive = { path = "../default-functions-derive" }
 time = "0.3.9"
+git-version = "0.3.5"
+gethostname = "0.2.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libmedium = "0.6.0"
