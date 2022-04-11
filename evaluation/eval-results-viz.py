@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 PROJECT_ROOT = join(dirname(__file__), "..")
-INPUT_FILE = join(PROJECT_ROOT, "evaluation/results/octree_2022-04-09_1.json")
+INPUT_FILE = join(PROJECT_ROOT, "evaluation/results/octree_2022-04-10_1.json")
 OUTPUT_FOLDER = INPUT_FILE + ".diagrams"
 
 

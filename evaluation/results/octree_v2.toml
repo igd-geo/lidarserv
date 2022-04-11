@@ -1,12 +1,16 @@
+# Changelog
+# v1 - Initial version
+# v2 - Increase default cache (results from v1 look like the cache is very scarce - maybe even be slightly too low for some parts of the test data)
+
 data_folder = "data/evaluation"
-output_file = "evaluation/results/octree_%d_%i.json"
+output_file = "evaluation/results/octree_v2_%d_%i.json"
 points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
 trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
 offset = [412785.340004, 5318821.784996, 290.0]
 
 [defaults]
 type = "Octree"
-cache_size = 500
+cache_size = 1000
 compression = true
 insertion_rate.target_point_pressure = 1_000_000
 query_perf.enable = false
