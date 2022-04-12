@@ -139,6 +139,18 @@ impl F64Position {
     pub fn global_position(&self) -> &Point3<f64> {
         &self.0
     }
+
+    pub fn set_x(&mut self, x: f64) {
+        self.0.x = x
+    }
+
+    pub fn set_y(&mut self, y: f64) {
+        self.0.y = y
+    }
+
+    pub fn set_z(&mut self, z: f64) {
+        self.0.z = z
+    }
 }
 
 impl Default for F64Position {
