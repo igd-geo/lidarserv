@@ -99,7 +99,10 @@ fn main() {
 
     // write results to file
     let hostname = gethostname::gethostname().to_string_lossy().into_owned();
-    let date = started_at
+    let start_date = started_at
+        .format(&Rfc3339)
+        .unwrap_or_else(|_| "unknown".to_string());
+    let end_date = time::OffsetDateTime::now_utc()
         .format(&Rfc3339)
         .unwrap_or_else(|_| "unknown".to_string());
     let input_file_str = input_file.to_string_lossy().into_owned();
@@ -107,8 +110,9 @@ fn main() {
         "env": {
             "version": VERSION,
             "hostname": hostname,
-            "started_at": date,
             "input_file": input_file_str,
+            "started_at": start_date,
+            "finished_at": end_date,
         },
         "runs": all_results
     });
