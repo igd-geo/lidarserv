@@ -5,8 +5,20 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 PROJECT_ROOT = join(dirname(__file__), "..")
-INPUT_FILE = join(PROJECT_ROOT, "evaluation/results/octree_v2_2022-04-12_1.json")
-OUTPUT_FOLDER = INPUT_FILE + ".diagrams"
+INPUT_FILES_OCTREE_V1 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+    "octree_v1_2022-04-07_1.json",
+    "octree_v1_2022-04-08_1.json",
+    "octree_v1_2022-04-09_1.json",
+    "octree_v1_2022-04-10_1.json",
+]]
+INPUT_FILES_OCTREE_V2 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+    "octree_v2_2022-04-12_1.json",
+]]
+INPUT_FILES_OCTREE_V3 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+]]
+INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+    "sensorpos_parallelisation_2022-04-11_1.json",
+]]
 
 
 def main():
@@ -16,39 +28,103 @@ def main():
     # regularly crashes the viewer...
     mpl.rcParams['pdf.fonttype'] = 42
 
-    # read file
-    with open(INPUT_FILE) as f:
-        data = json.load(f)
+    for input_file in INPUT_FILES_SENSORPOS_PARALLELISATION:
 
-    # ensure output folder exists
-    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+        # read file
+        with open(input_file) as f:
+            data = json.load(f)
 
-    default_run = next(
-        it
-        for it in data["runs"]["prio_fn_simple"]
-        if it["index"]["priority_function"] == "NrPointsWeightedByTaskAge"
-    )
-    plot_insertion_rate_by_nr_threads(data["runs"]["parallelisation"], "mno")
-    plot_insertion_rate_by_priority_function(data["runs"]["prio_fn_simple"], "mno")
-    plot_insertion_rate_by_priority_function(data["runs"]["prio_fn_no_cache"], "mno nocache")
-    plot_insertion_rate_by_cache_size(data["runs"]["cache"], "mno")
-    plot_latency_by_insertion_rate(default_run, "mno")
-    plot_latency_by_insertion_rate_foreach_priority_function(data["runs"]["prio_fn_simple"], "mno")
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
 
-    # plot_latency_by_nr_threads(data["num_threads"], "octree_index")
-    # plot_latency_by_nr_threads(data["num_threads"], "sensor_pos_index")
-    # plot_insertion_rate_by_priority_function(tpf_hack(data["task_priority_function_low_cache"]), "octree_index no cache")
-    # plot_latency_by_priority_function(tpf_hack(data["task_priority_function"]), "octree_index")
-    # plot_latency_by_priority_function(tpf_hack(data["task_priority_function_low_cache"]), "octree_index no cache")
-    # plot_insertion_rate_by_cache_size(data["max_cache_size"], "octree_index")
-    # plot_latency_by_cache_size(data["max_cache_size"], "octree_index")
-    # plot_latency_by_cache_size(data["max_cache_size"], "sensor_pos_index")
-    # plot_insertion_rate_by_node_size(data["max_node_size"])
-    # plot_query_time_by_node_size(data["max_node_size"])
-    # plot_latency_by_node_size(data["max_node_size"])
-    # plot_compare_insertion_rate(data["default"][0])
-    # plot_compare_latency(data["default"][0])
-    # plot_compare_query_time(data["default"][0])
+        # plot
+        plot_insertion_rate_by_nr_threads(
+            test_runs=data["num_threads"],
+            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
+        )
+        plot_insertion_rate_by_nr_threads(
+            test_runs=data["num_threads_no_compression"],
+            title="no compression",
+            filename=join(output_folder, "insertion-rate-by-nr-threads-no-compression.pdf")
+        )
+
+    for input_file in INPUT_FILES_OCTREE_V1:
+
+        # read file
+        with open(input_file) as f:
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_rate_by_nr_threads(
+            test_runs=data["parallelisation"],
+            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
+        )
+        plot_insertion_rate_by_priority_function(
+            test_runs=data["prio_fn_simple"],
+            filename=join(output_folder, "insertion-rate-by-priority-function.pdf")
+        )
+        plot_insertion_rate_by_priority_function(
+            test_runs=data["prio_fn_no_cache"],
+            title="no cache",
+            filename=join(output_folder, "insertion-rate-by-priority-function-nocache.pdf")
+        )
+        plot_insertion_rate_by_cache_size(
+            test_runs=data["cache"],
+            filename=join(output_folder, "insertion-rate-by-cache-size.pdf")
+        )
+        plot_latency_by_insertion_rate(
+            test_run=data["general"][0],
+            filename=join(output_folder, "latency-by-insertion-rate.pdf")
+        )
+        plot_latency_by_insertion_rate_foreach_priority_function(
+            test_runs=data["prio_fn_simple"],
+            filename=join(output_folder, "latency-by-insertion-rate-foreach-priority-function.pdf")
+        )
+
+    for input_file in INPUT_FILES_OCTREE_V2 + INPUT_FILES_OCTREE_V3:
+
+        # read file
+        with open(input_file) as f:
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        default_run = next(
+            it
+            for it in data["runs"]["prio_fn_simple"]
+            if it["index"]["priority_function"] == "NrPointsWeightedByTaskAge"
+        )
+        plot_insertion_rate_by_nr_threads(
+            test_runs=data["runs"]["parallelisation"],
+            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
+        )
+        plot_insertion_rate_by_priority_function(
+            test_runs=data["runs"]["prio_fn_simple"],
+            filename=join(output_folder, "insertion-rate-by-priority-function.pdf")
+        )
+        plot_insertion_rate_by_priority_function(
+            test_runs=data["runs"]["prio_fn_no_cache"],
+            title="no cache",
+            filename=join(output_folder, "insertion-rate-by-priority-function-nocache.pdf")
+        )
+        plot_insertion_rate_by_cache_size(
+            test_runs=data["runs"]["cache"],
+            filename=join(output_folder, "insertion-rate-by-cache-size.pdf")
+        )
+        plot_latency_by_insertion_rate(
+            test_run=default_run,
+            filename=join(output_folder, "latency-by-insertion-rate.pdf")
+        )
+        plot_latency_by_insertion_rate_foreach_priority_function(
+            test_runs=data["runs"]["prio_fn_simple"],
+            filename=join(output_folder, "latency-by-insertion-rate-foreach-priority-function.pdf")
+        )
 
 
 def make_y_insertion_rate(ax, test_runs):
@@ -117,55 +193,60 @@ def make_x_priority_function(ax, test_runs):
     return xs
 
 
-def plot_insertion_rate_by_nr_threads(test_runs, index):
+def plot_insertion_rate_by_nr_threads(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_nr_threads(ax, test_runs)
     ys = make_y_insertion_rate(ax, test_runs)
     ax.scatter(xs, ys)
-    ax.set_title(index)
-    fig.savefig(join(OUTPUT_FOLDER, f"{index}-insertion_rate_by_nr_threads.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_latency_by_nr_threads(test_runs, index):
+def plot_latency_by_nr_threads(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_nr_threads(ax, test_runs)
-    draw_y_latency(ax, xs, test_runs, index)
-    ax.set_title(index)
-    fig.savefig(join(OUTPUT_FOLDER, f"{index}-latency_by_nr_threads.pdf"), format="pdf", bbox_inches="tight")
+    draw_y_latency(ax, xs, test_runs)
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_insertion_rate_by_cache_size(test_runs, index):
+def plot_insertion_rate_by_cache_size(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_cache_size(ax, test_runs)
     ys = make_y_insertion_rate(ax, test_runs)
     ax.scatter(xs, ys)
-    ax.set_title(index)
-    fig.savefig(join(OUTPUT_FOLDER, f"{index}-insertion_rate_by_cache_size.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_latency_by_cache_size(test_runs, index):
+def plot_latency_by_cache_size(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_cache_size(ax, test_runs)
-    draw_y_latency(ax, xs, test_runs, index, x_log=True)
-    ax.set_title(index)
-    fig.savefig(join(OUTPUT_FOLDER, f"{index}-latency_by_cache_size.pdf"), format="pdf", bbox_inches="tight")
+    draw_y_latency(ax, xs, test_runs, x_log=True)
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_insertion_rate_by_node_size(test_runs):
+def plot_insertion_rate_by_node_size(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_node_size(ax, test_runs)
     ys = make_y_insertion_rate(ax, test_runs)
     ax.scatter(xs, ys)
-    ax.set_title("sensor_pos_index")
-    fig.savefig(join(OUTPUT_FOLDER, f"sensor_pos_index-insertion_rate_by_node_size.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_query_time_by_node_size(test_runs):
+def plot_query_time_by_node_size(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_node_size(ax, test_runs)
@@ -175,40 +256,44 @@ def plot_query_time_by_node_size(test_runs):
     #ax.scatter(xs, ys1, label="Query 1")
     ax.scatter(xs, ys2, label="Query 2")
     ax.scatter(xs, ys3, label="Query 3")
-    ax.set_title("sensor_pos_index")
     ax.legend()
-    fig.savefig(join(OUTPUT_FOLDER, f"sensor_pos_index-query_time_by_node_size.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_latency_by_node_size(test_runs):
+def plot_latency_by_node_size(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_node_size(ax, test_runs)
     draw_y_latency(ax, xs, test_runs, "sensor_pos_index", x_log=True)
-    ax.set_title("sensor_pos_index")
-    fig.savefig(join(OUTPUT_FOLDER, f"sensor_pos_index-latency_by_node_size.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_insertion_rate_by_priority_function(test_runs, title):
+def plot_insertion_rate_by_priority_function(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_priority_function(ax, test_runs)
     ys = make_y_insertion_rate(ax, test_runs)
     ax.bar(xs, ys, 0.7)
-    ax.set_title(title)
-    fig.savefig(join(OUTPUT_FOLDER, f"{title}-insertion_rate_by_priority_function.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_latency_by_priority_function(test_runs, title):
+def plot_latency_by_priority_function(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
     xs = make_x_priority_function(ax, test_runs)
     draw_y_latency(ax, xs, test_runs, "octree_index")
-    ax.set_title(title)
-    fig.savefig(join(OUTPUT_FOLDER, f"{title}-latency_by_priority_function.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_compare_insertion_rate(test_run):
+def plot_compare_insertion_rate(test_run, filename, title=None):
     fig: plt.Figure = plt.figure(figsize=[2.7, 4.8])
     ax: plt.Axes = fig.subplots()
     indexes = ["octree_index", "sensor_pos_index"]
@@ -217,10 +302,12 @@ def plot_compare_insertion_rate(test_run):
     ys = make_y_insertion_rate(ax, test_runs)
     ax.bar(xs, ys, 0.7)
     plt.xticks(xs, indexes)
-    fig.savefig(join(OUTPUT_FOLDER, f"compare_insertion_rate.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_compare_latency(test_run):
+def plot_compare_latency(test_run, filename, title=None):
     fig: plt.Figure = plt.figure(figsize=[2.7, 4.8])
     ax: plt.Axes = fig.subplots()
     indexes = ["octree_index", "sensor_pos_index"]
@@ -228,10 +315,12 @@ def plot_compare_latency(test_run):
     xs = [0, 1]
     draw_y_latency(ax, xs, test_runs, "index")
     plt.xticks(xs, indexes)
-    fig.savefig(join(OUTPUT_FOLDER, f"compare_latency.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_compare_query_time(test_run):
+def plot_compare_query_time(test_run, filename, title=None):
     fig: plt.Figure = plt.figure(figsize=[4.6, 4.8])
     ax: plt.Axes = fig.subplots()
     xs1 = [0, 3, 6]
@@ -251,10 +340,12 @@ def plot_compare_query_time(test_run):
     plt.xticks([0.5, 3.5, 6.5], ["Query 1", "Query 2", "Query 3"])
     ax.set_ylabel("Query time | seconds")
     ax.legend(loc="upper left")
-    fig.savefig(join(OUTPUT_FOLDER, f"compare_queryperf.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_insertion_rates_by_disk_speed(data):
+def plot_insertion_rates_by_disk_speed(data, filename, title=None):
     fig: plt.Figure = plt.figure(figsize=[4.6, 4.8])
     xs = [it["disk_speed_mibps"] for it in data]
     ax: plt.Axes = fig.subplots()
@@ -272,10 +363,12 @@ def plot_insertion_rates_by_disk_speed(data):
     ax.plot(xs, y_sensorpos_nocompression, label="sensor_pos_index no compression")
     ax.set_ylim(bottom=0)
     ax.legend()
-    fig.savefig(join(OUTPUT_FOLDER, f"compare_insertion_rate_by_disk_speed.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_latencies_by_disk_speed(data):
+def plot_latencies_by_disk_speed(data, filename, title=None):
     fig: plt.Figure = plt.figure(figsize=[4.6, 4.8])
     xs = [it["disk_speed_mibps"] for it in data]
     ax: plt.Axes = fig.subplots()
@@ -323,23 +416,27 @@ def plot_latencies_by_disk_speed(data):
 
     ax.set_ylabel("Latency | seconds")
     ax.legend()
-    fig.savefig(join(OUTPUT_FOLDER, f"compare_latency_by_disk_speed.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_latency_by_insertion_rate(data, index):
+def plot_latency_by_insertion_rate(test_run, filename, title=None):
     fig: plt.Figure = plt.figure(figsize=[4.6, 4.8])
     ax: plt.Axes = fig.subplots()
-    latency_runs = data["results"]["latency"]
+    latency_runs = test_run["results"]["latency"]
     xs = [it["settings"]["points_per_sec"] for it in latency_runs]
     ax.set_xlabel("Insertion rate | points/s")
     draw_y_latency(ax, xs, latency_runs, False)
-    fig.savefig(join(OUTPUT_FOLDER, f"{index}-latency_by_insertion_rate.pdf"), format="pdf", bbox_inches="tight")
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
-def plot_latency_by_insertion_rate_foreach_priority_function(data, index):
+def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure(figsize=[4.6, 4.8])
     ax: plt.Axes = fig.subplots()
-    for run in data:
+    for run in test_runs:
         prio_fn = run["index"]["priority_function"]
         latency_runs = run["results"]["latency"]
         xs = [it["settings"]["points_per_sec"] for it in latency_runs]
@@ -352,11 +449,9 @@ def plot_latency_by_insertion_rate_foreach_priority_function(data, index):
     ax.set_ylabel("Latency | seconds")
     ax.set_yscale("log")
     ax.legend()
-    fig.savefig(
-        join(OUTPUT_FOLDER, f"{index}-latency_by_insertion_rate_foreach_priority_function.pdf"),
-        format="pdf",
-        bbox_inches="tight"
-    )
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight")
 
 
 def rename_tpf(tpf):
