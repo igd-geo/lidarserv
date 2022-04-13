@@ -115,7 +115,8 @@ impl TaskPriorityFunction {
     ) -> Ordering {
         match self {
             TaskPriorityFunction::NrPoints => task_1.points.len().cmp(&task_2.points.len()),
-            TaskPriorityFunction::Lod => cell_1.lod.cmp(&cell_2.lod),
+            TaskPriorityFunction::Lod => (cell_1.lod, u32::MAX - task_1.created_generation)
+                .cmp(&(cell_2.lod, u32::MAX - task_2.created_generation)),
             TaskPriorityFunction::OldestPoint => task_2.min_generation.cmp(&task_1.min_generation),
             TaskPriorityFunction::NewestPoint => task_2.max_generation.cmp(&task_1.max_generation),
             TaskPriorityFunction::TaskAge => {
