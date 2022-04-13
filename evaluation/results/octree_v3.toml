@@ -1,0 +1,57 @@
+# Changelog
+# v1 - Initial version
+# v2 - Increase default cache (results from v1 look like the cache is very scarce - maybe even be slightly too low for some parts of the test data)
+# v3 - Increase resolution of point rates at which to measure latency
+
+data_folder = "data/evaluation"
+output_file = "evaluation/results/octree_v3_%d_%i.json"
+points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
+trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
+offset = [412785.340004, 5318821.784996, 290.0]
+
+[defaults]
+type = "Octree"
+cache_size = 1000
+compression = true
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = false
+priority_function = "NrPointsWeightedByTaskAge"
+latency.enable = false
+latency.points_per_sec = 300000
+latency.frames_per_sec = 50
+
+# just run once with default settings
+# and fine-grained latency analysis
+[runs.general]
+query_perf.enable = true
+
+# test how well it scales with the number of worker threads
+[runs.parallelisation]
+num_threads = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+
+# test different task priority functions
+[runs.prio_fn_simple]
+priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
+latency.enable = true
+latency.points_per_sec = [
+    200_000, 230_000, 260_000, 290_000, 320_000, 350_000, 380_000,   410_000,   440_000,   470_000,
+    500_000, 530_000, 560_000, 590_000, 620_000, 650_000, 680_000,   710_000,   740_000,   770_000,
+    800_000, 830_000, 860_000, 890_000, 920_000, 950_000, 980_000, 1_010_000, 1_040_000, 1_070_000,
+]
+
+# the priority functions perform a lot differently without caching.
+# test different task priority functions with no cache
+[runs.prio_fn_no_cache]
+priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
+cache_size = [0]
+
+# test different task priority functions with bogus points
+# my hypothesis that I want to test is that bogus points solve the problems that
+# the NrPoints priority function has
+[runs.prio_fn_with_bogus]
+priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
+nr_bogus_points = [[625, 625], [1_250, 1_250], [2_500, 2_500], [5_000, 5_000], [10_000, 10_000], [20_000, 20_000]]
+
+# show influence of cache size on indexing performance
+[runs.cache]
+cache_size = [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]

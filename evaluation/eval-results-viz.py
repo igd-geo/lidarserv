@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 PROJECT_ROOT = join(dirname(__file__), "..")
-INPUT_FILE = join(PROJECT_ROOT, "evaluation/results/octree_2022-04-10_1.json")
+INPUT_FILE = join(PROJECT_ROOT, "evaluation/results/octree_v2_2022-04-12_1.json")
 OUTPUT_FOLDER = INPUT_FILE + ".diagrams"
 
 
@@ -23,11 +23,17 @@ def main():
     # ensure output folder exists
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-    plot_insertion_rate_by_nr_threads(data["parallelisation"], "mno")
-    plot_insertion_rate_by_priority_function(data["prio_fn_simple"], "mno")
-    plot_insertion_rate_by_priority_function(data["prio_fn_no_cache"], "mno nocache")
-    plot_insertion_rate_by_cache_size(data["cache"], "mno")
-    plot_latency_by_insertion_rate(data["general"][0], "mno")
+    default_run = next(
+        it
+        for it in data["runs"]["prio_fn_simple"]
+        if it["index"]["priority_function"] == "NrPointsWeightedByTaskAge"
+    )
+    plot_insertion_rate_by_nr_threads(data["runs"]["parallelisation"], "mno")
+    plot_insertion_rate_by_priority_function(data["runs"]["prio_fn_simple"], "mno")
+    plot_insertion_rate_by_priority_function(data["runs"]["prio_fn_no_cache"], "mno nocache")
+    plot_insertion_rate_by_cache_size(data["runs"]["cache"], "mno")
+    plot_latency_by_insertion_rate(default_run, "mno")
+    plot_latency_by_insertion_rate_foreach_priority_function(data["runs"]["prio_fn_simple"], "mno")
 
     # plot_latency_by_nr_threads(data["num_threads"], "octree_index")
     # plot_latency_by_nr_threads(data["num_threads"], "sensor_pos_index")
@@ -330,6 +336,27 @@ def plot_latency_by_insertion_rate(data, index):
     fig.savefig(join(OUTPUT_FOLDER, f"{index}-latency_by_insertion_rate.pdf"), format="pdf", bbox_inches="tight")
 
 
+def plot_latency_by_insertion_rate_foreach_priority_function(data, index):
+    fig: plt.Figure = plt.figure(figsize=[4.6, 4.8])
+    ax: plt.Axes = fig.subplots()
+    for run in data:
+        prio_fn = run["index"]["priority_function"]
+        latency_runs = run["results"]["latency"]
+        xs = [it["settings"]["points_per_sec"] for it in latency_runs]
+        ys_min = [it["all_lods"]["quantiles"][1]["value"] for it in latency_runs]   # 10% quantile
+        ys_med = [it["all_lods"]["median_latency_seconds"] for it in latency_runs]   # median (50% quantile)
+        ys_max = [it["all_lods"]["quantiles"][11]["value"] for it in latency_runs]   # 90% quantile
+        ax.fill_between(xs, ys_min, ys_max, alpha=.2, linewidth=0)
+        ax.plot(xs, ys_med, label=rename_tpf(prio_fn))
+    ax.set_xlabel("Insertion rate | points/s")
+    ax.set_ylabel("Latency | seconds")
+    ax.set_yscale("log")
+    ax.legend()
+    fig.savefig(
+        join(OUTPUT_FOLDER, f"{index}-latency_by_insertion_rate_foreach_priority_function.pdf"),
+        format="pdf",
+        bbox_inches="tight"
+    )
 
 
 def rename_tpf(tpf):
