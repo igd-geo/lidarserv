@@ -201,7 +201,7 @@ def plot_insertion_rate_by_nr_threads(test_runs, filename, title=None):
     ax.scatter(xs, ys)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_latency_by_nr_threads(test_runs, filename, title=None):
@@ -211,7 +211,7 @@ def plot_latency_by_nr_threads(test_runs, filename, title=None):
     draw_y_latency(ax, xs, test_runs)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_insertion_rate_by_cache_size(test_runs, filename, title=None):
@@ -222,7 +222,7 @@ def plot_insertion_rate_by_cache_size(test_runs, filename, title=None):
     ax.scatter(xs, ys)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_latency_by_cache_size(test_runs, filename, title=None):
@@ -232,7 +232,7 @@ def plot_latency_by_cache_size(test_runs, filename, title=None):
     draw_y_latency(ax, xs, test_runs, x_log=True)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_insertion_rate_by_node_size(test_runs, filename, title=None):
@@ -243,7 +243,7 @@ def plot_insertion_rate_by_node_size(test_runs, filename, title=None):
     ax.scatter(xs, ys)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_query_time_by_node_size(test_runs, filename, title=None):
@@ -259,7 +259,7 @@ def plot_query_time_by_node_size(test_runs, filename, title=None):
     ax.legend()
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_latency_by_node_size(test_runs, filename, title=None):
@@ -269,7 +269,7 @@ def plot_latency_by_node_size(test_runs, filename, title=None):
     draw_y_latency(ax, xs, test_runs, "sensor_pos_index", x_log=True)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_insertion_rate_by_priority_function(test_runs, filename, title=None):
@@ -280,7 +280,7 @@ def plot_insertion_rate_by_priority_function(test_runs, filename, title=None):
     ax.bar(xs, ys, 0.7)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_latency_by_priority_function(test_runs, filename, title=None):
@@ -290,7 +290,7 @@ def plot_latency_by_priority_function(test_runs, filename, title=None):
     draw_y_latency(ax, xs, test_runs, "octree_index")
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_compare_insertion_rate(test_run, filename, title=None):
@@ -304,7 +304,7 @@ def plot_compare_insertion_rate(test_run, filename, title=None):
     plt.xticks(xs, indexes)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_compare_latency(test_run, filename, title=None):
@@ -317,7 +317,7 @@ def plot_compare_latency(test_run, filename, title=None):
     plt.xticks(xs, indexes)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_compare_query_time(test_run, filename, title=None):
@@ -342,7 +342,7 @@ def plot_compare_query_time(test_run, filename, title=None):
     ax.legend(loc="upper left")
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_insertion_rates_by_disk_speed(data, filename, title=None):
@@ -365,7 +365,7 @@ def plot_insertion_rates_by_disk_speed(data, filename, title=None):
     ax.legend()
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_latencies_by_disk_speed(data, filename, title=None):
@@ -418,7 +418,7 @@ def plot_latencies_by_disk_speed(data, filename, title=None):
     ax.legend()
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_latency_by_insertion_rate(test_run, filename, title=None):
@@ -430,7 +430,7 @@ def plot_latency_by_insertion_rate(test_run, filename, title=None):
     draw_y_latency(ax, xs, latency_runs, False)
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename, title=None):
@@ -451,7 +451,7 @@ def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename
     ax.legend()
     if title is not None:
         ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 def rename_tpf(tpf):
