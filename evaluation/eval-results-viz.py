@@ -3,6 +3,7 @@ from os.path import join, dirname
 import json
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import numpy as np
 
 PROJECT_ROOT = join(dirname(__file__), "..")
 INPUT_FILES_OCTREE_V1 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
@@ -125,6 +126,11 @@ def main():
         plot_latency_by_insertion_rate_foreach_priority_function(
             test_runs=data["runs"]["prio_fn_simple"],
             filename=join(output_folder, "latency-by-insertion-rate-foreach-priority-function.pdf")
+        )
+        plot_insertion_rate_by_priority_function_bogus(
+            test_runs=data["runs"]["prio_fn_with_bogus"] + data["runs"]["prio_fn_simple"],
+            title="with bogus points",
+            filename=join(output_folder, "insertion-rate-by-priority-function-bogus.pdf")
         )
 
 
@@ -279,6 +285,33 @@ def plot_insertion_rate_by_priority_function(test_runs, filename, title=None):
     xs = make_x_priority_function(ax, test_runs)
     ys = make_y_insertion_rate(ax, test_runs)
     ax.bar(xs, ys, 0.7)
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
+
+def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=None):
+    fig: plt.Figure = plt.figure()
+    ax: plt.Axes = fig.subplots()
+    boguses = sorted(set(t["index"]["nr_bogus_points"][0] for t in test_runs))
+    previous = dict()
+    for bogus in boguses:
+        this_runs = [t for t in test_runs if t["index"]["nr_bogus_points"][0] == bogus]
+        xs = make_x_priority_function(ax, this_runs)
+        ys = make_y_insertion_rate(ax, this_runs)
+        bottom = np.zeros(len(xs))
+        for i, x in enumerate(xs):
+            if x in previous:
+                last_y = previous[x]
+            else:
+                last_y = 0
+            if last_y > ys[i]:
+                raise "bad..."
+            previous[x] = ys[i]
+            bottom[i] = last_y
+            ys[i] = ys[i] - last_y
+        ax.bar(xs, ys, 0.7, bottom=bottom, label=f"{bogus} bogus points")
+    ax.legend()
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
