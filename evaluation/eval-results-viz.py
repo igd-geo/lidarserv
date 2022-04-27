@@ -132,12 +132,23 @@ def main():
             title="with bogus points",
             filename=join(output_folder, "insertion-rate-by-priority-function-bogus.pdf")
         )
+        plot_duration_cleanup_by_priority_function_bogus(
+            test_runs=data["runs"]["prio_fn_with_bogus"] + data["runs"]["prio_fn_simple"],
+            title="with bogus points",
+            filename=join(output_folder, "cleanup-time-by-priority-function-bogus.pdf")
+        )
 
 
 def make_y_insertion_rate(ax, test_runs):
     ys = [i["results"]["insertion_rate"]["insertion_rate_points_per_sec"] for i in test_runs]
     ax.set_ylabel("Insertion rate | points/s")
     ax.set_ylim(bottom=0, top=max(ys) * 1.1)
+    return ys
+
+
+def make_y_duration_cleanup(ax, test_runs):
+    ys = [i["results"]["insertion_rate"]["duration_cleanup_seconds"] for i in test_runs]
+    ax.set_ylabel("Cleanup time | points/s")
     return ys
 
 
@@ -311,6 +322,28 @@ def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=No
             bottom[i] = last_y
             ys[i] = ys[i] - last_y
         ax.bar(xs, ys, 0.7, bottom=bottom, label=f"{bogus} bogus points")
+    ax.legend()
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
+
+def plot_duration_cleanup_by_priority_function_bogus(test_runs, filename, title=None):
+    fig: plt.Figure = plt.figure()
+    ax: plt.Axes = fig.subplots()
+    boguses = sorted(set(t["index"]["nr_bogus_points"][0] for t in test_runs))
+    previous = dict()
+    for bogus in boguses:
+        this_runs = [t for t in test_runs if t["index"]["nr_bogus_points"][0] == bogus]
+        xs = make_x_priority_function(ax, this_runs)
+        ys = make_y_duration_cleanup(ax, this_runs)
+        for i, x in enumerate(xs):
+            if x in previous:
+                last_y = previous[x]
+                previous[x] = ys[i]
+                if ys[i] > last_y:
+                    ys[i] = 0
+        ax.bar(xs, ys, 0.7, label=f"{bogus} bogus points")
     ax.legend()
     if title is not None:
         ax.set_title(title)
