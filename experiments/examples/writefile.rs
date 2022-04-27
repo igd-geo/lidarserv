@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{Read, Write};
-use std::thread::{sleep, Thread};
+use std::thread::sleep;
 use std::time::{Duration, Instant};
 
 fn main() {
