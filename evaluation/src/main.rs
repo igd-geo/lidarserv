@@ -273,8 +273,8 @@ where
     F: Fn() -> I,
 {
     // measure insertion rate
-    let mut index = make_index();
     reset_data_folder(base_config);
+    let mut index = make_index();
     processor_cooldown();
     info!("Measuring insertion rate...");
     let (result_insertion_rate, max_pps) =
@@ -289,6 +289,7 @@ where
         info!("Results: {}", &sensorpos_query_perf);
         sensorpos_query_perf
     } else {
+        drop(index);
         serde_json::Value::Null
     };
 
