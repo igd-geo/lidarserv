@@ -1,6 +1,5 @@
 use crate::geometry::grid::{GridCell, LeveledGridCell, LodLevel};
 use crate::lru_cache::pager::PageDirectory;
-use std::array::IntoIter;
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
@@ -102,8 +101,10 @@ impl GridCellDirectory {
     }
 
     pub fn is_leaf_node(&self, node_id: &LeveledGridCell) -> bool {
-        let children = node_id.children();
-        IntoIter::new(children).all(|child| !self.exists(&child))
+        node_id
+            .children()
+            .into_iter()
+            .all(|child| !self.exists(&child))
     }
 }
 

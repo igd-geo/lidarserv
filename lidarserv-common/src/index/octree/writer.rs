@@ -445,7 +445,7 @@ where
         let condvar = Arc::new(Condvar::new());
         let inboxes = Arc::new(Mutex::new(Inboxes::new(
             Arc::clone(&condvar),
-            inner.priority_function.clone(),
+            inner.priority_function,
         )));
         let threads = (0..inner.num_threads)
             .into_iter()

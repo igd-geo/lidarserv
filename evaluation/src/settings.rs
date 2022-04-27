@@ -1,4 +1,3 @@
-use crate::settings::SystemUnderTest::{Octree, SensorPosTree};
 use default_functions_derive::DefaultFunctions;
 use lidarserv_common::index::octree::writer::TaskPriorityFunction;
 use nalgebra::Vector3;

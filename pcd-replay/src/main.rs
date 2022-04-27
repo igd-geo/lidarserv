@@ -23,6 +23,9 @@ fn main() {
     println!("Read {} additional points", new_points.len());
 }
 
+#[allow(dead_code)]
+// suppress warnings 'field is never read' - we are indeed not
+// interested in all fields, but these are the fields as defined by the PCL header.
 pub struct PclHeader {
     version: String,
     fields: Vec<PclField>,
@@ -38,10 +41,6 @@ pub struct PclField {
     size: u32,
     typ: PclType,
     count: u32,
-}
-
-pub struct PclPointformat {
-    fields: Vec<PclField>,
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]

@@ -137,7 +137,7 @@ impl MetaTree {
         self.lods
             .get(lod.level() as usize)
             .into_iter()
-            .map(move |lod_nodes| {
+            .filter_map(move |lod_nodes| {
                 if lod_nodes.depth.is_empty() {
                     None
                 } else {
@@ -154,7 +154,6 @@ impl MetaTree {
                     )
                 }
             })
-            .flatten()
             .flatten()
     }
 
@@ -361,8 +360,7 @@ impl MetaTreePart {
             sensor_pos,
             &self.sensor_grid_hierarchy,
             &previous_node
-                .map(|n| n.node.lod.coarser())
-                .flatten()
+                .and_then(|n| n.node.lod.coarser())
                 .unwrap_or_else(LodLevel::base),
         );
 
