@@ -17,13 +17,15 @@ INPUT_FILES_OCTREE_V2 = [join(PROJECT_ROOT, "evaluation/results/", file) for fil
 ]]
 INPUT_FILES_OCTREE_V3 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
     "octree_v3_2022-04-14_1.json",
+    "octree_v3_2022-04-27_1.json",
 ]]
 INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
     "sensorpos_parallelisation_2022-04-11_1.json",
 ]]
 
-
 def main():
+    # plot style
+    # plt.style.use("seaborn-notebook")
 
     # font magic to make the output pdf viewable in Evince, and probably other pdf viewers as well...
     # without this pdf rendering of pages with figures is extremely slow, especially when zooming in a lot and
@@ -128,14 +130,12 @@ def main():
             filename=join(output_folder, "latency-by-insertion-rate-foreach-priority-function.pdf")
         )
         plot_insertion_rate_by_priority_function_bogus(
-            test_runs=data["runs"]["prio_fn_with_bogus"] + data["runs"]["prio_fn_simple"],
-            title="with bogus points",
-            filename=join(output_folder, "insertion-rate-by-priority-function-bogus.pdf")
+            test_runs=data["runs"]["prio_fn_simple"] + data["runs"]["prio_fn_with_bogus"],
+            filename=join(output_folder, "insertion-rate-by-nr-bogus-points-foreach-priority-function.pdf")
         )
         plot_duration_cleanup_by_priority_function_bogus(
-            test_runs=data["runs"]["prio_fn_with_bogus"] + data["runs"]["prio_fn_simple"],
-            title="with bogus points",
-            filename=join(output_folder, "cleanup-time-by-priority-function-bogus.pdf")
+            test_runs=data["runs"]["prio_fn_simple"] + data["runs"]["prio_fn_with_bogus"],
+            filename=join(output_folder, "cleanup-time-by-nr-bogus-points-foreach-priority-function.pdf")
         )
 
 
@@ -193,8 +193,13 @@ def make_x_nr_threads(ax, test_runs):
 
 def make_x_cache_size(ax, test_runs):
     ax.set_xlabel("Cache Size | nr pages")
-    ax.set_xscale("log")
+    #ax.set_xscale("log")
     return [int(i["index"]["cache_size"]) for i in test_runs]
+
+
+def make_x_nr_bogus_points(ax, test_runs):
+    ax.set_xlabel("Bogus points | max nr bogus points per node")
+    return [int(i["index"]["nr_bogus_points"][0]) for i in test_runs]
 
 
 def make_x_node_size(ax, test_runs):
@@ -237,7 +242,7 @@ def plot_insertion_rate_by_cache_size(test_runs, filename, title=None):
     ax: plt.Axes = fig.subplots()
     xs = make_x_cache_size(ax, test_runs)
     ys = make_y_insertion_rate(ax, test_runs)
-    ax.scatter(xs, ys)
+    ax.plot(xs, ys, marker=".")
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
@@ -304,24 +309,12 @@ def plot_insertion_rate_by_priority_function(test_runs, filename, title=None):
 def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
-    boguses = sorted(set(t["index"]["nr_bogus_points"][0] for t in test_runs))
-    previous = dict()
-    for bogus in boguses:
-        this_runs = [t for t in test_runs if t["index"]["nr_bogus_points"][0] == bogus]
-        xs = make_x_priority_function(ax, this_runs)
+    prio_fns = set(rename_tpf(i["index"]["priority_function"]) for i in test_runs)
+    for prio_fn in prio_fns:
+        this_runs = [t for t in test_runs if rename_tpf(t["index"]["priority_function"]) == prio_fn]
+        xs = make_x_nr_bogus_points(ax, this_runs)
         ys = make_y_insertion_rate(ax, this_runs)
-        bottom = np.zeros(len(xs))
-        for i, x in enumerate(xs):
-            if x in previous:
-                last_y = previous[x]
-            else:
-                last_y = 0
-            if last_y > ys[i]:
-                raise "bad..."
-            previous[x] = ys[i]
-            bottom[i] = last_y
-            ys[i] = ys[i] - last_y
-        ax.bar(xs, ys, 0.7, bottom=bottom, label=f"{bogus} bogus points")
+        ax.plot(xs, ys, label=prio_fn, marker=".")
     ax.legend()
     if title is not None:
         ax.set_title(title)
@@ -331,19 +324,12 @@ def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=No
 def plot_duration_cleanup_by_priority_function_bogus(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
-    boguses = sorted(set(t["index"]["nr_bogus_points"][0] for t in test_runs))
-    previous = dict()
-    for bogus in boguses:
-        this_runs = [t for t in test_runs if t["index"]["nr_bogus_points"][0] == bogus]
-        xs = make_x_priority_function(ax, this_runs)
+    prio_fns = set(rename_tpf(i["index"]["priority_function"]) for i in test_runs)
+    for prio_fn in prio_fns:
+        this_runs = [t for t in test_runs if rename_tpf(t["index"]["priority_function"]) == prio_fn]
+        xs = make_x_nr_bogus_points(ax, this_runs)
         ys = make_y_duration_cleanup(ax, this_runs)
-        for i, x in enumerate(xs):
-            if x in previous:
-                last_y = previous[x]
-                previous[x] = ys[i]
-                if ys[i] > last_y:
-                    ys[i] = 0
-        ax.bar(xs, ys, 0.7, label=f"{bogus} bogus points")
+        ax.plot(xs, ys, label=prio_fn, marker=".")
     ax.legend()
     if title is not None:
         ax.set_title(title)
@@ -511,7 +497,7 @@ def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename
         ys_med = [it["all_lods"]["median_latency_seconds"] for it in latency_runs]   # median (50% quantile)
         ys_max = [it["all_lods"]["quantiles"][11]["value"] for it in latency_runs]   # 90% quantile
         ax.fill_between(xs, ys_min, ys_max, alpha=.2, linewidth=0)
-        ax.plot(xs, ys_med, label=rename_tpf(prio_fn))
+        ax.plot(xs, ys_med, label=rename_tpf(prio_fn), marker=".")
     ax.set_xlabel("Insertion rate | points/s")
     ax.set_ylabel("Latency | seconds")
     ax.set_yscale("log")
