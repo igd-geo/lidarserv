@@ -18,6 +18,7 @@ INPUT_FILES_OCTREE_V2 = [join(PROJECT_ROOT, "evaluation/results/", file) for fil
 INPUT_FILES_OCTREE_V3 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
     "octree_v3_2022-04-14_1.json",
     "octree_v3_2022-04-27_1.json",
+    "octree_v3_2022-04-28_1.json",
 ]]
 INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
     "sensorpos_parallelisation_2022-04-11_1.json",
@@ -309,7 +310,7 @@ def plot_insertion_rate_by_priority_function(test_runs, filename, title=None):
 def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
-    prio_fns = set(rename_tpf(i["index"]["priority_function"]) for i in test_runs)
+    prio_fns = sorted(set(rename_tpf(i["index"]["priority_function"]) for i in test_runs))
     for prio_fn in prio_fns:
         this_runs = [t for t in test_runs if rename_tpf(t["index"]["priority_function"]) == prio_fn]
         xs = make_x_nr_bogus_points(ax, this_runs)
@@ -324,7 +325,7 @@ def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=No
 def plot_duration_cleanup_by_priority_function_bogus(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
-    prio_fns = set(rename_tpf(i["index"]["priority_function"]) for i in test_runs)
+    prio_fns = sorted(set(rename_tpf(i["index"]["priority_function"]) for i in test_runs))
     for prio_fn in prio_fns:
         this_runs = [t for t in test_runs if rename_tpf(t["index"]["priority_function"]) == prio_fn]
         xs = make_x_nr_bogus_points(ax, this_runs)
