@@ -2,6 +2,7 @@ use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32Position, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
+use crate::index::octree::live_metrics_collector::{LiveMetricsCollector, MetricName};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
 use crate::index::Writer;
@@ -58,6 +59,7 @@ struct Inboxes<Point> {
     points_plot: &'static Plot,
     incoming_points_plot: &'static Plot,
     priority_function: TaskPriorityFunction,
+    metrics: Arc<LiveMetricsCollector>,
 }
 
 pub struct OctreeWriter<Point> {
@@ -151,7 +153,11 @@ impl TaskPriorityFunction {
 }
 
 impl<P> Inboxes<P> {
-    fn new(waiter: Arc<Condvar>, priority_function: TaskPriorityFunction) -> Self {
+    fn new(
+        waiter: Arc<Condvar>,
+        priority_function: TaskPriorityFunction,
+        metrics: Arc<LiveMetricsCollector>,
+    ) -> Self {
         Inboxes {
             tasks: Default::default(),
             locked: Default::default(),
@@ -164,6 +170,7 @@ impl<P> Inboxes<P> {
             points_plot: &POINTS_DEFAULT_PLOT,
             incoming_points_plot: &POINT_RATE_DEFAULT_PLOT,
             priority_function,
+            metrics,
         }
     }
 
@@ -253,12 +260,16 @@ impl<P> Inboxes<P> {
 
     #[inline]
     fn plot_tasks_len(&self) {
-        self.tasks_plot.point(self.tasks.len() as f64);
+        let val = self.tasks.len() as f64;
+        self.metrics.metric(MetricName::NrIncomingTasks, val);
+        self.tasks_plot.point(val);
     }
 
     #[inline]
     fn plot_nr_of_points(&self) {
-        self.points_plot.point(self.nr_of_points() as f64);
+        let val = self.nr_of_points() as f64;
+        self.metrics.metric(MetricName::NrIncomingPoints, val);
+        self.points_plot.point(val);
     }
 }
 
@@ -446,6 +457,7 @@ where
         let inboxes = Arc::new(Mutex::new(Inboxes::new(
             Arc::clone(&condvar),
             inner.priority_function,
+            Arc::clone(&inner.metrics),
         )));
         let threads = (0..inner.num_threads)
             .into_iter()
@@ -470,6 +482,7 @@ where
     }
 
     pub fn insert_many(&mut self, points: Vec<Point>) {
+        let nr_points = points.len() as f64;
         let mut points_by_cell: HashMap<LeveledGridCell, Vec<Point>> = HashMap::new();
         for point in points.into_iter() {
             let cell = self
@@ -491,6 +504,7 @@ where
         for (cell, points) in points_by_cell {
             lock.add(cell, points, generation, generation);
         }
+        lock.metrics.metric(MetricName::NrPointsAdded, nr_points);
         lock.maybe_next_generation();
         lock.plot_tasks_len();
         lock.plot_nr_of_points();

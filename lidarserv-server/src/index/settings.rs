@@ -38,6 +38,7 @@ pub struct OctreeSettings {
     pub max_lod: LodLevel,
     pub max_bogus_inner: usize,
     pub max_bogus_leaf: usize,
+    pub use_metrics: bool,
 }
 
 #[derive(Error, Debug)]

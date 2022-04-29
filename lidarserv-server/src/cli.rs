@@ -71,6 +71,11 @@ pub struct InitOptions {
     #[structopt(long, default_value = "100000")]
     pub bvg_max_points_per_node: usize,
 
+    /// If enabled, some metrics are collected during indexing and written to a file named 'metrics_%i.cbor',
+    /// where %i is a sequentially increasing number. This option only applies to the mno index.
+    #[structopt(long)]
+    pub mno_use_metrics: bool,
+
     /// Folder, that the point cloud will be created in. By default, the current folder will be used.
     #[structopt(default_value = ".", hide_default_value = true)]
     pub path: PathBuf,

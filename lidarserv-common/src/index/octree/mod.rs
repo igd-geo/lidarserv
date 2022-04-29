@@ -1,4 +1,5 @@
 pub mod grid_cell_directory;
+pub mod live_metrics_collector;
 pub mod page_manager;
 pub mod reader;
 pub mod writer;
@@ -8,6 +9,7 @@ use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::grid_cell_directory::GridCellDirectory;
+use crate::index::octree::live_metrics_collector::LiveMetricsCollector;
 use crate::index::octree::page_manager::{LasPageManager, OctreePageLoader, Page};
 use crate::index::octree::reader::OctreeReader;
 use crate::index::octree::writer::{OctreeWriter, TaskPriorityFunction};
@@ -30,6 +32,7 @@ struct Inner<Point, Sampl, SamplF> {
     sample_factory: SamplF,
     loader: I32LasReadWrite,
     coordinate_system: I32CoordinateSystem,
+    metrics: Arc<LiveMetricsCollector>,
 }
 
 pub struct OctreeParams<Point, Sampl, SamplF> {
@@ -45,6 +48,7 @@ pub struct OctreeParams<Point, Sampl, SamplF> {
     pub sample_factory: SamplF,
     pub loader: I32LasReadWrite,
     pub coordinate_system: I32CoordinateSystem,
+    pub metrics: Option<LiveMetricsCollector>,
 }
 
 pub struct Octree<Point, Sampl, SamplF> {
@@ -74,6 +78,7 @@ where
             sample_factory,
             loader,
             coordinate_system,
+            metrics,
         } = params;
         Octree {
             inner: Arc::new(Inner {
@@ -88,6 +93,9 @@ where
                 sample_factory,
                 loader,
                 coordinate_system,
+                metrics: Arc::new(
+                    metrics.unwrap_or_else(LiveMetricsCollector::new_discarding_collector),
+                ),
             }),
         }
     }

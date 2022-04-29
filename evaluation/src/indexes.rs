@@ -94,5 +94,6 @@ pub fn create_octree_index(
         sample_factory,
         loader: las_loader,
         coordinate_system,
+        metrics: None,
     })
 }

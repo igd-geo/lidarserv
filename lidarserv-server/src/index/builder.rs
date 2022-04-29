@@ -9,12 +9,13 @@ use crate::index::DynIndex;
 use lidarserv_common::geometry::grid::I32GridHierarchy;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
+use lidarserv_common::index::octree::live_metrics_collector::{LiveMetricsCollector, MetricsError};
 use lidarserv_common::index::octree::OctreeParams;
 use lidarserv_common::index::sensor_pos::meta_tree::{MetaTree, MetaTreeIoError};
 use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
 use lidarserv_common::index::sensor_pos::{SensorPosIndex, SensorPosIndexParams};
 use lidarserv_common::las::I32LasReadWrite;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use thiserror::Error;
 
@@ -25,6 +26,9 @@ pub enum BuilderError {
 
     #[error("Could not load directory: {0}")]
     GridCellIo(#[from] GridCellIoError),
+
+    #[error("Could not open metric file: {0}")]
+    MetricsIo(#[from] MetricsError),
 }
 
 pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynIndex>, BuilderError> {
@@ -59,6 +63,21 @@ fn build_octree_index(
         genaral_settings.las_offset,
     );
 
+    let metrics = if settings.use_metrics {
+        let mut metrics_file_name = PathBuf::new();
+        for i in 0.. {
+            metrics_file_name = data_path.to_owned();
+            metrics_file_name.push(format!("metrics_{}.cbor", i));
+            if !metrics_file_name.exists() {
+                break;
+            }
+        }
+        let m = LiveMetricsCollector::new_file_backed_collector(&metrics_file_name)?;
+        Some(m)
+    } else {
+        None
+    };
+
     let octree = Octree::new(OctreeParams {
         num_threads: genaral_settings.nr_threads as u16,
         priority_function: settings.priority_function,
@@ -72,6 +91,7 @@ fn build_octree_index(
         sample_factory,
         loader: las_loader,
         coordinate_system,
+        metrics,
     });
     Ok(Box::new(octree))
 }

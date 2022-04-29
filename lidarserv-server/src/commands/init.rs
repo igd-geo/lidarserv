@@ -25,6 +25,7 @@ pub fn run(init_options: InitOptions) -> Result<()> {
                 max_lod: LodLevel::from_level(init_options.max_lod),
                 max_bogus_inner: 0,
                 max_bogus_leaf: 0,
+                use_metrics: init_options.mno_use_metrics,
             }),
             Index::Bvg => IndexType::SensorPositionIndex(SensorPositionSettings {
                 max_nr_points_per_node: init_options.bvg_max_points_per_node,
