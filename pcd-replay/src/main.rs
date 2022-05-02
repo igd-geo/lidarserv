@@ -4,23 +4,33 @@ use lidarserv_server::common::geometry::position::F64Position;
 use lidarserv_server::index::point::GlobalPoint;
 use std::fs::File;
 use std::io::SeekFrom::{Current, End, Start};
-use std::io::{BufRead, BufReader, Read, Seek};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Read, Seek};
 use std::str::FromStr;
-use std::thread::sleep;
-use std::time::Duration;
+use std::time::Instant;
 
 fn main() {
     println!("Hello, world!");
-    let mut file = File::open("data/point-cloud-2.pcd").unwrap();
-    let header = PclHeader::read(BufReader::new(&mut file)).unwrap();
+    let t_start = Instant::now();
+    let file = File::open("data/point-cloud.pcd").unwrap();
+    let mut file = BufReader::new(file);
+    let header = PclHeader::read(&mut file).unwrap();
     let body = header.read_data(&mut file).unwrap();
-    println!("Read {} points", body.len());
-    sleep(Duration::from_secs(2));
+    let duration = Instant::now().duration_since(t_start);
 
-    // if another process concurrently appends data to the file,
-    // we can call read_data again to get any new points
-    let new_points = header.read_data(&mut file).unwrap();
-    println!("Read {} additional points", new_points.len());
+    println!(
+        "Read {} points in {}ms",
+        body.len(),
+        duration.as_secs_f64() * 1000.0
+    );
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum PclReadError {
+    #[error("Unexpected end of file")]
+    UnexpectedEOF,
+
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 #[allow(dead_code)]
@@ -34,6 +44,7 @@ pub struct PclHeader {
     viewpoint: String,
     points: u32,
     data: PclEncoding,
+    data_start_pos: u64,
 }
 
 pub struct PclField {
@@ -60,17 +71,18 @@ pub enum PclEncoding {
 pub struct TypeInfo<'a> {
     offset: usize,
     stride: usize,
+    index: usize,
     field: &'a PclField,
 }
 
 impl PclHeader {
-    fn read_pcl_header_entry(mut f: impl BufRead) -> Result<(String, String)> {
+    fn read_pcl_header_entry(mut f: impl BufRead) -> Result<(String, String), PclReadError> {
         loop {
             // read a line
             let mut line = String::new();
-            let chars = f.read_line(&mut line)?;
-            if chars == 0 {
-                return Err(anyhow!("Unexpected EOF"));
+            let chars = f.read_line(&mut line).map_err(|e| anyhow!(e))?;
+            if chars == 0 || !line.ends_with('\n') {
+                return Err(PclReadError::UnexpectedEOF);
             }
 
             // remove trailing comments
@@ -89,9 +101,9 @@ impl PclHeader {
             // split key / value
             let (key, val) = match statement.split_once(' ') {
                 None => {
-                    return Err(anyhow!(
+                    return Err(PclReadError::Other(anyhow!(
                         "Invalid header field - missing seperator between key and value."
-                    ))
+                    )))
                 }
                 Some(x) => x,
             };
@@ -99,23 +111,24 @@ impl PclHeader {
         }
     }
 
-    fn expect_entry(f: impl BufRead, entry: &'static str) -> Result<String> {
+    fn expect_entry(f: impl BufRead, entry: &'static str) -> Result<String, PclReadError> {
         let (k, v) = Self::read_pcl_header_entry(f)?;
         if k != entry {
-            Err(anyhow!("Expected header entry {} - but found {}", entry, k))
+            Err(anyhow!("Expected header entry {} - but found {}", entry, k).into())
         } else {
             Ok(v)
         }
     }
 
-    pub fn read(mut f: impl BufRead) -> Result<Self> {
+    pub fn read(mut f: impl BufRead + Seek) -> Result<Self, PclReadError> {
         // read all fields
         let version = Self::expect_entry(&mut f, "VERSION")?;
         if version != "0.7" {
             return Err(anyhow!(
                 "Version {} is not supported. Currently, only pcd version 0.7 is supported.",
                 version
-            ));
+            )
+            .into());
         }
 
         let fields = Self::expect_entry(&mut f, "FIELDS")?;
@@ -127,6 +140,7 @@ impl PclHeader {
         let viewpoint = Self::expect_entry(&mut f, "VIEWPOINT")?;
         let points = Self::expect_entry(&mut f, "POINTS")?;
         let data = Self::expect_entry(&mut f, "DATA")?;
+        let data_start_pos = f.seek(Current(0)).map_err(|e| anyhow!(e))?;
 
         // parse & zip field data
         let fields = Self::parse_space_seperated(&fields, Self::parse_string)?;
@@ -134,7 +148,7 @@ impl PclHeader {
         let typ = Self::parse_space_seperated(&typ, Self::parse_type)?;
         let count = Self::parse_space_seperated(&count, Self::parse_u32)?;
         if fields.len() != size.len() || fields.len() != typ.len() || fields.len() != count.len() {
-            return Err(anyhow!("The number of fields in the header entries FIELDS, SIZE, TYPE and COUNT did not match."));
+            return Err(anyhow!("The number of fields in the header entries FIELDS, SIZE, TYPE and COUNT did not match.").into());
         }
         let zipped_fields: Vec<_> = fields
             .into_iter()
@@ -157,6 +171,7 @@ impl PclHeader {
             viewpoint,
             points: Self::parse_u32(&points)?,
             data: Self::parse_encoding(&data)?,
+            data_start_pos,
         };
 
         Ok(header)
@@ -168,6 +183,10 @@ impl PclHeader {
 
     fn parse_u32(val: &str) -> Result<u32> {
         Ok(u32::from_str(val)?)
+    }
+
+    fn parse_f64(val: &str) -> Result<f64> {
+        Ok(f64::from_str(val)?)
     }
 
     fn parse_string(val: &str) -> Result<String> {
@@ -202,25 +221,78 @@ impl PclHeader {
         self.fields.iter().map(|f| f.size * f.count).sum::<u32>() as usize
     }
 
-    fn read_data(&self, mut f: impl Read + Seek) -> Result<Vec<GlobalPoint>> {
-        if self.data != PclEncoding::Binary {
-            return Err(anyhow!("This is not a binary pcd file. Only binary pcd files are supported at the moment (DATA binary)."));
+    fn read_data(&self, f: impl BufRead + Seek) -> Result<Vec<GlobalPoint>, PclReadError> {
+        match self.data {
+            PclEncoding::Ascii => self.read_data_ascii(f),
+            PclEncoding::Binary => self.read_data_binary(f),
+            PclEncoding::BinaryCompressed => {
+                Err(anyhow!("Binary Compressed format is not supported.").into())
+            }
         }
+    }
 
-        // seek to the EOF and back, to see how many bytes we can read.
-        let start_pos = f.seek(Current(0))?;
-        let end_pos = f.seek(End(0))?;
-        f.seek(Start(start_pos))?;
-        let bytes_available = (end_pos - start_pos) as usize;
+    fn read_data_ascii(
+        &self,
+        mut f: impl BufRead + Seek,
+    ) -> Result<Vec<GlobalPoint>, PclReadError> {
+        let nr_points = (self.width * self.height) as usize;
+        let mut points = Vec::with_capacity(nr_points);
 
+        // location of x, y, z fields
+        let field_x_info = self.get_type_info("x")?;
+        let field_y_info = self.get_type_info("y")?;
+        let field_z_info = self.get_type_info("z")?;
+        let nr_fields = self.fields.iter().map(|f| f.count).sum::<u32>() as usize;
+
+        // read file (line by line)
+        f.seek(Start(self.data_start_pos)).map_err(|e| anyhow!(e))?;
+        for i in 0..nr_points {
+            // read line
+            let mut line = String::new();
+            let len = f.read_line(&mut line).map_err(|e| anyhow!(e))?;
+            if len == 0 || !line.ends_with('\n') {
+                // todo retry without reading everything from scratch
+                return Err(PclReadError::UnexpectedEOF);
+            }
+
+            // split into fields
+            let fields = line.trim_end().split(' ').collect::<Vec<_>>();
+            if fields.len() != nr_fields {
+                return Err(PclReadError::Other(anyhow!(
+                    "Point {}: Expected {} fields, but got {}",
+                    i,
+                    nr_fields,
+                    fields.len()
+                )));
+            }
+
+            // extract x, y, z
+            let x = Self::parse_f64(fields[field_x_info.index])?;
+            let y = Self::parse_f64(fields[field_y_info.index])?;
+            let z = Self::parse_f64(fields[field_z_info.index])?;
+            let point = GlobalPoint::new(F64Position::new(x, y, z));
+            points.push(point);
+        }
+        Ok(points)
+    }
+
+    fn read_data_binary(&self, mut f: impl Read + Seek) -> Result<Vec<GlobalPoint>, PclReadError> {
         // calculate how many points - and subsequently how many bytes - to read.
+        let points_to_read = (self.width * self.height) as usize;
         let point_size = self.point_size();
-        let bytes_to_read = bytes_available - bytes_available % point_size;
-        let points_to_read = bytes_to_read / point_size;
+        let bytes_to_read = points_to_read * point_size;
 
         // read data
+        f.seek(Start(self.data_start_pos)).map_err(|e| anyhow!(e))?;
         let mut data = vec![0; bytes_to_read];
-        f.read_exact(&mut data)?;
+        f.read_exact(&mut data).map_err(|e| {
+            if e.kind() == ErrorKind::UnexpectedEof {
+                // todo retry
+                PclReadError::UnexpectedEOF
+            } else {
+                anyhow!(e).into()
+            }
+        })?;
 
         // read positions
         let mut positions = vec![F64Position::default(); points_to_read];
@@ -238,6 +310,7 @@ impl PclHeader {
 
     fn get_type_info(&self, field_name: &str) -> Result<TypeInfo> {
         let mut offset = 0;
+        let mut index = 0;
         let mut attr_i = self.fields.len();
         for (i, field) in self.fields.iter().enumerate() {
             if field.field == field_name {
@@ -245,6 +318,7 @@ impl PclHeader {
                 break;
             } else {
                 offset += (field.size * field.count) as usize;
+                index += field.count as usize;
             }
         }
         if attr_i == self.fields.len() {
@@ -257,6 +331,7 @@ impl PclHeader {
         Ok(TypeInfo {
             offset,
             stride,
+            index,
             field: &self.fields[attr_i],
         })
     }
@@ -271,6 +346,7 @@ impl PclHeader {
             offset,
             stride,
             field,
+            ..
         } = self.get_type_info(name)?;
         use read_primitives::as_f64::*;
         match (field.typ, field.size) {
@@ -319,6 +395,7 @@ mod read_primitives {
 
     macro_rules! read_primitive {
         ($fn:ident, $len:literal, $ty:ty, $as:ty) => {
+            #[inline]
             pub fn $fn(data: [u8; $len]) -> $as {
                 <$ty>::from_le_bytes(data) as $as // todo for now assuming that pcl uses little endian for its numbers...
             }
