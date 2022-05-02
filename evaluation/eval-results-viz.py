@@ -19,6 +19,8 @@ INPUT_FILES_OCTREE_V3 = [join(PROJECT_ROOT, "evaluation/results/", file) for fil
     "octree_v3_2022-04-14_1.json",
     "octree_v3_2022-04-27_1.json",
     "octree_v3_2022-04-28_1.json",
+    "octree_v3_2022-04-29_1.json",
+    "octree_v3_2022-04-30_1.json",
 ]]
 INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
     "sensorpos_parallelisation_2022-04-11_1.json",
