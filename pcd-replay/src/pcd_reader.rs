@@ -1,7 +1,6 @@
 use crate::{F64Position, PointType};
 use anyhow::anyhow;
 use anyhow::Result;
-use crossbeam_utils::Backoff;
 use lidarserv_server::index::point::GlobalPoint;
 use std::ffi::OsStr;
 use std::fs::File;
@@ -19,45 +18,36 @@ pub enum PclReadError {
     Other(#[from] anyhow::Error),
 }
 
-pub fn read_pcd_file(filename: &OsStr) -> Result<Vec<GlobalPoint>> {
-    #[cfg(not(feature = "file-lock"))]
-    fn try_read(filename: &OsStr) -> Result<Vec<GlobalPoint>, PclReadError> {
-        let mut file = File::open(filename).map_err(|e| anyhow!(e))?;
-        let mut file = BufReader::new(file);
-        let header = PclHeader::read(&mut file)?;
-        let body = header.read_data(&mut file)?;
-        Ok(body)
-    }
-    #[cfg(feature = "file-lock")]
-    fn try_read(filename: &OsStr) -> Result<Vec<GlobalPoint>, PclReadError> {
-        use file_locker::FileLock;
-        let mut lock = FileLock::new(filename)
-            .blocking(true)
-            .lock()
-            .map_err(|e| anyhow!(e))?;
-        let mut file = BufReader::new(&mut lock.file);
-        let header = PclHeader::read(&mut file)?;
-        let body = header.read_data(&mut file)?;
-        lock.unlock().map_err(|e| anyhow!(e))?;
-        Ok(body)
-    }
+#[cfg(not(feature = "file-lock"))]
+pub fn read_pcd_file(filename: &OsStr) -> Result<Vec<GlobalPoint>, PclReadError> {
+    let mut file = File::open(filename).map_err(|e| anyhow!(e))?;
+    let mut file = BufReader::new(file);
+    let header = PclHeader::read(&mut file)?;
+    let body = header.read_data(&mut file)?;
+    Ok(body)
+}
 
-    let backoff = Backoff::new();
-    loop {
-        match try_read(filename) {
-            Ok(r) => return Ok(r),
-            Err(PclReadError::UnexpectedEOF) => {
-                backoff.snooze();
-                continue;
-            }
-            Err(PclReadError::Other(e)) => return Err(e),
-        }
-    }
+#[cfg(feature = "file-lock")]
+pub fn read_pcd_file(
+    filename: &OsStr,
+    origin: (f64, f64, f64),
+) -> Result<Vec<GlobalPoint>, PclReadError> {
+    use file_locker::FileLock;
+    let mut lock = FileLock::new(filename)
+        .blocking(true)
+        .lock()
+        .map_err(|e| anyhow!(e))?;
+    let mut file = BufReader::new(&mut lock.file);
+    let header = PclHeader::read(&mut file)?;
+    let body = header.read_data(&mut file, origin)?;
+    lock.unlock().map_err(|e| anyhow!(e))?;
+    Ok(body)
 }
 
 #[allow(dead_code)]
 // suppress warnings 'field is never read' - we are indeed not
 // interested in all fields, but these are the fields as defined by the PCL header.
+#[derive(Debug)]
 pub struct PclHeader {
     version: String,
     fields: Vec<PclField>,
@@ -69,6 +59,7 @@ pub struct PclHeader {
     data_start_pos: u64,
 }
 
+#[derive(Debug)]
 pub struct PclField {
     field: String,
     size: u32,
@@ -243,10 +234,14 @@ impl PclHeader {
         self.fields.iter().map(|f| f.size * f.count).sum::<u32>() as usize
     }
 
-    fn read_data(&self, f: impl BufRead + Seek) -> Result<Vec<GlobalPoint>, PclReadError> {
+    fn read_data(
+        &self,
+        f: impl BufRead + Seek,
+        origin: (f64, f64, f64),
+    ) -> Result<Vec<GlobalPoint>, PclReadError> {
         match self.data {
-            PclEncoding::Ascii => self.read_data_ascii(f),
-            PclEncoding::Binary => self.read_data_binary(f),
+            PclEncoding::Ascii => self.read_data_ascii(f, origin),
+            PclEncoding::Binary => self.read_data_binary(f, origin),
             PclEncoding::BinaryCompressed => {
                 Err(anyhow!("Binary Compressed format is not supported.").into())
             }
@@ -256,6 +251,7 @@ impl PclHeader {
     fn read_data_ascii(
         &self,
         mut f: impl BufRead + Seek,
+        origin: (f64, f64, f64),
     ) -> Result<Vec<GlobalPoint>, PclReadError> {
         let nr_points = (self.width * self.height) as usize;
         let mut points = Vec::with_capacity(nr_points);
@@ -288,16 +284,20 @@ impl PclHeader {
             }
 
             // extract x, y, z
-            let x = Self::parse_f64(fields[field_x_info.index])?;
-            let y = Self::parse_f64(fields[field_y_info.index])?;
-            let z = Self::parse_f64(fields[field_z_info.index])?;
+            let x = Self::parse_f64(fields[field_x_info.index])? - origin.0;
+            let y = Self::parse_f64(fields[field_y_info.index])? - origin.1;
+            let z = Self::parse_f64(fields[field_z_info.index])? - origin.2;
             let point = GlobalPoint::new(F64Position::new(x, y, z));
             points.push(point);
         }
         Ok(points)
     }
 
-    fn read_data_binary(&self, mut f: impl Read + Seek) -> Result<Vec<GlobalPoint>, PclReadError> {
+    fn read_data_binary(
+        &self,
+        mut f: impl Read + Seek,
+        origin: (f64, f64, f64),
+    ) -> Result<Vec<GlobalPoint>, PclReadError> {
         // calculate how many points - and subsequently how many bytes - to read.
         let points_to_read = (self.width * self.height) as usize;
         let point_size = self.point_size();
@@ -316,9 +316,9 @@ impl PclHeader {
 
         // read positions
         let mut positions = vec![F64Position::default(); points_to_read];
-        self.collect_field_as_f64(&data, "x", |i, x| positions[i].set_x(x))?;
-        self.collect_field_as_f64(&data, "y", |i, y| positions[i].set_y(y))?;
-        self.collect_field_as_f64(&data, "z", |i, z| positions[i].set_z(z))?;
+        self.collect_field_as_f64(&data, "x", |i, x| positions[i].set_x(x - origin.0))?;
+        self.collect_field_as_f64(&data, "y", |i, y| positions[i].set_y(y - origin.1))?;
+        self.collect_field_as_f64(&data, "z", |i, z| positions[i].set_z(z - origin.2))?;
 
         // create points
         let points = positions
