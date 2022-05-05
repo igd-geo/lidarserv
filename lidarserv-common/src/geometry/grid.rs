@@ -103,6 +103,12 @@ impl LevelGrid {
     pub fn cell_at(&self, position: &I32Position) -> GridCell {
         self.grid.cell_at(position)
     }
+
+    /// Returns the side length of the cells in this grid
+    #[inline]
+    pub fn cell_size(&self) -> i32 {
+        self.grid.cell_size()
+    }
 }
 
 impl I32GridHierarchy {
@@ -154,6 +160,11 @@ impl I32Grid {
                 (cell_pos.z.wrapping_add(1) << self.shift).wrapping_sub(1),
             ),
         )
+    }
+
+    /// Returns the side length of the cells in this grid
+    pub fn cell_size(&self) -> i32 {
+        1_i32 << self.shift
     }
 
     /// Returns the cell, that contains the given position.

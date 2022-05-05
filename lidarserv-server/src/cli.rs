@@ -1,3 +1,4 @@
+use lidarserv_common::index::octree::writer::TaskPriorityFunction;
 use lidarserv_common::nalgebra::Vector3;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -56,16 +57,28 @@ pub struct InitOptions {
     pub cache_size: usize,
 
     /// The order, in which to process pending tasks. This option only applies to the mno index.
-    #[structopt(long, default_value="nr_points", possible_values=&["nr_points", "lod", "newest_point", "oldest_point", "task_age"],)]
-    pub mno_task_priority: String, // todo define enum
+    #[structopt(long, default_value="NrPoints", possible_values=&["NrPoints", "Lod", "OldestPoint", "TaskAge", "NrPointsTaskAge"],)]
+    pub mno_task_priority: TaskPriorityFunction,
 
-    /// The distance between two points at the coarsest level of detail.
-    #[structopt(long, default_value = "8.0")]
+    /// The distance between two points at the coarsest level of detail. The value will be rounded towards the closest valid value.
+    #[structopt(long, default_value = "1.024")]
     pub point_grid_size: f64,
 
-    /// The size of the nodes at the coarsest level of detail. With each finer LOD, the node size will be halved. This option only applies to the mno index.
-    #[structopt(long, default_value = "1024.0")]
+    /// The size of the nodes at the coarsest level of detail. With each finer LOD, the node size will be halved. The value will be rounded towards the closest valid value. This option only applies to the mno index.
+    #[structopt(long, default_value = "131.072")]
     pub mno_node_grid_size: f64,
+
+    /// Maximum number of bogus points per node. This option only applies to the mno index.
+    #[structopt(long, default_value = "0")]
+    pub mno_bogus: usize,
+
+    /// Maximum number of bogus points per inner (non-leaf) node. Overwrites the '--mno-bogus' option, if provided. This option only applies to the mno index.
+    #[structopt(long)]
+    pub mno_bogus_inner: Option<usize>,
+
+    /// Maximum number of bogus points per leaf node. Overwrites the '--mno-bogus' option, if provided. This option only applies to the mno index.
+    #[structopt(long)]
+    pub mno_bogus_leaf: Option<usize>,
 
     /// The maximum number of points that can be inserted into a node, before that node is split. This option only applies to the bvg index.
     #[structopt(long, default_value = "100000")]

@@ -14,6 +14,7 @@ use std::cmp::{max, Ordering};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::str::FromStr;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 use std::{mem, thread};
@@ -45,6 +46,25 @@ pub enum TaskPriorityFunction {
     NrPointsWeightedByTaskAge,
     NrPointsWeightedByOldestPoint,
     NrPointsWeightedByNegNewestPoint,
+}
+
+#[derive(Debug, Copy, Clone, Error)]
+#[error("Invalid task priority function. Must be one of: 'NrPoints', 'Lod', 'OldestPoint', 'TaskAge', 'NrPointsTaskAge'")]
+pub struct TaskPriorityFunctionFromStrErr;
+
+impl FromStr for TaskPriorityFunction {
+    type Err = TaskPriorityFunctionFromStrErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NrPoints" => Ok(TaskPriorityFunction::NrPoints),
+            "Lod" => Ok(TaskPriorityFunction::NrPoints),
+            "OldestPoint" => Ok(TaskPriorityFunction::NrPoints),
+            "TaskAge" => Ok(TaskPriorityFunction::NrPoints),
+            "NrPointsTaskAge" => Ok(TaskPriorityFunction::NrPoints),
+            _ => Err(TaskPriorityFunctionFromStrErr),
+        }
+    }
 }
 
 struct Inboxes<Point> {

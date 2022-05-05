@@ -39,6 +39,8 @@ pub struct OctreeSettings {
     pub max_bogus_inner: usize,
     pub max_bogus_leaf: usize,
     pub use_metrics: bool,
+    pub point_grid_shift: u16,
+    pub node_grid_shift: u16,
 }
 
 #[derive(Error, Debug)]

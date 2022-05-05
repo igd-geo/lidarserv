@@ -48,8 +48,8 @@ fn build_octree_index(
     data_path: &Path,
 ) -> Result<Box<dyn DynIndex>, BuilderError> {
     // tree stuff
-    let node_hierarchy = I32GridHierarchy::new(14); // todo config for that
-    let point_hierarchy = I32GridHierarchy::new(21); // todo config for that
+    let node_hierarchy = I32GridHierarchy::new(settings.node_grid_shift);
+    let point_hierarchy = I32GridHierarchy::new(settings.point_grid_shift);
     let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
 
     // page loading stuff
