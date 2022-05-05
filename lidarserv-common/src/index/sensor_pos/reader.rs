@@ -99,7 +99,7 @@ where
 
     #[allow(clippy::type_complexity)] // only internal anyways
     fn lod_layer_and_coarse(
-        lods: &mut Vec<LodReader<SamplF, Point, Sampl>>,
+        lods: &mut [LodReader<SamplF, Point, Sampl>],
         coarse_lod_steps: usize,
         lod_index: usize,
     ) -> (
@@ -399,7 +399,7 @@ where
     }
 
     pub fn load_one(&mut self) -> Option<(MetaTreeNodeId, SensorPosNodeCollection<Sampl, Point>)> {
-        if let Some(node_id) = self.nodes_to_load.iter().cloned().next() {
+        if let Some(node_id) = self.nodes_to_load.iter().next().cloned() {
             self.nodes_to_load.remove(&node_id);
             let load_result = self.load_node(&node_id).unwrap_or_default();
             self.loaded.insert(node_id.clone(), load_result.clone());

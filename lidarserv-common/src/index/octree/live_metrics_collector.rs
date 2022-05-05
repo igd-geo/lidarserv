@@ -1,6 +1,5 @@
 use crossbeam_channel::{Receiver, Sender};
-use serde::de::value::F64Deserializer;
-use serde::de::{EnumAccess, Error, MapAccess, SeqAccess, Unexpected, Visitor};
+use serde::de::{Error, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::Formatter;
 use std::fs::File;

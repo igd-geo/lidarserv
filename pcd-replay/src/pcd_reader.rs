@@ -3,7 +3,6 @@ use anyhow::anyhow;
 use anyhow::Result;
 use lidarserv_server::index::point::GlobalPoint;
 use std::ffi::OsStr;
-use std::fs::File;
 use std::io::SeekFrom::{Current, Start};
 use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 use std::str::FromStr;
