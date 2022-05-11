@@ -13,7 +13,7 @@ pub struct Args {
     #[structopt(long, short, default_value = "4567")]
     pub port: u16,
 
-    #[structopt(long, default_value = "fixed", possible_values = &["fixed", "intensity"])]
+    #[structopt(long, default_value = "fixed", possible_values = &["fixed", "intensity", "rgb"])]
     pub point_color: PointColorArg,
 
     #[structopt(long, default_value = "10")]
@@ -27,6 +27,7 @@ pub struct Args {
 pub enum PointColorArg {
     Fixed,
     Intensity,
+    Rgb,
 }
 
 impl FromStr for PointColorArg {
@@ -36,6 +37,7 @@ impl FromStr for PointColorArg {
         match s {
             "fixed" => Ok(PointColorArg::Fixed),
             "intensity" => Ok(PointColorArg::Intensity),
+            "rgb" => Ok(PointColorArg::Rgb),
             _ => Err(anyhow::Error::msg(
                 "Invalid value - must be one of: 'fixed', 'intensity'",
             )),

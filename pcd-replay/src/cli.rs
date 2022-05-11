@@ -27,6 +27,14 @@ pub struct Arguments {
     #[clap(long, short = 'z', default_value = "0.0")]
     pub offset_z: f64,
 
+    /// read rgb point colors
+    #[clap(long)]
+    pub color: bool,
+
+    /// read intensities
+    #[clap(long)]
+    pub intensity: bool,
+
     /// Path to the folder in which to look for *.pcd files
     #[clap()]
     pub base_path: PathBuf,

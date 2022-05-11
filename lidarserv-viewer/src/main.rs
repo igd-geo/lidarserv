@@ -8,7 +8,7 @@ use lidarserv_server::index::point::GlobalPoint;
 use lidarserv_server::net::client::viewer::{IncrementalUpdate, ViewerClient};
 use log::{debug, trace};
 use pasture_core::containers::{PerAttributeVecPointStorage, PointBuffer};
-use pasture_core::layout::attributes::INTENSITY;
+use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY};
 use pasture_core::layout::PointType as PasturePointType;
 use pasture_core::math::AABB as PastureAABB;
 use pasture_core::nalgebra::Vector3;
@@ -16,7 +16,7 @@ use pasture_derive::PointType;
 use point_cloud_viewer::navigation::Matrices;
 use point_cloud_viewer::renderer::settings::{
     BaseRenderSettings, Color, ColorMap, PointCloudRenderSettings, PointColor, PointShape,
-    PointSize, ScalarAttributeColoring,
+    PointSize, RgbPointColoring, ScalarAttributeColoring,
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::collections::HashMap;
@@ -53,6 +53,9 @@ fn main(args: Args) {
                                 max: u16::MAX as f32,
                             })
                         }
+                        PointColorArg::Rgb => PointColor::Rgb(RgbPointColoring {
+                            attribute: COLOR_RGB,
+                        }),
                     },
                     point_shape: PointShape::Round,
                     point_size: PointSize::Fixed(args.point_size),
@@ -114,7 +117,7 @@ fn main(args: Args) {
                         .update_point_cloud(
                             point_cloud_id,
                             &node_to_pasture(node.points, offset),
-                            &[&INTENSITY],
+                            &[&INTENSITY, &COLOR_RGB],
                         )
                         .unwrap();
                 }
@@ -124,7 +127,7 @@ fn main(args: Args) {
                     let point_cloud_id = window
                         .add_point_cloud_with_attributes(
                             &node_to_pasture(node.points, offset),
-                            &[&INTENSITY],
+                            &[&INTENSITY, &COLOR_RGB],
                         )
                         .unwrap();
                     point_clouds.insert(node.node_id, point_cloud_id);
@@ -245,6 +248,8 @@ pub struct PasturePointt {
     pub position: Vector3<f64>,
     #[pasture(BUILTIN_INTENSITY)]
     pub intensity: u16,
+    #[pasture(BUILTIN_COLOR_RGB)]
+    pub color: Vector3<u16>,
 }
 
 fn node_to_pasture(points: Vec<GlobalPoint>, offset: Vector3<f64>) -> impl PointBuffer {
@@ -257,6 +262,11 @@ fn node_to_pasture(points: Vec<GlobalPoint>, offset: Vector3<f64>) -> impl Point
                 point.position().z(),
             ) - offset,
             intensity: point.attribute::<LasPointAttributes>().intensity,
+            color: Vector3::new(
+                point.attribute::<LasPointAttributes>().color.0,
+                point.attribute::<LasPointAttributes>().color.1,
+                point.attribute::<LasPointAttributes>().color.2,
+            ),
         };
         point_buf.push_point(pasture_point);
     }

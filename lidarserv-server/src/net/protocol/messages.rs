@@ -12,7 +12,10 @@ pub enum Message {
 
     /// Sent from the server to each client, after the connection got established,
     /// contains some general information about the point cloud, that is managed by the server.
-    PointCloudInfo { coordinate_system: CoordinateSystem },
+    PointCloudInfo {
+        coordinate_system: CoordinateSystem,
+        color: bool,
+    },
 
     /// First command sent from the client to the server after exchanging the hello message.
     /// This permanently sets the connection mode according to the device type and makes the server

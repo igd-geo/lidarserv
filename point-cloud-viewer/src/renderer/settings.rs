@@ -75,7 +75,9 @@ pub enum PointColor {
     /// by looking up each points color in a palette of discrete colors.
     /// Note, that this is only valid for integer point attributes.
     CategoricalAttribute(CategoricalAttributeColoring),
-    // todo: color (vec3 attribute for colored point clouds)
+
+    // todo: doc comment - and maybe rename
+    Rgb(RgbPointColoring),
 }
 
 /// Settings for coloring a point cloud based on a scalar attribute.
@@ -106,6 +108,12 @@ pub struct CategoricalAttributeColoring {
 
     /// Color palette for mapping the individual values to different colors
     pub color_palette: ColorPalette,
+}
+
+#[derive(Clone, Debug)]
+pub struct RgbPointColoring {
+    /// The vec3 attribute to use for the coloring
+    pub attribute: PointAttributeDefinition,
 }
 
 /// Defines a mapping from an input value between 0.0 and 1.0 to a color.

@@ -19,10 +19,11 @@ pub fn init_las_header(
     bounds_min: Point3<f64>,
     bounds_max: Point3<f64>,
     coordinate_system: &I32CoordinateSystem,
+    use_color: bool,
 ) -> (las::raw::Header, Format) {
     // las 1.2, Point format 0
     let version = Version::new(1, 2);
-    let mut format = Format::new(0).unwrap();
+    let mut format = Format::new(if use_color { 2 } else { 0 }).unwrap();
     format.extra_bytes = extra_bytes;
     format.is_compressed = is_compressed;
 
@@ -67,6 +68,7 @@ pub fn write_point_data_i32<W: Write, P, It>(
     mut writer: W,
     points: It,
     format: &Format,
+    use_color: bool,
 ) -> Result<[u32; 5], io::Error>
 where
     P: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
@@ -88,6 +90,7 @@ where
         let attributes = point.attribute::<LasPointAttributes>();
         let extra_bytes = point.get_extra_bytes();
         assert_eq!(extra_bytes.len(), P::NR_EXTRA_BYTES);
+
         let raw_point = las::raw::Point {
             x: point.position().x(),
             y: point.position().y(),
@@ -103,10 +106,18 @@ where
             scan_angle: ScanAngle::Rank(attributes.scan_angle_rank),
             user_data: attributes.user_data,
             point_source_id: attributes.point_source_id,
+            color: if use_color {
+                Some(las::Color::new(
+                    attributes.color.0,
+                    attributes.color.1,
+                    attributes.color.2,
+                ))
+            } else {
+                None
+            },
             extra_bytes,
             ..Default::default()
         };
-
         // write into given stream
         raw_point
             .write_to(&mut writer, format)
@@ -165,6 +176,10 @@ where
         };
         las_attr.user_data = raw.user_data;
         las_attr.point_source_id = raw.point_source_id;
+        las_attr.color = raw
+            .color
+            .map(|c| (c.red, c.green, c.blue))
+            .unwrap_or((0, 0, 0));
         point.set_attribute(las_attr);
 
         // set extra bytes

@@ -44,6 +44,10 @@ pub struct InitOptions {
     #[structopt(long)]
     pub las_no_compression: bool,
 
+    /// Enable storing of point colors
+    #[structopt(long)]
+    pub las_color: bool,
+
     /// Number of threads used for indexing the points.
     #[structopt(long, default_value = "4")]
     pub num_threads: usize,

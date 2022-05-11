@@ -24,7 +24,7 @@ where
     Q: Query + Send + Sync + 'static,
 {
     index.flush().unwrap();
-    let las_loader = I32LasReadWrite::new(true);
+    let las_loader = I32LasReadWrite::new(true, false);
 
     let time_start = Instant::now();
     let mut r = index.reader(query);

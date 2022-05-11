@@ -32,6 +32,7 @@ pub struct CoordinateSystemMismatchError;
 pub struct IndexInfo<'a> {
     pub coordinate_system: &'a I32CoordinateSystem,
     pub sampling_factory: &'a GridCenterSamplingFactory<LasPoint>,
+    pub use_point_colors: bool,
 }
 
 /// object safe wrapper for a point cloud index, otherwise very similar to [lidarserv_common::index::Index].
@@ -72,6 +73,7 @@ impl DynIndex
         IndexInfo {
             coordinate_system: self.coordinate_system(),
             sampling_factory: self.sampling_factory(),
+            use_point_colors: self.use_point_colors(),
         }
     }
 
@@ -185,6 +187,7 @@ impl DynIndex
         IndexInfo {
             coordinate_system: self.coordinate_system(),
             sampling_factory: self.sampling_factory(),
+            use_point_colors: self.use_point_colors(),
         }
     }
 

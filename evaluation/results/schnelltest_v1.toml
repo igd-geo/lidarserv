@@ -1,0 +1,26 @@
+# Changelog
+# v1 - Initial version
+# v2 - Increase default cache (results from v1 look like the cache is very scarce - maybe even be slightly too low for some parts of the test data)
+# v3 - Increase resolution of point rates at which to measure latency
+
+data_folder = "data/evaluation"
+output_file = "evaluation/results/schnelltest_v1_%d_%i.json"
+points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
+trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
+offset = [412785.340004, 5318821.784996, 290.0]
+
+[defaults]
+type = "Octree"
+cache_size = 1000
+compression = true
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = false
+priority_function = "NrPointsWeightedByTaskAge"
+latency.enable = false
+num_threads = 4
+
+[runs.prio_fn]
+priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
+
+[runs.cache]
+cache_size = [512, 1024, 2048]

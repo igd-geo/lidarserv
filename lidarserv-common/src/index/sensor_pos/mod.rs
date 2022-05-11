@@ -42,6 +42,7 @@ pub struct SensorPosIndexParams<SamplF, Point, Sampl> {
     pub max_lod: LodLevel,
     pub max_delay: Duration,
     pub coarse_lod_steps: usize,
+    pub use_point_colors: bool,
 }
 
 struct Inner<SamplF, Point, Sampl> {
@@ -57,6 +58,7 @@ struct Inner<SamplF, Point, Sampl> {
     pub max_node_split_level: LodLevel,
     pub max_delay: Duration,
     pub coarse_lod_steps: usize,
+    pub use_point_colors: bool,
 }
 
 struct Shared {
@@ -94,6 +96,7 @@ where
             max_lod,
             max_delay,
             coarse_lod_steps,
+            use_point_colors,
         } = params;
         SensorPosIndex {
             inner: Arc::new(Inner {
@@ -116,6 +119,7 @@ where
                     readers: vec![],
                 }),
                 coarse_lod_steps,
+                use_point_colors,
             }),
         }
     }
@@ -126,6 +130,10 @@ where
 
     pub fn sampling_factory(&self) -> &SamplF {
         &self.inner.sampling_factory
+    }
+
+    pub fn use_point_colors(&self) -> bool {
+        self.inner.use_point_colors
     }
 
     pub fn flush(&self) -> Result<(), IoError> {

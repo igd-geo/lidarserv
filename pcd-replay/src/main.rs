@@ -52,7 +52,7 @@ async fn network_thread(args: Arguments, files_receiver: Receiver<PathBuf>) -> R
     for filename in files_receiver {
         // read
         trace!("Reading file: {:?}", &filename);
-        let points = read_pcd_file(filename.as_os_str(), origin)?;
+        let points = read_pcd_file(filename.as_os_str(), origin, args.color, args.intensity)?;
         let nr_points = points.len();
         trace!("Read {} points from {:?}.", nr_points, &filename);
 

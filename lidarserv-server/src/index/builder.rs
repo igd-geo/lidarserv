@@ -53,7 +53,8 @@ fn build_octree_index(
     let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
 
     // page loading stuff
-    let las_loader = I32LasReadWrite::new(genaral_settings.use_compression);
+    let las_loader =
+        I32LasReadWrite::new(genaral_settings.use_compression, genaral_settings.use_color);
     let page_loader = OctreePageLoader::new(las_loader.clone(), data_path.to_owned());
     let mut directory_file_name = data_path.to_owned();
     directory_file_name.push("directory.bin");
@@ -92,6 +93,7 @@ fn build_octree_index(
         loader: las_loader,
         coordinate_system,
         metrics,
+        use_point_colors: genaral_settings.use_color,
     });
     Ok(Box::new(octree))
 }
@@ -102,7 +104,8 @@ fn build_sensor_position_index(
     data_path: &Path,
 ) -> Result<Box<dyn DynIndex>, BuilderError> {
     // las loader
-    let las_loader = I32LasReadWrite::new(general_settings.use_compression);
+    let las_loader =
+        I32LasReadWrite::new(general_settings.use_compression, general_settings.use_color);
 
     // coordinate system
     let coordinate_system = I32CoordinateSystem::from_las_transform(
@@ -148,6 +151,7 @@ fn build_sensor_position_index(
         max_lod: LodLevel::from_level(10), // todo config for this
         max_delay: Duration::from_secs(1), // todo config for this
         coarse_lod_steps: 1,               // todo config for this
+        use_point_colors: general_settings.use_color,
     };
     let spi = SensorPosIndex::new(params);
 

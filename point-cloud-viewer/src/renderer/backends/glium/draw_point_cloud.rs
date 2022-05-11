@@ -75,6 +75,7 @@ mod shaders {
         Fixed,
         ScalarAttribute(ScalarAttributeType),
         CategoricalAttribute,
+        Rgb,
     }
 
     /// Settings for building a shader.
@@ -105,6 +106,7 @@ mod shaders {
                         PointColorShader::ScalarAttribute(attribute_read_shader)
                     }
                     PointColor::CategoricalAttribute(_) => PointColorShader::CategoricalAttribute,
+                    PointColor::Rgb(_) => PointColorShader::Rgb,
                 },
                 point_shape: settings.point_shape,
                 point_size: match settings.point_size {
@@ -135,6 +137,8 @@ mod shaders {
         pub const FN_COLOR_CATEGORICAL_ATTRIBUTE: &str =
             include_str!("shaders/fn__set_point_color__categorical_attribute.glsl");
 
+        pub const FN_COLOR_RGB: &str = include_str!("shaders/fn__set_point_color__rgb.glsl");
+
         pub const FN_SIZE_CONST: &str = include_str!("shaders/fn__set_point_size__fixed.glsl");
         pub const FN_SIZE_DEPTH: &str = include_str!("shaders/fn__set_point_size__depth.glsl");
     }
@@ -160,6 +164,7 @@ mod shaders {
             PointColorShader::CategoricalAttribute => {
                 shader_src_parts::FN_COLOR_CATEGORICAL_ATTRIBUTE.to_owned()
             }
+            PointColorShader::Rgb => shader_src_parts::FN_COLOR_RGB.to_owned(),
         };
 
         vertex_shader += match config.point_size {
@@ -311,6 +316,7 @@ impl PointCloudDrawCall {
                     ],
                 ))
             }
+            PointColor::Rgb(_) => {}
         }
         match settings.point_size {
             PointSize::Fixed(size) => uniforms_f.push(("point_size_fixed", size)),
@@ -416,6 +422,33 @@ impl PointCloudDrawCall {
                 vertex_buffers.push((
                     vec!["point_color_attribute"],
                     Rc::clone(&color_attribute_buffer.gpu_data.buffer),
+                ));
+            }
+            PointColor::Rgb(rgb_color) => {
+                let color_rgb_buffer = attribute_buffers
+                    .iter()
+                    .find(|it| it.attribute == rgb_color.attribute);
+                let color_rgb_buffer = if let Some(buf) = color_rgb_buffer {
+                    buf
+                } else {
+                    return Err(RendererError::AttributeMismatch {
+                        attribute: rgb_color.attribute.clone(),
+                        problem: AttributeMismatchType::DoesNotExist,
+                    });
+                };
+                if color_rgb_buffer.gpu_data.data_type != VertexDataType::Vec3F32 {
+                    return Err(RendererError::UnsupportedOperation {
+                        backend_name: BACKEND_NAME,
+                        operation_name: format!(
+                            "RGB Point Color of data type {}",
+                            color_rgb_buffer.gpu_data.data_type
+                        ),
+                        platform_specific: false,
+                    });
+                }
+                vertex_buffers.push((
+                    vec!["point_color_rgb"],
+                    Rc::clone(&color_rgb_buffer.gpu_data.buffer),
                 ));
             }
         }

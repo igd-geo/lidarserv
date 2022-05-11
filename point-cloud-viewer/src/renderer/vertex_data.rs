@@ -30,7 +30,7 @@ where
         PointAttributeDataType::F64 => &[VertexDataType::F32],
         PointAttributeDataType::Bool => &[],
         PointAttributeDataType::Vec3u8 => &[],
-        PointAttributeDataType::Vec3u16 => &[],
+        PointAttributeDataType::Vec3u16 => &[VertexDataType::Vec3F32],
         PointAttributeDataType::Vec3f32 => &[VertexDataType::Vec3F32],
         PointAttributeDataType::Vec3f64 => {
             &[VertexDataType::Vec3F32Transform, VertexDataType::Vec3F32]
@@ -119,6 +119,10 @@ fn point_attribute_to_vertex_data_type(
                 scale
             }
         },
+
+        (PointAttributeDataType::Vec3u16, VertexDataType::Vec3F32) => VertexData::Vec3F32(
+            get_point_attribute_vertex_data(points, attribute, |v: Vector3<u16>| Vec3F32Attribute::new(v.x as f32 / 65535.0, v.y as f32 / 65535.0, v.z as f32 / 65535.0))
+        ),
 
         (PointAttributeDataType::F32, VertexDataType::F32) =>
             VertexData::F32(

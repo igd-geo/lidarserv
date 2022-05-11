@@ -17,6 +17,7 @@ static DEFAULT_LAS_POINT_ATTRS: LasPointAttributes = LasPointAttributes {
     scan_angle_rank: 0,
     user_data: 0,
     point_source_id: 0,
+    color: (0, 0, 0),
 };
 
 #[derive(Default, Clone, Debug)]

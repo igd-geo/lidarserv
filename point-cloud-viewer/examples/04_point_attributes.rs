@@ -3,7 +3,7 @@ use pasture_core::layout::attributes;
 use pasture_core::nalgebra::Point3;
 use point_cloud_viewer::renderer::settings::{
     BaseRenderSettings, CategoricalAttributeColoring, Color, ColorMap, ColorPalette,
-    PointCloudRenderSettings, PointColor, ScalarAttributeColoring,
+    PointCloudRenderSettings, PointColor, RgbPointColoring, ScalarAttributeColoring,
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 
@@ -171,6 +171,20 @@ fn main() {
                                 color_palette: rgb_palette,
                             },
                         ),
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+
+            let point_buffer = attributes_example_point_cloud(Point3::new(0.0, -1.1, 0.0));
+            window
+                .add_point_cloud_with_attributes_and_settings(
+                    &point_buffer,
+                    &[&attributes::COLOR_RGB],
+                    PointCloudRenderSettings {
+                        point_color: PointColor::Rgb(RgbPointColoring {
+                            attribute: attributes::COLOR_RGB,
+                        }),
                         ..Default::default()
                     },
                 )

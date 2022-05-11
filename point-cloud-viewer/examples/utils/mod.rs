@@ -17,6 +17,8 @@ pub struct SimplePoint {
     pub intensity: u16,
     #[pasture(BUILTIN_CLASSIFICATION)]
     pub classification: u8,
+    #[pasture(BUILTIN_COLOR_RGB)]
+    pub color: Vector3<u16>,
 }
 
 pub fn small_example_point_cloud(center: Point3<f64>, nr_points: usize) -> impl PointBuffer {
@@ -31,6 +33,7 @@ pub fn small_example_point_cloud(center: Point3<f64>, nr_points: usize) -> impl 
             position: center.coords + Vector3::new(x, y, 0.0),
             intensity: 0,
             classification: 0,
+            color: Vector3::new(0, 0, 0),
         });
     }
 
@@ -49,10 +52,14 @@ pub fn attributes_example_point_cloud(center: Point3<f64>) -> impl PointBuffer {
                 .sqrt()
                 .sin()
                 * 0.02;
+            let r = rand::random();
+            let g = rand::random();
+            let b = rand::random();
             buf.push_point(SimplePoint {
                 position: Vector3::new(px, py, pz) + center.coords,
                 intensity,
                 classification,
+                color: Vector3::new(r, g, b),
             })
         }
     }

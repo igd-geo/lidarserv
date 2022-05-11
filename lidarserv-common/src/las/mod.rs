@@ -85,17 +85,20 @@ pub struct LasPointAttributes {
     pub scan_angle_rank: i8,
     pub user_data: u8,
     pub point_source_id: u16,
+    pub color: (u16, u16, u16),
 }
 
 #[derive(Debug, Clone)]
 pub struct I32LasReadWrite {
     compression: bool,
+    color: bool,
 }
 
 impl I32LasReadWrite {
-    pub fn new(use_compression: bool) -> Self {
+    pub fn new(use_compression: bool, use_color: bool) -> Self {
         I32LasReadWrite {
             compression: use_compression,
+            color: use_color,
         }
     }
 
@@ -129,13 +132,15 @@ impl I32LasReadWrite {
             min,
             max,
             &coordinate_system,
+            self.color,
         );
 
         // encode (uncompressed) point data into buffer
         let number_of_point_records = points.len() as u32;
         let mut point_data = Vec::with_capacity(points.len() * format.len() as usize);
         let number_of_points_by_return =
-            write_point_data_i32(Cursor::new(&mut point_data), points, &format).unwrap(); // unwrap: cursor will not throw i/o errors
+            write_point_data_i32(Cursor::new(&mut point_data), points, &format, self.color)
+                .unwrap(); // unwrap: cursor will not throw i/o errors
         header.number_of_points_by_return = number_of_points_by_return;
         header.number_of_point_records = number_of_point_records;
 
@@ -215,7 +220,8 @@ impl I32LasReadWrite {
 
         // check format
         let mut format = Format::new(header.point_data_record_format)?;
-        if format.to_u8()? != 0 {
+        let point_data_record_format = format.to_u8()?;
+        if point_data_record_format != 0 && point_data_record_format != 2 {
             // only point format 0 for now
             return Err(ReadLasError::FileFormat {
                 desc: "Only point format 0 is supported.".to_string(),
@@ -323,6 +329,7 @@ where
         Point3::new(-1.0, -1.0, -1.0),
         Point3::new(1.0, 1.0, 1.0),
         coordinate_system,
+        false,
     );
     let header_pos = write.seek(SeekFrom::Current(0))?;
     match header.write_to(&mut write) {
@@ -370,6 +377,7 @@ where
                 Cursor::new(&mut point_data),
                 chunk.iter(),
                 &format,
+                false,
             )
             .unwrap(); // unwrap: cursor will not throw i/o errors
 

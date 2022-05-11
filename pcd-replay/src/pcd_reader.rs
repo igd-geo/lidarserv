@@ -1,6 +1,7 @@
 use crate::{F64Position, PointType};
 use anyhow::anyhow;
 use anyhow::Result;
+use lidarserv_server::common::las::LasPointAttributes;
 use lidarserv_server::index::point::GlobalPoint;
 use std::ffi::OsStr;
 use std::io::SeekFrom::{Current, Start};
@@ -30,6 +31,8 @@ pub fn read_pcd_file(filename: &OsStr) -> Result<Vec<GlobalPoint>, PclReadError>
 pub fn read_pcd_file(
     filename: &OsStr,
     origin: (f64, f64, f64),
+    read_color: bool,
+    read_intensity: bool,
 ) -> Result<Vec<GlobalPoint>, PclReadError> {
     use file_locker::FileLock;
     let mut lock = FileLock::new(filename)
@@ -38,7 +41,7 @@ pub fn read_pcd_file(
         .map_err(|e| anyhow!(e))?;
     let mut file = BufReader::new(&mut lock.file);
     let header = PclHeader::read(&mut file)?;
-    let body = header.read_data(&mut file, origin)?;
+    let body = header.read_data(&mut file, origin, read_color, read_intensity)?;
     lock.unlock().map_err(|e| anyhow!(e))?;
     Ok(body)
 }
@@ -80,6 +83,7 @@ pub enum PclEncoding {
     BinaryCompressed,
 }
 
+#[derive(Debug)]
 pub struct TypeInfo<'a> {
     offset: usize,
     stride: usize,
@@ -237,10 +241,12 @@ impl PclHeader {
         &self,
         f: impl BufRead + Seek,
         origin: (f64, f64, f64),
+        read_color: bool,
+        read_intensity: bool,
     ) -> Result<Vec<GlobalPoint>, PclReadError> {
         match self.data {
-            PclEncoding::Ascii => self.read_data_ascii(f, origin),
-            PclEncoding::Binary => self.read_data_binary(f, origin),
+            PclEncoding::Ascii => self.read_data_ascii(f, origin, read_color, read_intensity),
+            PclEncoding::Binary => self.read_data_binary(f, origin, read_color, read_intensity),
             PclEncoding::BinaryCompressed => {
                 Err(anyhow!("Binary Compressed format is not supported.").into())
             }
@@ -251,6 +257,8 @@ impl PclHeader {
         &self,
         mut f: impl BufRead + Seek,
         origin: (f64, f64, f64),
+        read_color: bool,
+        read_intensity: bool,
     ) -> Result<Vec<GlobalPoint>, PclReadError> {
         let nr_points = (self.width * self.height) as usize;
         let mut points = Vec::with_capacity(nr_points);
@@ -259,6 +267,19 @@ impl PclHeader {
         let field_x_info = self.get_type_info("x")?;
         let field_y_info = self.get_type_info("y")?;
         let field_z_info = self.get_type_info("z")?;
+        let fields_color_info = if read_color {
+            let field_r_info = self.get_type_info("r")?;
+            let field_g_info = self.get_type_info("g")?;
+            let field_b_info = self.get_type_info("b")?;
+            Some((field_r_info, field_g_info, field_b_info))
+        } else {
+            None
+        };
+        let field_intensity_info = if read_intensity {
+            Some(self.get_type_info("intensity")?)
+        } else {
+            None
+        };
         let nr_fields = self.fields.iter().map(|f| f.count).sum::<u32>() as usize;
 
         // read file (line by line)
@@ -286,7 +307,26 @@ impl PclHeader {
             let x = Self::parse_f64(fields[field_x_info.index])? - origin.0;
             let y = Self::parse_f64(fields[field_y_info.index])? - origin.1;
             let z = Self::parse_f64(fields[field_z_info.index])? - origin.2;
-            let point = GlobalPoint::new(F64Position::new(x, y, z));
+            let mut point = GlobalPoint::new(F64Position::new(x, y, z));
+
+            // extract color
+            let mut attrs = point.attribute::<LasPointAttributes>().clone();
+            if let Some((field_r_info, field_g_info, field_b_info)) = &fields_color_info {
+                let r = Self::parse_f64(fields[field_r_info.index])?;
+                let g = Self::parse_f64(fields[field_g_info.index])?;
+                let b = Self::parse_f64(fields[field_b_info.index])?;
+                attrs.color = (
+                    (r * u16::MAX as f64) as u16,
+                    (g * u16::MAX as f64) as u16,
+                    (b * u16::MAX as f64) as u16,
+                );
+            }
+            if let Some(intensity) = &field_intensity_info {
+                attrs.intensity =
+                    (Self::parse_f64(fields[intensity.index])? / 100.0 * u16::MAX as f64) as u16;
+            }
+            point.set_attribute(attrs);
+
             points.push(point);
         }
         Ok(points)
@@ -296,6 +336,8 @@ impl PclHeader {
         &self,
         mut f: impl Read + Seek,
         origin: (f64, f64, f64),
+        read_color: bool,
+        read_intensity: bool,
     ) -> Result<Vec<GlobalPoint>, PclReadError> {
         // calculate how many points - and subsequently how many bytes - to read.
         let points_to_read = (self.width * self.height) as usize;
@@ -315,14 +357,36 @@ impl PclHeader {
 
         // read positions
         let mut positions = vec![F64Position::default(); points_to_read];
+        let mut las_attrs = vec![LasPointAttributes::default(); points_to_read];
         self.collect_field_as_f64(&data, "x", |i, x| positions[i].set_x(x - origin.0))?;
         self.collect_field_as_f64(&data, "y", |i, y| positions[i].set_y(y - origin.1))?;
         self.collect_field_as_f64(&data, "z", |i, z| positions[i].set_z(z - origin.2))?;
+        if read_color {
+            self.collect_field_as_f64(&data, "r", |i, r| {
+                las_attrs[i].color.0 = (r * u16::MAX as f64) as u16
+            })?;
+            self.collect_field_as_f64(&data, "g", |i, g| {
+                las_attrs[i].color.1 = (g * u16::MAX as f64) as u16
+            })?;
+            self.collect_field_as_f64(&data, "b", |i, b| {
+                las_attrs[i].color.2 = (b * u16::MAX as f64) as u16
+            })?;
+        }
+        if read_intensity {
+            self.collect_field_as_f64(&data, "intensity", |i, v| {
+                las_attrs[i].intensity = (v / 100.0 * u16::MAX as f64) as u16
+            })?;
+        }
 
         // create points
         let points = positions
             .into_iter()
             .map(GlobalPoint::new)
+            .zip(las_attrs)
+            .map(|(mut p, las_a)| {
+                p.set_attribute(las_a);
+                p
+            })
             .collect::<Vec<_>>();
         Ok(points)
     }

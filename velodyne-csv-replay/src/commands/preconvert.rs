@@ -15,7 +15,8 @@ use tokio::net::TcpStream;
 
 pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
     // get coordinate system from server
-    let coordinate_system = match get_server_settings(&args).await? {
+    let (coordinate_system, _) = get_server_settings(&args).await?;
+    let coordinate_system = match coordinate_system {
         CoordinateSystem::I32CoordinateSystem { scale, offset } => {
             I32CoordinateSystem::from_las_transform(scale, offset)
         }
@@ -43,7 +44,7 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
 
 const PROTOCOL_VERSION: u32 = 1;
 
-async fn get_server_settings(args: &PreConvertArgs) -> Result<CoordinateSystem> {
+async fn get_server_settings(args: &PreConvertArgs) -> Result<(CoordinateSystem, bool)> {
     // connect
     let (_sender, mut shutdown) = tokio::sync::broadcast::channel(1);
     let tcp_con = TcpStream::connect((args.host.as_str(), args.port)).await?;
@@ -72,12 +73,15 @@ async fn get_server_settings(args: &PreConvertArgs) -> Result<CoordinateSystem> 
 
     // wait for the point cloud info.
     let pc_info = connection.read_message(&mut shutdown).await?;
-    let coordinate_system = match pc_info {
-        Message::PointCloudInfo { coordinate_system } => coordinate_system,
+    let (coordinate_system, use_color) = match pc_info {
+        Message::PointCloudInfo {
+            coordinate_system,
+            color,
+        } => (coordinate_system, color),
         _ => bail!("Protocol error"),
     };
 
-    Ok(coordinate_system)
+    Ok((coordinate_system, use_color))
 }
 
 fn read_points(
