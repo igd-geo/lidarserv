@@ -13,6 +13,15 @@ pub struct Args {
     #[structopt(long, short, default_value = "4567")]
     pub port: u16,
 
+    /// The multisampling level used during rendering.
+    ///
+    /// The value MUST be a power of 2. A value of `0` indicates, that multisampling is disabled.
+    #[structopt(long, default_value = "2")]
+    pub multisampling: u16,
+
+    #[structopt(long)]
+    pub disable_eye_dome_lighting: bool,
+
     #[structopt(long, default_value = "fixed", possible_values = &["fixed", "intensity", "rgb"])]
     pub point_color: PointColorArg,
 

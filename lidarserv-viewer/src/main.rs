@@ -14,6 +14,7 @@ use pasture_core::math::AABB as PastureAABB;
 use pasture_core::nalgebra::Vector3;
 use pasture_derive::PointType;
 use point_cloud_viewer::navigation::Matrices;
+use point_cloud_viewer::renderer::backends::glium::GliumRenderOptions;
 use point_cloud_viewer::renderer::settings::{
     BaseRenderSettings, Color, ColorMap, PointCloudRenderSettings, PointColor, PointShape,
     PointSize, RgbPointColoring, ScalarAttributeColoring,
@@ -29,118 +30,119 @@ mod cli;
 #[paw::main]
 fn main(args: Args) {
     simple_logger::init_with_level(args.log_level).unwrap();
-    point_cloud_viewer::renderer::backends::glium::GliumRenderOptions::default().run(
-        move |render_thread| {
-            // create window
-            let window = render_thread.open_window().unwrap();
-            window
-                .set_render_settings(BaseRenderSettings {
-                    window_title: "LidarServ Viewer".to_string(),
-                    grid: Some(Default::default()),
-                    enable_edl: true,
-                    ..Default::default()
-                })
-                .unwrap();
-            window
-                .set_default_point_cloud_settings(PointCloudRenderSettings {
-                    point_color: match args.point_color {
-                        PointColorArg::Fixed => PointColor::Fixed(Color::BLUE),
-                        PointColorArg::Intensity => {
-                            PointColor::ScalarAttribute(ScalarAttributeColoring {
-                                attribute: INTENSITY,
-                                color_map: ColorMap::fire(),
-                                min: 0.0,
-                                max: u16::MAX as f32,
-                            })
-                        }
-                        PointColorArg::Rgb => PointColor::Rgb(RgbPointColoring {
-                            attribute: COLOR_RGB,
-                        }),
-                    },
-                    point_shape: PointShape::Round,
-                    point_size: PointSize::Fixed(args.point_size),
-                })
-                .unwrap();
-
-            // start network thread and continuosly
-            //  - send camera matrix to server
-            //  - receive point cloud updates from server
-            let offset = Vector3::new(0.0, 0.0, 0.0);
-            let camera_receiver = window.subscribe_to_camera().unwrap();
-            let (tokio_camera_sender, tokio_camera_receiver) = tokio::sync::mpsc::channel(500);
-            let (exit_sender, mut exit_receiver) = tokio::sync::broadcast::channel(1);
-            let (updates_sender, updates_receiver) = crossbeam_channel::bounded(5);
-            thread::spawn(move || {
-                network_thread(
-                    args,
-                    &mut exit_receiver,
-                    updates_sender,
-                    tokio_camera_receiver,
-                )
-            });
-            thread::spawn(move || {
-                forward_camera(camera_receiver, tokio_camera_sender, offset);
-                exit_sender.send(()).ok();
-            });
-
-            // move to where the query is
-            // todo do not hardcode
-            window
-                .camera_movement()
-                .focus_on_bounding_box(PastureAABB::from_min_max(
-                    Point3::new(-213.7, -282.33, 0.0),
-                    Point3::new(213.7, 282.33, 50.0),
-                ))
-                .execute()
-                .unwrap();
-
-            // keep applying updates
-            let mut point_clouds = HashMap::new();
-            for update in updates_receiver.iter() {
-                let IncrementalUpdate {
-                    mut remove,
-                    mut insert,
-                } = update;
-
-                // update
-                let mut update_points = None;
-                if let Some(remove_node_id) = &remove {
-                    let matching_index = insert.iter().position(|n| n.node_id == *remove_node_id);
-                    if let Some(i) = matching_index {
-                        update_points = Some(insert.swap_remove(i));
-                        remove = None;
+    let options = GliumRenderOptions {
+        multisampling: args.multisampling,
+    };
+    options.run(move |render_thread| {
+        // create window
+        let window = render_thread.open_window().unwrap();
+        window
+            .set_render_settings(BaseRenderSettings {
+                window_title: "LidarServ Viewer".to_string(),
+                grid: Some(Default::default()),
+                enable_edl: !args.disable_eye_dome_lighting,
+                ..Default::default()
+            })
+            .unwrap();
+        window
+            .set_default_point_cloud_settings(PointCloudRenderSettings {
+                point_color: match args.point_color {
+                    PointColorArg::Fixed => PointColor::Fixed(Color::BLUE),
+                    PointColorArg::Intensity => {
+                        PointColor::ScalarAttribute(ScalarAttributeColoring {
+                            attribute: INTENSITY,
+                            color_map: ColorMap::fire(),
+                            min: 0.0,
+                            max: u16::MAX as f32,
+                        })
                     }
-                }
-                if let Some(node) = update_points {
-                    let point_cloud_id = *point_clouds.get(&node.node_id).unwrap();
-                    window
-                        .update_point_cloud(
-                            point_cloud_id,
-                            &node_to_pasture(node.points, offset),
-                            &[&INTENSITY, &COLOR_RGB],
-                        )
-                        .unwrap();
-                }
+                    PointColorArg::Rgb => PointColor::Rgb(RgbPointColoring {
+                        attribute: COLOR_RGB,
+                    }),
+                },
+                point_shape: PointShape::Round,
+                point_size: PointSize::Fixed(args.point_size),
+            })
+            .unwrap();
 
-                // insert new pcs
-                for node in insert {
-                    let point_cloud_id = window
-                        .add_point_cloud_with_attributes(
-                            &node_to_pasture(node.points, offset),
-                            &[&INTENSITY, &COLOR_RGB],
-                        )
-                        .unwrap();
-                    point_clouds.insert(node.node_id, point_cloud_id);
-                }
+        // start network thread and continuosly
+        //  - send camera matrix to server
+        //  - receive point cloud updates from server
+        let offset = Vector3::new(0.0, 0.0, 0.0);
+        let camera_receiver = window.subscribe_to_camera().unwrap();
+        let (tokio_camera_sender, tokio_camera_receiver) = tokio::sync::mpsc::channel(500);
+        let (exit_sender, mut exit_receiver) = tokio::sync::broadcast::channel(1);
+        let (updates_sender, updates_receiver) = crossbeam_channel::bounded(5);
+        thread::spawn(move || {
+            network_thread(
+                args,
+                &mut exit_receiver,
+                updates_sender,
+                tokio_camera_receiver,
+            )
+        });
+        thread::spawn(move || {
+            forward_camera(camera_receiver, tokio_camera_sender, offset);
+            exit_sender.send(()).ok();
+        });
 
-                // if there is a pc to remove:
-                if let Some(node_id) = remove {
-                    let point_cloud_id = point_clouds.remove(&node_id).unwrap();
-                    window.remove_point_cloud(point_cloud_id).unwrap();
+        // move to where the query is
+        // todo do not hardcode
+        window
+            .camera_movement()
+            .focus_on_bounding_box(PastureAABB::from_min_max(
+                Point3::new(-213.7, -282.33, 0.0),
+                Point3::new(213.7, 282.33, 50.0),
+            ))
+            .execute()
+            .unwrap();
+
+        // keep applying updates
+        let mut point_clouds = HashMap::new();
+        for update in updates_receiver.iter() {
+            let IncrementalUpdate {
+                mut remove,
+                mut insert,
+            } = update;
+
+            // update
+            let mut update_points = None;
+            if let Some(remove_node_id) = &remove {
+                let matching_index = insert.iter().position(|n| n.node_id == *remove_node_id);
+                if let Some(i) = matching_index {
+                    update_points = Some(insert.swap_remove(i));
+                    remove = None;
                 }
             }
-        },
-    );
+            if let Some(node) = update_points {
+                let point_cloud_id = *point_clouds.get(&node.node_id).unwrap();
+                window
+                    .update_point_cloud(
+                        point_cloud_id,
+                        &node_to_pasture(node.points, offset),
+                        &[&INTENSITY, &COLOR_RGB],
+                    )
+                    .unwrap();
+            }
+
+            // insert new pcs
+            for node in insert {
+                let point_cloud_id = window
+                    .add_point_cloud_with_attributes(
+                        &node_to_pasture(node.points, offset),
+                        &[&INTENSITY, &COLOR_RGB],
+                    )
+                    .unwrap();
+                point_clouds.insert(node.node_id, point_cloud_id);
+            }
+
+            // if there is a pc to remove:
+            if let Some(node_id) = remove {
+                let point_cloud_id = point_clouds.remove(&node_id).unwrap();
+                window.remove_point_cloud(point_cloud_id).unwrap();
+            }
+        }
+    });
 }
 
 #[allow(clippy::assign_op_pattern)]
