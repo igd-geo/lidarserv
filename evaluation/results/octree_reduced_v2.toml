@@ -1,0 +1,26 @@
+# Changelog
+# v1 - Initial version - reduced version of octree_v3.toml to run on my laptop hopefully during lunchtime
+# v2 - Also test parallelisation (but only up to 8 threads because this is how many cores I have). Remove prio_fn_no_cache, because it did not make it into the paper.
+
+data_folder = "data/evaluation"
+output_file = "evaluation/results/octree_reduced_v2_%d_%i.json"
+points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
+trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
+offset = [412785.340004, 5318821.784996, 290.0]
+
+[defaults]
+type = "Octree"
+cache_size = 1000
+compression = true
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = false
+priority_function = "NrPointsWeightedByTaskAge"
+latency.enable = false
+
+# test different task priority functions
+[runs.prio_fn_simple]
+priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
+
+# test how well it scales with the number of worker threads
+[runs.parallelisation]
+num_threads = [1, 2, 3, 4, 5, 6, 7, 8]

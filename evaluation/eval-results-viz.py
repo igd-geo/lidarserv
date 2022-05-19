@@ -22,9 +22,24 @@ INPUT_FILES_OCTREE_V3 = [join(PROJECT_ROOT, "evaluation/results/", file) for fil
     "octree_v3_2022-04-29_1.json",
     "octree_v3_2022-04-30_1.json",
 ]]
+INPUT_FILES_OCTREE_REDUCED_V1 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+    "octree_reduced_v1_2022-05-19_1.json",
+    "octree_reduced_v1_2022-05-19_2.json",
+    "octree_reduced_v1_2022-05-19_3.json",
+    "octree_reduced_v1_2022-05-19_4.json",
+    "octree_reduced_v1_2022-05-19_5.json",
+    "octree_reduced_v1_2022-05-19_6.json",
+]]
 INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
     "sensorpos_parallelisation_2022-04-11_1.json",
 ]]
+INPUT_FILES_COMBINEDINSERTION_RATE = [
+    (
+        join(PROJECT_ROOT, "evaluation/results/octree_v3_2022-04-30_1.json"),
+        join(PROJECT_ROOT, "evaluation/results/octree_reduced_v1_2022-05-19_6.json"),
+        join(PROJECT_ROOT, "evaluation/results/insertion_rate_hdd_vs_ssd"),
+    )
+]
 
 def main():
     # plot style
@@ -140,6 +155,49 @@ def main():
             test_runs=data["runs"]["prio_fn_simple"] + data["runs"]["prio_fn_with_bogus"],
             filename=join(output_folder, "cleanup-time-by-nr-bogus-points-foreach-priority-function.pdf")
         )
+
+    for input_file in INPUT_FILES_OCTREE_REDUCED_V1:
+
+        # read file
+        with open(input_file) as f:
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_rate_by_priority_function(
+            test_runs=data["runs"]["prio_fn_simple"],
+            filename=join(output_folder, "insertion-rate-by-priority-function.pdf")
+        )
+        plot_insertion_rate_by_priority_function(
+            test_runs=data["runs"]["prio_fn_no_cache"],
+            title="no cache",
+            filename=join(output_folder, "insertion-rate-by-priority-function-nocache.pdf")
+        )
+
+    for input_file_1, input_file_2, output_folder in INPUT_FILES_COMBINEDINSERTION_RATE:
+        with open(input_file_1) as f:
+            data_1 = json.load(f)
+        with open(input_file_2) as f:
+            data_2 = json.load(f)
+        os.makedirs(output_folder, exist_ok=True)
+
+        priofns_1 = [p["index"]["priority_function"] for p in data_1["runs"]["prio_fn_simple"]]
+        priofns_2 = [p["index"]["priority_function"] for p in data_2["runs"]["prio_fn_simple"]]
+        assert priofns_1 == priofns_2
+        fig: plt.Figure = plt.figure()
+        ax: plt.Axes = fig.subplots()
+        xs = make_x_priority_function(ax, data_1["runs"]["prio_fn_simple"])
+        xs1 = [x - .2 for x in xs]
+        xs2 = [x + .2 for x in xs]
+        ys1 = make_y_insertion_rate(ax, data_1["runs"]["prio_fn_simple"])
+        ys2 = make_y_insertion_rate(ax, data_2["runs"]["prio_fn_simple"])
+        ax.bar(xs1, ys1, 0.3, label="Virtual Server")
+        ax.bar(xs2, ys2, 0.3, label="Laptop System")
+        ax.legend()
+        fig.savefig(join(output_folder, "by-priority-function.pdf"), format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
 
 
 def make_y_insertion_rate(ax, test_runs):

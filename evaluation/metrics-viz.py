@@ -64,6 +64,8 @@ def main():
         ax1.set_ylabel("tasks", color="green")
         ax2.set_ylabel("points", color="blue")
         ax1.set_xlabel("time | s")
+        ax1.set_ylim(bottom=0.0)
+        ax2.set_ylim(bottom=0.0)
         fig.legend()
         fig.savefig(f"{input_file}.pdf", format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
