@@ -58,10 +58,10 @@ impl FromStr for TaskPriorityFunction {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "NrPoints" => Ok(TaskPriorityFunction::NrPoints),
-            "Lod" => Ok(TaskPriorityFunction::NrPoints),
-            "OldestPoint" => Ok(TaskPriorityFunction::NrPoints),
-            "TaskAge" => Ok(TaskPriorityFunction::NrPoints),
-            "NrPointsTaskAge" => Ok(TaskPriorityFunction::NrPoints),
+            "Lod" => Ok(TaskPriorityFunction::Lod),
+            "OldestPoint" => Ok(TaskPriorityFunction::OldestPoint),
+            "TaskAge" => Ok(TaskPriorityFunction::TaskAge),
+            "NrPointsTaskAge" => Ok(TaskPriorityFunction::NrPointsWeightedByTaskAge),
             _ => Err(TaskPriorityFunctionFromStrErr),
         }
     }
