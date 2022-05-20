@@ -1,0 +1,28 @@
+# Changelog
+# v1 - Initial version
+
+data_folder = "data/evaluation"
+output_file = "evaluation/results/octree_optim_v1_%d_%i.json"
+points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
+trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
+offset = [412785.340004, 5318821.784996, 290.0]
+
+[defaults]
+type = "Octree"
+cache_size = 1000
+compression = true
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = false
+latency.enable = false
+
+# test different task priority functions with bogus points
+# my hypothesis that I want to test is that bogus points solve the problems that
+# the NrPoints priority function has
+[runs.prio_fn_with_bogus]
+priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
+nr_bogus_points = [[0, 0], [100, 100], [200, 200], [300, 300], [400, 400], [800, 800], [1_600, 1_600], [2_400, 2_400], [3_200, 3_200]]
+
+# show influence of cache size on indexing performance
+[runs.prio_fn_with_cache]
+priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge", "Lod"]
+cache_size = [0, 128, 256, 384, 512, 1024, 2048, 3072, 4096]
