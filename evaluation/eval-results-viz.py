@@ -42,7 +42,7 @@ INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/
 INPUT_FILES_COMBINEDINSERTION_RATE = [
     (
         join(PROJECT_ROOT, "evaluation/results/octree_v3_2022-04-30_1.json"),
-        join(PROJECT_ROOT, "evaluation/results/octree_reduced_v1_2022-05-19_6.json"),
+        join(PROJECT_ROOT, "evaluation/results/octree_reduced_v2_2022-05-20_1.json"),
         join(PROJECT_ROOT, "evaluation/results/insertion_rate_hdd_vs_ssd"),
     )
 ]
@@ -222,6 +222,17 @@ def main():
         ax.bar(xs2, ys2, 0.3, label="Laptop System")
         ax.legend()
         fig.savefig(join(output_folder, "by-priority-function.pdf"), format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
+        fig: plt.Figure = plt.figure()
+        ax: plt.Axes = fig.subplots()
+        xs2 = make_x_nr_threads(ax, data_2["runs"]["parallelisation"])
+        xs1 = make_x_nr_threads(ax, data_1["runs"]["parallelisation"])
+        ys2 = make_y_insertion_rate(ax, data_2["runs"]["parallelisation"])
+        ys1 = make_y_insertion_rate(ax, data_1["runs"]["parallelisation"])
+        ax.scatter(xs1, ys1, label="Virtual Server")
+        ax.scatter(xs2, ys2, label="Laptop System")
+        ax.legend()
+        fig.savefig(join(output_folder, "by-nr_threads.pdf"), format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
 
 
 
