@@ -36,6 +36,9 @@ INPUT_FILES_OCTREE_REDUCED_V2 = [join(PROJECT_ROOT, "evaluation/results/", file)
     "octree_reduced_v2_2022-05-20_1.json",
     "octree_reduced_v2_2022-05-20_2.json",
 ]]
+INPUT_FILES_OCTREE_OPTIM_V1 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+    "octree_optim_v1_2022-05-20_1.json",
+]]
 INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
     "sensorpos_parallelisation_2022-04-11_1.json",
 ]]
@@ -201,6 +204,25 @@ def main():
             filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
         )
 
+    for input_file in INPUT_FILES_OCTREE_OPTIM_V1:
+
+        # read file
+        with open(input_file) as f:
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_rate_by_priority_function_bogus(
+            test_runs=data["runs"]["prio_fn_with_bogus"],
+            filename=join(output_folder, "insertion-rate-by-bogus-foreach-priority-function.pdf")
+        )
+        plot_insertion_rate_by_priority_function_cache(
+            test_runs=data["runs"]["prio_fn_with_cache"],
+            filename=join(output_folder, "insertion-rate-by-cache-size-foreach-priority-function.pdf")
+        )
+
     for input_file_1, input_file_2, output_folder in INPUT_FILES_COMBINEDINSERTION_RATE:
         with open(input_file_1) as f:
             data_1 = json.load(f)
@@ -239,7 +261,10 @@ def main():
 def make_y_insertion_rate(ax, test_runs):
     ys = [i["results"]["insertion_rate"]["insertion_rate_points_per_sec"] for i in test_runs]
     ax.set_ylabel("Insertion rate | points/s")
-    ax.set_ylim(bottom=0, top=max(ys) * 1.1)
+    ymax = max(ys) * 1.1
+    bottom, top = ax.get_ylim()
+    if bottom != 0 or top < ymax:
+        ax.set_ylim(bottom=0, top=ymax)
     return ys
 
 
@@ -410,6 +435,21 @@ def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=No
     for prio_fn in prio_fns:
         this_runs = [t for t in test_runs if rename_tpf(t["index"]["priority_function"]) == prio_fn]
         xs = make_x_nr_bogus_points(ax, this_runs)
+        ys = make_y_insertion_rate(ax, this_runs)
+        ax.plot(xs, ys, label=prio_fn, marker=".")
+    ax.legend()
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
+
+def plot_insertion_rate_by_priority_function_cache(test_runs, filename, title=None):
+    fig: plt.Figure = plt.figure()
+    ax: plt.Axes = fig.subplots()
+    prio_fns = sorted(set(rename_tpf(i["index"]["priority_function"]) for i in test_runs))
+    for prio_fn in prio_fns:
+        this_runs = [t for t in test_runs if rename_tpf(t["index"]["priority_function"]) == prio_fn]
+        xs = make_x_cache_size(ax, this_runs)
         ys = make_y_insertion_rate(ax, this_runs)
         ax.plot(xs, ys, label=prio_fn, marker=".")
     ax.legend()
