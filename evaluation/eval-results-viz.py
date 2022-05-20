@@ -30,6 +30,12 @@ INPUT_FILES_OCTREE_REDUCED_V1 = [join(PROJECT_ROOT, "evaluation/results/", file)
     "octree_reduced_v1_2022-05-19_5.json",
     "octree_reduced_v1_2022-05-19_6.json",
 ]]
+INPUT_FILES_OCTREE_REDUCED_V2 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+    "octree_reduced_v2_2022-05-19_1.json",
+    "octree_reduced_v2_2022-05-19_2.json",
+    "octree_reduced_v2_2022-05-20_1.json",
+    "octree_reduced_v2_2022-05-20_2.json",
+]]
 INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
     "sensorpos_parallelisation_2022-04-11_1.json",
 ]]
@@ -174,6 +180,25 @@ def main():
             test_runs=data["runs"]["prio_fn_no_cache"],
             title="no cache",
             filename=join(output_folder, "insertion-rate-by-priority-function-nocache.pdf")
+        )
+
+    for input_file in INPUT_FILES_OCTREE_REDUCED_V2:
+
+        # read file
+        with open(input_file) as f:
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_rate_by_priority_function(
+            test_runs=data["runs"]["prio_fn_simple"],
+            filename=join(output_folder, "insertion-rate-by-priority-function.pdf")
+        )
+        plot_insertion_rate_by_nr_threads(
+            test_runs=data["runs"]["parallelisation"],
+            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
         )
 
     for input_file_1, input_file_2, output_folder in INPUT_FILES_COMBINEDINSERTION_RATE:

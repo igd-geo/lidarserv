@@ -1,0 +1,351 @@
+{
+  "env": {
+    "finished_at": "2022-05-19T20:14:49.71651668Z",
+    "hostname": "tobias-arch",
+    "input_file": "evaluation/results/octree_reduced_v2.toml",
+    "started_at": "2022-05-19T19:23:39.656176991Z",
+    "version": "git:d5b6a72"
+  },
+  "runs": {
+    "parallelisation": [
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 1,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 7.697438343,
+            "duration_seconds": 234.569808161,
+            "insertion_rate_points_per_sec": 370797.7916796805,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 2,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 1.870136144,
+            "duration_seconds": 98.655344811,
+            "insertion_rate_points_per_sec": 893625.7667865638,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 3,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.823230692,
+            "duration_seconds": 68.254317847,
+            "insertion_rate_points_per_sec": 1263861.2592372878,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 4,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.006868727,
+            "duration_seconds": 61.576378237,
+            "insertion_rate_points_per_sec": 1412827.5023586291,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 5,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.020911853,
+            "duration_seconds": 55.808695651,
+            "insertion_rate_points_per_sec": 1553393.908021707,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 6,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 4.419324279,
+            "duration_seconds": 52.835309814,
+            "insertion_rate_points_per_sec": 1568993.6967212749,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 7,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 1.821272622,
+            "duration_seconds": 48.393689912,
+            "insertion_rate_points_per_sec": 1788952.0466967516,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 8,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 1.465081933,
+            "duration_seconds": 47.446379602,
+            "insertion_rate_points_per_sec": 1836628.0045775778,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ],
+    "prio_fn_simple": [
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 4,
+          "priority_function": "NrPoints",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 34.202415652,
+            "duration_seconds": 67.733581251,
+            "insertion_rate_points_per_sec": 881260.4254558109,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 4,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.971522095,
+            "duration_seconds": 79.981250149,
+            "insertion_rate_points_per_sec": 1082931.37854109,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 4,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 1.8564871200000002,
+            "duration_seconds": 61.688840555,
+            "insertion_rate_points_per_sec": 1413670.5763709794,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 1000,
+          "compression": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 4,
+          "priority_function": "Lod",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.348531012,
+            "duration_seconds": 94.316678053,
+            "insertion_rate_points_per_sec": 948945.8787157858,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ]
+  }
+}
