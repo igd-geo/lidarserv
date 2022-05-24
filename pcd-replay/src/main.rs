@@ -1,26 +1,27 @@
 mod cli;
 mod pcd_reader;
 
-use crate::cli::Arguments;
+use crate::cli::{Arguments, Mode};
 use crate::pcd_reader::read_pcd_file;
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::Parser;
 use crossbeam_channel::{Receiver, Sender};
-use inotify::{Events, Inotify, WatchMask};
+use inotify::{Inotify, WatchMask};
 use lidarserv_server::common::geometry::points::PointType;
 use lidarserv_server::common::geometry::position::F64Position;
-use log::{error, info, trace};
-use std::collections::HashSet;
+use log::{error, info, trace, warn};
+use std::collections::{BTreeMap, HashSet};
 use std::ffi::{OsStr, OsString};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::ptr::null_mut;
+use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::{Acquire, Release};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use std::{mem, thread};
+use std::{cmp, mem, thread};
 
 fn main() {
     let args = Arguments::parse();
@@ -80,6 +81,146 @@ async fn network_thread(args: Arguments, files_receiver: Receiver<PathBuf>) -> R
     Ok(())
 }
 
+fn inotify_mode(
+    path: PathBuf,
+    abort: Arc<AtomicBool>,
+    sender: Sender<PathBuf>,
+) -> Result<(), anyhow::Error> {
+    let mut buffer = [0; 1024];
+    let mut notify = Inotify::init()?;
+    notify.add_watch(&path, WatchMask::CLOSE)?;
+
+    let mut dedup: [HashSet<OsString>; 2] = [HashSet::new(), HashSet::with_capacity(1000)];
+
+    loop {
+        // get changed files
+        let r = notify.read_events_blocking(&mut buffer);
+
+        // check, if we should abort
+        // and do so with the correct error (if any)
+        let events = if abort.load(Acquire) {
+            return match r {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    if e.kind() == ErrorKind::Interrupted {
+                        Ok(())
+                    } else {
+                        Err(e.into())
+                    }
+                }
+            };
+        } else {
+            match r {
+                Ok(ev) => ev,
+                Err(e) => break Err(e.into()),
+            }
+        };
+
+        // send events to network thread
+        for event in events {
+            trace!("FS event: {:?}", event);
+            if let Some(name) = event.name {
+                if Path::new(name).extension() == Some(OsStr::new("pcd")) {
+                    if !dedup[0].contains(name) && !dedup[1].contains(name) {
+                        dedup[1].insert(name.to_os_string());
+                        if dedup[1].len() > 999 {
+                            dedup[0] = mem::replace(&mut dedup[1], HashSet::with_capacity(1000));
+                        }
+                        let mut full_path = path.clone();
+                        full_path.push(name);
+                        sender.send(full_path).ok();
+                        trace!("File {:?}: Triggered read", name);
+                    } else {
+                        trace!("File {:?}: Dedup, already known", name);
+                    }
+                } else {
+                    trace!("File: {:?} Skip, not a *.pcd file", name);
+                }
+            }
+        }
+    }
+}
+
+fn replay_mode(
+    base_path: PathBuf,
+    abort: Arc<AtomicBool>,
+    sender: Sender<PathBuf>,
+) -> Result<(), anyhow::Error> {
+    // scan for files
+    let mut pcd_files = BTreeMap::new();
+    for file in base_path.read_dir()? {
+        let path = file?.path();
+        if path.extension() != Some(OsStr::new("pcd")) {
+            trace!(
+                "Ignoring file, because it is not a *.pcd file: {}",
+                path.to_string_lossy()
+            );
+            continue;
+        }
+        if let Some(file_name) = path.file_name().and_then(OsStr::to_str) {
+            // remove file extension
+            let time_stamp_str = &file_name[..file_name.len() - ".pcd".len()];
+
+            // convert to number
+            let time_stamp = match u128::from_str(time_stamp_str) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+            pcd_files.insert(time_stamp, path);
+        }
+    }
+
+    // log some info
+    if pcd_files.is_empty() {
+        error!(
+            "No input files were found in the folder '{}'. Make sure, that the files are named based on the pattern 'timesstamp.pcd' (timestamp is in µs (microseconds))",
+            base_path.to_string_lossy()
+        );
+        return Ok(());
+    } else {
+        info!("Found {} input files.", pcd_files.len())
+    }
+
+    // replay!
+    let time_start = Instant::now();
+    let timestamp_base = *pcd_files.keys().min().unwrap();
+    let mut next_timestamp = timestamp_base;
+    let mut last_message = Instant::now();
+    loop {
+        let now = Instant::now();
+        let replay_until = now.duration_since(time_start).as_micros() + timestamp_base;
+        for (_, path) in pcd_files.range(next_timestamp..replay_until) {
+            sender.send(path.clone()).ok();
+        }
+        next_timestamp = replay_until;
+        match pcd_files.range(next_timestamp..).min() {
+            None => break,
+            Some((ts, _)) => {
+                let target_time = time_start + Duration::from_micros((ts - timestamp_base) as u64);
+                let current_time = Instant::now();
+                if current_time < target_time {
+                    interuptable_sleep(target_time - current_time);
+                } else {
+                    let behind_seconds = (current_time - target_time).as_secs_f64() / 1_000_000.0;
+                    if behind_seconds > 1.0
+                        && current_time.duration_since(last_message) > Duration::from_secs(1)
+                    {
+                        warn!(
+                            "Cannot send files fast enough. Currently behind by {} seconds. (Going as fast as I can to catch up)",
+                            behind_seconds
+                        );
+                        last_message = current_time;
+                    }
+                }
+                if abort.load(Acquire) {
+                    return Ok(());
+                }
+            }
+        };
+    }
+    Ok(())
+}
+
 fn main_result(args: Arguments) -> Result<(), anyhow::Error> {
     // Install a signal handler for SIGUSR1
     // The signal handler itself does nothing, but with a signal handler in place,
@@ -128,72 +269,36 @@ fn main_result(args: Arguments) -> Result<(), anyhow::Error> {
         })
     };
 
-    let path = args.base_path;
-    let mut buffer = [0; 1024];
-    let mut notify = Inotify::init()?;
-    notify.add_watch(&path, WatchMask::CLOSE)?;
-
-    let mut dedup: [HashSet<OsString>; 2] = [HashSet::new(), HashSet::with_capacity(1000)];
-
-    let inotify_thread_result = loop {
-        // get changed files
-        let r = notify.read_events_blocking(&mut buffer);
-
-        // check, if we should abort
-        // and do so with the correct error (if any)
-        let events = if abort.load(Acquire) {
-            match r {
-                Ok(_) => break Ok(()),
-                Err(e) => {
-                    if e.kind() == ErrorKind::Interrupted {
-                        break Ok(());
-                    } else {
-                        break Err(e.into());
-                    }
-                }
-            }
-        } else {
-            match r {
-                Ok(ev) => ev,
-                Err(e) => break Err(e.into()),
-            }
-        };
-
-        // send events to network thread
-        process_events(events, &mut dedup, &path, &sender);
+    let inotify_thread_result = match args.mode {
+        Mode::Live => inotify_mode(args.input_folder, abort, sender),
+        Mode::Replay => replay_mode(args.input_folder, abort, sender),
     };
 
     aborted.store(true, Release);
-    drop(sender);
     network_thread.join().unwrap()?;
     inotify_thread_result
 }
 
-fn process_events(
-    events: Events,
-    dedup: &mut [HashSet<OsString>; 2],
-    base_path: &Path,
-    sender: &Sender<PathBuf>,
-) {
-    for event in events {
-        trace!("FS event: {:?}", event);
-        if let Some(name) = event.name {
-            if Path::new(name).extension() == Some(OsStr::new("pcd")) {
-                if !dedup[0].contains(name) && !dedup[1].contains(name) {
-                    dedup[1].insert(name.to_os_string());
-                    if dedup[1].len() > 999 {
-                        dedup[0] = mem::replace(&mut dedup[1], HashSet::with_capacity(1000));
-                    }
-                    let mut full_path = base_path.to_path_buf();
-                    full_path.push(name);
-                    sender.send(full_path).ok();
-                    trace!("File {:?}: Triggered read", name);
-                } else {
-                    trace!("File {:?}: Dedup, already known", name);
-                }
+/// taken from the std rust lib (std::thread::sleep) and modified to return in case of an interrupt
+/// Returns true, if the sleep was able to complete the given duration, false if it was interrupted.
+pub fn interuptable_sleep(dur: Duration) -> bool {
+    let mut secs = dur.as_secs();
+    let mut nsecs = dur.subsec_nanos() as _;
+    unsafe {
+        while secs > 0 || nsecs > 0 {
+            let mut ts = libc::timespec {
+                tv_sec: cmp::min(libc::time_t::MAX as u64, secs) as libc::time_t,
+                tv_nsec: nsecs,
+            };
+            secs -= ts.tv_sec as u64;
+            let ts_ptr = &mut ts as *mut _;
+            if libc::nanosleep(ts_ptr, ts_ptr) == -1 {
+                assert_eq!((*libc::__errno_location()), libc::EINTR);
+                return false;
             } else {
-                trace!("File: {:?} Skip, not a *.pcd file", name);
+                nsecs = 0;
             }
         }
     }
+    true
 }
