@@ -199,7 +199,7 @@ fn replay_mode(
                 let target_time = time_start + Duration::from_micros((ts - timestamp_base) as u64);
                 let current_time = Instant::now();
                 if current_time < target_time {
-                    interuptable_sleep(target_time - current_time);
+                    interruptable_sleep(target_time - current_time);
                 } else {
                     let behind_seconds = (current_time - target_time).as_secs_f64() / 1_000_000.0;
                     if behind_seconds > 1.0
@@ -281,7 +281,7 @@ fn main_result(args: Arguments) -> Result<(), anyhow::Error> {
 
 /// taken from the std rust lib (std::thread::sleep) and modified to return in case of an interrupt
 /// Returns true, if the sleep was able to complete the given duration, false if it was interrupted.
-pub fn interuptable_sleep(dur: Duration) -> bool {
+pub fn interruptable_sleep(dur: Duration) -> bool {
     let mut secs = dur.as_secs();
     let mut nsecs = dur.subsec_nanos() as _;
     unsafe {
