@@ -26,12 +26,12 @@ cargo run --release --bin lidarserv-server -- --help
 
 Overview of the included binaries:
 
-| Binary              | Description                                                              |
-|---------------------|--------------------------------------------------------------------------|
-| lidarserv-server    | The server                                                               |
-| lidarserv-viewer    | Client that connects to the server and visualizes the served point cloud |
-| velodyne-csv-replay | Simulates a LiDAR scanner that sends point data to the server            |
-| evaluation          | Evaluation for the index data structures                                 |
+| Binary           | Description                                                              |
+|------------------|--------------------------------------------------------------------------|
+| lidarserv-server | The server                                                               |
+| lidarserv-viewer | Client that connects to the server and visualizes the served point cloud |
+| file-replay      | Simulates a LiDAR scanner that sends point data to the server            |
+| evaluation       | Evaluation for the index data structures                                 |
 
 If you are working with these tools a lot, it might be helpful to install them into your system
 so that you don't have to repeat the full cargo command every time:
@@ -39,7 +39,7 @@ so that you don't have to repeat the full cargo command every time:
 ```shell
 cargo install --path ./lidarserv-server
 cargo install --path ./lidarserv-viewer
-cargo install --path ./velodyne-csv-replay
+cargo install --path ./file-replay
 cargo install --path ./evaluation
 ```
 
@@ -83,7 +83,7 @@ The point cloud that is currently being served is still empty. In order to inser
 can connect and stream in its captured points to the server. The server will then index and store the received 
 points.
 
-Here, we will use the `velodyne-csv-replay` tool to emulate a LiDAR scanner by replaying a previously captured LiDAR 
+Here, we will use the `file-replay` tool to emulate a LiDAR scanner by replaying a previously captured LiDAR 
 dataset. The dataset consists of two csv files, `trajectory.txt` and `points.txt`. Please refer to section [CSV LiDAR captures](#csv-lidar-captures) for an in depth description of the file formats. Here is an example for how the contents of the two files look:
 
 `trajectory.txt`:
@@ -105,7 +105,7 @@ Timestamp point_3d_x point_3d_y point_3d_z Intensity Polar_Angle
 As a first step, we convert this dataset to a `*.laz` file. The resulting LAZ file can be used to replay the point data more efficiently. With the LiDAR server running, execute the following command:
 
 ```shell
-velodyne-csv-replay convert --points-file /path/to/points.txt --trajectory-file /path/to/trajectory.txt -x 412785.340004 -y 5318821.784996 -z 290.0 --fps=5 --output-file preconv.laz
+file-replay convert --points-file /path/to/points.txt --trajectory-file /path/to/trajectory.txt -x 412785.340004 -y 5318821.784996 -z 290.0 --fps=5 --output-file preconv.laz
 ```
 
 | Option                                                      | Description                                                                                                                       |
@@ -117,12 +117,12 @@ velodyne-csv-replay convert --points-file /path/to/points.txt --trajectory-file 
 
 This produces the file `preconf.laz`.
 
-Note, that the files produced by `velodyne-csv-replay convert` are no ordinary LAZ files. They contain trajectory information for each point and use specific scale and shift values in the LAS header that the server requested. This means, that it is not possible, to use arbitrary LAZ files - you have to either use the conversion tool or build your own LAZ files according to the rules in section [Preprocessed LAZ file](#preprocessed-laz-file).
+Note, that the files produced by `file-replay convert` are no ordinary LAZ files. They contain trajectory information for each point and use specific scale and shift values in the LAS header that the server requested. This means, that it is not possible, to use arbitrary LAZ files - you have to either use the conversion tool or build your own LAZ files according to the rules in section [Preprocessed LAZ file](#preprocessed-laz-file).
 
 We can now send the point cloud to the LiDAR server with the following command:
 
 ```shell
-velodyne-csv-replay replay --fps 5 preconv.laz
+file-replay replay --fps 5 preconv.laz
 ```
 
 This will stream the contents of `preconv.laz` to the LiDAR server, in the same speed, that the points originally got captured by the sensor.
@@ -619,11 +619,11 @@ OPTIONS:
     -p, --port <port>                         [default: 4567]
 ```
 
-### `velodyne-csv-replay`
+### `file-replay`
 
 ```
 USAGE:
-    velodyne-csv-replay [OPTIONS] <SUBCOMMAND>
+    file-replay [OPTIONS] <SUBCOMMAND>
 
 FLAGS:
     -h, --help       Prints help information
@@ -639,11 +639,11 @@ SUBCOMMANDS:
     replay         Replays the given laz file. Each frame sent to the server at the given frame rate (fps) contains exactly one chunk of compressed point data from the input file
 ```
 
-#### `velodyne-csv-replay convert` subcommand
+#### `file-replay convert` subcommand
 
 ```
 USAGE:
-    velodyne-csv-replay convert [OPTIONS] --output-file <output-file> --points-file <points-file>
+    file-replay convert [OPTIONS] --output-file <output-file> --points-file <points-file>
 
 FLAGS:
         --help       Prints help information
@@ -662,13 +662,13 @@ OPTIONS:
         --trajectory-file <trajectory-file>    Input file with the sensor trajectory (only required for velodyne csv files) [default: ]
 ```
 
-#### `velodyne-csv-replay replay` subcommand
+#### `file-replay replay` subcommand
 
 ```
 Replays the given laz file. Each frame sent to the server at the given frame rate (fps) contains exactly one chunk of compressed point data from the input file
 
 USAGE:
-    velodyne-csv-replay replay [OPTIONS] <input-file>
+    file-replay replay [OPTIONS] <input-file>
 
 FLAGS:
         --help       Prints help information
@@ -683,13 +683,13 @@ ARGS:
     <input-file>    Name of the file containing the point data
 ```
 
-#### `velodyne-csv-replay live-replay` subcommand
+#### `file-replay live-replay` subcommand
 
 ```
 Replays the point data directly from the csv files containing the point and trajectory information. Calculation of point positions and encoding of LAZ data is done on-the-fly
 
 USAGE:
-    velodyne-csv-replay live-replay [FLAGS] [OPTIONS] --points-file <points-file> --trajectory-file <trajectory-file>
+    file-replay live-replay [FLAGS] [OPTIONS] --points-file <points-file> --trajectory-file <trajectory-file>
 
 FLAGS:
         --help              

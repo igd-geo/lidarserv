@@ -1,4 +1,4 @@
-use crate::velodyne_csv_reader::{PointReader, TrajectoryCsvRecord, TrajectoryReader};
+use crate::file_reader::{PointReader, TrajectoryCsvRecord, TrajectoryReader};
 use anyhow::Result;
 use itertools::Itertools;
 use lidarserv_server::common::geometry::points::PointType;

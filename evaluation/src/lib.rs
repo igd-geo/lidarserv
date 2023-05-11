@@ -4,7 +4,7 @@ use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::index::sensor_pos::point::SensorPositionAttribute;
 use log::info;
 use std::path::PathBuf;
-use velodyne_csv_replay::iter_points::iter_points;
+use file_replay::iter_points::iter_points;
 
 pub mod indexes;
 pub mod insertion_rate;

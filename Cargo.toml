@@ -4,7 +4,7 @@ members = [
     "lidarserv-server",
     "lidarserv-common",
     "lidarserv-viewer",
-    "velodyne-csv-replay",
+    "file-replay",
     "pcd-replay",
     "point-cloud-viewer",
     "experiments",

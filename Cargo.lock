@@ -606,6 +606,7 @@ dependencies = [
  "crossbeam-channel",
  "default-functions-derive",
  "dotenv",
+ "file-replay",
  "gethostname",
  "git-version",
  "libmedium",
@@ -618,7 +619,6 @@ dependencies = [
  "serde_json",
  "time 0.3.9",
  "toml",
- "velodyne-csv-replay",
 ]
 
 [[package]]
@@ -626,11 +626,11 @@ name = "experiments"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "file-replay",
  "las",
  "laz 0.6.0",
  "lidarserv-common",
  "lidarserv-server",
- "velodyne-csv-replay",
 ]
 
 [[package]]
@@ -640,6 +640,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "700a35398033e1512c68ca2aa4277b0687f6ecf6454793bb6d51647fdc9205b2"
 dependencies = [
  "nix 0.23.1",
+]
+
+[[package]]
+name = "file-replay"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossbeam-channel",
+ "itertools",
+ "las",
+ "laz 0.6.0",
+ "lidarserv-server",
+ "log",
+ "paw",
+ "simple_logger",
+ "structopt",
+ "tokio",
 ]
 
 [[package]]
@@ -2412,23 +2429,6 @@ name = "vec_map"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
-
-[[package]]
-name = "velodyne-csv-replay"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "crossbeam-channel",
- "itertools",
- "las",
- "laz 0.6.0",
- "lidarserv-server",
- "log",
- "paw",
- "simple_logger",
- "structopt",
- "tokio",
-]
 
 [[package]]
 name = "version_check"
