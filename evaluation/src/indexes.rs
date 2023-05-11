@@ -33,7 +33,7 @@ pub fn create_sensor_pos_index(
     let sampling_factory = GridCenterSamplingFactory::new(point_grid_hierarchy);
     let sensor_grid_hierarchy = I32GridHierarchy::new(14);
     let meta_tree = MetaTree::new(sensor_grid_hierarchy);
-    let las_loader = I32LasReadWrite::new(settings.compression, false);
+    let las_loader = I32LasReadWrite::new(settings.compression, false, true , true);
     let page_loader = Loader::new(
         data_folder.clone(),
         settings.compression,
@@ -60,6 +60,7 @@ pub fn create_sensor_pos_index(
         max_delay: Duration::from_secs(1),
         coarse_lod_steps: 5,
         use_point_colors: false,
+        use_point_times: false,
     };
     SensorPosIndex::new(params)
 }
@@ -75,7 +76,7 @@ pub fn create_octree_index(
     let point_hierarchy = I32GridHierarchy::new(17);
     let max_lod = LodLevel::from_level(10);
     let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
-    let las_loader = I32LasReadWrite::new(settings.compression, false);
+    let las_loader = I32LasReadWrite::new(settings.compression, false, true, true);
     let page_loader = OctreePageLoader::new(las_loader.clone(), data_folder.clone());
     let mut directory_file_name = data_folder.clone();
     directory_file_name.push("directory.bin");
@@ -97,5 +98,6 @@ pub fn create_octree_index(
         coordinate_system,
         metrics: None,
         use_point_colors: false,
+        use_point_times: false,
     })
 }

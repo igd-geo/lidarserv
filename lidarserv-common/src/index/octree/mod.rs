@@ -34,6 +34,7 @@ struct Inner<Point, Sampl, SamplF> {
     coordinate_system: I32CoordinateSystem,
     metrics: Arc<LiveMetricsCollector>,
     use_point_colors: bool,
+    use_point_times: bool,
 }
 
 pub struct OctreeParams<Point, Sampl, SamplF> {
@@ -51,6 +52,7 @@ pub struct OctreeParams<Point, Sampl, SamplF> {
     pub coordinate_system: I32CoordinateSystem,
     pub metrics: Option<LiveMetricsCollector>,
     pub use_point_colors: bool,
+    pub use_point_times: bool,
 }
 
 pub struct Octree<Point, Sampl, SamplF> {
@@ -82,6 +84,7 @@ where
             coordinate_system,
             metrics,
             use_point_colors,
+            use_point_times,
         } = params;
         Octree {
             inner: Arc::new(Inner {
@@ -100,6 +103,7 @@ where
                     metrics.unwrap_or_else(LiveMetricsCollector::new_discarding_collector),
                 ),
                 use_point_colors,
+                use_point_times,
             }),
         }
     }
@@ -114,6 +118,10 @@ where
 
     pub fn use_point_colors(&self) -> bool {
         self.inner.use_point_colors
+    }
+
+    pub fn use_point_times(&self) -> bool {
+        self.inner.use_point_times
     }
 
     pub fn flush(&mut self) -> Result<(), FlushError> {

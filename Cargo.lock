@@ -2420,6 +2420,8 @@ dependencies = [
  "anyhow",
  "crossbeam-channel",
  "itertools",
+ "las",
+ "laz 0.6.0",
  "lidarserv-server",
  "log",
  "paw",

@@ -20,10 +20,13 @@ pub fn init_las_header(
     bounds_max: Point3<f64>,
     coordinate_system: &I32CoordinateSystem,
     use_color: bool,
+    use_time: bool,
 ) -> (las::raw::Header, Format) {
     // las 1.2, Point format 0
     let version = Version::new(1, 2);
-    let mut format = Format::new(if use_color { 2 } else { 0 }).unwrap();
+    let num = if use_color && use_time { 3 } else if use_color { 2 } else if use_time { 1 } else { 0 };
+    let mut format = Format::new(num).unwrap();
+
     format.extra_bytes = extra_bytes;
     format.is_compressed = is_compressed;
 
@@ -69,6 +72,7 @@ pub fn write_point_data_i32<W: Write, P, It>(
     points: It,
     format: &Format,
     use_color: bool,
+    use_time: bool,
 ) -> Result<[u32; 5], io::Error>
 where
     P: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
@@ -115,6 +119,7 @@ where
             } else {
                 None
             },
+            gps_time: if use_time { Some(attributes.gps_time) } else { None },
             extra_bytes,
             ..Default::default()
         };
@@ -143,6 +148,7 @@ pub fn read_point_data_i32<R: Read, P>(
     mut read: R,
     format: &Format,
     number_of_point_records: usize,
+    set_extra_bytes: bool,
 ) -> Result<Vec<P>, ReadLasError>
 where
     P: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
@@ -180,10 +186,13 @@ where
             .color
             .map(|c| (c.red, c.green, c.blue))
             .unwrap_or((0, 0, 0));
+        las_attr.gps_time = raw.gps_time.unwrap_or(0.0);
         point.set_attribute(las_attr);
 
         // set extra bytes
-        point.set_extra_bytes(raw.extra_bytes.as_slice());
+        if set_extra_bytes {
+            point.set_extra_bytes(raw.extra_bytes.as_slice());
+        }
         points.push(point)
     }
     Ok(points)

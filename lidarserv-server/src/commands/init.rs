@@ -18,6 +18,7 @@ pub fn run(init_options: InitOptions) -> Result<()> {
             las_offset: init_options.las_offset.0,
             use_compression: !init_options.las_no_compression,
             use_color: init_options.las_color,
+            use_time: init_options.las_time,
         },
         index_type: match init_options.index {
             Index::Mno => IndexType::Octree(OctreeSettings {

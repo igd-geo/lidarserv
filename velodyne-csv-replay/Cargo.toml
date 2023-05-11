@@ -15,3 +15,5 @@ log = "0.4.14"
 simple_logger = "2.1.0"
 itertools = "0.10.1"
 crossbeam-channel = "0.5.1"
+las = { version = "0.7.5", features = ["laz"] }
+laz = "0.6.0"

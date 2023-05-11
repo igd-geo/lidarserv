@@ -43,7 +43,7 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
 }
 
 fn build_octree_index(
-    genaral_settings: GeneralSettings,
+    general_settings: GeneralSettings,
     settings: OctreeSettings,
     data_path: &Path,
 ) -> Result<Box<dyn DynIndex>, BuilderError> {
@@ -54,14 +54,14 @@ fn build_octree_index(
 
     // page loading stuff
     let las_loader =
-        I32LasReadWrite::new(genaral_settings.use_compression, genaral_settings.use_color);
+        I32LasReadWrite::new(general_settings.use_compression, general_settings.use_color, general_settings.use_time, true);
     let page_loader = OctreePageLoader::new(las_loader.clone(), data_path.to_owned());
     let mut directory_file_name = data_path.to_owned();
     directory_file_name.push("directory.bin");
     let page_directory = GridCellDirectory::new(&settings.max_lod, directory_file_name)?;
     let coordinate_system = I32CoordinateSystem::from_las_transform(
-        genaral_settings.las_scale,
-        genaral_settings.las_offset,
+        general_settings.las_scale,
+        general_settings.las_offset,
     );
 
     let metrics = if settings.use_metrics {
@@ -80,7 +80,7 @@ fn build_octree_index(
     };
 
     let octree = Octree::new(OctreeParams {
-        num_threads: genaral_settings.nr_threads as u16,
+        num_threads: general_settings.nr_threads as u16,
         priority_function: settings.priority_function,
         max_lod: settings.max_lod,
         max_bogus_inner: settings.max_bogus_inner,
@@ -88,12 +88,13 @@ fn build_octree_index(
         node_hierarchy,
         page_loader,
         page_directory,
-        max_cache_size: genaral_settings.max_cache_size,
+        max_cache_size: general_settings.max_cache_size,
         sample_factory,
         loader: las_loader,
         coordinate_system,
         metrics,
-        use_point_colors: genaral_settings.use_color,
+        use_point_colors: general_settings.use_color,
+        use_point_times: general_settings.use_time,
     });
     Ok(Box::new(octree))
 }
@@ -105,7 +106,7 @@ fn build_sensor_position_index(
 ) -> Result<Box<dyn DynIndex>, BuilderError> {
     // las loader
     let las_loader =
-        I32LasReadWrite::new(general_settings.use_compression, general_settings.use_color);
+        I32LasReadWrite::new(general_settings.use_compression, general_settings.use_color, general_settings.use_time, true);
 
     // coordinate system
     let coordinate_system = I32CoordinateSystem::from_las_transform(
@@ -152,6 +153,7 @@ fn build_sensor_position_index(
         max_delay: Duration::from_secs(1), // todo config for this
         coarse_lod_steps: 1,               // todo config for this
         use_point_colors: general_settings.use_color,
+        use_point_times: general_settings.use_time,
     };
     let spi = SensorPosIndex::new(params);
 

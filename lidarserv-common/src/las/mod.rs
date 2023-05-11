@@ -85,6 +85,7 @@ pub struct LasPointAttributes {
     pub scan_angle_rank: i8,
     pub user_data: u8,
     pub point_source_id: u16,
+    pub gps_time: f64,
     pub color: (u16, u16, u16),
 }
 
@@ -92,13 +93,18 @@ pub struct LasPointAttributes {
 pub struct I32LasReadWrite {
     compression: bool,
     color: bool,
+    gps_time: bool,
+    las_extra_bytes: bool,
 }
 
 impl I32LasReadWrite {
-    pub fn new(use_compression: bool, use_color: bool) -> Self {
+    pub fn new(use_compression: bool, use_color: bool, use_time: bool, use_extra_bytes: bool) -> Self {
         I32LasReadWrite {
             compression: use_compression,
             color: use_color,
+
+            gps_time: use_time,
+            las_extra_bytes: use_extra_bytes,
         }
     }
 
@@ -133,13 +139,14 @@ impl I32LasReadWrite {
             max,
             &coordinate_system,
             self.color,
+            self.gps_time,
         );
 
         // encode (uncompressed) point data into buffer
         let number_of_point_records = points.len() as u32;
         let mut point_data = Vec::with_capacity(points.len() * format.len() as usize);
         let number_of_points_by_return =
-            write_point_data_i32(Cursor::new(&mut point_data), points, &format, self.color)
+            write_point_data_i32(Cursor::new(&mut point_data), points, &format, self.color, self.gps_time)
                 .unwrap(); // unwrap: cursor will not throw i/o errors
         header.number_of_points_by_return = number_of_points_by_return;
         header.number_of_point_records = number_of_point_records;
@@ -221,14 +228,13 @@ impl I32LasReadWrite {
         // check format
         let mut format = Format::new(header.point_data_record_format)?;
         let point_data_record_format = format.to_u8()?;
-        if point_data_record_format != 0 && point_data_record_format != 2 {
-            // only point format 0 for now
+        if point_data_record_format > 3 {
             return Err(ReadLasError::FileFormat {
-                desc: "Only point format 0 is supported.".to_string(),
+                desc: "Only point formats 0-3 are supported.".to_string(),
             });
         }
         format.extra_bytes = header.point_data_record_length - format.len();
-        if format.extra_bytes as usize != Point::NR_EXTRA_BYTES {
+        if (format.extra_bytes as usize != Point::NR_EXTRA_BYTES) && self.las_extra_bytes {
             // extra bytes need to match
             return Err(ReadLasError::FileFormat {
                 desc: format!(
@@ -296,10 +302,11 @@ impl I32LasReadWrite {
                 data.as_slice(),
                 &format,
                 header.number_of_point_records as usize,
+                true,
             )?
         } else {
             read.seek(SeekFrom::Start(header.offset_to_point_data as u64))?;
-            read_point_data_i32(read, &format, header.number_of_point_records as usize)?
+            read_point_data_i32(read, &format, header.number_of_point_records as usize, self.las_extra_bytes)?
         };
 
         let (coordinate_system, bounds) = get_header_info_i32(&header);
@@ -317,6 +324,8 @@ pub fn async_write_compressed_las_with_variable_chunk_size<Point, W>(
     chunks: crossbeam_channel::Receiver<Vec<Point>>,
     coordinate_system: &I32CoordinateSystem,
     mut write: W,
+    use_color: bool,
+    use_time: bool,
 ) -> Result<(), std::io::Error>
 where
     Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
@@ -329,7 +338,8 @@ where
         Point3::new(-1.0, -1.0, -1.0),
         Point3::new(1.0, 1.0, 1.0),
         coordinate_system,
-        false,
+        use_color,
+        use_time,
     );
     let header_pos = write.seek(SeekFrom::Current(0))?;
     match header.write_to(&mut write) {
@@ -365,6 +375,7 @@ where
         compressor.compress_chunks(chunks.iter().map(|chunk| {
             // update aabb
             for point in &chunk {
+                // println!("Point ({},{},{}), Int: {}, Time: {} ", point.position().x(), point.position().y(), point.position().z(), point.attribute().intensity, point.attribute().gps_time);
                 aabb.extend(point.position())
             }
 
@@ -377,7 +388,8 @@ where
                 Cursor::new(&mut point_data),
                 chunk.iter(),
                 &format,
-                false,
+                use_color,
+                use_time,
             )
             .unwrap(); // unwrap: cursor will not throw i/o errors
 

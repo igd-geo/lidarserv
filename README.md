@@ -633,7 +633,7 @@ OPTIONS:
         --log-level <log-level>    Verbosity of the command line output [default: info]  [possible values: trace, debug, info, warn, error]
 
 SUBCOMMANDS:
-    convert        Reads the csv files with point and trajectory data and converts them to a laz file, that can be used with the replay command
+    convert        Converts either velodyne csv files (trajectory + points) or a laz file to a laz file that can be used with the replay command
     help           Prints this message or the help of the given subcommand(s)
     live-replay    Replays the point data directly from the csv files containing the point and trajectory information. Calculation of point positions and encoding of LAZ data is done on-the-fly
     replay         Replays the given laz file. Each frame sent to the server at the given frame rate (fps) contains exactly one chunk of compressed point data from the input file
@@ -643,7 +643,7 @@ SUBCOMMANDS:
 
 ```
 USAGE:
-    velodyne-csv-replay convert [OPTIONS] --output-file <output-file> --points-file <points-file> --trajectory-file <trajectory-file>
+    velodyne-csv-replay convert [OPTIONS] --output-file <output-file> --points-file <points-file>
 
 FLAGS:
         --help       Prints help information
@@ -656,10 +656,10 @@ OPTIONS:
     -y, --offset-y <offset-y>                  See offset-x [default: 0.0]
     -z, --offset-z <offset-z>                  See offset-x [default: 0.0]
         --output-file <output-file>            Name of the output file
-        --points-file <points-file>            Input file with the point data
+        --points-file <points-file>            Input file with the point data (las or velodyn csv)
     -p, --port <port>                          Port for the point cloud server. The converter will briefly connect to this server to determine the correct settings for encoding the point data [default: 4567]
         --speed-factor <speed-factor>          speeds up or slows down the reader by the given factor [default: 1.0]
-        --trajectory-file <trajectory-file>    Input file with the sensor trajectory
+        --trajectory-file <trajectory-file>    Input file with the sensor trajectory (only required for velodyne csv files) [default: ]
 ```
 
 #### `velodyne-csv-replay replay` subcommand

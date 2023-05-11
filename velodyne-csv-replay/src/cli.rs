@@ -12,8 +12,8 @@ pub struct Args {
 
 #[derive(StructOpt, Debug, Clone)]
 pub enum Command {
-    /// Reads the csv files with point and trajectory data and converts them to a laz file, that can
-    /// be used with the replay command.
+    /// Converts either velodyne csv files (trajectory + points) or a laz file to a laz file
+    /// that can be used with the replay command.
     Convert(PreConvertArgs),
 
     /// Replays the given laz file.
@@ -72,11 +72,11 @@ pub struct LiveReplayArgs {
 
 #[derive(StructOpt, Debug, Clone)]
 pub struct PreConvertArgs {
-    /// Input file with the sensor trajectory
-    #[structopt(long)]
+    /// Input file with the sensor trajectory (only required for velodyne csv files)
+    #[structopt(long, default_value = "")]
     pub trajectory_file: String,
 
-    /// Input file with the point data
+    /// Input file with the point data (las or velodyn csv)
     #[structopt(long)]
     pub points_file: String,
 

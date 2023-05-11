@@ -20,6 +20,7 @@ pub struct GeneralSettings {
     pub las_offset: Vector3<f64>,
     pub use_compression: bool,
     pub use_color: bool,
+    pub use_time: bool
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

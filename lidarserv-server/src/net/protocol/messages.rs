@@ -15,6 +15,7 @@ pub enum Message {
     PointCloudInfo {
         coordinate_system: CoordinateSystem,
         color: bool,
+        time: bool,
     },
 
     /// First command sent from the client to the server after exchanging the hello message.
