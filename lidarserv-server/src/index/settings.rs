@@ -9,7 +9,7 @@ use thiserror::Error;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexSettings {
     pub general: GeneralSettings,
-    pub index_type: IndexType,
+    pub octree_settings: OctreeSettings,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,17 +21,6 @@ pub struct GeneralSettings {
     pub use_compression: bool,
     pub use_color: bool,
     pub use_time: bool
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum IndexType {
-    SensorPositionIndex(SensorPositionSettings),
-    Octree(OctreeSettings),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SensorPositionSettings {
-    pub max_nr_points_per_node: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -2,7 +2,7 @@ use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{CoordinateSystem, Position};
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
-use crate::las::{LasExtraBytes, LasPointAttributes, ReadLasError};
+use crate::las::{LasPointAttributes, ReadLasError};
 use las::point::Format;
 use las::raw::point::{Flags, ScanAngle};
 use las::raw::Header;
@@ -14,7 +14,6 @@ use std::io::{Read, Write};
 use std::string::FromUtf8Error;
 
 pub fn init_las_header(
-    extra_bytes: u16,
     is_compressed: bool,
     bounds_min: Point3<f64>,
     bounds_max: Point3<f64>,
@@ -27,7 +26,6 @@ pub fn init_las_header(
     let num = if use_color && use_time { 3 } else if use_color { 2 } else if use_time { 1 } else { 0 };
     let mut format = Format::new(num).unwrap();
 
-    format.extra_bytes = extra_bytes;
     format.is_compressed = is_compressed;
 
     // string "LIDARSERV" for system identifier and generating software
@@ -75,7 +73,7 @@ pub fn write_point_data_i32<W: Write, P, It>(
     use_time: bool,
 ) -> Result<[u32; 5], io::Error>
 where
-    P: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+    P: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
     It: Iterator,
     It::Item: Borrow<P>,
 {
@@ -92,8 +90,6 @@ where
 
         // create raw point
         let attributes = point.attribute::<LasPointAttributes>();
-        let extra_bytes = point.get_extra_bytes();
-        assert_eq!(extra_bytes.len(), P::NR_EXTRA_BYTES);
 
         let raw_point = las::raw::Point {
             x: point.position().x(),
@@ -120,7 +116,6 @@ where
                 None
             },
             gps_time: if use_time { Some(attributes.gps_time) } else { None },
-            extra_bytes,
             ..Default::default()
         };
         // write into given stream
@@ -148,10 +143,9 @@ pub fn read_point_data_i32<R: Read, P>(
     mut read: R,
     format: &Format,
     number_of_point_records: usize,
-    set_extra_bytes: bool,
 ) -> Result<Vec<P>, ReadLasError>
 where
-    P: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+    P: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
 {
     let mut points = Vec::with_capacity(number_of_point_records);
     for _ in 0..number_of_point_records {
@@ -189,10 +183,6 @@ where
         las_attr.gps_time = raw.gps_time.unwrap_or(0.0);
         point.set_attribute(las_attr);
 
-        // set extra bytes
-        if set_extra_bytes {
-            point.set_extra_bytes(raw.extra_bytes.as_slice());
-        }
         points.push(point)
     }
     Ok(points)

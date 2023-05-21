@@ -9,10 +9,6 @@ use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
 use lidarserv_common::index::octree::reader::OctreeReader;
 use lidarserv_common::index::octree::Octree;
-use lidarserv_common::index::sensor_pos::meta_tree::MetaTreeNodeId;
-use lidarserv_common::index::sensor_pos::reader::SensorPosReader;
-use lidarserv_common::index::sensor_pos::writer::SensorPosWriter;
-use lidarserv_common::index::sensor_pos::SensorPosIndex;
 use lidarserv_common::index::Node as IndexNode;
 use lidarserv_common::index::{Reader, Writer as CommonWriter};
 use lidarserv_common::query::empty::EmptyQuery;
@@ -65,104 +61,6 @@ pub trait DynReader: Send + Sync {
     fn load_one(&mut self) -> Option<Node>;
     fn remove_one(&mut self) -> Option<NodeId>;
     fn update_one(&mut self) -> Option<(NodeId, Vec<Node>)>;
-}
-
-impl DynIndex
-    for SensorPosIndex<GridCenterSamplingFactory<LasPoint>, LasPoint, GridCenterSampling<LasPoint>>
-{
-    fn index_info(&self) -> IndexInfo {
-        IndexInfo {
-            coordinate_system: self.coordinate_system(),
-            sampling_factory: self.sampling_factory(),
-            use_point_colors: self.use_point_colors(),
-            use_point_times: self.use_point_times(),
-        }
-    }
-
-    fn writer(&self) -> Box<dyn DynWriter> {
-        let wr = lidarserv_common::index::Index::writer(self);
-        Box::new(wr)
-    }
-
-    fn reader(&self) -> Box<dyn DynReader> {
-        let rd = lidarserv_common::index::Index::reader(self, EmptyQuery);
-        Box::new(rd)
-    }
-
-    fn flush(&mut self) -> Result<(), Box<dyn Error>> {
-        SensorPosIndex::flush(self).map_err(|e| Box::new(e) as Box<dyn Error>)
-    }
-}
-
-impl DynWriter for SensorPosWriter<GridCenterSampling<LasPoint>, LasPoint> {
-    fn insert_points(
-        &mut self,
-        points: Vec<LasPoint>,
-        coordinate_system: &I32CoordinateSystem,
-    ) -> Result<(), CoordinateSystemMismatchError> {
-        if *self.coordinate_system() != *coordinate_system {
-            return Err(CoordinateSystemMismatchError);
-        }
-        self.insert(points);
-        Ok(())
-    }
-}
-
-impl DynReader
-    for SensorPosReader<GridCenterSamplingFactory<LasPoint>, LasPoint, GridCenterSampling<LasPoint>>
-{
-    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
-        Reader::<LasPoint>::blocking_update(self, queries)
-    }
-
-    fn load_one(&mut self) -> Option<Node> {
-        Reader::<LasPoint>::load_one(self).map(|(node_id, node)| {
-            let node_id = meta_tree_node_id_to_proto_node_id(&node_id);
-            let node_data = node.las_files();
-            (node_id, node_data)
-        })
-    }
-
-    fn remove_one(&mut self) -> Option<NodeId> {
-        Reader::<LasPoint>::remove_one(self)
-            .as_ref()
-            .map(meta_tree_node_id_to_proto_node_id)
-    }
-
-    fn update_one(&mut self) -> Option<(NodeId, Vec<Node>)> {
-        Reader::<LasPoint>::update_one(self).map(|(node_id, replacements)| {
-            let node_id = meta_tree_node_id_to_proto_node_id(&node_id);
-            let replacements = replacements
-                .into_iter()
-                .map(|(replacement_node_id, replacement_node_data)| {
-                    let replacement_node_id =
-                        meta_tree_node_id_to_proto_node_id(&replacement_node_id);
-                    let node_data = replacement_node_data.las_files();
-                    (replacement_node_id, node_data)
-                })
-                .collect();
-            (node_id, replacements)
-        })
-    }
-}
-
-/// for use in the transmission protocol
-fn meta_tree_node_id_to_proto_node_id(node_id: &MetaTreeNodeId) -> NodeId {
-    NodeId {
-        lod_level: node_id.lod().level(),
-        id: {
-            let mut id = [0; 14];
-            let bytes_1 = node_id.tree_node().lod.level().to_le_bytes();
-            let bytes_2 = node_id.tree_node().pos.x.to_le_bytes();
-            let bytes_3 = node_id.tree_node().pos.y.to_le_bytes();
-            let bytes_4 = node_id.tree_node().pos.z.to_le_bytes();
-            id[0..2].copy_from_slice(&bytes_1);
-            id[2..6].copy_from_slice(&bytes_2);
-            id[6..10].copy_from_slice(&bytes_3);
-            id[10..14].copy_from_slice(&bytes_4);
-            id
-        },
-    }
 }
 
 /// for use in the transmission protocol

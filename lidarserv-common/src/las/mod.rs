@@ -67,13 +67,6 @@ pub struct Las<Points> {
     pub coordinate_system: I32CoordinateSystem,
 }
 
-pub trait LasExtraBytes {
-    const NR_EXTRA_BYTES: usize;
-
-    fn get_extra_bytes(&self) -> Vec<u8>;
-    fn set_extra_bytes(&mut self, extra_bytes: &[u8]);
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LasPointAttributes {
     pub intensity: u16,
@@ -94,17 +87,14 @@ pub struct I32LasReadWrite {
     compression: bool,
     color: bool,
     gps_time: bool,
-    las_extra_bytes: bool,
 }
 
 impl I32LasReadWrite {
-    pub fn new(use_compression: bool, use_color: bool, use_time: bool, use_extra_bytes: bool) -> Self {
+    pub fn new(use_compression: bool, use_color: bool, use_time: bool) -> Self {
         I32LasReadWrite {
             compression: use_compression,
             color: use_color,
-
             gps_time: use_time,
-            las_extra_bytes: use_extra_bytes,
         }
     }
 
@@ -112,7 +102,7 @@ impl I32LasReadWrite {
     where
         It: Iterator + ExactSizeIterator,
         It::Item: Borrow<Point>,
-        Point: PointType<Position = I32Position> + LasExtraBytes + WithAttr<LasPointAttributes>,
+        Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
     {
         let mut wr = Cursor::new(Vec::new());
         let Las {
@@ -133,7 +123,6 @@ impl I32LasReadWrite {
 
         // header
         let (mut header, format) = init_las_header(
-            Point::NR_EXTRA_BYTES as u16,
             self.compression,
             min,
             max,
@@ -220,7 +209,7 @@ impl I32LasReadWrite {
     pub fn read_las<R, Point>(&self, mut read: R) -> Result<Las<Vec<Point>>, ReadLasError>
     where
         R: Read + Seek + Send,
-        Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+        Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
     {
         // read header
         let header = las::raw::Header::read_from(&mut read)?;
@@ -234,16 +223,6 @@ impl I32LasReadWrite {
             });
         }
         format.extra_bytes = header.point_data_record_length - format.len();
-        if (format.extra_bytes as usize != Point::NR_EXTRA_BYTES) && self.las_extra_bytes {
-            // extra bytes need to match
-            return Err(ReadLasError::FileFormat {
-                desc: format!(
-                    "Number of extra bytes does not match. (Expected {}, got {})",
-                    Point::NR_EXTRA_BYTES,
-                    format.extra_bytes
-                ),
-            });
-        }
 
         // read vlrs
         let mut vlrs = Vec::new();
@@ -302,11 +281,10 @@ impl I32LasReadWrite {
                 data.as_slice(),
                 &format,
                 header.number_of_point_records as usize,
-                true,
             )?
         } else {
             read.seek(SeekFrom::Start(header.offset_to_point_data as u64))?;
-            read_point_data_i32(read, &format, header.number_of_point_records as usize, self.las_extra_bytes)?
+            read_point_data_i32(read, &format, header.number_of_point_records as usize)?
         };
 
         let (coordinate_system, bounds) = get_header_info_i32(&header);
@@ -328,12 +306,11 @@ pub fn async_write_compressed_las_with_variable_chunk_size<Point, W>(
     use_time: bool,
 ) -> Result<(), std::io::Error>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
     W: Write + Seek + Send,
 {
     // header
     let (mut header, format) = init_las_header(
-        Point::NR_EXTRA_BYTES as u16,
         true,
         Point3::new(-1.0, -1.0, -1.0),
         Point3::new(1.0, 1.0, 1.0),

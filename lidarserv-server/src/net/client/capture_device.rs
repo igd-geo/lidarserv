@@ -104,7 +104,7 @@ impl CaptureDeviceClient {
                     .map_err(|e| LidarServerError::Other(Box::new(e)))?;
 
                 // encode as las
-                let encoder = I32LasReadWrite::new(self.use_compression, self.use_color, self.use_time, true);
+                let encoder = I32LasReadWrite::new(self.use_compression, self.use_color, self.use_time);
                 encoder.write_las::<LasPoint, _>(Las {
                     points: las_points.iter(),
                     bounds: OptionAABB::empty(), // these bounds are technically wrong, but they do not matter for just sending them to the server.

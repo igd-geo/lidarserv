@@ -7,7 +7,6 @@ use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
 use crate::index::{Node, NodeId, Reader, Update};
 use crate::las::I32LasReadWrite;
-use crate::las::LasExtraBytes;
 use crate::las::LasPointAttributes;
 use crate::lru_cache::pager::PageDirectory;
 use crate::query::{Query, QueryExt};
@@ -41,7 +40,7 @@ pub struct OctreePage<Sampl, Point> {
 
 impl<Point, Sampl, SamplF> OctreeReader<Point, Sampl, SamplF>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
@@ -312,7 +311,7 @@ where
 
 impl<Point, Sampl, SamplF> Reader<Point> for OctreeReader<Point, Sampl, SamplF>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
@@ -387,7 +386,7 @@ where
 
 impl<Sampl, Point> Node for OctreePage<Sampl, Point>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
 {
     fn las_files(&self) -> Vec<Arc<Vec<u8>>> {

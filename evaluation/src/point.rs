@@ -1,6 +1,5 @@
 use lidarserv_common::geometry::points::{PointType, WithAttr};
 use lidarserv_common::geometry::position::I32Position;
-use lidarserv_common::index::sensor_pos::point::SensorPositionAttribute;
 use lidarserv_common::las::{LasExtraBytes, LasPointAttributes};
 use std::mem::size_of;
 
@@ -24,7 +23,6 @@ static DEFAULT_LAS_POINT_ATTRS: LasPointAttributes = LasPointAttributes {
 #[derive(Default, Clone, Debug)]
 pub struct Point {
     pub position: I32Position,
-    pub sensor_position: SensorPositionAttribute,
     pub point_id: PointIdAttribute,
 }
 
@@ -40,16 +38,6 @@ impl PointType for Point {
 
     fn position(&self) -> &Self::Position {
         &self.position
-    }
-}
-
-impl WithAttr<SensorPositionAttribute> for Point {
-    fn value(&self) -> &SensorPositionAttribute {
-        &self.sensor_position
-    }
-
-    fn set_value(&mut self, new_value: SensorPositionAttribute) {
-        self.sensor_position = new_value;
     }
 }
 
@@ -74,23 +62,5 @@ impl WithAttr<PointIdAttribute> for Point {
 
     fn set_value(&mut self, new_value: PointIdAttribute) {
         self.point_id = new_value;
-    }
-}
-
-impl LasExtraBytes for Point {
-    const NR_EXTRA_BYTES: usize = SensorPositionAttribute::NR_EXTRA_BYTES + size_of::<usize>();
-
-    fn get_extra_bytes(&self) -> Vec<u8> {
-        let mut extra = self.sensor_position.get_extra_bytes();
-        extra.extend(self.point_id.0.to_le_bytes());
-        extra
-    }
-
-    fn set_extra_bytes(&mut self, extra_bytes: &[u8]) {
-        let mut point_id_bytes = [0; size_of::<usize>()];
-        let (sensor_pos, rest) = extra_bytes.split_at(SensorPositionAttribute::NR_EXTRA_BYTES);
-        self.sensor_position.set_extra_bytes(sensor_pos);
-        point_id_bytes.copy_from_slice(rest);
-        self.point_id.0 = usize::from_le_bytes(point_id_bytes);
     }
 }

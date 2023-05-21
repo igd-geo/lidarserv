@@ -3,14 +3,12 @@ use lidarserv_common::geometry::position::{
     CoordinateSystemError, F64CoordinateSystem, F64Position, I32CoordinateSystem, I32Position,
     Position,
 };
-use lidarserv_common::index::sensor_pos::point::SensorPositionAttribute;
-use lidarserv_common::las::{LasExtraBytes, LasPointAttributes};
+use lidarserv_common::las::{LasPointAttributes};
 
 /// Point type for the lidar server.
 #[derive(Debug, Clone)]
-pub struct GenericPoint<Position, SensorPos> {
+pub struct GenericPoint<Position> {
     position: Position,
-    sensor_pos: SensorPos,
     las_attributes: Box<LasPointAttributes>,
 }
 
@@ -19,24 +17,20 @@ pub struct GenericPoint<Position, SensorPos> {
 /// meaningful in the context of some coordinate system
 /// ([lidarserv_common::geometry::position::I32CoordinateSystem]), that will apply some scale
 /// and offset transformation.
-pub type LasPoint = GenericPoint<I32Position, SensorPositionAttribute>;
+pub type LasPoint = GenericPoint<I32Position>;
 
 /// Point format with f64 coordinates in global space.
-#[derive(Clone, Debug, Default)]
-pub struct GlobalSensorPositionAttribute(pub F64Position);
-pub type GlobalPoint = GenericPoint<F64Position, GlobalSensorPositionAttribute>;
+pub type GlobalPoint = GenericPoint<F64Position>;
 
-impl<Pos, T> PointType for GenericPoint<Pos, T>
+impl<Pos> PointType for GenericPoint<Pos>
 where
     Pos: Position + Default,
-    T: Default,
 {
     type Position = Pos;
 
     fn new(position: Self::Position) -> Self {
         GenericPoint {
             position,
-            sensor_pos: Default::default(),
             las_attributes: Default::default(),
         }
     }
@@ -46,52 +40,13 @@ where
     }
 }
 
-impl<Pos> WithAttr<GlobalSensorPositionAttribute>
-    for GenericPoint<Pos, GlobalSensorPositionAttribute>
-where
-    Pos: Position,
-{
-    fn value(&self) -> &GlobalSensorPositionAttribute {
-        &self.sensor_pos
-    }
-
-    fn set_value(&mut self, new_value: GlobalSensorPositionAttribute) {
-        self.sensor_pos = new_value;
-    }
-}
-
-impl<Pos> WithAttr<SensorPositionAttribute> for GenericPoint<Pos, SensorPositionAttribute>
-where
-    Pos: Position,
-{
-    fn value(&self) -> &SensorPositionAttribute {
-        &self.sensor_pos
-    }
-
-    fn set_value(&mut self, new_value: SensorPositionAttribute) {
-        self.sensor_pos = new_value;
-    }
-}
-
-impl<Pos, T> WithAttr<LasPointAttributes> for GenericPoint<Pos, T> {
+impl<Pos> WithAttr<LasPointAttributes> for GenericPoint<Pos> {
     fn value(&self) -> &LasPointAttributes {
         self.las_attributes.as_ref()
     }
 
     fn set_value(&mut self, new_value: LasPointAttributes) {
         *self.las_attributes = new_value
-    }
-}
-
-impl LasExtraBytes for LasPoint {
-    const NR_EXTRA_BYTES: usize = SensorPositionAttribute::NR_EXTRA_BYTES;
-
-    fn get_extra_bytes(&self) -> Vec<u8> {
-        self.sensor_pos.get_extra_bytes()
-    }
-
-    fn set_extra_bytes(&mut self, extra_bytes: &[u8]) {
-        self.sensor_pos.set_extra_bytes(extra_bytes)
     }
 }
 
@@ -103,15 +58,12 @@ impl GlobalPoint {
     ) -> Result<LasPoint, CoordinateSystemError> {
         let GlobalPoint {
             position,
-            sensor_pos: GlobalSensorPositionAttribute(sensor_position),
             las_attributes,
         } = self;
         let global = F64CoordinateSystem::new();
         let las_position = position.transcode(&global, coordinate_system)?;
-        let las_sensor_position = sensor_position.transcode(&global, coordinate_system)?;
         Ok(LasPoint {
             position: las_position,
-            sensor_pos: SensorPositionAttribute(las_sensor_position),
             las_attributes,
         })
     }
@@ -122,18 +74,13 @@ impl GlobalPoint {
     ) -> GlobalPoint {
         let LasPoint {
             position,
-            sensor_pos: SensorPositionAttribute(sensor_position),
             las_attributes,
         } = las_point;
         let global = F64CoordinateSystem::new();
         // unwrap: transcoding to F64CoordinateSystem never fails
         let position = position.transcode(coordinate_system, &global).unwrap();
-        let sensor_position = sensor_position
-            .transcode(coordinate_system, &global)
-            .unwrap();
         GlobalPoint {
             position,
-            sensor_pos: GlobalSensorPositionAttribute(sensor_position),
             las_attributes,
         }
     }

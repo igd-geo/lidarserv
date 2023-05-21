@@ -4,7 +4,7 @@ use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::Sampling;
 use crate::index::octree::grid_cell_directory::GridCellDirectory;
-use crate::las::{I32LasReadWrite, Las, LasExtraBytes, LasPointAttributes, ReadLasError};
+use crate::las::{I32LasReadWrite, Las, LasPointAttributes, ReadLasError};
 use crate::lru_cache::pager::{CacheLoadError, IoError, PageFileHandle, PageLoader, PageManager};
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
@@ -41,7 +41,7 @@ pub struct Node<Sampl, Point> {
 
 impl<Sampl, Point> Default for Page<Sampl, Point>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
 {
     fn default() -> Self {
@@ -51,7 +51,7 @@ where
 
 impl<Sampl, Point> Page<Sampl, Point>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
 {
     pub fn from_binary(data: Vec<u8>) -> Self {
@@ -242,7 +242,7 @@ where
 
 impl<Point, Sampl> PageFileHandle for OctreeFileHandle<Page<Sampl, Point>>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
 {
     type Data = Page<Sampl, Point>;

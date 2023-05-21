@@ -1,7 +1,6 @@
 # Lidar Serv
 
 ![](img/mno.mp4)
-![](img/bvg.mp4)
 
 ## Table of Contents
 
@@ -61,7 +60,6 @@ The most important ones are:
 | Option            | Description                                                   |
 |-------------------|---------------------------------------------------------------|
 | `--index mno`     | Uses the octree index structure for indexing the point cloud. |
-| `--index bvg`     | Uses the sensor position index for indexing the point cloud.  |
 | `--num-threads 4` | The number of threads to use for indexing.                    |
 
 The options are stored in `my-pointcloud/settings.json`. You can change the options later by editing this file. 

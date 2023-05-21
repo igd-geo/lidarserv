@@ -86,7 +86,7 @@ async fn capture_device_mode(
     index: Arc<dyn DynIndex>,
     mut shutdown: Receiver<()>,
 ) -> Result<(), LidarServerError> {
-    let las_reader = I32LasReadWrite::new(false, index.index_info().use_point_colors, true, true);
+    let las_reader = I32LasReadWrite::new(false, index.index_info().use_point_colors, true);
     let mut writer = index.writer();
 
     // keep receiving 'InsertPoints' messages, until the connection is closed

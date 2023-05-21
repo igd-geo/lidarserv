@@ -44,9 +44,6 @@ INPUT_FILES_OCTREE_OPTIM_V1 = [join(PROJECT_ROOT, "evaluation/results/", file) f
     "octree_optim_v1_2022-05-22_2.json",
     "octree_optim_v1_2022-05-23_1.json",
 ]]
-INPUT_FILES_SENSORPOS_PARALLELISATION = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
-    "sensorpos_parallelisation_2022-04-11_1.json",
-]]
 INPUT_FILES_COMBINEDINSERTION_RATE = [
     (
         join(PROJECT_ROOT, "evaluation/results/octree_v3_2022-04-30_1.json"),
@@ -63,27 +60,6 @@ def main():
     # without this pdf rendering of pages with figures is extremely slow, especially when zooming in a lot and
     # regularly crashes the viewer...
     mpl.rcParams['pdf.fonttype'] = 42
-
-    for input_file in INPUT_FILES_SENSORPOS_PARALLELISATION:
-
-        # read file
-        with open(input_file) as f:
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        # plot
-        plot_insertion_rate_by_nr_threads(
-            test_runs=data["num_threads"],
-            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
-        )
-        plot_insertion_rate_by_nr_threads(
-            test_runs=data["num_threads_no_compression"],
-            title="no compression",
-            filename=join(output_folder, "insertion-rate-by-nr-threads-no-compression.pdf")
-        )
 
     for input_file in INPUT_FILES_OCTREE_V1:
 
@@ -550,12 +526,8 @@ def plot_insertion_rates_by_disk_speed(data, filename, title=None):
     y_flat = [jt for run in data for jt in run["data"]["compression"]]
     y_octree_compression = [it["octree_index"]["insertion_rate"]["insertion_rate_points_per_sec"] for it in y_flat if it["config"]["compression"] is True]
     y_octree_nocompression = [it["octree_index"]["insertion_rate"]["insertion_rate_points_per_sec"] for it in y_flat if it["config"]["compression"] is False]
-    y_sensorpos_compression = [it["sensor_pos_index"]["insertion_rate"]["insertion_rate_points_per_sec"] for it in y_flat if it["config"]["compression"] is True]
-    y_sensorpos_nocompression = [it["sensor_pos_index"]["insertion_rate"]["insertion_rate_points_per_sec"] for it in y_flat if it["config"]["compression"] is False]
     ax.plot(xs, y_octree_compression, label="octree_index with compression")
     ax.plot(xs, y_octree_nocompression, label="octree_index no compression")
-    ax.plot(xs, y_sensorpos_compression, label="sensor_pos_index with compression")
-    ax.plot(xs, y_sensorpos_nocompression, label="sensor_pos_index no compression")
     ax.set_ylim(bottom=0)
     ax.legend()
     if title is not None:
@@ -584,28 +556,10 @@ def plot_latencies_by_disk_speed(data, filename, title=None):
     y1_octree_laz = [laz[index]["octree_index"]["latency"]["all_lods"]["quantiles"][3]["value"] for index in ids]   # 25% quantile
     y2_octree_laz = [laz[index]["octree_index"]["latency"]["all_lods"]["quantiles"][9]["value"] for index in ids]   # 75% quantile
 
-
-    ids = [index for index, it in enumerate(data) if las[index]["sensor_pos_index"]["latency"] is not None]
-    xs_sensorpos_las = [xs[index] for index in ids]
-    y_sensorpos_las = [las[index]["sensor_pos_index"]["latency"]["all_lods"]["median_latency_seconds"] for index in ids]  # median
-    y1_sensorpos_las = [las[index]["sensor_pos_index"]["latency"]["all_lods"]["quantiles"][3]["value"] for index in ids]   # 25% quantile
-    y2_sensorpos_las = [las[index]["sensor_pos_index"]["latency"]["all_lods"]["quantiles"][9]["value"] for index in ids]   # 75% quantile
-
-    ids = [index for index, it in enumerate(data) if laz[index]["sensor_pos_index"]["latency"] is not None]
-    xs_sensorpos_laz = [xs[index] for index in ids]
-    y_sensorpos_laz = [laz[index]["sensor_pos_index"]["latency"]["all_lods"]["median_latency_seconds"] for index in ids]  # median
-    y1_sensorpos_laz = [laz[index]["sensor_pos_index"]["latency"]["all_lods"]["quantiles"][3]["value"] for index in ids]   # 25% quantile
-    y2_sensorpos_laz = [laz[index]["sensor_pos_index"]["latency"]["all_lods"]["quantiles"][9]["value"] for index in ids]   # 75% quantile
-
     ax.fill_between(xs_octree_laz, y1_octree_laz, y2_octree_laz, alpha=.2, linewidth=0)
     ax.plot(xs_octree_laz, y_octree_laz, label="octree_index with compression")
     ax.fill_between(xs_octree_las, y1_octree_las, y2_octree_las, alpha=.2, linewidth=0)
     ax.plot(xs_octree_las, y_octree_las, label="octree_index no compression")
-
-    ax.fill_between(xs_sensorpos_laz, y1_sensorpos_laz, y2_sensorpos_laz, alpha=.2, linewidth=0)
-    ax.plot(xs_sensorpos_laz, y_sensorpos_laz, label="sensor_pos_index with compression")
-    ax.fill_between(xs_sensorpos_las, y1_sensorpos_las, y2_sensorpos_las, alpha=.2, linewidth=0)
-    ax.plot(xs_sensorpos_las, y_sensorpos_las, label="sensor_pos_index no compression")
 
     ax.set_ylim(bottom=0, top=0.125)
 

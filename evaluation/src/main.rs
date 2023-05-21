@@ -80,14 +80,9 @@ fn main() {
         run.apply_defaults(&config.defaults);
         let mut run_results = Vec::new();
         for index in &run.index {
-            let result = match index.typ {
-                SystemUnderTest::Octree => evaluate(&points, &run, &config.base, || {
+            let result = evaluate(&points, &run, &config.base, || {
                     create_octree_index(coordinate_system.clone(), &config.base, &index)
-                }),
-                SystemUnderTest::SensorPosTree => evaluate(&points, &run, &config.base, || {
-                    create_sensor_pos_index(coordinate_system.clone(), &config.base, &index)
-                }),
-            };
+            });
             run_results.push(json!({
                 "index": index,
                 "results": result,

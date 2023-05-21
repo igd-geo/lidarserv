@@ -28,10 +28,6 @@ pub enum Command {
 
 #[derive(StructOpt, Debug)]
 pub struct InitOptions {
-    /// Index structure to use so the point cloud can be queried efficiently.
-    #[structopt(long, possible_values=&["mno", "bvg"], default_value = "mno")]
-    pub index: Index,
-
     /// The resolution used for storing point data.
     #[structopt(long, default_value = "0.001")]
     pub las_scale: VectorOption,
@@ -88,10 +84,6 @@ pub struct InitOptions {
     #[structopt(long)]
     pub mno_bogus_leaf: Option<usize>,
 
-    /// The maximum number of points that can be inserted into a node, before that node is split. This option only applies to the bvg index.
-    #[structopt(long, default_value = "100000")]
-    pub bvg_max_points_per_node: usize,
-
     /// If enabled, some metrics are collected during indexing and written to a file named 'metrics_%i.cbor',
     /// where %i is a sequentially increasing number. This option only applies to the mno index.
     #[structopt(long)]
@@ -117,26 +109,6 @@ pub struct ServeOptions {
     /// Use the `init` command first, to initialize a new point cloud in that folder. By default, the current folder will be used.
     #[structopt(default_value = ".", hide_default_value = true)]
     pub path: PathBuf,
-}
-
-#[derive(Debug)]
-pub enum Index {
-    Mno,
-    Bvg,
-}
-
-impl FromStr for Index {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "mno" => Ok(Index::Mno),
-            "bvg" => Ok(Index::Bvg),
-            _ => Err(anyhow::Error::msg(
-                "Unrecognized index structure. Valid values are: mno, bvg",
-            )),
-        }
-    }
 }
 
 #[derive(Debug)]

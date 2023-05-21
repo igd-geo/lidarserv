@@ -171,7 +171,7 @@ where
             Message::IncrementalResult { replaces, nodes } => {
                 // read laz segments
                 *self.received_updates.lock().unwrap() += 1;
-                let las_reader = I32LasReadWrite::new(true, true, true, true); // use_compression / use_color parameter does not matter, when only used for reading
+                let las_reader = I32LasReadWrite::new(true, true, true); // use_compression / use_color parameter does not matter, when only used for reading
                 let mut insert_nodes = Vec::new();
                 for (insert_node_id, insert_node_las_segments) in nodes {
                     let mut points = Vec::new();

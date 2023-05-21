@@ -6,7 +6,6 @@ use std::error::Error;
 use std::sync::Arc;
 
 pub mod octree;
-pub mod sensor_pos;
 
 pub trait Index<Point>
 where

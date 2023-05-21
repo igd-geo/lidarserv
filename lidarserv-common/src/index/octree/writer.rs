@@ -6,7 +6,7 @@ use crate::index::octree::live_metrics_collector::{LiveMetricsCollector, MetricN
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
 use crate::index::Writer;
-use crate::las::{LasExtraBytes, LasPointAttributes, ReadLasError};
+use crate::las::{LasPointAttributes, ReadLasError};
 use crate::lru_cache::pager::{CacheCleanupError, CacheLoadError};
 use log::info;
 use serde::{Deserialize, Serialize};
@@ -295,7 +295,7 @@ impl<P> Inboxes<P> {
 
 impl<Point, Sampl, SamplF> OctreeWorkerThread<Point, Sampl, SamplF>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point> + Clone,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
@@ -470,7 +470,7 @@ where
 
 impl<Point> OctreeWriter<Point>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
 {
     pub(super) fn new<Sampl, SamplF>(inner: Arc<Inner<Point, Sampl, SamplF>>) -> Self
     where
@@ -543,7 +543,7 @@ where
 
 impl<Point> Writer<Point> for OctreeWriter<Point>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
 {
     fn backlog_size(&self) -> usize {
         self.nr_points_waiting()

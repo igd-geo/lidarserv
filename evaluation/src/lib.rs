@@ -1,7 +1,6 @@
 use crate::point::{Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
-use lidarserv_common::index::sensor_pos::point::SensorPositionAttribute;
 use log::info;
 use std::path::PathBuf;
 use file_replay::iter_points::iter_points;
@@ -31,7 +30,6 @@ pub fn read_points(
         let las_point = p.into_las_point(coordinate_system).unwrap();
         Point {
             position: las_point.position().clone(),
-            sensor_position: las_point.attribute::<SensorPositionAttribute>().clone(),
             point_id: PointIdAttribute(id),
         }
     })
@@ -46,8 +44,5 @@ pub fn reset_data_folder(settings: &settings::Base) {
     std::fs::create_dir(&data_folder).unwrap();
     let mut octree = data_folder.clone();
     octree.push("octree");
-    let mut sensorpos = data_folder;
-    sensorpos.push("sensorpos");
     std::fs::create_dir(&octree).unwrap();
-    std::fs::create_dir(&sensorpos).unwrap();
 }

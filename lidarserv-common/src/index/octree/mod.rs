@@ -15,7 +15,7 @@ use crate::index::octree::page_manager::{LasPageManager, OctreePageLoader, Page}
 use crate::index::octree::reader::OctreeReader;
 use crate::index::octree::writer::{OctreeWriter, TaskPriorityFunction};
 use crate::index::Index;
-use crate::las::{I32LasReadWrite, LasExtraBytes, LasPointAttributes};
+use crate::las::{I32LasReadWrite, LasPointAttributes};
 use crate::query::Query;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
@@ -68,7 +68,7 @@ pub struct FlushError(String);
 
 impl<Point, Sampl, SamplF> Octree<Point, Sampl, SamplF>
 where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + LasExtraBytes + Clone,
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
 {
     pub fn new(params: OctreeParams<Point, Sampl, SamplF>) -> Self {
@@ -150,7 +150,6 @@ impl<Point, Sampl, SamplF> Index<Point> for Octree<Point, Sampl, SamplF>
 where
     Point: PointType<Position = I32Position>
         + WithAttr<LasPointAttributes>
-        + LasExtraBytes
         + Clone
         + Send
         + Sync
