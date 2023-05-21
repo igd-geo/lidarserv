@@ -387,6 +387,11 @@ where
         )?;
         let mut node = (*node_arc).clone();
 
+        // update attribute index
+        for point in &task.points {
+            self.inner.attribute_index.update(node_id.lod, &node_id.pos, point.attribute());
+        }
+
         // insert new points
         node.sampling.reset_dirty();
         let initial_nr_bogus = node.bogus_points.len();

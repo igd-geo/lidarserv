@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 pub struct GridCellDirectory {
+    // each element of vector is a lod level
     cells: Vec<HashSet<GridCell>>,
     file_name: PathBuf,
     dirty: bool,

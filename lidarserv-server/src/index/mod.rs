@@ -146,6 +146,7 @@ impl DynReader
     }
 }
 
+/// for use in the transmission protocol
 fn meta_tree_node_id_to_proto_node_id(node_id: &MetaTreeNodeId) -> NodeId {
     NodeId {
         lod_level: node_id.lod().level(),
@@ -164,6 +165,7 @@ fn meta_tree_node_id_to_proto_node_id(node_id: &MetaTreeNodeId) -> NodeId {
     }
 }
 
+/// for use in the transmission protocol
 fn leveled_grid_cell_to_proto_node_id(grid_cell: &LeveledGridCell) -> NodeId {
     NodeId {
         lod_level: grid_cell.lod.level(),

@@ -18,6 +18,7 @@ static DEFAULT_LAS_POINT_ATTRS: LasPointAttributes = LasPointAttributes {
     user_data: 0,
     point_source_id: 0,
     color: (0, 0, 0),
+    gps_time: 0.0,
 };
 
 #[derive(Default, Clone, Debug)]

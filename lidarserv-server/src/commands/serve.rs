@@ -12,6 +12,7 @@ pub async fn run(serve_options: ServeOptions) -> Result<()> {
     debug!("Loaded settings: {:?}", &settings);
 
     // init index
+    debug!("Building index...");
     let index = build(settings, &serve_options.path)?;
 
     // handle ctrl+c
@@ -26,6 +27,7 @@ pub async fn run(serve_options: ServeOptions) -> Result<()> {
     });
 
     // start server
+    debug!("Starting server...");
     serve(
         (serve_options.host, serve_options.port),
         index,

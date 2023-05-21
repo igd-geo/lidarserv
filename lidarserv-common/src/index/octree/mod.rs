@@ -3,6 +3,7 @@ pub mod live_metrics_collector;
 pub mod page_manager;
 pub mod reader;
 pub mod writer;
+pub mod attribute_index;
 
 use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
@@ -19,6 +20,7 @@ use crate::query::Query;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
+use crate::index::octree::attribute_index::{AttributeIndex};
 
 struct Inner<Point, Sampl, SamplF> {
     num_threads: u16,
@@ -29,6 +31,7 @@ struct Inner<Point, Sampl, SamplF> {
     node_hierarchy: I32GridHierarchy,
     subscriptions: Mutex<Vec<crossbeam_channel::Sender<LeveledGridCell>>>,
     page_cache: LasPageManager<Sampl, Point>,
+    attribute_index: AttributeIndex,
     sample_factory: SamplF,
     loader: I32LasReadWrite,
     coordinate_system: I32CoordinateSystem,
@@ -86,6 +89,9 @@ where
             use_point_colors,
             use_point_times,
         } = params;
+
+        let max_level = &node_hierarchy.max_level().level();
+
         Octree {
             inner: Arc::new(Inner {
                 num_threads,
@@ -96,6 +102,7 @@ where
                 node_hierarchy,
                 subscriptions: Mutex::new(vec![]),
                 page_cache: LasPageManager::new(page_loader, page_directory, max_cache_size),
+                attribute_index: AttributeIndex::new(*max_level as usize),
                 sample_factory,
                 loader,
                 coordinate_system,
