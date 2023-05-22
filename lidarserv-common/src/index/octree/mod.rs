@@ -20,7 +20,6 @@ use crate::query::Query;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
-use crate::index::octree::attribute_index::{AttributeIndex};
 
 struct Inner<Point, Sampl, SamplF> {
     num_threads: u16,
@@ -89,8 +88,6 @@ where
             use_point_colors,
             use_point_times,
         } = params;
-
-        let max_level = &node_hierarchy.max_level().level();
 
         Octree {
             inner: Arc::new(Inner {
