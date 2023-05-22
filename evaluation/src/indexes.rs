@@ -6,8 +6,6 @@ use lidarserv_common::geometry::sampling::{GridCenterSampling, GridCenterSamplin
 use lidarserv_common::index::octree::grid_cell_directory::GridCellDirectory;
 use lidarserv_common::index::octree::page_manager::OctreePageLoader;
 use lidarserv_common::index::octree::{Octree, OctreeParams};
-use lidarserv_common::index::sensor_pos::meta_tree::MetaTree;
-use lidarserv_common::index::sensor_pos::page_manager::{FileIdDirectory, Loader};
 use lidarserv_common::las::I32LasReadWrite;
 use std::path::PathBuf;
 use std::time::Duration;

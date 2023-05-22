@@ -12,7 +12,7 @@ use std::mem::take;
 use std::path::PathBuf;
 use std::thread;
 use tokio::net::TcpStream;
-use log::info;
+use log::{info, warn};
 use lidarserv_server::common::geometry::points::{PointType, WithAttr};
 
 pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
@@ -179,12 +179,16 @@ fn read_points_from_las(
         let frame_number = ((t - t0) / args.speed_factor * args.fps as f64) as i32;
         while current_frame < frame_number {
             info!("Sending frame {} with {} points", current_frame, current_frame_points.len());
+            if current_frame_points.is_empty() {
+                warn!("Frame {} is empty", current_frame);
+            }
             sender.send(take(&mut current_frame_points))?;
             current_frame += 1;
         }
 
         // convert from las file coordinate system to server coordinate system
         let pos = point.position().transcode(&result.coordinate_system, coordinate_system).unwrap();
+        //TODO handle better
 
         // create new point with new position and same attributes
         let attr = point.attribute::<LasPointAttributes>();

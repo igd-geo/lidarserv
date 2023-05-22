@@ -59,7 +59,6 @@ The most important ones are:
 
 | Option            | Description                                                   |
 |-------------------|---------------------------------------------------------------|
-| `--index mno`     | Uses the octree index structure for indexing the point cloud. |
 | `--num-threads 4` | The number of threads to use for indexing.                    |
 
 The options are stored in `my-pointcloud/settings.json`. You can change the options later by editing this file. 
@@ -553,9 +552,7 @@ FLAGS:
     -V, --version               Prints version information
 
 OPTIONS:
-        --bvg-max-points-per-node <bvg-max-points-per-node>    The maximum number of points that can be inserted into a node, before that node is split. This option only applies to the bvg index [default: 100000]
         --cache-size <cache-size>                              Maximum number of nodes to keep in memory, while indexing [default: 500]
-        --index <index>                                        Index structure to use so the point cloud can be queried efficiently [default: mno]  [possible values: mno, bvg]
         --las-offset <las-offset>                              The offset used for storing point data. (usually fine to be left at '0.0, 0.0, 0.0') [default: 0]
         --las-scale <las-scale>                                The resolution used for storing point data [default: 0.001]
         --max-lod <max-lod>                                    Maximum level of detail of the index [default: 10]
