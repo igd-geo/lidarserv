@@ -20,6 +20,7 @@ use std::time::{Duration, Instant};
 use std::{mem, thread};
 use thiserror::Error;
 use tracy_client::{create_plot, Plot};
+use crate::index::octree::attribute_index::{LasPointAttributeBounds};
 
 static TASKS_DEFAULT_PLOT: Plot = create_plot!("Task queue length");
 static POINTS_DEFAULT_PLOT: Plot = create_plot!("Task queue length in points");
@@ -388,9 +389,9 @@ where
         let mut node = (*node_arc).clone();
 
         // update attribute index
-        for point in &task.points {
-            self.inner.attribute_index.update(node_id.lod, &node_id.pos, point.attribute());
-        }
+        let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
+        let _ = &task.points.iter().for_each(|p| bounds.update_by_attributes(p.attribute()));
+        self.inner.attribute_index.update_by_bounds(node_id.lod, &node_id.pos, &bounds);
 
         // insert new points
         node.sampling.reset_dirty();
