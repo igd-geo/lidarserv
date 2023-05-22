@@ -20,7 +20,7 @@ use std::time::{Duration, Instant};
 use std::{mem, thread};
 use thiserror::Error;
 use tracy_client::{create_plot, Plot};
-use crate::index::octree::attribute_index::{LasPointAttributeBounds};
+use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 static TASKS_DEFAULT_PLOT: Plot = create_plot!("Task queue length");
 static POINTS_DEFAULT_PLOT: Plot = create_plot!("Task queue length in points");

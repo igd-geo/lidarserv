@@ -4,6 +4,7 @@ pub mod page_manager;
 pub mod reader;
 pub mod writer;
 pub mod attribute_index;
+pub mod attribute_bounds;
 
 use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
