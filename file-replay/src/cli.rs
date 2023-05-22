@@ -100,6 +100,10 @@ pub struct PreConvertArgs {
     #[structopt(long, default_value = "20")]
     pub fps: u32,
 
+    /// Do not store frames that do not contain any points.
+    #[structopt(long)]
+    pub skip_empty_frames: bool,
+
     /// Host name for the point cloud server.
     /// The converter will briefly connect to this server to determine the correct settings for encoding the point data.
     #[structopt(long, short, default_value = "::1")]

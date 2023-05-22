@@ -178,10 +178,12 @@ fn read_points_from_las(
         let t0 = *t0.get_or_insert(t);
         let frame_number = ((t - t0) / args.speed_factor * args.fps as f64) as i32;
         while current_frame < frame_number {
-            info!("Sending frame {} with {} points", current_frame, current_frame_points.len());
-            if current_frame_points.is_empty() {
-                warn!("Frame {} is empty", current_frame);
+            if current_frame_points.is_empty() && args.skip_empty_frames {
+                warn!("Skipping empty frame {}", current_frame);
+                current_frame += 1;
+                continue;
             }
+            info!("Sending frame {} with {} points", current_frame, current_frame_points.len());
             sender.send(take(&mut current_frame_points))?;
             current_frame += 1;
         }
