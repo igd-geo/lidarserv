@@ -1,8 +1,9 @@
 use crate::las::LasPointAttributes;
+use serde::{Deserialize, Serialize};
 
 /// Defines Min and Max of all attributes.
 /// Provides methods to check if a point is within the bounds and to update the bounds
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct LasPointAttributeBounds {
     pub intensity: Option<(u16, u16)>,
     pub return_number: Option<(u8, u8)>,
