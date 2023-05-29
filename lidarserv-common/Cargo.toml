@@ -14,7 +14,7 @@ thiserror = "1.0.30"
 tracy-client = { version = "0.12.5", default_features=false }
 crossbeam-channel = "0.5.1"
 serde = { version = "1.0.126", features = ["derive"] }
-ciborium = "0.1.0"
+ciborium = "0.2.1"
 log = "0.4.14"
 crossbeam-utils = "0.8.5"
 crossbeam-deque = "0.8.1"

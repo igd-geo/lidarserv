@@ -12,7 +12,7 @@ anyhow = "1.0.44"
 lidarserv-server = { path = "../lidarserv-server" }
 tokio = { version = "1.28.0", features = ["full"] }
 log = "0.4.14"
-simple_logger = "2.1.0"
+simple_logger = "4.1.0"
 itertools = "0.10.1"
 crossbeam-channel = "0.5.1"
 las = { version = "0.7.5", features = ["laz"] }

@@ -9,7 +9,7 @@ authors = ["Tobias Dorra <mail@tobiasdorra.de>"]
 structopt = { version = "0.3.23", features = ["paw", "wrap_help", "color", "suggestions"]}
 paw = "1.0.0"
 log = "0.4.14"
-simple_logger = "2.1.0"
+simple_logger = "4.1.0"
 human-panic = "1.0.3"
 anyhow = "1.0.44"
 lidarserv-common = { path = "../lidarserv-common" }
@@ -18,5 +18,5 @@ bytes = "1.1.0"
 thiserror = "1.0.30"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = "1.0.64"
-ciborium = "0.1.0"
+ciborium = "0.2.1"
 crossbeam-channel = "0.5.1"

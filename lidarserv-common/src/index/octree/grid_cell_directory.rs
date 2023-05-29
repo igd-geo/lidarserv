@@ -35,6 +35,7 @@ impl<T> From<ciborium::de::Error<T>> for GridCellIoError {
             ciborium::de::Error::Io(_) => GridCellIoError::Io,
             ciborium::de::Error::Syntax(_) => GridCellIoError::InvalidFile,
             ciborium::de::Error::Semantic(_, _) => GridCellIoError::InvalidFile,
+            ciborium::de::Error::RecursionLimitExceeded => GridCellIoError::InvalidFile,
         }
     }
 }
