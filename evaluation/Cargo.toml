@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 dotenv = "0.15.0"
-file-replay = { path = "../file-replay" }
+input-file-replay = { path = "../input-file-replay" }
 lidarserv-common = { path = "../lidarserv-common" }
 lidarserv-server = { path = "../lidarserv-server" }
 nalgebra = "0.23.2"

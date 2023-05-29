@@ -7,7 +7,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         "/home/tobias/Downloads/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt",
     )?;
     let buf_reader = BufReader::new(reader);
-    let points = file_replay::file_reader::PointReader::new(buf_reader)?;
+    let points = input_file_replay::file_reader::PointReader::new(buf_reader)?;
     for point in points {
         let point = point?;
         let dist =

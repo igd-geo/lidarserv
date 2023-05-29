@@ -562,9 +562,9 @@ dependencies = [
  "crossbeam-channel",
  "default-functions-derive",
  "dotenv",
- "file-replay",
  "gethostname",
  "git-version",
+ "input-file-replay",
  "libmedium",
  "lidarserv-common",
  "lidarserv-server",
@@ -582,28 +582,11 @@ name = "experiments"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "file-replay",
+ "input-file-replay",
  "las",
  "laz 0.6.0",
  "lidarserv-common",
  "lidarserv-server",
-]
-
-[[package]]
-name = "file-replay"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "crossbeam-channel",
- "itertools",
- "las",
- "laz 0.6.0",
- "lidarserv-server",
- "log",
- "paw",
- "simple_logger",
- "structopt",
- "tokio",
 ]
 
 [[package]]
@@ -855,6 +838,23 @@ name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
+name = "input-file-replay"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "crossbeam-channel",
+ "itertools",
+ "las",
+ "laz 0.6.0",
+ "lidarserv-server",
+ "log",
+ "paw",
+ "simple_logger",
+ "structopt",
+ "tokio",
+]
 
 [[package]]
 name = "instant"

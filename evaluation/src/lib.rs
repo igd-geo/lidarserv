@@ -3,7 +3,7 @@ use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use log::info;
 use std::path::PathBuf;
-use file_replay::iter_points::iter_points;
+use input_file_replay::iter_points::iter_points;
 
 pub mod indexes;
 pub mod insertion_rate;

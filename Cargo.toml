@@ -4,7 +4,7 @@ members = [
     "lidarserv-server",
     "lidarserv-common",
     "lidarserv-viewer",
-    "file-replay",
+    "input-file-replay",
     "point-cloud-viewer",
     "experiments",
     "evaluation",

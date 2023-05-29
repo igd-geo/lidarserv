@@ -25,12 +25,12 @@ cargo run --release --bin lidarserv-server -- --help
 
 Overview of the included binaries:
 
-| Binary           | Description                                                              |
-|------------------|--------------------------------------------------------------------------|
-| lidarserv-server | The server                                                               |
-| lidarserv-viewer | Client that connects to the server and visualizes the served point cloud |
-| file-replay      | Simulates a LiDAR scanner that sends point data to the server            |
-| evaluation       | Evaluation for the index data structures                                 |
+| Binary            | Description                                                              |
+|-------------------|--------------------------------------------------------------------------|
+| lidarserv-server  | The server                                                               |
+| lidarserv-viewer  | Client that connects to the server and visualizes the served point cloud |
+| input-file-replay | Simulates a LiDAR scanner that sends point data to the server            |
+| evaluation        | Evaluation for the index data structures                                 |
 
 If you are working with these tools a lot, it might be helpful to install them into your system
 so that you don't have to repeat the full cargo command every time:
@@ -38,7 +38,7 @@ so that you don't have to repeat the full cargo command every time:
 ```shell
 cargo install --path ./lidarserv-server
 cargo install --path ./lidarserv-viewer
-cargo install --path ./file-replay
+cargo install --path ./input-file-replay
 cargo install --path ./evaluation
 ```
 
@@ -80,7 +80,7 @@ The point cloud that is currently being served is still empty. In order to inser
 can connect and stream in its captured points to the server. The server will then index and store the received 
 points.
 
-Here, we will use the `file-replay` tool to emulate a LiDAR scanner by replaying a previously captured LiDAR 
+Here, we will use the `input-file-replay` tool to emulate a LiDAR scanner by replaying a previously captured LiDAR 
 dataset. The dataset consists of two csv files, `trajectory.txt` and `points.txt`. Please refer to section [CSV LiDAR captures](#csv-lidar-captures) for an in depth description of the file formats. Here is an example for how the contents of the two files look:
 
 `trajectory.txt`:
@@ -102,7 +102,7 @@ Timestamp point_3d_x point_3d_y point_3d_z Intensity Polar_Angle
 As a first step, we convert this dataset to a `*.laz` file. The resulting LAZ file can be used to replay the point data more efficiently. With the LiDAR server running, execute the following command:
 
 ```shell
-file-replay convert --points-file /path/to/points.txt --trajectory-file /path/to/trajectory.txt -x 412785.340004 -y 5318821.784996 -z 290.0 --fps=5 --output-file preconv.laz
+input-file-replay convert --points-file /path/to/points.txt --trajectory-file /path/to/trajectory.txt -x 412785.340004 -y 5318821.784996 -z 290.0 --fps=5 --output-file preconv.laz
 ```
 
 | Option                                                      | Description                                                                                                                       |
@@ -119,7 +119,7 @@ Note, that the files produced by `file-replay convert` are no ordinary LAZ files
 We can now send the point cloud to the LiDAR server with the following command:
 
 ```shell
-file-replay replay --fps 5 preconv.laz
+input-file-replay replay --fps 5 preconv.laz
 ```
 
 This will stream the contents of `preconv.laz` to the LiDAR server, in the same speed, that the points originally got captured by the sensor.
@@ -614,7 +614,7 @@ OPTIONS:
     -p, --port <port>                         [default: 4567]
 ```
 
-### `file-replay`
+### `input-file-replay`
 
 ```
 USAGE:
