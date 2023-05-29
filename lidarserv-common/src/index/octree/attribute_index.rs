@@ -4,7 +4,7 @@ use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use ciborium::de::from_reader;
-use log::debug;
+use log::{debug};
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::las::LasPointAttributes;
@@ -14,6 +14,7 @@ use crate::las::LasPointAttributes;
 /// HashMaps map grid cells to attribute bounds.
 pub struct AttributeIndex {
     index: Arc<Vec<RwLock<HashMap<GridCell, LasPointAttributeBounds>>>>,
+    file_name: PathBuf,
 }
 
 impl AttributeIndex {
@@ -21,17 +22,21 @@ impl AttributeIndex {
     pub fn new(num_lods: usize, file_name: PathBuf) -> Self {
         if let Ok(index) = Self::load_from_file(num_lods, &file_name) {
             // index exists, load it
+            debug!("Loaded attribute index from file {:?}", file_name);
             return AttributeIndex {
                 index,
+                file_name,
             };
         } else {
             // index does not exist, create new one
+            debug!("Created new attribute index at {:?}", file_name);
             let mut index = Vec::with_capacity(num_lods);
             for _ in 0..num_lods {
                 index.push(RwLock::new(HashMap::new()));
             }
             AttributeIndex {
                 index: Arc::new(index),
+                file_name,
             }
         }
 
@@ -87,14 +92,14 @@ impl AttributeIndex {
         Ok(Arc::new(vector))
     }
 
-    pub fn write_to_file(&self, file_name: &Path) -> Result<(), std::io::Error> {
+    pub fn write_to_file(&self) -> Result<(), std::io::Error> {
 
         // create file
         let f = OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
-            .open(&file_name)?;
+            .open(&self.file_name)?;
 
         // convert into vector without mutex and arc
         let mut vector : Vec<HashMap<GridCell, LasPointAttributeBounds>> = Vec::with_capacity(self.index.len());
@@ -161,8 +166,9 @@ mod tests {
 
     #[test]
     fn test_attribute_index_update() {
+
         // create attribute index
-        let attribute_index = AttributeIndex::new(1, PathBuf::from("non-existing-file"));
+        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
         let grid_cell = GridCell{ x: 0, y: 0, z: 0};
 
@@ -186,12 +192,18 @@ mod tests {
         assert_eq!(bounds.color_r, Some((0, 255)));
         assert_eq!(bounds.color_g, Some((0, 255)));
         assert_eq!(bounds.color_b, Some((0, 0)));
+
+        // delete file if it exists
+        let file_name = PathBuf::from("test.bin");
+        if file_name.exists() {
+            std::fs::remove_file(file_name).unwrap();
+        }
     }
 
     #[test]
     fn load_and_save() {
         // create attribute index
-        let attribute_index = AttributeIndex::new(1, PathBuf::from("non-existing-file"));
+        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
         let grid_cell = GridCell{ x: 0, y: 0, z: 0};
 
@@ -201,12 +213,13 @@ mod tests {
 
         // write to file
         println!("Writing index to file");
-        let write_result = attribute_index.write_to_file(&PathBuf::from("test.bin"));
+        let write_result = attribute_index.write_to_file();
         assert!(write_result.is_ok());
 
         // read from file
         println!("Reading index from file test.bin");
         let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        println!("Index: {:?}", attribute_index.index);
 
         // check if values are correct
         let index = &attribute_index.index[0].read().unwrap();
@@ -224,6 +237,9 @@ mod tests {
         assert_eq!(bounds.color_r, Some((0, 255)));
         assert_eq!(bounds.color_g, Some((0, 255)));
         assert_eq!(bounds.color_b, Some((0, 0)));
+
+        // delete file
+        std::fs::remove_file("test.bin").unwrap();
     }
 
 

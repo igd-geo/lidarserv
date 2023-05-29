@@ -389,9 +389,11 @@ where
         let mut node = (*node_arc).clone();
 
         // update attribute index
-        let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-        let _ = &task.points.iter().for_each(|p| bounds.update_by_attributes(p.attribute()));
-        self.inner.attribute_index.update_by_bounds(node_id.lod, &node_id.pos, &bounds);
+        if self.inner.attribute_index.is_some() {
+            let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
+            let _ = &task.points.iter().for_each(|p| bounds.update_by_attributes(p.attribute()));
+            self.inner.attribute_index.as_ref().unwrap().update_by_bounds(node_id.lod, &node_id.pos, &bounds);
+        }
 
         // insert new points
         node.sampling.reset_dirty();

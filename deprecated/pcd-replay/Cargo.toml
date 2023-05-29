@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.56"
 thiserror = "1.0.31"
-lidarserv-server = { path = "../lidarserv-server" }
+lidarserv-server = { path = "../../lidarserv-server" }
 file-locker = { version = "1.1.1", optional = true }
 clap = { version = "3.1.15", features=["wrap_help", "unicode", "derive", "color", "suggestions"] }
 log = "0.4.17"

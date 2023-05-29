@@ -184,10 +184,8 @@ mod tests {
     use crate::las::LasPointAttributes;
     use super::*;
 
-    #[test]
-    fn test_bounds() {
-        let mut bounds = LasPointAttributeBounds::new();
-        let attributes = LasPointAttributes {
+    fn attributes_1() -> LasPointAttributes {
+        LasPointAttributes {
             intensity: 10,
             return_number: 1,
             number_of_returns: 1,
@@ -199,8 +197,29 @@ mod tests {
             point_source_id: 123,
             gps_time: 123.456,
             color: (255, 0, 0),
-        };
-        bounds.update_by_attributes(&attributes);
+        }
+    }
+
+    fn attributes_2() -> LasPointAttributes {
+        LasPointAttributes {
+            intensity: 0,
+            return_number: 2,
+            number_of_returns: 3,
+            scan_direction: false,
+            edge_of_flight_line: true,
+            classification: 3,
+            scan_angle_rank: 5,
+            user_data: 255,
+            point_source_id: 456,
+            gps_time: 456.789,
+            color: (0, 255, 0),
+        }
+    }
+
+    #[test]
+    fn test_bounds() {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.update_by_attributes(&attributes_1());
         assert_eq!(bounds.intensity, Some((10, 10)));
         assert_eq!(bounds.return_number, Some((1, 1)));
         assert_eq!(bounds.number_of_returns, Some((1, 1)));
@@ -215,20 +234,7 @@ mod tests {
         assert_eq!(bounds.color_g, Some((0, 0)));
         assert_eq!(bounds.color_b, Some((0, 0)));
 
-        let attributes = LasPointAttributes {
-            intensity: 0,
-            return_number: 2,
-            number_of_returns: 3,
-            scan_direction: false,
-            edge_of_flight_line: true,
-            classification: 3,
-            scan_angle_rank: 5,
-            user_data: 255,
-            point_source_id: 456,
-            gps_time: 456.789,
-            color: (0, 255, 0),
-        };
-        bounds.update_by_attributes(&attributes);
+        bounds.update_by_attributes(&attributes_2());
         assert_eq!(bounds.intensity, Some((0, 10)));
         assert_eq!(bounds.return_number, Some((1, 2)));
         assert_eq!(bounds.number_of_returns, Some((1, 3)));
@@ -243,21 +249,8 @@ mod tests {
         assert_eq!(bounds.color_g, Some((0, 255)));
         assert_eq!(bounds.color_b, Some((0, 0)));
 
-        let attributes2 = LasPointAttributes {
-            intensity: 10,
-            return_number: 1,
-            number_of_returns: 1,
-            scan_direction: true,
-            edge_of_flight_line: false,
-            classification: 2,
-            scan_angle_rank: -5,
-            user_data: 0,
-            point_source_id: 123,
-            gps_time: 123.456,
-            color: (255, 0, 0),
-        };
-        let bounds2 = LasPointAttributeBounds::from_attributes(&attributes2);
+        let bounds2 = LasPointAttributeBounds::from_attributes(&attributes_2());
         assert_eq!(bounds.is_bounds_in_bounds(&bounds2), true);
-        assert_eq!(bounds.is_attributes_in_bounds(&attributes2), true);
+        assert_eq!(bounds.is_attributes_in_bounds(&attributes_2()), true);
     }
 }

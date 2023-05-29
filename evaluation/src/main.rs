@@ -1,4 +1,4 @@
-use evaluation::indexes::{create_octree_index, create_sensor_pos_index};
+use evaluation::indexes::create_octree_index;
 use evaluation::insertion_rate::measure_insertion_rate;
 use evaluation::latency::measure_latency;
 use evaluation::point::Point;

@@ -8,7 +8,7 @@ use thiserror::Error;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexSettings {
-    pub general: GeneralSettings,
+    pub general_settings: GeneralSettings,
     pub octree_settings: OctreeSettings,
 }
 
@@ -29,6 +29,7 @@ pub struct OctreeSettings {
     pub max_lod: LodLevel,
     pub max_bogus_inner: usize,
     pub max_bogus_leaf: usize,
+    pub enable_attribute_indexing: bool,
     pub use_metrics: bool,
     pub point_grid_shift: u16,
     pub node_grid_shift: u16,

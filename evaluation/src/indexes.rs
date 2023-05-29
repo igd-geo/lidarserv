@@ -8,7 +8,6 @@ use lidarserv_common::index::octree::page_manager::OctreePageLoader;
 use lidarserv_common::index::octree::{Octree, OctreeParams};
 use lidarserv_common::las::I32LasReadWrite;
 use std::path::PathBuf;
-use std::time::Duration;
 
 pub type I32Octree = Octree<Point, GridCenterSampling<Point>, GridCenterSamplingFactory<Point>>;
 
@@ -36,6 +35,7 @@ pub fn create_octree_index(
         max_lod,
         max_bogus_inner,
         max_bogus_leaf,
+        attribute_index: None,
         node_hierarchy,
         page_loader,
         page_directory,

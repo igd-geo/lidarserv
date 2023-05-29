@@ -19,8 +19,8 @@ use crate::index::Index;
 use crate::las::{I32LasReadWrite, LasPointAttributes};
 use crate::query::Query;
 use std::error::Error;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::option::Option;
 use thiserror::Error;
 use crate::index::octree::attribute_index::AttributeIndex;
 
@@ -33,7 +33,7 @@ struct Inner<Point, Sampl, SamplF> {
     node_hierarchy: I32GridHierarchy,
     subscriptions: Mutex<Vec<crossbeam_channel::Sender<LeveledGridCell>>>,
     page_cache: LasPageManager<Sampl, Point>,
-    attribute_index: AttributeIndex,
+    attribute_index: Option<AttributeIndex>,
     sample_factory: SamplF,
     loader: I32LasReadWrite,
     coordinate_system: I32CoordinateSystem,
@@ -48,6 +48,7 @@ pub struct OctreeParams<Point, Sampl, SamplF> {
     pub max_lod: LodLevel,
     pub max_bogus_inner: usize,
     pub max_bogus_leaf: usize,
+    pub attribute_index: Option<AttributeIndex>,
     pub node_hierarchy: I32GridHierarchy,
     pub page_loader: OctreePageLoader<Page<Sampl, Point>>,
     pub page_directory: GridCellDirectory,
@@ -80,6 +81,7 @@ where
             max_lod,
             max_bogus_inner,
             max_bogus_leaf,
+            attribute_index,
             node_hierarchy,
             page_loader,
             page_directory,
@@ -92,8 +94,6 @@ where
             use_point_times,
         } = params;
 
-        let max_level = node_hierarchy.max_level().level();
-
         Octree {
             inner: Arc::new(Inner {
                 num_threads,
@@ -104,7 +104,7 @@ where
                 node_hierarchy,
                 subscriptions: Mutex::new(vec![]),
                 page_cache: LasPageManager::new(page_loader, page_directory, max_cache_size),
-                attribute_index: AttributeIndex::new(max_level as usize, PathBuf::from("attribute_index.bin")),
+                attribute_index,
                 sample_factory,
                 loader,
                 coordinate_system,
@@ -144,6 +144,11 @@ where
             .write_to_file()
             .map_err(|e| FlushError(format!("{}", e)))?;
 
+        let attribute_index = &self.inner.attribute_index;
+        match attribute_index {
+            Some(index) => index.write_to_file().map_err(|e| FlushError(format!("{}", e)))?,
+            None => {}
+        }
         Ok(())
     }
 }

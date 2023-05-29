@@ -60,7 +60,7 @@ pub struct InitOptions {
     #[structopt(long, default_value = "500")]
     pub cache_size: usize,
 
-    /// The order, in which to process pending tasks. This option only applies to the mno index.
+    /// The order, in which to process pending tasks.
     #[structopt(long, default_value="NrPoints", possible_values=&["NrPoints", "Lod", "OldestPoint", "TaskAge", "NrPointsTaskAge"],)]
     pub mno_task_priority: TaskPriorityFunction,
 
@@ -68,24 +68,28 @@ pub struct InitOptions {
     #[structopt(long, default_value = "1.024")]
     pub point_grid_size: f64,
 
-    /// The size of the nodes at the coarsest level of detail. With each finer LOD, the node size will be halved. The value will be rounded towards the closest valid value. This option only applies to the mno index.
+    /// The size of the nodes at the coarsest level of detail. With each finer LOD, the node size will be halved. The value will be rounded towards the closest valid value.
     #[structopt(long, default_value = "131.072")]
     pub mno_node_grid_size: f64,
 
-    /// Maximum number of bogus points per node. This option only applies to the mno index.
+    /// Maximum number of bogus points per node.
     #[structopt(long, default_value = "0")]
     pub mno_bogus: usize,
 
-    /// Maximum number of bogus points per inner (non-leaf) node. Overwrites the '--mno-bogus' option, if provided. This option only applies to the mno index.
+    /// Maximum number of bogus points per inner (non-leaf) node. Overwrites the '--mno-bogus' option, if provided.
     #[structopt(long)]
     pub mno_bogus_inner: Option<usize>,
 
-    /// Maximum number of bogus points per leaf node. Overwrites the '--mno-bogus' option, if provided. This option only applies to the mno index.
+    /// Maximum number of bogus points per leaf node. Overwrites the '--mno-bogus' option, if provided.
     #[structopt(long)]
     pub mno_bogus_leaf: Option<usize>,
 
+    /// Enable indexing attributes of points
+    #[structopt(long)]
+    pub enable_attribute_indexing: bool,
+
     /// If enabled, some metrics are collected during indexing and written to a file named 'metrics_%i.cbor',
-    /// where %i is a sequentially increasing number. This option only applies to the mno index.
+    /// where %i is a sequentially increasing number.
     #[structopt(long)]
     pub mno_use_metrics: bool,
 

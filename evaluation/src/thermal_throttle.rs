@@ -1,4 +1,4 @@
-use log::{info, warn};
+use log::{info};
 use std::error::Error;
 use std::thread::sleep;
 use std::time::Duration;
