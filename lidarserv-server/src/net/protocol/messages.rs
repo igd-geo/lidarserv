@@ -2,6 +2,7 @@ use lidarserv_common::nalgebra::{Matrix4, Vector3};
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Message {
@@ -31,7 +32,10 @@ pub enum Message {
     InsertPoints { data: LasPointData },
 
     /// Sent from the client to server in Viewer mode, to set or update the query.
-    Query(Box<Query>),
+    Query{
+        query: Box<Query>,
+        filter: Option<LasPointAttributeBounds>
+    },
 
     /// Sent from the server to the client with some update to the current query result.
     IncrementalResult {

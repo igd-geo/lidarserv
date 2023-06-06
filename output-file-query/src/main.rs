@@ -49,7 +49,7 @@ async fn network_thread(args: Args) -> Result<(), LidarServerError> {
 
     // send query
     debug!("Sending query.");
-    client_write.query_aabb(&aabb, &lod).await.unwrap();
+    client_write.query_aabb(&aabb, &lod, Some(bounds)).await.unwrap();
 
     // receive result
     let mut points : Vec<GlobalPoint> = Vec::new();

@@ -234,8 +234,8 @@ async fn viewer_mode(
     // read incoming messages and send to queries to query thread
     let receive_queries = async move {
         while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
-            let query = match msg {
-                Message::Query(q) => *q,
+            let (query, filter) = match msg {
+                Message::Query { query, filter } => (*query, filter),
                 Message::ResultAck { update_number } => {
                     query_ack_sender.send(update_number).ok();
                     continue;
@@ -246,6 +246,9 @@ async fn viewer_mode(
                     ));
                 }
             };
+            debug!("FOUND QUERY: {:?}", query);
+            debug!("FOUND FILTER: {:?}", filter);
+            //TODO HANDLE FILTER
             match query {
                 Query::AabbQuery {
                     lod_level,

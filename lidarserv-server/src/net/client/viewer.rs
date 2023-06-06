@@ -14,6 +14,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio::sync::broadcast::Receiver;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub struct ViewerClient<Stream> {
     connection: Connection<Stream>,
@@ -129,17 +130,20 @@ where
         &mut self,
         global_aabb: &AABB<f64>,
         lod: &LodLevel,
+        filter: Option<LasPointAttributeBounds>
     ) -> Result<(), LidarServerError> {
         let csys = F64CoordinateSystem::new();
         let min = global_aabb.min::<F64Position>().decode(&csys);
         let max = global_aabb.max::<F64Position>().decode(&csys);
         self.connection
-            .write_message(&Message::Query(Box::new(Query::AabbQuery {
-                min_bounds: min.coords,
-                max_bounds: max.coords,
-                lod_level: lod.level(),
-            })))
-            .await
+            .write_message(&Message::Query{
+                query: Box::new(Query::AabbQuery {
+                    min_bounds: min.coords,
+                    max_bounds: max.coords,
+                    lod_level: lod.level(),
+                }),
+                filter,
+            }).await
     }
 
     pub async fn query_view_frustum(
@@ -148,15 +152,18 @@ where
         view_projection_matrix_inv: Matrix4<f64>,
         window_width_pixels: f64,
         min_distance_pixels: f64,
+        filter: Option<LasPointAttributeBounds>
     ) -> Result<(), LidarServerError> {
         self.connection
-            .write_message(&Message::Query(Box::new(Query::ViewFrustumQuery {
-                view_projection_matrix,
-                view_projection_matrix_inv,
-                window_width_pixels,
-                min_distance_pixels,
-            })))
-            .await
+            .write_message(&Message::Query{
+                query: Box::new(Query::ViewFrustumQuery {
+                    view_projection_matrix,
+                    view_projection_matrix_inv,
+                    window_width_pixels,
+                    min_distance_pixels,
+                }),
+                filter,
+            }).await
     }
 }
 
