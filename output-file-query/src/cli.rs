@@ -18,8 +18,8 @@ pub struct Args {
     pub port: u16,
 
     /// Folder, that the las file will be stored in. Default is the current directory.
-    #[structopt(default_value = ".", hide_default_value = true)]
-    pub output_path: PathBuf,
+    #[structopt(long, default_value = "")]
+    pub output_file: String,
 
     /// Level of detail of the point cloud.
     #[structopt(long, default_value = "0")]
