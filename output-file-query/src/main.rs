@@ -80,7 +80,7 @@ async fn network_thread(args: Args) -> Result<(), LidarServerError> {
 }
 
 fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
-    debug!("Writing {:?} points to file: {:?}", points.len(), path);
+    info!("Writing {:?} points to file: {:?}", points.len(), path);
     if points.len() == 0 {
         warn!("No points to write.");
     }
@@ -88,6 +88,7 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
     builder.point_format = Format::new(3).unwrap();
     let header = builder.into_header().unwrap();
     let mut writer = Writer::from_path(&path, header).unwrap();
+    let mut errors = 0;
     let point = Point { x: 1., y: 2., z: 3., ..Default::default() };
     for point in points.iter() {
         let direction : ScanDirection = match point.attribute().scan_direction {
@@ -114,9 +115,10 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
         };
         let result = writer.write(point);
         if result.is_err() {
-            warn!("Error writing point: {:?}", result);
+            errors += 1;
         }
     }
+    info!("Number of errors: {}", errors);
     debug!("Header: {:?}", writer.header());
     writer.close().unwrap();
     ()
