@@ -1,23 +1,17 @@
-use std::fmt::Error;
-use std::fs::File;
 use std::option::Option;
-use std::io::BufWriter;
-use std::thread;
-use std::io::Cursor;
 use std::path::PathBuf;
-use log::{debug, info, trace, warn};
-use las::{Builder, Color, Header, Point, raw, Write, Writer};
+use log::{debug, info, warn};
+use las::{Builder, Color, Point, Write, Writer};
 use las::point::{Classification, Format, ScanDirection};
 use lidarserv_server::common::geometry::bounding_box::{AABB, BaseAABB};
 use lidarserv_server::common::geometry::grid::LodLevel;
 use lidarserv_server::common::nalgebra::Point3;
 use lidarserv_server::net::client::viewer::ViewerClient;
 use lidarserv_server::net::LidarServerError;
-use lidarserv_common::geometry::bounding_box::OptionAABB;
 use lidarserv_common::geometry::points::PointType;
-use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position, Position};
+use lidarserv_common::geometry::position::{Position};
 use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
-use lidarserv_server::index::point::{GenericPoint, GlobalPoint, LasPoint};
+use lidarserv_server::index::point::{GlobalPoint};
 use crate::cli::Args;
 
 mod cli;
@@ -91,12 +85,10 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
     let header = builder.into_header().unwrap();
     let mut writer = Writer::from_path(&path, header).unwrap();
     let mut errors = 0;
-    let point = Point { x: 1., y: 2., z: 3., ..Default::default() };
     for point in points.iter() {
         let direction : ScanDirection = match point.attribute().scan_direction {
             true => ScanDirection::LeftToRight,
             false => ScanDirection::RightToLeft,
-            _ => ScanDirection::default(),
         };
         let point = Point {
             x: point.position().x() as f64,

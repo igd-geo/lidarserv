@@ -18,7 +18,6 @@ use std::sync::Arc;
 use std::thread;
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Receiver;
-use tokio::sync::mpsc::error::SendError;
 
 pub async fn handle_connection(
     con: TcpStream,
