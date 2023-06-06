@@ -57,7 +57,10 @@ pub trait DynReader: Send + Sync {
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
     ) -> bool;
-
+    fn updates_available(
+        &mut self,
+        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
+    ) -> bool;
     fn load_one(&mut self) -> Option<Node>;
     fn remove_one(&mut self) -> Option<NodeId>;
     fn update_one(&mut self) -> Option<(NodeId, Vec<Node>)>;
@@ -129,6 +132,10 @@ impl DynReader
 {
     fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
         Reader::blocking_update(self, queries)
+    }
+
+    fn updates_available(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
+        Reader::updates_available(self, queries)
     }
 
     fn load_one(&mut self) -> Option<Node> {

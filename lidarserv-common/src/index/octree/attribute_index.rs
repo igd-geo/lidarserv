@@ -212,14 +212,11 @@ mod tests {
         attribute_index.update_by_attributes(lod, &grid_cell, &create_attribute_2());
 
         // write to file
-        println!("Writing index to file");
         let write_result = attribute_index.write_to_file();
         assert!(write_result.is_ok());
 
         // read from file
-        println!("Reading index from file test.bin");
         let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
-        println!("Index: {:?}", attribute_index.index);
 
         // check if values are correct
         let index = &attribute_index.index[0].read().unwrap();

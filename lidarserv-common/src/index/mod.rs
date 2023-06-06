@@ -44,6 +44,11 @@ where
 
     fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q);
 
+    fn updates_available(
+        &mut self,
+        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>
+    ) -> bool;
+
     fn update(&mut self);
 
     fn blocking_update(

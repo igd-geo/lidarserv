@@ -102,6 +102,7 @@ pub struct ParsedNode {
 pub struct IncrementalUpdate {
     pub remove: Option<NodeId>,
     pub insert: Vec<ParsedNode>,
+    pub result_complete: bool,
 }
 
 impl Debug for ParsedNode {
@@ -197,8 +198,14 @@ where
                 Ok(IncrementalUpdate {
                     remove: replaces,
                     insert: insert_nodes,
+                    result_complete: false,
                 })
             }
+            Message::ResultComplete => Ok(IncrementalUpdate {
+                remove: None,
+                insert: Vec::new(),
+                result_complete: true,
+            }),
             _ => Err(LidarServerError::Protocol(
                 "Expected an `IncrementalResult` message.".to_string(),
             )),

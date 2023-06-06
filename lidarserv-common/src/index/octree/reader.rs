@@ -322,6 +322,14 @@ where
         OctreeReader::set_query(self, Box::new(query))
     }
 
+    fn updates_available(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
+        if let Some(q) = queries.try_iter().last() {
+            self.set_query(q);
+        }
+        self.update();
+        self.is_dirty()
+    }
+
     fn update(&mut self) {
         OctreeReader::update(self)
     }

@@ -1,7 +1,7 @@
 use crate::common::las::Las;
 use crate::index::DynIndex;
 use crate::net::protocol::connection::Connection;
-use crate::net::protocol::messages::Message::IncrementalResult;
+use crate::net::protocol::messages::Message::{IncrementalResult, ResultComplete};
 use crate::net::protocol::messages::{CoordinateSystem, DeviceType, LasPointData, Message, Query};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::{BaseAABB, OptionAABB};
@@ -18,6 +18,7 @@ use std::sync::Arc;
 use std::thread;
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Receiver;
+use tokio::sync::mpsc::error::SendError;
 
 pub async fn handle_connection(
     con: TcpStream,
@@ -162,7 +163,23 @@ async fn viewer_mode(
         let mut ackd_updates = 0;
         let mut reader = index.reader();
         let mut queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
-        'update_loop: while reader.blocking_update(&mut queries_receiver) {
+        reader.update_one();
+
+        'update_loop: loop {
+            // send result complete message
+            if !reader.updates_available(&mut queries_receiver) {
+                debug!("Sending ResultComplete message.");
+                match updates_sender.blocking_send(ResultComplete) {
+                    Err(_) => break 'update_loop,
+                    _ => {}
+                }
+            }
+
+            // wait for new updates
+            debug!("Waiting for updates.");
+            reader.blocking_update(&mut queries_receiver);
+            debug!("Got updates.");
+
             if let Some((node_id, data)) = reader.load_one() {
                 match updates_sender.blocking_send(IncrementalResult {
                     replaces: None,
@@ -201,6 +218,9 @@ async fn viewer_mode(
                     Err(_) => break 'update_loop,
                 }
             }
+
+            // wait for acks
+            debug!("Waiting for acks.");
             while ackd_updates + 10 < sent_updates {
                 ackd_updates = match query_ack_receiver.recv() {
                     Ok(v) => v,
@@ -208,6 +228,7 @@ async fn viewer_mode(
                 };
             }
         }
+        debug!("Query thread finished.");
         Ok(())
     });
 
