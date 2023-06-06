@@ -16,6 +16,7 @@ use lidarserv_server::net::LidarServerError;
 use lidarserv_common::geometry::bounding_box::OptionAABB;
 use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position, Position};
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_server::index::point::{GenericPoint, GlobalPoint, LasPoint};
 use crate::cli::Args;
 
@@ -30,7 +31,8 @@ fn main(args: Args) {
 
 #[tokio::main]
 async fn network_thread(args: Args) -> Result<(), LidarServerError> {
-    // create path
+    // parse cli arguments
+    let bounds = parse_attribute_bounds(&args);
     let path = PathBuf::from(args.output_file);
 
     // connect
@@ -122,4 +124,23 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
     debug!("Header: {:?}", writer.header());
     writer.close().unwrap();
     ()
+}
+
+fn parse_attribute_bounds(args: &Args) -> LasPointAttributeBounds {
+    let mut attribute_bounds = LasPointAttributeBounds::new();
+    attribute_bounds.intensity = Some((args.min_intensity.unwrap_or(0), args.max_intensity.unwrap_or(u16::MAX)));
+    attribute_bounds.return_number = Some((args.min_return_number.unwrap_or(0), args.max_return_number.unwrap_or(u8::MAX)));
+    attribute_bounds.number_of_returns = Some((args.min_number_of_returns.unwrap_or(0), args.max_number_of_returns.unwrap_or(u8::MAX)));
+    attribute_bounds.scan_direction = Some((args.min_scan_direction.unwrap_or(0) != 0, args.max_scan_direction.unwrap_or(1) != 0));
+    attribute_bounds.edge_of_flight_line = Some((args.min_edge_of_flight_line.unwrap_or(0) != 0, args.max_edge_of_flight_line.unwrap_or(1) != 0));
+    attribute_bounds.classification = Some((args.min_classification.unwrap_or(0), args.max_classification.unwrap_or(u8::MAX)));
+    attribute_bounds.scan_angle_rank = Some((args.min_scan_angle.unwrap_or(i8::MIN), args.max_scan_angle.unwrap_or(i8::MAX)));
+    attribute_bounds.user_data = Some((args.min_user_data.unwrap_or(0), args.max_user_data.unwrap_or(u8::MAX)));
+    attribute_bounds.point_source_id = Some((args.min_point_source_id.unwrap_or(0), args.max_point_source_id.unwrap_or(u16::MAX)));
+    attribute_bounds.gps_time = Some((args.min_gps_time.unwrap_or(f64::MIN), args.max_gps_time.unwrap_or(f64::MAX)));
+    attribute_bounds.color_r = Some((args.min_color_r.unwrap_or(0), args.max_color_r.unwrap_or(u16::MAX)));
+    attribute_bounds.color_g = Some((args.min_color_g.unwrap_or(0), args.max_color_g.unwrap_or(u16::MAX)));
+    attribute_bounds.color_b = Some((args.min_color_b.unwrap_or(0), args.max_color_b.unwrap_or(u16::MAX)));
+    debug!("Parsed Attribute bounds: {:?}", attribute_bounds);
+    attribute_bounds
 }
