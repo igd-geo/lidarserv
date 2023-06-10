@@ -218,6 +218,7 @@ async fn network_thread(
                             view_projection_matrix_inv,
                             camera_matrix.window_size.x,
                             args.point_distance,
+                            None,
                         )
                         .await
                         .unwrap()
