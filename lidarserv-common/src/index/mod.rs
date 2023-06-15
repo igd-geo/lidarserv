@@ -8,6 +8,8 @@ use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub mod octree;
 
+/// Abstracts over a point cloud index.
+/// Only used for [Octree] at the moment.
 pub trait Index<Point>
 where
     Point: PointType<Position = I32Position>,
@@ -23,6 +25,8 @@ where
     fn flush(&mut self) -> Result<(), Box<dyn Error>>;
 }
 
+/// Abstracts over a point cloud index, that can be written to.
+/// Only used for [OctreeWriter] at the moment.
 pub trait Writer<Point>
 where
     Point: PointType,
@@ -36,6 +40,8 @@ where
     fn insert(&mut self, points: Vec<Point>);
 }
 
+/// Abstracts over a point cloud index, that can be read from.
+/// Only used for [OctreeReader] at the moment.
 pub trait Reader<Point>
 where
     Point: PointType,
@@ -68,11 +74,13 @@ where
 
 pub type Update<NodeId, CoordinateSystem, NodeData> = (NodeId, CoordinateSystem, Vec<(NodeId, NodeData)>);
 
+/// Currently only implemented for [OctreePage].
 pub trait Node<Point> {
     fn las_files(&self) -> Vec<Arc<Vec<u8>>>;
     fn points(&self) -> Vec<Point>;
 }
 
+/// Currently only implemented for [LeveledGridCell].
 pub trait NodeId {
     fn lod(&self) -> LodLevel;
 }

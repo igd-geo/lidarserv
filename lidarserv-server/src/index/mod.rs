@@ -58,18 +58,35 @@ pub type Node<Point> = (NodeId, Vec<Point>, I32CoordinateSystem);
 
 pub trait DynReader: Send + Sync
 {
+    /// Blocks until an update is available.
+    /// New queries, filters or points trigger an update.
     fn blocking_update(
         &mut self,
-        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>,
+        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut Receiver<Option<LasPointAttributeBounds>>,
     ) -> bool;
+
+    /// Checks if there are updates available.
+    /// (This is a non-blocking version of [DynReader::blocking_update])
     fn updates_available(
         &mut self,
-        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>,
+        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut Receiver<Option<LasPointAttributeBounds>>,
     ) -> bool;
+
+    /// Returns a node from the loading queue.
+    /// Returns None if the loading queue is empty.
+    /// Returns NodeId, Points of Node, CoordinateSystem of Node, if the loading queue is not empty.
     fn load_one(&mut self) -> Option<Node<LasPoint>>;
+
+    /// Removes a node from the removal queue.
+    /// Returns NodeId of removed node.
+    /// Returns None if the removal queue is empty.
     fn remove_one(&mut self) -> Option<NodeId>;
+
+    /// Reloads a node from the reload queue.
+    /// Returns NodeId of old node and a vector of new nodes.
+    /// Returns None if the update queue is empty.
     fn update_one(&mut self) -> Option<(NodeId, Vec<Node<LasPoint>>)>;
 }
 
@@ -137,6 +154,7 @@ impl DynWriter for (I32CoordinateSystem, OctreeWriter<LasPoint>) {
 impl DynReader
     for OctreeReader<LasPoint, GridCenterSampling<LasPoint>, GridCenterSamplingFactory<LasPoint>>
 {
+
     fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<Option<LasPointAttributeBounds>>) -> bool {
         Reader::blocking_update(self, queries, filters)
     }

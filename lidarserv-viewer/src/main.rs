@@ -106,6 +106,8 @@ fn main(args: Args) {
                 mut result_complete
             } = update;
 
+            debug!("Received update with {} insertions", insert.len());
+
             // update
             let mut update_points = None;
             if let Some(remove_node_id) = &remove {

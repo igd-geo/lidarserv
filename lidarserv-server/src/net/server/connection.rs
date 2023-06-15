@@ -132,7 +132,9 @@ async fn capture_device_mode(
     }
     Ok(())
 }
-
+/// Handle a connection in viewer mode (serverside).
+/// This function will spawn a new thread that will handle the connection.
+/// The thread will check for updates in the index and send them to the client.
 async fn viewer_mode(
     con: Connection<TcpStream>,
     index: Arc<dyn DynIndex>,
@@ -177,12 +179,11 @@ async fn viewer_mode(
             }
 
             // wait for new updates
-            debug!("Waiting for updates.");
             reader.blocking_update(&mut queries_receiver, &mut filters_receiver);
-            debug!("Got updates.");
 
+            // check for new nodes to load
             if let Some((node_id, data, coordinate_system)) = reader.load_one() {
-
+                debug!("Loading node {:?} with {:?} points.", node_id, data.len());
                 match updates_sender.blocking_send(IncrementalResult {
                     replaces: None,
                     nodes: vec![(node_id, data, coordinate_system)],
@@ -191,7 +192,9 @@ async fn viewer_mode(
                     Err(_) => break 'update_loop,
                 }
             }
+            // check for new nodes to remove
             if let Some(node_id) = reader.remove_one() {
+                debug!("Removing node {:?}.", node_id);
                 match updates_sender.blocking_send(IncrementalResult {
                     replaces: Some(node_id),
                     nodes: vec![],
@@ -200,7 +203,9 @@ async fn viewer_mode(
                     Err(_) => break 'update_loop,
                 }
             }
+            // check for new nodes to update
             if let Some((node_id, replacements)) = reader.update_one() {
+                debug!("Replacing node {:?} with nodes {:?}.", node_id, replacements);
                 match updates_sender.blocking_send(IncrementalResult {
                     replaces: Some(node_id),
                     nodes: replacements
@@ -211,7 +216,6 @@ async fn viewer_mode(
             }
 
             // wait for acks
-            debug!("Waiting for acks.");
             while ackd_updates + 10 < sent_updates {
                 ackd_updates = match query_ack_receiver.recv() {
                     Ok(v) => v,

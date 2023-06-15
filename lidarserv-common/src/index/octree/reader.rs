@@ -13,6 +13,7 @@ use crate::query::{Query, QueryExt};
 use crossbeam_channel::Receiver;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use log::debug;
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub struct OctreeReader<Point, Sampl, SamplF> {
@@ -46,6 +47,8 @@ where
     Sampl: Sampling<Point = Point>,
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
+    /// Creates a new reader for the given octree and query.
+    /// All root nodes of the octree are added to the reader.
     pub(super) fn new<Q>(query: Q, inner: Arc<Inner<Point, Sampl, SamplF>>) -> Self
     where
         Q: Query + Send + Sync + 'static,
@@ -77,6 +80,8 @@ where
         reader
     }
 
+    /// Adds a new root node to the readers frontier and list of known root nodes.
+    /// If the node matches the query, it is also added to the load queue.
     fn add_root(&mut self, cell: LeveledGridCell) {
         let matches_query = self.cell_matches_query(&cell);
         self.frontier.insert(
@@ -96,6 +101,7 @@ where
         Self::cell_matches_query_impl(cell, self.query.as_ref(), &self.filter, self.inner.as_ref())
     }
 
+    /// Checks, if the given cell matches the query and filter.
     fn cell_matches_query_impl(
         cell: &LeveledGridCell,
         query: &(dyn Query + Send + Sync),
@@ -116,6 +122,14 @@ where
         query.matches_node(&bounds, &inner.coordinate_system, &lod)
     }
 
+    /// Processes a set of changed nodes.
+    /// This includes:
+    /// - Add already loaded nodes to the reload queue.
+    /// - Add new nodes to the frontier and load queue, when they match the query.
+    /// - Add new root nodes
+    ///
+    /// # Arguments
+    /// * `changes` - The set of changed nodes.
     fn process_changes(&mut self, mut changes: HashSet<LeveledGridCell>) {
         // get remaining changes from the channel, if any
         while let Ok(update) = self.changed_nodes_receiver.try_recv() {
@@ -188,10 +202,13 @@ where
         }
     }
 
+    /// Sets the query and filter.
+    /// Updates the frontier, load and remove queue accordingly.
     pub fn set_query(&mut self, q: Box<dyn Query + Send + Sync + 'static>, f: Option<LasPointAttributeBounds>) {
         self.query = q;
         self.filter = f;
 
+        // update frontier
         {
             let Self {
                 frontier, query, ..
@@ -202,6 +219,7 @@ where
             }
         }
 
+        // update load queue from frontier
         self.load_queue = self
             .frontier
             .iter()
@@ -214,6 +232,7 @@ where
             })
             .collect();
 
+        // search for removable nodes
         let mut removable_cnt = HashMap::new();
         for (cell, elem) in &self.frontier {
             if !elem.matches_query {
@@ -225,6 +244,8 @@ where
                 }
             }
         }
+
+        // remove nodes that are not needed anymore --> add to remove queue
         self.remove_queue = removable_cnt
             .into_iter()
             .filter_map(|(cell, cnt)| if cnt == 8 { Some(cell) } else { None })
@@ -232,6 +253,9 @@ where
             .collect();
     }
 
+    /// Reloads a node from the reload queue and removes it from the queue.
+    /// Returns LeveledGridCell of old node and new node-page.
+    /// Returns None if the update queue is empty.
     pub fn reload_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>, I32CoordinateSystem)> {
         let reload = match self.reload_queue.iter().min_by_key(|&(_, v)| *v) {
             None => return None,
@@ -242,6 +266,10 @@ where
         Some((reload, node, self.inner.coordinate_system.clone()))
     }
 
+    /// Loads a node from the load queue.
+    /// Adds children of the loaded node to the frontier and schedules them for their initial load.
+    /// Returns LeveledGridCell of the loaded node and the node-page.
+    /// Returns None if the load queue is empty.
     pub fn load_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>, I32CoordinateSystem)> {
         // get a node to load
         let load = match self.load_queue.iter().next() {
@@ -253,7 +281,7 @@ where
         // update the set of loaded nodes
         self.loaded.insert(load);
 
-        // update the frontier (remove this node, but add children)
+        // update the frontier (remove this node, but add childresn)
         // and schedule the children that can be loaded immediately for their initial loading
         self.frontier.remove(&load);
         for child in load.children() {
@@ -276,6 +304,11 @@ where
         Some((load, node, self.inner.coordinate_system.clone()))
     }
 
+    /// Removes a node from the remove queue.
+    /// Updates the frontier.
+    /// Adds children of the removed node to the remove queue.
+    /// Returns LeveledGridCell of the removed node.
+    /// Returns None if the remove queue is empty.
     pub fn remove_one(&mut self) -> Option<LeveledGridCell> {
         // get a node to remove
         let remove = match self.remove_queue.iter().next() {
@@ -402,6 +435,7 @@ where
             }
         }
     }
+
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node, I32CoordinateSystem)> {
         OctreeReader::load_one(self).map(|(n, d, c)| (n, OctreePage::from_page(d, &self.inner.loader), c))
