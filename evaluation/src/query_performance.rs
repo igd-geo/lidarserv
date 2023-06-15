@@ -29,7 +29,7 @@ where
     let time_start = Instant::now();
     let mut r = index.reader(query);
     let mut nodes = Vec::new();
-    while let Some((_node_id, node)) = r.load_one() {
+    while let Some((_node_id, node, _coordinate_system)) = r.load_one() {
         nodes.push(node);
     }
     let time_finish_query = Instant::now();

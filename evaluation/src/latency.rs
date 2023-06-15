@@ -11,6 +11,7 @@ use std::io::Cursor;
 use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub fn measure_latency<I, Q>(
     index: I,
@@ -26,7 +27,8 @@ where
     // query thread
     let reader = index.reader(query);
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded(); // we will never actually push a new query. but the channel is still used to tell the queryer when to stop.
-    let rt = thread::spawn(move || read_thread::<I>(reader, queries_receiver));
+    let (filters_sender, filters_receiver) = crossbeam_channel::unbounded();
+    let rt = thread::spawn(move || read_thread::<I>(reader, queries_receiver, filters_receiver));
 
     // do the insertions in the current thread
     let insertion_times = insertion_thread::<I>(index.writer(), points, config);
@@ -164,6 +166,7 @@ where
 pub fn read_thread<I>(
     mut reader: I::Reader,
     mut queries: crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
+    mut filters: crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
 ) -> Vec<HashMap<usize, Instant>>
 where
     I: Index<Point>,
@@ -176,9 +179,9 @@ where
     }
     let las_loader = I32LasReadWrite::new(true, false, true);
 
-    while reader.blocking_update(&mut queries) {
+    while reader.blocking_update(&mut queries, &mut filters) {
         reader.remove_one();
-        if let Some((node_id, node)) = reader.load_one() {
+        if let Some((node_id, node, coordinate_system)) = reader.load_one() {
             let point_chunks: Vec<_> = node
                 .las_files()
                 .into_iter()
@@ -199,7 +202,7 @@ where
                 }
             }
         }
-        if let Some((_, repl)) = reader.update_one() {
+        if let Some((_, _, repl)) = reader.update_one() {
             let now = Instant::now();
             for (node_id, node) in repl {
                 let points = node.las_files().into_iter().map(|data| {
