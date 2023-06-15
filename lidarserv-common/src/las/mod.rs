@@ -7,6 +7,7 @@ use crate::las::helpers::{
     get_header_info_i32, init_las_header, read_las_string, read_point_data_i32,
     write_point_data_i32,
 };
+use serde::{Deserialize, Serialize};
 use las::point::Format;
 use las::Vlr;
 use laz::laszip::ChunkTable;
@@ -67,7 +68,7 @@ pub struct Las<Points> {
     pub coordinate_system: I32CoordinateSystem,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct LasPointAttributes {
     pub intensity: u16,
     pub return_number: u8,

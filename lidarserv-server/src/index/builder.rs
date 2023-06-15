@@ -12,6 +12,7 @@ use lidarserv_common::las::I32LasReadWrite;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use lidarserv_common::index::octree::attribute_index::AttributeIndex;
+use crate::index::point::LasPoint;
 
 #[derive(Debug, Error)]
 pub enum BuilderError {

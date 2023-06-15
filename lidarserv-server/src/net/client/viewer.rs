@@ -176,31 +176,20 @@ where
         shutdown: &mut Receiver<()>,
     ) -> Result<IncrementalUpdate, LidarServerError> {
         match self.connection.read_message(shutdown).await? {
-            Message::IncrementalResult { replaces, nodes } => {
-                // read laz segments
+            Message::IncrementalResult { replaces, nodes} => {
+                // read points
                 *self.received_updates.lock().unwrap() += 1;
-                let las_reader = I32LasReadWrite::new(true, true, true); // use_compression / use_color parameter does not matter, when only used for reading
                 let mut insert_nodes = Vec::new();
-                for (insert_node_id, insert_node_las_segments) in nodes {
-                    let mut points = Vec::new();
-                    for las_segment in insert_node_las_segments {
-                        let las: Las<Vec<LasPoint>> = las_reader
-                            .read_las(Cursor::new(las_segment.0.as_ref()))
-                            .map_err(|e| {
-                                LidarServerError::Protocol(format!(
-                                    "Received invalid LAS data from server: {}",
-                                    e
-                                ))
-                            })?;
-                        let las_points = las.points.into_iter().map(|point| {
-                            GlobalPoint::from_las_point(point, &las.coordinate_system)
-                        });
-                        points.extend(las_points);
-                    }
+                for (insert_node_id, points, coordinate_system) in nodes {
+                    // convert all points to global points
+                    let las_points = points.into_iter().map(|point| {
+                        GlobalPoint::from_las_point(point, &coordinate_system)
+                    }).collect();
+                    // add the node to the list of nodes to insert
                     insert_nodes.push(ParsedNode {
                         node_id: insert_node_id,
-                        points,
-                    })
+                        points: las_points,
+                    });
                 }
                 Ok(IncrementalUpdate {
                     remove: replaces,

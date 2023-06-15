@@ -73,6 +73,21 @@ impl AttributeIndex {
         bounds.update_by_bounds(new_bounds);
     }
 
+    pub fn cell_in_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds) -> bool{
+        // aquire read lock for lod level
+        let index_read = self.index[lod.level() as usize].read().unwrap();
+        let entry = index_read.get_key_value(&grid_cell);
+
+        // check if cell is in bounds
+        let _ = match entry {
+            Some(cell_bounds) => {
+                cell_bounds.1.is_bounds_in_bounds(bounds)
+            },
+            None => false,
+        };
+        false
+    }
+
     fn load_from_file(num_lods: usize, file_name: &Path) -> Result<Arc<Vec<RwLock<HashMap<GridCell, LasPointAttributeBounds>>>>, std::io::Error> {
 
         // check existence of file and open it

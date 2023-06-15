@@ -1,9 +1,10 @@
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
-use crate::geometry::position::I32Position;
+use crate::geometry::position::{CoordinateSystem, I32CoordinateSystem, I32Position};
 use crate::query::Query;
 use std::error::Error;
 use std::sync::Arc;
+use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub mod octree;
 
@@ -40,13 +41,14 @@ where
     Point: PointType,
 {
     type NodeId: NodeId;
-    type Node: Node;
+    type Node: Node<Point>;
 
-    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q);
+    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q, filter: Option<LasPointAttributeBounds>);
 
     fn updates_available(
         &mut self,
-        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>
+        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
     ) -> bool;
 
     fn update(&mut self);
@@ -54,19 +56,21 @@ where
     fn blocking_update(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
     ) -> bool;
 
-    fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node)>;
+    fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node, I32CoordinateSystem)>;
 
     fn remove_one(&mut self) -> Option<Self::NodeId>;
 
-    fn update_one(&mut self) -> Option<Update<Self::NodeId, Self::Node>>;
+    fn update_one(&mut self) -> Option<Update<Self::NodeId, I32CoordinateSystem, Self::Node>>;
 }
 
-pub type Update<NodeId, NodeData> = (NodeId, Vec<(NodeId, NodeData)>);
+pub type Update<NodeId, CoordinateSystem, NodeData> = (NodeId, CoordinateSystem, Vec<(NodeId, NodeData)>);
 
-pub trait Node {
+pub trait Node<Point> {
     fn las_files(&self) -> Vec<Arc<Vec<u8>>>;
+    fn points(&self) -> Vec<Point>;
 }
 
 pub trait NodeId {

@@ -143,6 +143,7 @@ async fn viewer_mode(
     let coordinate_system = index.index_info().coordinate_system.clone();
     let sampling_factory = index.index_info().sampling_factory.clone();
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded();
+    let (filters_sender, filters_receiver) = crossbeam_channel::unbounded();
     let (updates_sender, mut updates_receiver) = tokio::sync::mpsc::channel(1);
     let (query_ack_sender, query_ack_receiver) = crossbeam_channel::unbounded();
 
@@ -162,11 +163,12 @@ async fn viewer_mode(
         let mut ackd_updates = 0;
         let mut reader = index.reader();
         let mut queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
+        let mut filters_receiver = filters_receiver;
         reader.update_one();
 
         'update_loop: loop {
-            // send result complete message
-            if !reader.updates_available(&mut queries_receiver) {
+            // send result complete message, when no more updates are currently available
+            if !reader.updates_available(&mut queries_receiver, &mut filters_receiver) {
                 debug!("Sending ResultComplete message.");
                 match updates_sender.blocking_send(ResultComplete) {
                     Err(_) => break 'update_loop,
@@ -176,13 +178,14 @@ async fn viewer_mode(
 
             // wait for new updates
             debug!("Waiting for updates.");
-            reader.blocking_update(&mut queries_receiver);
+            reader.blocking_update(&mut queries_receiver, &mut filters_receiver);
             debug!("Got updates.");
 
-            if let Some((node_id, data)) = reader.load_one() {
+            if let Some((node_id, data, coordinate_system)) = reader.load_one() {
+
                 match updates_sender.blocking_send(IncrementalResult {
                     replaces: None,
-                    nodes: vec![(node_id, data.into_iter().map(LasPointData).collect())],
+                    nodes: vec![(node_id, data, coordinate_system)],
                 }) {
                     Ok(_) => sent_updates += 1,
                     Err(_) => break 'update_loop,
@@ -201,17 +204,6 @@ async fn viewer_mode(
                 match updates_sender.blocking_send(IncrementalResult {
                     replaces: Some(node_id),
                     nodes: replacements
-                        .into_iter()
-                        .map(|(replacement_node_id, replacement_node_data)| {
-                            (
-                                replacement_node_id,
-                                replacement_node_data
-                                    .into_iter()
-                                    .map(LasPointData)
-                                    .collect(),
-                            )
-                        })
-                        .collect(),
                 }) {
                     Ok(_) => sent_updates += 1,
                     Err(_) => break 'update_loop,
@@ -248,7 +240,6 @@ async fn viewer_mode(
             };
             debug!("FOUND QUERY: {:?}", query);
             debug!("FOUND FILTER: {:?}", filter);
-            //TODO HANDLE FILTER
             match query {
                 Query::AabbQuery {
                     lod_level,
@@ -273,6 +264,7 @@ async fn viewer_mode(
                     let query = BoundingBoxQuery::new(aabb, lod);
                     debug!("{}: Query: {:?}", addr, &query);
                     queries_sender.send(Box::new(query)).unwrap();
+                    filters_sender.send(filter).unwrap();
                 }
                 Query::ViewFrustumQuery {
                     view_projection_matrix,
@@ -290,6 +282,7 @@ async fn viewer_mode(
                     );
                     debug!("{}: Query: {:?}", addr, &query);
                     queries_sender.send(Box::new(query)).unwrap();
+                    filters_sender.send(filter).unwrap();
                 }
             }
         }

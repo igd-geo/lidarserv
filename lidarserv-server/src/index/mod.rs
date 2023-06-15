@@ -5,7 +5,7 @@ use crate::index::point::LasPoint;
 use crate::net::protocol::messages::NodeId;
 use crossbeam_channel::Receiver;
 use lidarserv_common::geometry::grid::LeveledGridCell;
-use lidarserv_common::geometry::position::I32CoordinateSystem;
+use lidarserv_common::geometry::position::{I32CoordinateSystem, I32Position};
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
 use lidarserv_common::index::octree::reader::OctreeReader;
 use lidarserv_common::index::octree::Octree;
@@ -16,6 +16,9 @@ use lidarserv_common::query::Query;
 use std::error::Error;
 use std::sync::Arc;
 use thiserror::Error;
+use lidarserv_common::geometry::points::{PointType, WithAttr};
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
+use lidarserv_common::las::LasPointAttributes;
 
 pub mod builder;
 pub mod point;
@@ -33,7 +36,8 @@ pub struct IndexInfo<'a> {
 }
 
 /// object safe wrapper for a point cloud index, otherwise very similar to [lidarserv_common::index::Index].
-pub trait DynIndex: Send + Sync {
+pub trait DynIndex: Send + Sync
+{
     fn index_info(&self) -> IndexInfo;
     fn writer(&self) -> Box<dyn DynWriter>;
     fn reader(&self) -> Box<dyn DynReader>;
@@ -50,20 +54,23 @@ pub trait DynWriter: Send + Sync {
 }
 
 pub type NodeData = Vec<Arc<Vec<u8>>>;
-pub type Node = (NodeId, NodeData);
+pub type Node<Point> = (NodeId, Vec<Point>, I32CoordinateSystem);
 
-pub trait DynReader: Send + Sync {
+pub trait DynReader: Send + Sync
+{
     fn blocking_update(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>,
     ) -> bool;
     fn updates_available(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>,
     ) -> bool;
-    fn load_one(&mut self) -> Option<Node>;
+    fn load_one(&mut self) -> Option<Node<LasPoint>>;
     fn remove_one(&mut self) -> Option<NodeId>;
-    fn update_one(&mut self) -> Option<(NodeId, Vec<Node>)>;
+    fn update_one(&mut self) -> Option<(NodeId, Vec<Node<LasPoint>>)>;
 }
 
 /// for use in the transmission protocol
@@ -130,18 +137,19 @@ impl DynWriter for (I32CoordinateSystem, OctreeWriter<LasPoint>) {
 impl DynReader
     for OctreeReader<LasPoint, GridCenterSampling<LasPoint>, GridCenterSamplingFactory<LasPoint>>
 {
-    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
-        Reader::blocking_update(self, queries)
+    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<Option<LasPointAttributeBounds>>) -> bool {
+        Reader::blocking_update(self, queries, filters)
     }
 
-    fn updates_available(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
-        Reader::updates_available(self, queries)
+    fn updates_available(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<Option<LasPointAttributeBounds>>) -> bool {
+        Reader::updates_available(self, queries, filters)
     }
 
-    fn load_one(&mut self) -> Option<Node> {
-        Reader::load_one(self).map(|(node_id, data)| {
+    fn load_one(&mut self) -> Option<Node<LasPoint>> {
+        Reader::load_one(self).map(|(node_id, data, coordinate_system)| {
             let node_id = leveled_grid_cell_to_proto_node_id(&node_id);
-            (node_id, data.las_files())
+            let points = data.points();
+            (node_id, points, coordinate_system)
         })
     }
 
@@ -151,13 +159,14 @@ impl DynReader
             .map(leveled_grid_cell_to_proto_node_id)
     }
 
-    fn update_one(&mut self) -> Option<(NodeId, Vec<Node>)> {
-        Reader::update_one(self).map(|(node_id, replace)| {
+    fn update_one(&mut self) -> Option<(NodeId, Vec<Node<LasPoint>>)>
+    {
+        Reader::update_one(self).map(|(node_id, coordinate_system, replace)| {
             (
                 leveled_grid_cell_to_proto_node_id(&node_id),
                 replace
                     .into_iter()
-                    .map(|(n, o)| (leveled_grid_cell_to_proto_node_id(&n), o.las_files()))
+                    .map(|(n, o)| (leveled_grid_cell_to_proto_node_id(&n), o.points(), coordinate_system))
                     .collect(),
             )
         })

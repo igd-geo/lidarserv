@@ -1,7 +1,7 @@
 use crate::geometry::grid::{LeveledGridCell, LodLevel};
 use crate::geometry::points::PointType;
 use crate::geometry::points::WithAttr;
-use crate::geometry::position::I32Position;
+use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
@@ -13,11 +13,13 @@ use crate::query::{Query, QueryExt};
 use crossbeam_channel::Receiver;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub struct OctreeReader<Point, Sampl, SamplF> {
     pub(super) inner: Arc<Inner<Point, Sampl, SamplF>>,
     update_cnt: u64,
     query: Box<dyn Query + Send + Sync>,
+    filter: Option<LasPointAttributeBounds>,
     changed_nodes_receiver: crossbeam_channel::Receiver<LeveledGridCell>,
     loaded: HashSet<LeveledGridCell>,
     frontier: HashMap<LeveledGridCell, FrontierElement>,
@@ -60,6 +62,7 @@ where
             inner,
             update_cnt: 0,
             query: Box::new(query),
+            filter: None,
             changed_nodes_receiver,
             loaded: HashSet::new(),
             frontier: HashMap::default(),
@@ -90,16 +93,26 @@ where
     }
 
     fn cell_matches_query(&self, cell: &LeveledGridCell) -> bool {
-        Self::cell_matches_query_impl(cell, self.query.as_ref(), self.inner.as_ref())
+        Self::cell_matches_query_impl(cell, self.query.as_ref(), &self.filter, self.inner.as_ref())
     }
 
     fn cell_matches_query_impl(
         cell: &LeveledGridCell,
         query: &(dyn Query + Send + Sync),
+        filter: &Option<LasPointAttributeBounds>,
         inner: &Inner<Point, Sampl, SamplF>,
     ) -> bool {
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
         let lod = cell.lod;
+
+        // check attributes
+        // if let Some(filter) = filter {
+        //     if !inner.attribute_index.unwrap().cell_in_bounds(lod, &cell.pos, filter) {
+        //         return false;
+        //     }
+        // }
+
+        // check query
         query.matches_node(&bounds, &inner.coordinate_system, &lod)
     }
 
@@ -175,8 +188,9 @@ where
         }
     }
 
-    pub fn set_query(&mut self, q: Box<dyn Query + Send + Sync + 'static>) {
+    pub fn set_query(&mut self, q: Box<dyn Query + Send + Sync + 'static>, f: Option<LasPointAttributeBounds>) {
         self.query = q;
+        self.filter = f;
 
         {
             let Self {
@@ -184,7 +198,7 @@ where
             } = self;
             for (cell, elem) in frontier {
                 elem.matches_query =
-                    Self::cell_matches_query_impl(cell, query.as_ref(), self.inner.as_ref());
+                    Self::cell_matches_query_impl(cell, query.as_ref(), &self.filter, self.inner.as_ref());
             }
         }
 
@@ -218,17 +232,17 @@ where
             .collect();
     }
 
-    pub fn reload_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>)> {
+    pub fn reload_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>, I32CoordinateSystem)> {
         let reload = match self.reload_queue.iter().min_by_key(|&(_, v)| *v) {
             None => return None,
             Some((k, _)) => *k,
         };
         self.reload_queue.remove(&reload);
         let node = self.inner.page_cache.load_or_default(&reload).unwrap();
-        Some((reload, node))
+        Some((reload, node, self.inner.coordinate_system.clone()))
     }
 
-    pub fn load_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>)> {
+    pub fn load_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>, I32CoordinateSystem)> {
         // get a node to load
         let load = match self.load_queue.iter().next() {
             None => return None,
@@ -259,7 +273,7 @@ where
 
         // load and return node data
         let node = self.inner.page_cache.load_or_default(&load).unwrap();
-        Some((load, node))
+        Some((load, node, self.inner.coordinate_system.clone()))
     }
 
     pub fn remove_one(&mut self) -> Option<LeveledGridCell> {
@@ -318,13 +332,21 @@ where
     type NodeId = LeveledGridCell;
     type Node = OctreePage<Sampl, Point>;
 
-    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q) {
-        OctreeReader::set_query(self, Box::new(query))
+    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q, filter: Option<LasPointAttributeBounds>) {
+        OctreeReader::set_query(self, Box::new(query), filter)
     }
 
-    fn updates_available(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
+    fn updates_available(
+        &mut self,
+        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut Receiver<Option<LasPointAttributeBounds>>
+    ) -> bool {
         if let Some(q) = queries.try_iter().last() {
-            self.set_query(q);
+            if let Some(f) = filters.try_iter().last() {
+                self.set_query(q, f);
+            } else {
+                self.set_query(q, None);
+            }
         }
         self.update();
         self.is_dirty()
@@ -334,10 +356,18 @@ where
         OctreeReader::update(self)
     }
 
-    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>) -> bool {
+    fn blocking_update(
+        &mut self,
+        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut Receiver<Option<LasPointAttributeBounds>>
+    ) -> bool {
         // make sure we've go the most recent query
         if let Some(q) = queries.try_iter().last() {
-            self.set_query(q);
+            if let Some(f) = filters.try_iter().last() {
+                self.set_query(q, f);
+            } else {
+                self.set_query(q, None);
+            }
         }
 
         // make sure we have the most recent updates from the writer
@@ -355,9 +385,17 @@ where
                 None => (),
                 Some(Ok(query)) => {
                     if let Some(q) = queries.try_iter().last() {
-                        self.set_query(q);
+                        if let Some(f) = filters.try_iter().last() {
+                            self.set_query(q, f);
+                        } else {
+                            self.set_query(q, None);
+                        }
                     } else {
-                        self.set_query(query);
+                        if let Some(f) = filters.try_iter().last() {
+                            self.set_query(query, f);
+                        } else {
+                            self.set_query(query, None);
+                        }
                     }
                 }
                 Some(Err(_)) => return false,
@@ -365,17 +403,17 @@ where
         }
     }
 
-    fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node)> {
-        OctreeReader::load_one(self).map(|(n, d)| (n, OctreePage::from_page(d, &self.inner.loader)))
+    fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node, I32CoordinateSystem)> {
+        OctreeReader::load_one(self).map(|(n, d, c)| (n, OctreePage::from_page(d, &self.inner.loader), c))
     }
 
     fn remove_one(&mut self) -> Option<Self::NodeId> {
         OctreeReader::remove_one(self)
     }
 
-    fn update_one(&mut self) -> Option<Update<Self::NodeId, Self::Node>> {
+    fn update_one(&mut self) -> Option<Update<Self::NodeId, I32CoordinateSystem, Self::Node>> {
         OctreeReader::reload_one(self)
-            .map(|(n, d)| (n, vec![(n, OctreePage::from_page(d, &self.inner.loader))]))
+            .map(|(n, d, c)| (n, c, vec![(n, OctreePage::from_page(d, &self.inner.loader))]))
     }
 }
 
@@ -392,13 +430,17 @@ where
     }
 }
 
-impl<Sampl, Point> Node for OctreePage<Sampl, Point>
+impl<Sampl, Point> Node<Point> for OctreePage<Sampl, Point>
 where
     Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
 {
     fn las_files(&self) -> Vec<Arc<Vec<u8>>> {
         vec![self.page.get_binary(&self.loader)]
+    }
+
+    fn points(&self) -> Vec<Point> {
+        self.page.get_points(&self.loader).unwrap_or(vec![])
     }
 }
 

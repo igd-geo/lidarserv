@@ -2,7 +2,9 @@ use lidarserv_common::nalgebra::{Matrix4, Vector3};
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
+use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
+use crate::index::point::LasPoint;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Message {
@@ -38,9 +40,12 @@ pub enum Message {
     },
 
     /// Sent from the server to the client with some update to the current query result.
+    /// "replaces" is the node id of the node, that is replaced by the new nodes.
+    /// "nodes" is a list of nodes, that are added to the current query result.
+    /// it contains the node id, the points and the coordinate system of each node.
     IncrementalResult {
         replaces: Option<NodeId>,
-        nodes: Vec<(NodeId, Vec<LasPointData>)>,
+        nodes: Vec<(NodeId, Vec<LasPoint>, I32CoordinateSystem)>,
     },
 
     /// Sent from the server to the client, to indicate that the current query result is complete.

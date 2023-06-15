@@ -4,6 +4,7 @@ use num_traits::Bounded;
 use std::fmt::Debug;
 use std::ops::{Add, Sub};
 use thiserror::Error;
+use serde::{Deserialize, Serialize};
 
 /// Error type for [CoordinateSystem::encode_position].
 #[derive(Debug, Error)]
@@ -216,7 +217,7 @@ impl Position for F64Position {
 /// Coordinate system for i32 coordinates, that is given explicit bounds for the coordinates,
 /// that it can represent. Coordinates within the bounds are mapped to the
 /// range \[i32::MIN - i32::MAX\].
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy, Serialize, Deserialize)]
 pub struct I32CoordinateSystem {
     scale: Vector3<f64>,
     offset: Vector3<f64>,
@@ -294,7 +295,7 @@ impl CoordinateSystem for I32CoordinateSystem {
 }
 
 /// Position with i32 x, y and z components.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct I32Position(Point3<i32>);
 
 impl Default for I32Position {
