@@ -242,8 +242,7 @@ async fn viewer_mode(
                     ));
                 }
             };
-            debug!("FOUND QUERY: {:?}", query);
-            debug!("FOUND FILTER: {:?}", filter);
+            debug!("Received Query: {:?} and Filter {:?}", query, filter);
             match query {
                 Query::AabbQuery {
                     lod_level,

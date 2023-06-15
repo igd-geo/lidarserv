@@ -1,3 +1,4 @@
+use log::debug;
 use crate::las::LasPointAttributes;
 use serde::{Deserialize, Serialize};
 
@@ -132,12 +133,13 @@ impl LasPointAttributeBounds {
     }
 
     /// Check, if a bound is contained in the bound
+    /// If one of the bounds is None, it is considered to be contained
     fn is_bound_in_bound<T: PartialOrd + Copy>(&self, current_bound: Option<(T, T)>, new_bound: Option<(T, T)>) -> bool {
         match (current_bound, new_bound) {
             (Some((min_val, max_val)), Some((new_min, new_max))) => {
                 new_min >= min_val && new_max <= max_val
             }
-            (None, Some(_)) => false,
+            (None, Some(_)) => true,
             (Some(_), None) => true,
             (None, None) => true,
         }
@@ -216,6 +218,42 @@ mod tests {
         }
     }
 
+    fn max_bounds() -> LasPointAttributeBounds {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.intensity = Some((0, 65535));
+        bounds.return_number = Some((0, 255));
+        bounds.number_of_returns = Some((0, 255));
+        bounds.scan_direction = Some((false, true));
+        bounds.edge_of_flight_line = Some((false, true));
+        bounds.classification = Some((0, 255));
+        bounds.scan_angle_rank = Some((-128, 127));
+        bounds.user_data = Some((0, 255));
+        bounds.point_source_id = Some((0, 65535));
+        bounds.gps_time = Some((-1.7976931348623157e308, 1.7976931348623157e308));
+        bounds.color_r = Some((0, 65535));
+        bounds.color_g = Some((0, 65535));
+        bounds.color_b = Some((0, 65535));
+        bounds
+    }
+
+    fn smaller_bounds() -> LasPointAttributeBounds {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.intensity = Some((3, 19));
+        bounds.return_number = Some((0, 2));
+        bounds.number_of_returns = Some((2, 4));
+        bounds.scan_direction = Some((false, true));
+        bounds.edge_of_flight_line = Some((false, true));
+        bounds.classification = Some((1, 5));
+        bounds.scan_angle_rank = Some((-22, 2));
+        bounds.user_data = Some((0, 35));
+        bounds.point_source_id = Some((27, 29));
+        bounds.gps_time = Some((61869.3669254723, 62336.55417299696));
+        bounds.color_r = Some((0, 0));
+        bounds.color_g = Some((0, 0));
+        bounds.color_b = Some((0, 0));
+        bounds
+    }
+
     #[test]
     fn test_bounds() {
         let mut bounds = LasPointAttributeBounds::new();
@@ -252,5 +290,10 @@ mod tests {
         let bounds2 = LasPointAttributeBounds::from_attributes(&attributes_2());
         assert_eq!(bounds.is_bounds_in_bounds(&bounds2), true);
         assert_eq!(bounds.is_attributes_in_bounds(&attributes_2()), true);
+    }
+
+    #[test]
+    fn test_bounds_in_bounds() {
+        assert!(max_bounds().is_bounds_in_bounds(&smaller_bounds()));
     }
 }

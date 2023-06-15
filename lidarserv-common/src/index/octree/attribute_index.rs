@@ -12,6 +12,7 @@ use crate::las::LasPointAttributes;
 /// Holds attribute bounds for grid cells.
 /// Elements of vector correspond to LOD levels.
 /// HashMaps map grid cells to attribute bounds.
+#[derive(Debug)]
 pub struct AttributeIndex {
     index: Arc<Vec<RwLock<HashMap<GridCell, LasPointAttributeBounds>>>>,
     file_name: PathBuf,
@@ -19,6 +20,7 @@ pub struct AttributeIndex {
 
 impl AttributeIndex {
     /// Creates a new attribute index
+    /// If an index file (file_name) exists, it is loaded, otherwise a new one is created
     pub fn new(num_lods: usize, file_name: PathBuf) -> Self {
         if let Ok(index) = Self::load_from_file(num_lods, &file_name) {
             // index exists, load it
@@ -73,7 +75,8 @@ impl AttributeIndex {
         bounds.update_by_bounds(new_bounds);
     }
 
-    pub fn cell_in_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds) -> bool{
+    /// Checks if a grid cell is in given attribute bounds
+    pub fn cell_in_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds) -> bool {
         // aquire read lock for lod level
         let index_read = self.index[lod.level() as usize].read().unwrap();
         let entry = index_read.get_key_value(&grid_cell);
@@ -81,13 +84,17 @@ impl AttributeIndex {
         // check if cell is in bounds
         let _ = match entry {
             Some(cell_bounds) => {
-                cell_bounds.1.is_bounds_in_bounds(bounds)
+                let is_in_bounds = bounds.is_bounds_in_bounds(&cell_bounds.1);
+                return is_in_bounds;
             },
-            None => false,
+            None => {
+                true
+            },
         };
         false
     }
 
+    /// Loads attribute index from file
     fn load_from_file(num_lods: usize, file_name: &Path) -> Result<Arc<Vec<RwLock<HashMap<GridCell, LasPointAttributeBounds>>>>, std::io::Error> {
 
         // check existence of file and open it
@@ -107,6 +114,7 @@ impl AttributeIndex {
         Ok(Arc::new(vector))
     }
 
+    /// Writes attribute index to file
     pub fn write_to_file(&self) -> Result<(), std::io::Error> {
 
         // create file
@@ -127,19 +135,6 @@ impl AttributeIndex {
         ciborium::ser::into_writer(&vector, &f).expect("Error while writing attribute index");
         f.sync_all()?;
         Ok(())
-    }
-}
-
-impl fmt::Debug for AttributeIndex {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (i, lock) in self.index.iter().enumerate() {
-            let index = lock.read().unwrap();
-            writeln!(f, "LOD {}", i)?;
-            for (cell, bounds) in index.iter() {
-                writeln!(f, "  {:?} {:?}", cell, bounds)?;
-            }
-        }
-        write!(f, "none")
     }
 }
 

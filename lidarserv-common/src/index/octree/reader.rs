@@ -111,15 +111,22 @@ where
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
         let lod = cell.lod;
 
-        // check attributes
-        // if let Some(filter) = filter {
-        //     if !inner.attribute_index.unwrap().cell_in_bounds(lod, &cell.pos, filter) {
-        //         return false;
-        //     }
-        // }
+        // check spatial query for cell
+        if !query.matches_node(&bounds, &inner.coordinate_system, &lod) {
+            debug!("Cell {:?} does not match query", cell);
+            return false;
+        }
 
-        // check query
-        query.matches_node(&bounds, &inner.coordinate_system, &lod)
+        // check attributes for cell
+        if let Some(filter) = filter {
+            let attribute_index = inner.attribute_index.as_ref().unwrap();
+            if !attribute_index.cell_in_bounds(lod, &cell.pos, filter) {
+                debug!("Cell {:?} does not match filter", cell);
+                return false;
+            }
+        }
+        debug!("Cell {:?} matches query and filter", cell);
+        true
     }
 
     /// Processes a set of changed nodes.
