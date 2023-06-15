@@ -99,7 +99,7 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
             number_of_returns: point.attribute().number_of_returns as u8,
             scan_direction: direction, //todo wrong
             is_edge_of_flight_line: point.attribute().edge_of_flight_line, //todo wrong
-            classification: Classification::new(point.attribute().classification as u8).unwrap(),
+            classification: Classification::new(point.attribute().classification as u8).unwrap_or(Classification::new(0).unwrap()),
             scan_angle: point.attribute().scan_angle_rank as f32,
             user_data: point.attribute().user_data as u8,
             point_source_id: point.attribute().point_source_id as u16,
