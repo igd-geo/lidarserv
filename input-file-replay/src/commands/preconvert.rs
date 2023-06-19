@@ -165,21 +165,24 @@ fn read_points_from_las(
     let mut reader = BufReader::new(f);
     // TODO choose use_color and use_time dynamically
     let las_reader : I32LasReadWrite = I32LasReadWrite::new(false, true, true);
-    let result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader)?;
+    let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader)?;
     info!("LAS File Coordinate System: {:?}", result.coordinate_system);
 
-    let mut t0 = None;
+    //sort points by time
+    info!("Sorting points by time");
+    result.points.sort_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
+
+    let t0 = result.points[0].attribute().gps_time;
     let mut current_frame = 0;
     let mut current_frame_points = Vec::new();
 
     // chunk points into frames and send them
     for point in result.points {
         let t = point.attribute::<LasPointAttributes>().gps_time;
-        let t0 = *t0.get_or_insert(t);
         let frame_number = ((t - t0) / args.speed_factor * args.fps as f64) as i32;
         while current_frame < frame_number {
             if current_frame_points.is_empty() && args.skip_empty_frames {
-                warn!("Skipping empty frame {}", current_frame);
+                // warn!("Skipping empty frame {}", current_frame);
                 current_frame += 1;
                 continue;
             }
