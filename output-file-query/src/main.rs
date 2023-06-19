@@ -90,6 +90,11 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
             true => ScanDirection::LeftToRight,
             false => ScanDirection::RightToLeft,
         };
+        // needed for this point format
+        let mut classification = point.attribute().classification as u8;
+        if classification > 31 {
+            classification = 31;
+        }
         let point = Point {
             x: point.position().x() as f64,
             y: point.position().y() as f64,
@@ -99,7 +104,7 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
             number_of_returns: point.attribute().number_of_returns as u8,
             scan_direction: direction, //todo wrong
             is_edge_of_flight_line: point.attribute().edge_of_flight_line, //todo wrong
-            classification: Classification::new(point.attribute().classification as u8).unwrap_or(Classification::new(0).unwrap()),
+            classification: Classification::new(classification).unwrap_or(Classification::new(0).unwrap()),
             scan_angle: point.attribute().scan_angle_rank as f32,
             user_data: point.attribute().user_data as u8,
             point_source_id: point.attribute().point_source_id as u16,
@@ -109,6 +114,7 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
         };
         let result = writer.write(point);
         if result.is_err() {
+            info!("Error writing point: {:?}", result);
             errors += 1;
         }
     }
