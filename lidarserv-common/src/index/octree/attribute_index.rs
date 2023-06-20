@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 use ciborium::de::from_reader;
 use log::{debug};
 use csv::Writer;
-use crate::geometry::grid::{GridCell, LodLevel};
+use crate::geometry::grid::{GridCell, LeveledGridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::las::LasPointAttributes;
 
@@ -264,6 +264,60 @@ mod tests {
         }
     }
 
+    fn max_bounds() -> LasPointAttributeBounds {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.intensity = Some((0, 65535));
+        bounds.return_number = Some((0, 255));
+        bounds.number_of_returns = Some((0, 255));
+        bounds.scan_direction = Some((false, true));
+        bounds.edge_of_flight_line = Some((false, true));
+        bounds.classification = Some((0, 255));
+        bounds.scan_angle_rank = Some((-128, 127));
+        bounds.user_data = Some((0, 255));
+        bounds.point_source_id = Some((0, 65535));
+        bounds.gps_time = Some((-1.7976931348623157e308, 1.7976931348623157e308));
+        bounds.color_r = Some((0, 65535));
+        bounds.color_g = Some((0, 65535));
+        bounds.color_b = Some((0, 65535));
+        bounds
+    }
+
+    fn smaller_bounds() -> LasPointAttributeBounds {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.intensity = Some((3, 19));
+        bounds.return_number = Some((0, 2));
+        bounds.number_of_returns = Some((2, 4));
+        bounds.scan_direction = Some((false, true));
+        bounds.edge_of_flight_line = Some((false, true));
+        bounds.classification = Some((1, 5));
+        bounds.scan_angle_rank = Some((-22, 2));
+        bounds.user_data = Some((0, 35));
+        bounds.point_source_id = Some((27, 29));
+        bounds.gps_time = Some((61869.3669254723, 62336.55417299696));
+        bounds.color_r = Some((0, 0));
+        bounds.color_g = Some((0, 0));
+        bounds.color_b = Some((0, 0));
+        bounds
+    }
+
+    fn not_overlapping_bounds() -> LasPointAttributeBounds {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.intensity = Some((20, 65535));
+        bounds.return_number = Some((0, 255));
+        bounds.number_of_returns = Some((0, 255));
+        bounds.scan_direction = Some((false, true));
+        bounds.edge_of_flight_line = Some((false, true));
+        bounds.classification = Some((30, 255));
+        bounds.scan_angle_rank = Some((-128, 127));
+        bounds.user_data = Some((0, 255));
+        bounds.point_source_id = Some((0, 65535));
+        bounds.gps_time = Some((-1.7976931348623157e308, 1.7976931348623157e308));
+        bounds.color_r = Some((0, 65535));
+        bounds.color_g = Some((0, 65535));
+        bounds.color_b = Some((0, 65535));
+        bounds
+    }
+
     #[test]
     fn test_attribute_index_update() {
 
@@ -337,6 +391,27 @@ mod tests {
 
         // delete file
         std::fs::remove_file("test.bin").unwrap();
+    }
+
+    #[test]
+    fn overlap() {
+        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let lod = LodLevel::base();
+        let grid_cell = GridCell{ x: 0, y: 0, z: 0};
+
+        // update with values
+        attribute_index.update_by_bounds(lod, &grid_cell, &smaller_bounds());
+
+        // check if values are correct
+        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &smaller_bounds()), true);
+        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &max_bounds()), true);
+        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &not_overlapping_bounds()), false);
+
+        // delete file if it exists
+        let file_name = PathBuf::from("test.bin");
+        if file_name.exists() {
+            std::fs::remove_file(file_name).unwrap();
+        }
     }
 
 
