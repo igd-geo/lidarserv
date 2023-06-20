@@ -20,6 +20,7 @@ crossbeam-utils = "0.8.5"
 crossbeam-deque = "0.8.1"
 rand = "0.8.4"
 core_affinity = "0.5.10"
+csv = "1.2"
 
 [features]
 trace = ["tracy-client/enable"]

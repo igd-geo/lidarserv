@@ -1,10 +1,11 @@
 use std::collections::HashMap;
-use std::fmt;
+use std::{fmt, io};
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use ciborium::de::from_reader;
 use log::{debug};
+use csv::Writer;
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::las::LasPointAttributes;
@@ -134,6 +135,95 @@ impl AttributeIndex {
         // write to file
         ciborium::ser::into_writer(&vector, &f).expect("Error while writing attribute index");
         f.sync_all()?;
+
+        // DEBUG
+        self.write_to_csv().unwrap();
+
+        Ok(())
+    }
+
+    /// Writes attribute index to human readable file (for debugging)
+    pub fn write_to_csv(&self) -> Result<(), std::io::Error> {
+
+        // delete file
+        if Path::new("attribute_index.csv").exists() {
+            std::fs::remove_file("attribute_index.csv")?;
+        }
+
+        // create writer
+        let mut wtr = Writer::from_path("attribute_index.csv")?;
+        wtr.write_record(&[
+            "lod",
+            "x",
+            "y",
+            "z",
+            "intensity_min",
+            "intensity_max",
+            "return_number_min",
+            "return_number_max",
+            "number_of_returns_min",
+            "number_of_returns_max",
+            "scan_direction_min",
+            "scan_direction_max",
+            "edge_of_flight_line_min",
+            "edge_of_flight_line_max",
+            "classification_min",
+            "classification_max",
+            "scan_angle_rank_min",
+            "scan_angle_rank_max",
+            "user_data_min",
+            "user_data_max",
+            "point_source_id_min",
+            "point_source_id_max",
+            "gps_time_min",
+            "gps_time_max",
+            "color_r_min",
+            "color_r_max",
+            "color_g_min",
+            "color_g_max",
+            "color_b_min",
+            "color_b_max",
+        ])?;
+
+        // write to file
+        for (lod, lock) in self.index.iter().enumerate() {
+            let index = lock.read().unwrap();
+            for (grid_cell, bounds) in index.iter() {
+                wtr.write_record(&[
+                    lod.to_string(),
+                    grid_cell.x.to_string(),
+                    grid_cell.y.to_string(),
+                    grid_cell.z.to_string(),
+                    bounds.intensity.unwrap().0.to_string(),
+                    bounds.intensity.unwrap().1.to_string(),
+                    bounds.return_number.unwrap().0.to_string(),
+                    bounds.return_number.unwrap().1.to_string(),
+                    bounds.number_of_returns.unwrap().0.to_string(),
+                    bounds.number_of_returns.unwrap().1.to_string(),
+                    bounds.scan_direction.unwrap().0.to_string(),
+                    bounds.scan_direction.unwrap().1.to_string(),
+                    bounds.edge_of_flight_line.unwrap().0.to_string(),
+                    bounds.edge_of_flight_line.unwrap().1.to_string(),
+                    bounds.classification.unwrap().0.to_string(),
+                    bounds.classification.unwrap().1.to_string(),
+                    bounds.scan_angle_rank.unwrap().0.to_string(),
+                    bounds.scan_angle_rank.unwrap().1.to_string(),
+                    bounds.user_data.unwrap().0.to_string(),
+                    bounds.user_data.unwrap().1.to_string(),
+                    bounds.point_source_id.unwrap().0.to_string(),
+                    bounds.point_source_id.unwrap().1.to_string(),
+                    bounds.gps_time.unwrap().0.to_string(),
+                    bounds.gps_time.unwrap().1.to_string(),
+                    bounds.color_r.unwrap().0.to_string(),
+                    bounds.color_r.unwrap().1.to_string(),
+                    bounds.color_g.unwrap().0.to_string(),
+                    bounds.color_g.unwrap().1.to_string(),
+                    bounds.color_b.unwrap().0.to_string(),
+                    bounds.color_b.unwrap().1.to_string(),
+                ])?;
+            }
+        }
+        wtr.flush()?;
         Ok(())
     }
 }
