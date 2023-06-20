@@ -4,6 +4,7 @@ use crate::geometry::position::{CoordinateSystem, I32CoordinateSystem, I32Positi
 use crate::query::Query;
 use std::error::Error;
 use std::sync::Arc;
+use log::debug;
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub mod octree;
@@ -50,6 +51,14 @@ where
     type Node: Node<Point>;
 
     fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q, filter: Option<LasPointAttributeBounds>);
+
+    fn set_filter(&mut self, filter: Option<LasPointAttributeBounds>);
+
+    fn fetch_query_filter(
+        &mut self,
+        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
+    );
 
     fn updates_available(
         &mut self,

@@ -114,6 +114,7 @@ where
         // check spatial query for cell
         if !query.matches_node(&bounds, &inner.coordinate_system, &lod) {
             debug!("Cell {:?} does not match query", cell);
+            debug!("Bounds: {:?}", bounds);
             return false;
         }
 
@@ -121,7 +122,6 @@ where
         if let Some(filter) = filter {
             let attribute_index = inner.attribute_index.as_ref().unwrap();
             if !attribute_index.cell_in_bounds(lod, &cell.pos, filter) {
-                debug!("Cell {:?} does not match filter", cell);
                 return false;
             }
         }
@@ -209,12 +209,20 @@ where
         }
     }
 
-    /// Sets the query and filter.
-    /// Updates the frontier, load and remove queue accordingly.
-    pub fn set_query(&mut self, q: Box<dyn Query + Send + Sync + 'static>, f: Option<LasPointAttributeBounds>) {
+    /// Sets the query
+    pub fn set_query(&mut self, q: Box<dyn Query + Send + Sync + 'static>) {
         self.query = q;
-        self.filter = f;
+        self.update_new_query();
+    }
 
+    /// Sets the filter
+    pub fn set_filter(&mut self, f: Option<LasPointAttributeBounds>) {
+        self.filter = f;
+        self.update_new_query();
+    }
+
+    /// Updates the frontier, load and remove queue after new query or filter.
+    fn update_new_query(&mut self) {
         // update frontier
         {
             let Self {
@@ -373,7 +381,26 @@ where
     type Node = OctreePage<Sampl, Point>;
 
     fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q, filter: Option<LasPointAttributeBounds>) {
-        OctreeReader::set_query(self, Box::new(query), filter)
+        OctreeReader::set_query(self, Box::new(query))
+    }
+
+    fn set_filter(&mut self, filter: Option<LasPointAttributeBounds>) {
+        OctreeReader::set_filter(self, filter)
+    }
+
+    fn fetch_query_filter(
+        &mut self,
+        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut Receiver<Option<LasPointAttributeBounds>>
+    ) {
+        if let Some(q) = queries.try_iter().last() {
+            self.set_query(q);
+            debug!("Updating query");
+        }
+        if let Some(f) = filters.try_iter().last() {
+            self.set_filter(f);
+            debug!("Updating filter");
+        }
     }
 
     fn updates_available(
@@ -381,13 +408,7 @@ where
         queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
         filters: &mut Receiver<Option<LasPointAttributeBounds>>
     ) -> bool {
-        if let Some(q) = queries.try_iter().last() {
-            if let Some(f) = filters.try_iter().last() {
-                self.set_query(q, f);
-            } else {
-                self.set_query(q, None);
-            }
-        }
+        self.fetch_query_filter(queries, filters);
         self.update();
         self.is_dirty()
     }
@@ -402,13 +423,7 @@ where
         filters: &mut Receiver<Option<LasPointAttributeBounds>>
     ) -> bool {
         // make sure we've go the most recent query
-        if let Some(q) = queries.try_iter().last() {
-            if let Some(f) = filters.try_iter().last() {
-                self.set_query(q, f);
-            } else {
-                self.set_query(q, None);
-            }
-        }
+        self.fetch_query_filter(queries, filters);
 
         // make sure we have the most recent updates from the writer
         self.update();
@@ -424,19 +439,8 @@ where
             match self.wait_update_or(queries) {
                 None => (),
                 Some(Ok(query)) => {
-                    if let Some(q) = queries.try_iter().last() {
-                        if let Some(f) = filters.try_iter().last() {
-                            self.set_query(q, f);
-                        } else {
-                            self.set_query(q, None);
-                        }
-                    } else {
-                        if let Some(f) = filters.try_iter().last() {
-                            self.set_query(query, f);
-                        } else {
-                            self.set_query(query, None);
-                        }
-                    }
+                    self.set_query(query);
+                    self.fetch_query_filter(queries, filters);
                 }
                 Some(Err(_)) => return false,
             }
