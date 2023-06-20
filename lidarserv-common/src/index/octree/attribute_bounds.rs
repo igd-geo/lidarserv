@@ -145,7 +145,20 @@ impl LasPointAttributeBounds {
         }
     }
 
-    /// Checks, if the given attributes are contained in the bounds of this object
+    /// Check if a bound is overlapping with another bound
+    /// If one of the bounds is None, it is considered to be overlapping
+    fn is_bound_overlapping_bound<T: PartialOrd + Copy>(&self, current_bound: Option<(T, T)>, new_bound: Option<(T, T)>) -> bool {
+        match (current_bound, new_bound) {
+            (Some((min_val, max_val)), Some((new_min, new_max))) => {
+                new_min <= max_val && min_val <= new_max
+            }
+            (None, Some(_)) => true,
+            (Some(_), None) => true,
+            (None, None) => true,
+        }
+    }
+
+    /// Checks, if ALL OF the given attributes are contained in the bounds of this object
     pub fn is_attributes_in_bounds(&self, attributes: &LasPointAttributes) -> bool {
         self.is_value_in_bound(self.intensity, attributes.intensity) &&
             self.is_value_in_bound(self.return_number, attributes.return_number) &&
@@ -162,7 +175,7 @@ impl LasPointAttributeBounds {
             self.is_value_in_bound(self.color_b, attributes.color.2)
     }
 
-    /// Checks, if the given bounds are contained in the bounds of this object
+    /// Checks, if ALL OF the given bounds are FULLY CONTAINED in the bounds of this object
     pub fn is_bounds_in_bounds(&self, bounds: &LasPointAttributeBounds) -> bool {
         self.is_bound_in_bound(self.intensity, bounds.intensity) &&
             self.is_bound_in_bound(self.return_number, bounds.return_number) &&
@@ -177,6 +190,23 @@ impl LasPointAttributeBounds {
             self.is_bound_in_bound(self.color_r, bounds.color_r) &&
             self.is_bound_in_bound(self.color_g, bounds.color_g) &&
             self.is_bound_in_bound(self.color_b, bounds.color_b)
+    }
+
+    /// Checks, if AT LEAST ONE of the given bounds OVERLAPS with the bounds of this object
+    pub fn is_bounds_overlapping_bounds(&self, bounds: &LasPointAttributeBounds) -> bool {
+        self.is_bound_overlapping_bound(self.intensity, bounds.intensity) &&
+            self.is_bound_overlapping_bound(self.return_number, bounds.return_number) &&
+            self.is_bound_overlapping_bound(self.number_of_returns, bounds.number_of_returns) &&
+            self.is_bound_overlapping_bound(self.scan_direction, bounds.scan_direction) &&
+            self.is_bound_overlapping_bound(self.edge_of_flight_line, bounds.edge_of_flight_line) &&
+            self.is_bound_overlapping_bound(self.classification, bounds.classification) &&
+            self.is_bound_overlapping_bound(self.scan_angle_rank, bounds.scan_angle_rank) &&
+            self.is_bound_overlapping_bound(self.user_data, bounds.user_data) &&
+            self.is_bound_overlapping_bound(self.point_source_id, bounds.point_source_id) &&
+            self.is_bound_overlapping_bound(self.gps_time, bounds.gps_time) &&
+            self.is_bound_overlapping_bound(self.color_r, bounds.color_r) &&
+            self.is_bound_overlapping_bound(self.color_g, bounds.color_g) &&
+            self.is_bound_overlapping_bound(self.color_b, bounds.color_b)
     }
 }
 
@@ -254,6 +284,24 @@ mod tests {
         bounds
     }
 
+    fn not_overlapping_bounds() -> LasPointAttributeBounds {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.intensity = Some((20, 65535));
+        bounds.return_number = Some((0, 255));
+        bounds.number_of_returns = Some((0, 255));
+        bounds.scan_direction = Some((false, true));
+        bounds.edge_of_flight_line = Some((false, true));
+        bounds.classification = Some((30, 255));
+        bounds.scan_angle_rank = Some((-128, 127));
+        bounds.user_data = Some((0, 255));
+        bounds.point_source_id = Some((0, 65535));
+        bounds.gps_time = Some((-1.7976931348623157e308, 1.7976931348623157e308));
+        bounds.color_r = Some((0, 65535));
+        bounds.color_g = Some((0, 65535));
+        bounds.color_b = Some((0, 65535));
+        bounds
+    }
+
     #[test]
     fn test_bounds() {
         let mut bounds = LasPointAttributeBounds::new();
@@ -295,5 +343,24 @@ mod tests {
     #[test]
     fn test_bounds_in_bounds() {
         assert!(max_bounds().is_bounds_in_bounds(&smaller_bounds()));
+    }
+
+    #[test]
+    fn test_overlap_single_bound() {
+
+        let mut bounds = LasPointAttributeBounds::new();
+
+        let bound1 : Option<(u16, u16)> = Some((0, 10));
+        let bound2 : Option<(u16, u16)> = Some((5, 15));
+        let bound3 : Option<(u16, u16)> = Some((11, 20));
+
+        assert_eq!(bounds.is_bound_overlapping_bound(bound1, bound2), true);
+        assert_eq!(bounds.is_bound_overlapping_bound(bound1, bound3), false);
+    }
+
+    #[test]
+    fn test_overlap_bounds() {
+        assert_eq!(max_bounds().is_bounds_overlapping_bounds(&smaller_bounds()), true);
+        assert_eq!(smaller_bounds().is_bounds_overlapping_bounds(&not_overlapping_bounds()), false);
     }
 }

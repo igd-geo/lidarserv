@@ -121,7 +121,8 @@ where
         // check attributes for cell
         if let Some(filter) = filter {
             let attribute_index = inner.attribute_index.as_ref().unwrap();
-            if !attribute_index.cell_in_bounds(lod, &cell.pos, filter) {
+            if !attribute_index.cell_overlaps_with_bounds(lod, &cell.pos, filter) {
+                debug!("Cell {:?} does not match filter {:?}", cell, filter);
                 return false;
             }
         }

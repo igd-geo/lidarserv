@@ -76,8 +76,8 @@ impl AttributeIndex {
         bounds.update_by_bounds(new_bounds);
     }
 
-    /// Checks if a grid cell is in given attribute bounds
-    pub fn cell_in_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds) -> bool {
+    /// Checks if a grid cell OVERLAPS with the given attribute bounds
+    pub fn cell_overlaps_with_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds) -> bool {
         // aquire read lock for lod level
         let index_read = self.index[lod.level() as usize].read().unwrap();
         let entry = index_read.get_key_value(&grid_cell);
