@@ -9,6 +9,11 @@ pub fn run(init_options: InitOptions) -> Result<()> {
     // create the directory
     std::fs::create_dir_all(&init_options.path)?;
 
+    // check point record format
+    if !(init_options.las_point_record_format >= 0 && init_options.las_point_record_format <= 3) {
+        anyhow::bail!("Invalid point record format: {}, only 0-3 are supported", init_options.las_point_record_format);
+    }
+
     // write settings
     let settings = IndexSettings {
         general_settings: GeneralSettings {
@@ -17,8 +22,7 @@ pub fn run(init_options: InitOptions) -> Result<()> {
             las_scale: init_options.las_scale.0,
             las_offset: init_options.las_offset.0,
             use_compression: !init_options.las_no_compression,
-            use_color: init_options.las_color,
-            use_time: init_options.las_time,
+            point_record_format: init_options.las_point_record_format,
         },
         octree_settings: OctreeSettings {
             priority_function: init_options.mno_task_priority,

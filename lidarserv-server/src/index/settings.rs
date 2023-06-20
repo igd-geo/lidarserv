@@ -19,8 +19,7 @@ pub struct GeneralSettings {
     pub las_scale: Vector3<f64>,
     pub las_offset: Vector3<f64>,
     pub use_compression: bool,
-    pub use_color: bool,
-    pub use_time: bool
+    pub point_record_format: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

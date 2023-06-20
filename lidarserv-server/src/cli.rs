@@ -40,13 +40,9 @@ pub struct InitOptions {
     #[structopt(long)]
     pub las_no_compression: bool,
 
-    /// Enable storing of point colors
-    #[structopt(long)]
-    pub las_color: bool,
-
-    /// Enable storing of point times
-    #[structopt(long)]
-    pub las_time: bool,
+    /// Selection of LAS Point Record Format (0-3 supported)
+    #[structopt(long, default_value = "0")]
+    pub las_point_record_format: u8,
 
     /// Number of threads used for indexing the points.
     #[structopt(long, default_value = "4")]

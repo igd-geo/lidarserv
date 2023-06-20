@@ -36,7 +36,7 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
 
     // page loading stuff
     let las_loader =
-        I32LasReadWrite::new(general_settings.use_compression, general_settings.use_color, general_settings.use_time);
+        I32LasReadWrite::new(general_settings.use_compression, general_settings.point_record_format);
     let page_loader = OctreePageLoader::new(las_loader.clone(), data_path.to_owned());
     let mut directory_file_name = data_path.to_owned();
     directory_file_name.push("directory.bin");
@@ -86,8 +86,7 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
         loader: las_loader,
         coordinate_system,
         metrics,
-        use_point_colors: general_settings.use_color,
-        use_point_times: general_settings.use_time,
+        point_record_format: general_settings.point_record_format,
     });
     Ok(Box::new(octree))
 }

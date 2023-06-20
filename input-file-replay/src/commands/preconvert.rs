@@ -17,7 +17,7 @@ use lidarserv_server::common::geometry::points::{PointType, WithAttr};
 
 pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
     // get coordinate system from server
-    let (coordinate_system, _ , _) = get_server_settings(&args).await?;
+    let (coordinate_system, point_record_format) = get_server_settings(&args).await?;
     let coordinate_system = match coordinate_system {
         CoordinateSystem::I32CoordinateSystem { scale, offset } => {
             let cs = I32CoordinateSystem::from_las_transform(scale, offset);
@@ -51,7 +51,7 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
             }
             Some("las") => {
                 // read points from input files (las)
-                thread::spawn(move || read_points_from_las(&args, chunks_sender, &coordinate_system))
+                thread::spawn(move || read_points_from_las(&args, chunks_sender, &coordinate_system, point_record_format))
             }
             _ => bail!("Unknown file extension"),
         }
@@ -60,7 +60,7 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
     // write points to output file (laz)
     let t2 = {
         let args = args.clone();
-        thread::spawn(move || write_points(&args, chunks_receiver, &coordinate_system))
+        thread::spawn(move || write_points(&args, chunks_receiver, &coordinate_system, point_record_format))
     };
 
     // wait for read / write threads to finish
@@ -71,7 +71,7 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
 
 const PROTOCOL_VERSION: u32 = 1;
 
-async fn get_server_settings(args: &PreConvertArgs) -> Result<(CoordinateSystem, bool, bool)> {
+async fn get_server_settings(args: &PreConvertArgs) -> Result<(CoordinateSystem, u8)> {
     // connect
     let (_sender, mut shutdown) = tokio::sync::broadcast::channel(1);
     let tcp_con = TcpStream::connect((args.host.as_str(), args.port)).await?;
@@ -100,16 +100,15 @@ async fn get_server_settings(args: &PreConvertArgs) -> Result<(CoordinateSystem,
 
     // wait for the point cloud info.
     let pc_info = connection.read_message(&mut shutdown).await?;
-    let (coordinate_system, use_color, use_time) = match pc_info {
+    let (coordinate_system, point_record_format) = match pc_info {
         Message::PointCloudInfo {
             coordinate_system,
-            color,
-            time,
-        } => (coordinate_system, color, time),
+            point_record_format,
+        } => (coordinate_system, point_record_format),
         _ => bail!("Protocol error"),
     };
 
-    Ok((coordinate_system, use_color, use_time))
+    Ok((coordinate_system, point_record_format))
 }
 
 fn read_points_from_csv(
@@ -155,6 +154,7 @@ fn read_points_from_las(
     args: &PreConvertArgs,
     sender: crossbeam_channel::Sender<Vec<LasPoint>>,
     coordinate_system: &I32CoordinateSystem,
+    point_record_format: u8,
 ) -> Result<()> {
 
     // read args
@@ -164,7 +164,7 @@ fn read_points_from_las(
     let f = File::open(points_file)?;
     let mut reader = BufReader::new(f);
     // TODO choose use_color and use_time dynamically
-    let las_reader : I32LasReadWrite = I32LasReadWrite::new(false, true, true);
+    let las_reader : I32LasReadWrite = I32LasReadWrite::new(false, point_record_format);
     let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader)?;
     info!("LAS File Coordinate System: {:?}", result.coordinate_system);
 
@@ -214,10 +214,10 @@ fn write_points(
     args: &PreConvertArgs,
     receiver: crossbeam_channel::Receiver<Vec<LasPoint>>,
     coordinate_system: &I32CoordinateSystem,
+    point_record_format: u8,
 ) -> Result<()> {
     let write = File::create(&args.output_file)?;
     let write = BufWriter::new(write);
-    // TODO choose use_color and use_time dynamically
-    async_write_compressed_las_with_variable_chunk_size(receiver, coordinate_system, write, true, true)?;
+    async_write_compressed_las_with_variable_chunk_size(receiver, coordinate_system, write, point_record_format)?;
     Ok(())
 }

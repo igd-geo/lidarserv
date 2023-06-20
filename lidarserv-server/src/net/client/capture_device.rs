@@ -15,8 +15,7 @@ pub struct CaptureDeviceClient {
     use_compression: bool,
     connection: Connection<TcpStream>,
     coordinate_system: CoordinateSystem,
-    use_color: bool,
-    use_time: bool,
+    point_record_format: u8,
 }
 
 impl CaptureDeviceClient {
@@ -67,12 +66,11 @@ impl CaptureDeviceClient {
         // We need that first, before we can start inserting points,
         // because it tells us how to encode the points (E.g. the las transformation (scale+offset))
         let pc_info = connection.read_message(shutdown).await?;
-        let (coordinate_system, use_color, use_time) = match pc_info {
+        let (coordinate_system, point_record_format) = match pc_info {
             Message::PointCloudInfo {
                 coordinate_system,
-                color,
-                time,
-            } => (coordinate_system, color, time),
+                point_record_format
+            } => (coordinate_system, point_record_format),
             _ => {
                 return Err(LidarServerError::Protocol(
                     "Expected a `PointCloudInfo` message.".to_string(),
@@ -84,8 +82,7 @@ impl CaptureDeviceClient {
             use_compression,
             connection,
             coordinate_system,
-            use_color,
-            use_time,
+            point_record_format
         })
     }
 
@@ -104,7 +101,7 @@ impl CaptureDeviceClient {
                     .map_err(|e| LidarServerError::Other(Box::new(e)))?;
 
                 // encode as las
-                let encoder = I32LasReadWrite::new(self.use_compression, self.use_color, self.use_time);
+                let encoder = I32LasReadWrite::new(self.use_compression, self.point_record_format);
                 encoder.write_las::<LasPoint, _>(Las {
                     points: las_points.iter(),
                     bounds: OptionAABB::empty(), // these bounds are technically wrong, but they do not matter for just sending them to the server.

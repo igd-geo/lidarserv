@@ -12,20 +12,18 @@ use std::borrow::Borrow;
 use std::io;
 use std::io::{Read, Write};
 use std::string::FromUtf8Error;
+use log::debug;
 
 pub fn init_las_header(
     is_compressed: bool,
     bounds_min: Point3<f64>,
     bounds_max: Point3<f64>,
     coordinate_system: &I32CoordinateSystem,
-    use_color: bool,
-    use_time: bool,
+    point_record_format: u8,
 ) -> (las::raw::Header, Format) {
-    // las 1.2, Point format 0
+    // las 1.2, Point format 0-3
     let version = Version::new(1, 2);
-    let num = if use_color && use_time { 3 } else if use_color { 2 } else if use_time { 1 } else { 0 };
-    let mut format = Format::new(num).unwrap();
-
+    let mut format = Format::new(point_record_format).unwrap();
     format.is_compressed = is_compressed;
 
     // string "LIDARSERV" for system identifier and generating software
@@ -69,8 +67,6 @@ pub fn write_point_data_i32<W: Write, P, It>(
     mut writer: W,
     points: It,
     format: &Format,
-    use_color: bool,
-    use_time: bool,
 ) -> Result<[u32; 5], io::Error>
 where
     P: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
@@ -106,7 +102,7 @@ where
             scan_angle: ScanAngle::Rank(attributes.scan_angle_rank),
             user_data: attributes.user_data,
             point_source_id: attributes.point_source_id,
-            color: if use_color {
+            color: if format.has_color {
                 Some(las::Color::new(
                     attributes.color.0,
                     attributes.color.1,
@@ -115,7 +111,7 @@ where
             } else {
                 None
             },
-            gps_time: if use_time { Some(attributes.gps_time) } else { None },
+            gps_time: if format.has_gps_time { Some(attributes.gps_time) } else { None },
             ..Default::default()
         };
         // write into given stream

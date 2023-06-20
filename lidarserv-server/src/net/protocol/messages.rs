@@ -17,8 +17,7 @@ pub enum Message {
     /// contains some general information about the point cloud, that is managed by the server.
     PointCloudInfo {
         coordinate_system: CoordinateSystem,
-        color: bool,
-        time: bool,
+        point_record_format: u8,
     },
 
     /// First command sent from the client to the server after exchanging the hello message.

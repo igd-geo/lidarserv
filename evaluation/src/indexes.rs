@@ -22,7 +22,7 @@ pub fn create_octree_index(
     let point_hierarchy = I32GridHierarchy::new(17);
     let max_lod = LodLevel::from_level(10);
     let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
-    let las_loader = I32LasReadWrite::new(settings.compression, false, true);
+    let las_loader = I32LasReadWrite::new(settings.compression, 3);
     let page_loader = OctreePageLoader::new(las_loader.clone(), data_folder.clone());
     let mut directory_file_name = data_folder.clone();
     directory_file_name.push("directory.bin");
@@ -44,7 +44,6 @@ pub fn create_octree_index(
         loader: las_loader,
         coordinate_system,
         metrics: None,
-        use_point_colors: false,
-        use_point_times: false,
+        point_record_format: 3,
     })
 }

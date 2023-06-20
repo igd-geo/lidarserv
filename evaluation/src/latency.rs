@@ -177,7 +177,7 @@ where
         let points = HashMap::new();
         receive_times.push(points);
     }
-    let las_loader = I32LasReadWrite::new(true, false, true);
+    let las_loader = I32LasReadWrite::new(true, 3);
 
     while reader.blocking_update(&mut queries, &mut filters) {
         reader.remove_one();

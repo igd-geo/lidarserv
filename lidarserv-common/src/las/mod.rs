@@ -18,6 +18,7 @@ use std::fmt::Debug;
 use std::io::SeekFrom::Start;
 use std::io::{Cursor, Error, Read, Seek, SeekFrom, Write};
 use std::sync::Arc;
+use log::debug;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
@@ -86,16 +87,14 @@ pub struct LasPointAttributes {
 #[derive(Debug, Clone)]
 pub struct I32LasReadWrite {
     compression: bool,
-    color: bool,
-    gps_time: bool,
+    point_record_format: u8,
 }
 
 impl I32LasReadWrite {
-    pub fn new(use_compression: bool, use_color: bool, use_time: bool) -> Self {
+    pub fn new(use_compression: bool, point_record_format: u8) -> Self {
         I32LasReadWrite {
             compression: use_compression,
-            color: use_color,
-            gps_time: use_time,
+            point_record_format
         }
     }
 
@@ -128,15 +127,14 @@ impl I32LasReadWrite {
             min,
             max,
             &coordinate_system,
-            self.color,
-            self.gps_time,
+            self.point_record_format
         );
 
         // encode (uncompressed) point data into buffer
         let number_of_point_records = points.len() as u32;
         let mut point_data = Vec::with_capacity(points.len() * format.len() as usize);
         let number_of_points_by_return =
-            write_point_data_i32(Cursor::new(&mut point_data), points, &format, self.color, self.gps_time)
+            write_point_data_i32(Cursor::new(&mut point_data), points, &format)
                 .unwrap(); // unwrap: cursor will not throw i/o errors
         header.number_of_points_by_return = number_of_points_by_return;
         header.number_of_point_records = number_of_point_records;
@@ -303,8 +301,7 @@ pub fn async_write_compressed_las_with_variable_chunk_size<Point, W>(
     chunks: crossbeam_channel::Receiver<Vec<Point>>,
     coordinate_system: &I32CoordinateSystem,
     mut write: W,
-    use_color: bool,
-    use_time: bool,
+    point_record_format: u8,
 ) -> Result<(), std::io::Error>
 where
     Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
@@ -316,8 +313,7 @@ where
         Point3::new(-1.0, -1.0, -1.0),
         Point3::new(1.0, 1.0, 1.0),
         coordinate_system,
-        use_color,
-        use_time,
+        point_record_format,
     );
     let header_pos = write.seek(SeekFrom::Current(0))?;
     match header.write_to(&mut write) {
@@ -366,8 +362,6 @@ where
                 Cursor::new(&mut point_data),
                 chunk.iter(),
                 &format,
-                use_color,
-                use_time,
             )
             .unwrap(); // unwrap: cursor will not throw i/o errors
 
