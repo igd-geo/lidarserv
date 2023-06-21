@@ -74,11 +74,11 @@ where
         filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
     ) -> bool;
 
-    fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node, I32CoordinateSystem)>;
+    fn load_one(&mut self) -> Option<(Self::NodeId, Vec<Point>, I32CoordinateSystem)>;
 
     fn remove_one(&mut self) -> Option<Self::NodeId>;
 
-    fn update_one(&mut self) -> Option<Update<Self::NodeId, I32CoordinateSystem, Self::Node>>;
+    fn update_one(&mut self) -> Option<Update<Self::NodeId, I32CoordinateSystem, Vec<Point>>>;
 }
 
 pub type Update<NodeId, CoordinateSystem, NodeData> = (NodeId, CoordinateSystem, Vec<(NodeId, NodeData)>);

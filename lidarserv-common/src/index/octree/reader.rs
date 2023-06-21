@@ -294,7 +294,7 @@ where
     /// Reloads a node from the reload queue and removes it from the queue.
     /// Returns LeveledGridCell of old node and new node-page.
     /// Returns None if the update queue is empty.
-    pub fn reload_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>, I32CoordinateSystem)> {
+    pub fn reload_one(&mut self) -> Option<(LeveledGridCell, Vec<Point>, I32CoordinateSystem)> {
         let reload = match self.reload_queue.iter().min_by_key(|&(_, v)| *v) {
             None => return None,
             Some((k, _)) => *k,
@@ -302,14 +302,17 @@ where
         self.reload_queue.remove(&reload);
         debug!("Reloading node {:?} from reload queue", reload);
         let node = self.inner.page_cache.load_or_default(&reload).unwrap();
-        Some((reload, node, self.inner.coordinate_system.clone()))
+        let loader = &self.inner.loader;
+        let mut points = node.get_points(loader).unwrap();
+        points = self.filter_points(&points);
+        Some((reload, points, self.inner.coordinate_system.clone()))
     }
 
     /// Loads a node from the load queue.
     /// Adds children of the loaded node to the frontier and schedules them for their initial load.
     /// Returns LeveledGridCell of the loaded node and the node-page.
     /// Returns None if the load queue is empty.
-    pub fn load_one(&mut self) -> Option<(LeveledGridCell, Arc<Page<Sampl, Point>>, I32CoordinateSystem)> {
+    pub fn load_one(&mut self) -> Option<(LeveledGridCell, Vec<Point>, I32CoordinateSystem)> {
         // get a node to load
         let load = match self.load_queue.iter().next() {
             None => return None,
@@ -341,7 +344,10 @@ where
 
         // load and return node data
         let node = self.inner.page_cache.load_or_default(&load).unwrap();
-        Some((load, node, self.inner.coordinate_system.clone()))
+        let loader = &self.inner.loader;
+        let mut points = node.get_points(loader).unwrap();
+        points = self.filter_points(&points);
+        Some((load, points, self.inner.coordinate_system.clone()))
     }
 
     /// Removes a node from the remove queue.
@@ -474,17 +480,17 @@ where
     }
 
 
-    fn load_one(&mut self) -> Option<(Self::NodeId, Self::Node, I32CoordinateSystem)> {
-        OctreeReader::load_one(self).map(|(n, d, c)| (n, OctreePage::from_page(d, &self.inner.loader), c))
+    fn load_one(&mut self) -> Option<(Self::NodeId, Vec<Point>, I32CoordinateSystem)> {
+        OctreeReader::load_one(self)
     }
 
     fn remove_one(&mut self) -> Option<Self::NodeId> {
         OctreeReader::remove_one(self)
     }
 
-    fn update_one(&mut self) -> Option<Update<Self::NodeId, I32CoordinateSystem, Self::Node>> {
+    fn update_one(&mut self) -> Option<Update<Self::NodeId, I32CoordinateSystem, Vec<Point>>> {
         OctreeReader::reload_one(self)
-            .map(|(n, d, c)| (n, c, vec![(n, OctreePage::from_page(d, &self.inner.loader))]))
+            .map(|(n, d, c)| (n, c, vec![(n, d)]))
     }
 }
 

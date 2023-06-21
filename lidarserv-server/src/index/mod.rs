@@ -162,9 +162,8 @@ impl DynReader
     }
 
     fn load_one(&mut self) -> Option<Node<LasPoint>> {
-        Reader::load_one(self).map(|(node_id, data, coordinate_system)| {
+        Reader::load_one(self).map(|(node_id, points, coordinate_system)| {
             let node_id = leveled_grid_cell_to_proto_node_id(&node_id);
-            let points = data.points();
             (node_id, points, coordinate_system)
         })
     }
@@ -182,7 +181,7 @@ impl DynReader
                 leveled_grid_cell_to_proto_node_id(&node_id),
                 replace
                     .into_iter()
-                    .map(|(n, o)| (leveled_grid_cell_to_proto_node_id(&n), o.points(), coordinate_system))
+                    .map(|(n, o)| (leveled_grid_cell_to_proto_node_id(&n), o, coordinate_system))
                     .collect(),
             )
         })
