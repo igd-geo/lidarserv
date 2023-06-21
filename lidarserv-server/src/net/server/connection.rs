@@ -162,25 +162,31 @@ async fn viewer_mode(
     let query_thread = thread::spawn(move || -> Result<(), LidarServerError> {
         let mut sent_updates = 0;
         let mut ackd_updates = 0;
+
+        debug!("Creating reader and channels.");
         let mut reader = index.reader();
         let mut queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
         let mut filters_receiver = filters_receiver;
+
+        debug!("Calling update_one() once.");
         reader.update_one();
 
         'update_loop: loop {
             // send result complete message, when no more updates are currently available
+            debug!("Checking for updates.");
             if !reader.updates_available(&mut queries_receiver, &mut filters_receiver) {
-                debug!("Sending ResultComplete message.");
+                debug!("No Updates available, sending ResultComplete message and waiting for updates.");
                 match updates_sender.blocking_send(ResultComplete) {
                     Err(_) => break 'update_loop,
                     _ => {}
                 }
+                reader.blocking_update(&mut queries_receiver, &mut filters_receiver);
+            } else {
+                debug!("Updates available, sending NO ResultComplete message.");
             }
 
-            // wait for new updates
-            reader.blocking_update(&mut queries_receiver, &mut filters_receiver);
-
             // check for new nodes to load
+            debug!("Checking for new nodes.");
             if let Some((node_id, data, coordinate_system)) = reader.load_one() {
                 debug!("Loading node {:?} with {:?} points.", node_id, data.len());
                 match updates_sender.blocking_send(IncrementalResult {
@@ -192,6 +198,7 @@ async fn viewer_mode(
                 }
             }
             // check for new nodes to remove
+            debug!("Checking for removed nodes.");
             if let Some(node_id) = reader.remove_one() {
                 debug!("Removing node {:?}.", node_id);
                 match updates_sender.blocking_send(IncrementalResult {
@@ -203,6 +210,7 @@ async fn viewer_mode(
                 }
             }
             // check for new nodes to update
+            debug!("Checking for updated nodes.");
             if let Some((node_id, replacements)) = reader.update_one() {
                 debug!("Replacing node {:?} with nodes {:?}.", node_id, replacements);
                 match updates_sender.blocking_send(IncrementalResult {
@@ -215,6 +223,7 @@ async fn viewer_mode(
             }
 
             // wait for acks
+            debug!("Waiting for acks.");
             while ackd_updates + 10 < sent_updates {
                 ackd_updates = match query_ack_receiver.recv() {
                     Ok(v) => v,
@@ -222,7 +231,7 @@ async fn viewer_mode(
                 };
             }
         }
-        debug!("Query thread finished.");
+        debug!("Query thread finished unexpectedly.");
         Ok(())
     });
 

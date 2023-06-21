@@ -114,7 +114,6 @@ where
         // check spatial query for cell
         if !query.matches_node(&bounds, &inner.coordinate_system, &lod) {
             debug!("Cell {:?} does not match query", cell);
-            debug!("Bounds: {:?}", bounds);
             return false;
         }
 
@@ -212,12 +211,14 @@ where
 
     /// Sets the query
     pub fn set_query(&mut self, q: Box<dyn Query + Send + Sync + 'static>) {
+        debug!("Setting new query");
         self.query = q;
         self.update_new_query();
     }
 
     /// Sets the filter
     pub fn set_filter(&mut self, f: Option<LasPointAttributeBounds>) {
+        debug!("Setting new filter");
         self.filter = f;
         self.update_new_query();
     }
@@ -225,6 +226,7 @@ where
     /// Updates the frontier, load and remove queue after new query or filter.
     fn update_new_query(&mut self) {
         // update frontier
+        debug!("Updating frontier after new query");
         {
             let Self {
                 frontier, query, ..
@@ -236,6 +238,7 @@ where
         }
 
         // update load queue from frontier
+        debug!("Updating load queue after new query");
         self.load_queue = self
             .frontier
             .iter()
@@ -249,6 +252,7 @@ where
             .collect();
 
         // search for removable nodes
+        debug!("Searching for removable nodes after new query");
         let mut removable_cnt = HashMap::new();
         for (cell, elem) in &self.frontier {
             if !elem.matches_query {
@@ -262,6 +266,7 @@ where
         }
 
         // remove nodes that are not needed anymore --> add to remove queue
+        debug!("Updating remove queue after new query");
         self.remove_queue = removable_cnt
             .into_iter()
             .filter_map(|(cell, cnt)| if cnt == 8 { Some(cell) } else { None })
@@ -278,6 +283,7 @@ where
             Some((k, _)) => *k,
         };
         self.reload_queue.remove(&reload);
+        debug!("Reloading node {:?} from reload queue", reload);
         let node = self.inner.page_cache.load_or_default(&reload).unwrap();
         Some((reload, node, self.inner.coordinate_system.clone()))
     }
@@ -293,6 +299,7 @@ where
             Some(e) => *e,
         };
         self.load_queue.remove(&load);
+        debug!("Loading node {:?} from load queue", load);
 
         // update the set of loaded nodes
         self.loaded.insert(load);
@@ -332,6 +339,7 @@ where
             Some(e) => *e,
         };
         self.remove_queue.remove(&remove);
+        debug!("Removing node {:?} from remove queue", remove);
 
         // remove from loaded
         self.loaded.remove(&remove);

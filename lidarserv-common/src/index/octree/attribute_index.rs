@@ -85,7 +85,7 @@ impl AttributeIndex {
         // check if cell is in bounds
         let _ = match entry {
             Some(cell_bounds) => {
-                let is_in_bounds = bounds.is_bounds_in_bounds(&cell_bounds.1);
+                let is_in_bounds = bounds.is_bounds_overlapping_bounds(&cell_bounds.1);
                 return is_in_bounds;
             },
             None => {
@@ -140,6 +140,20 @@ impl AttributeIndex {
         self.write_to_csv().unwrap();
 
         Ok(())
+    }
+
+    /// Return bounds of a grid cell
+    pub fn get_cell_bounds(&self, lod: LodLevel, grid_cell: &GridCell) -> Option<LasPointAttributeBounds> {
+        let index_read = self.index[lod.level() as usize].read().unwrap();
+        let entry = index_read.get_key_value(&grid_cell);
+        match entry {
+            Some(bounds) => {
+                Some(bounds.1.clone())
+            },
+            None => {
+                None
+            },
+        }
     }
 
     /// Writes attribute index to human readable file (for debugging)
