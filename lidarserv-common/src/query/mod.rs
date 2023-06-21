@@ -43,7 +43,6 @@ pub trait QueryExt {
         &self,
         point: &Point,
         coordinate_system: &I32CoordinateSystem,
-        lod: &LodLevel,
     ) -> bool
     where
         Point: PointType<Position = I32Position>;
@@ -70,14 +69,13 @@ where
         &self,
         point: &Point,
         coordinate_system: &I32CoordinateSystem,
-        lod: &LodLevel,
     ) -> bool
     where
         Point: PointType<Position = I32Position>,
     {
         match self.max_lod_position(point.position(), coordinate_system) {
             None => false,
-            Some(max_lod) => max_lod >= *lod,
+            Some(_) => true,
         }
     }
 }

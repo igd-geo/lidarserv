@@ -131,10 +131,10 @@ where
 
     /// Filters out all points of the given Vector, that do not match the query or filter
     /// returns vector of points that match the query and filter.
-    fn filter_points(&self, points: &Vec<LasPoint>) -> Vec<Point> {
+    fn filter_points(&self, points: &Vec<Point>) -> Vec<Point> {
         let mut filtered_points = Vec::new();
         for point in points {
-            if self.query.matches_point(&point, &self.inner.coordinate_system) {
+            if self.query.matches_point(point, &self.inner.coordinate_system) {
                 if let Some(filter) = &self.filter {
                     if !filter.is_attributes_in_bounds(&point.attribute()) {
                         continue;
