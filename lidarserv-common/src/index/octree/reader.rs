@@ -134,9 +134,9 @@ where
     fn filter_points(&self, points: &Vec<LasPoint>) -> Vec<Point> {
         let mut filtered_points = Vec::new();
         for point in points {
-            if self.query.matches_point(&point) {
+            if self.query.matches_point(&point, &self.inner.coordinate_system) {
                 if let Some(filter) = &self.filter {
-                    if !filter.matches_point(&point) {
+                    if !filter.is_attributes_in_bounds(&point.attribute()) {
                         continue;
                     }
                 }
