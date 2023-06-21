@@ -21,6 +21,8 @@ pub struct OctreeReader<Point, Sampl, SamplF> {
     update_cnt: u64,
     query: Box<dyn Query + Send + Sync>,
     filter: Option<LasPointAttributeBounds>,
+    enable_attribute_acceleration: bool,
+    enable_point_filtering: bool,
     changed_nodes_receiver: crossbeam_channel::Receiver<LeveledGridCell>,
     loaded: HashSet<LeveledGridCell>,
     frontier: HashMap<LeveledGridCell, FrontierElement>,
@@ -66,6 +68,8 @@ where
             update_cnt: 0,
             query: Box::new(query),
             filter: None,
+            enable_attribute_acceleration: false,
+            enable_point_filtering: false,
             changed_nodes_receiver,
             loaded: HashSet::new(),
             frontier: HashMap::default(),
@@ -98,7 +102,7 @@ where
     }
 
     fn cell_matches_query(&self, cell: &LeveledGridCell) -> bool {
-        Self::cell_matches_query_impl(cell, self.query.as_ref(), &self.filter, self.inner.as_ref())
+        Self::cell_matches_query_impl(cell, self.query.as_ref(), &self.filter, self.inner.as_ref(), self.enable_attribute_acceleration)
     }
 
     /// Checks, if the given cell matches the query and filter.
@@ -107,6 +111,7 @@ where
         query: &(dyn Query + Send + Sync),
         filter: &Option<LasPointAttributeBounds>,
         inner: &Inner<Point, Sampl, SamplF>,
+        enable_attribute_acceleration: bool,
     ) -> bool {
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
         let lod = cell.lod;
@@ -118,11 +123,13 @@ where
         }
 
         // check attributes for cell
-        if let Some(filter) = filter {
-            let attribute_index = inner.attribute_index.as_ref().unwrap();
-            if !attribute_index.cell_overlaps_with_bounds(lod, &cell.pos, filter) {
-                debug!("Cell {:?} does not match filter {:?}", cell, filter);
-                return false;
+        if enable_attribute_acceleration {
+            if let Some(filter) = filter {
+                let attribute_index = inner.attribute_index.as_ref().unwrap();
+                if !attribute_index.cell_overlaps_with_bounds(lod, &cell.pos, filter) {
+                    debug!("Cell {:?} does not match attribute filter {:?}", cell, filter);
+                    return false;
+                }
             }
         }
         debug!("Cell {:?} matches query and filter", cell);
@@ -234,9 +241,11 @@ where
     }
 
     /// Sets the filter
-    pub fn set_filter(&mut self, f: Option<LasPointAttributeBounds>) {
+    pub fn set_filter(&mut self, f: (Option<LasPointAttributeBounds>, bool, bool)) {
         debug!("Setting new filter");
-        self.filter = f;
+        self.filter = f.0;
+        self.enable_attribute_acceleration = f.1;
+        self.enable_point_filtering = f.2;
         self.update_new_query();
     }
 
@@ -250,7 +259,7 @@ where
             } = self;
             for (cell, elem) in frontier {
                 elem.matches_query =
-                    Self::cell_matches_query_impl(cell, query.as_ref(), &self.filter, self.inner.as_ref());
+                    Self::cell_matches_query_impl(cell, query.as_ref(), &self.filter, self.inner.as_ref(), self.enable_attribute_acceleration);
             }
         }
 
@@ -304,7 +313,9 @@ where
         let node = self.inner.page_cache.load_or_default(&reload).unwrap();
         let loader = &self.inner.loader;
         let mut points = node.get_points(loader).unwrap();
-        points = self.filter_points(&points);
+        if self.enable_point_filtering {
+            points = self.filter_points(&points);
+        }
         Some((reload, points, self.inner.coordinate_system.clone()))
     }
 
@@ -346,7 +357,9 @@ where
         let node = self.inner.page_cache.load_or_default(&load).unwrap();
         let loader = &self.inner.loader;
         let mut points = node.get_points(loader).unwrap();
-        points = self.filter_points(&points);
+        if self.enable_point_filtering {
+            points = self.filter_points(&points);
+        }
         Some((load, points, self.inner.coordinate_system.clone()))
     }
 
@@ -416,14 +429,14 @@ where
         OctreeReader::set_query(self, Box::new(query))
     }
 
-    fn set_filter(&mut self, filter: Option<LasPointAttributeBounds>) {
+    fn set_filter(&mut self, filter: (Option<LasPointAttributeBounds>, bool, bool)) {
         OctreeReader::set_filter(self, filter)
     }
 
     fn fetch_query_filter(
         &mut self,
         queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<Option<LasPointAttributeBounds>>
+        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool)>
     ) {
         if let Some(q) = queries.try_iter().last() {
             self.set_query(q);
@@ -438,7 +451,7 @@ where
     fn updates_available(
         &mut self,
         queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<Option<LasPointAttributeBounds>>
+        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool)>
     ) -> bool {
         self.fetch_query_filter(queries, filters);
         self.update();
@@ -452,7 +465,7 @@ where
     fn blocking_update(
         &mut self,
         queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<Option<LasPointAttributeBounds>>
+        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool)>
     ) -> bool {
         // make sure we've go the most recent query
         self.fetch_query_filter(queries, filters);

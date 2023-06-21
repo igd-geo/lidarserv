@@ -23,6 +23,14 @@ pub struct Args {
     #[structopt(long, default_value = "0")]
     pub lod: u16,
 
+    /// Enable usage attribute-index acceleration structure.
+    #[structopt(long)]
+    pub enable_attribute_acceleration: bool,
+
+    /// Enable point based filtering for spatial queries and attribute filters.
+    #[structopt(long)]
+    pub enable_point_filtering: bool,
+
     // AABB PARAMETER
     /// Minimum x value of the bounding box.
     #[structopt(long)]

@@ -130,7 +130,9 @@ where
         &mut self,
         global_aabb: &AABB<f64>,
         lod: &LodLevel,
-        filter: Option<LasPointAttributeBounds>
+        filter: Option<LasPointAttributeBounds>,
+        enable_attribute_acceleration: bool,
+        enable_point_filtering: bool,
     ) -> Result<(), LidarServerError> {
         let csys = F64CoordinateSystem::new();
         let min = global_aabb.min::<F64Position>().decode(&csys);
@@ -143,6 +145,8 @@ where
                     lod_level: lod.level(),
                 }),
                 filter,
+                enable_attribute_acceleration,
+                enable_point_filtering,
             }).await
     }
 
@@ -152,7 +156,9 @@ where
         view_projection_matrix_inv: Matrix4<f64>,
         window_width_pixels: f64,
         min_distance_pixels: f64,
-        filter: Option<LasPointAttributeBounds>
+        filter: Option<LasPointAttributeBounds>,
+        enable_attribute_acceleration: bool,
+        enable_point_filtering: bool,
     ) -> Result<(), LidarServerError> {
         self.connection
             .write_message(&Message::Query{
@@ -163,6 +169,8 @@ where
                     min_distance_pixels,
                 }),
                 filter,
+                enable_attribute_acceleration,
+                enable_point_filtering,
             }).await
     }
 }

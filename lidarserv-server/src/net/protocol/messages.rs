@@ -35,7 +35,9 @@ pub enum Message {
     /// Sent from the client to server in Viewer mode, to set or update the query.
     Query{
         query: Box<Query>,
-        filter: Option<LasPointAttributeBounds>
+        filter: Option<LasPointAttributeBounds>,
+        enable_attribute_acceleration: bool,
+        enable_point_filtering: bool,
     },
 
     /// Sent from the server to the client with some update to the current query result.

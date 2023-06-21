@@ -52,18 +52,18 @@ where
 
     fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q);
 
-    fn set_filter(&mut self, filter: Option<LasPointAttributeBounds>);
+    fn set_filter(&mut self, filter: (Option<LasPointAttributeBounds>, bool, bool));
 
     fn fetch_query_filter(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
+        filters: &mut crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool)>
     );
 
     fn updates_available(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
+        filters: &mut crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool)>
     ) -> bool;
 
     fn update(&mut self);
@@ -71,7 +71,7 @@ where
     fn blocking_update(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
+        filters: &mut crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool)>
     ) -> bool;
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Vec<Point>, I32CoordinateSystem)>;
