@@ -129,6 +129,23 @@ where
         true
     }
 
+    /// Filters out all points of the given Vector, that do not match the query or filter
+    /// returns vector of points that match the query and filter.
+    fn filter_points(&self, points: &Vec<LasPoint>) -> Vec<Point> {
+        let mut filtered_points = Vec::new();
+        for point in points {
+            if self.query.matches_point(&point) {
+                if let Some(filter) = &self.filter {
+                    if !filter.matches_point(&point) {
+                        continue;
+                    }
+                }
+                filtered_points.push(point.clone());
+            }
+        }
+        filtered_points
+    }
+
     /// Processes a set of changed nodes.
     /// This includes:
     /// - Add already loaded nodes to the reload queue.
@@ -389,7 +406,7 @@ where
     type NodeId = LeveledGridCell;
     type Node = OctreePage<Sampl, Point>;
 
-    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q, filter: Option<LasPointAttributeBounds>) {
+    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q) {
         OctreeReader::set_query(self, Box::new(query))
     }
 

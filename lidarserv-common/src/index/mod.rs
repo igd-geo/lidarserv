@@ -50,7 +50,7 @@ where
     type NodeId: NodeId;
     type Node: Node<Point>;
 
-    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q, filter: Option<LasPointAttributeBounds>);
+    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q);
 
     fn set_filter(&mut self, filter: Option<LasPointAttributeBounds>);
 
