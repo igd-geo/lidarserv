@@ -69,7 +69,7 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
     Ok(())
 }
 
-const PROTOCOL_VERSION: u32 = 1;
+const PROTOCOL_VERSION: u32 = 2;
 
 async fn get_server_settings(args: &PreConvertArgs) -> Result<(CoordinateSystem, u8)> {
     // connect

@@ -4,7 +4,7 @@ pub mod server;
 
 use thiserror::Error;
 
-const PROTOCOL_VERSION: u32 = 1;
+const PROTOCOL_VERSION: u32 = 2;
 
 /// Error type for the indexing server.
 #[derive(Error, Debug)]
