@@ -100,16 +100,16 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
             y: point.position().y() as f64,
             z: point.position().z() as f64,
             intensity: point.attribute().intensity as u16,
-            return_number: point.attribute().return_number as u8, //todo wrong
+            return_number: point.attribute().return_number as u8,
             number_of_returns: point.attribute().number_of_returns as u8,
-            scan_direction: direction, //todo wrong
-            is_edge_of_flight_line: point.attribute().edge_of_flight_line, //todo wrong
+            scan_direction: direction,
+            is_edge_of_flight_line: point.attribute().edge_of_flight_line,
             classification: Classification::new(classification).unwrap_or(Classification::new(0).unwrap()),
             scan_angle: point.attribute().scan_angle_rank as f32,
             user_data: point.attribute().user_data as u8,
             point_source_id: point.attribute().point_source_id as u16,
-            gps_time: Option::from(point.attribute().gps_time as f64),  //Todo test
-            color: Option::from(Color::new(point.attribute().color.0, point.attribute().color.1, point.attribute().color.2)), //Todo test
+            gps_time: Option::from(point.attribute().gps_time as f64),
+            color: Option::from(Color::new(point.attribute().color.0, point.attribute().color.1, point.attribute().color.2)),
             .. Default::default()
         };
         let result = writer.write(point);

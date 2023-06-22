@@ -163,7 +163,6 @@ fn read_points_from_las(
     // read points
     let f = File::open(points_file)?;
     let mut reader = BufReader::new(f);
-    // TODO choose use_color and use_time dynamically
     let las_reader : I32LasReadWrite = I32LasReadWrite::new(false, point_record_format);
     let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader)?;
     info!("LAS File Coordinate System: {:?}", result.coordinate_system);
