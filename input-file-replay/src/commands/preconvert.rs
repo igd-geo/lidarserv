@@ -12,7 +12,7 @@ use std::mem::take;
 use std::path::PathBuf;
 use std::thread;
 use tokio::net::TcpStream;
-use log::{info, warn};
+use log::{info};
 use lidarserv_server::common::geometry::points::{PointType, WithAttr};
 
 pub async fn preconvert(args: PreConvertArgs) -> Result<()> {

@@ -4,7 +4,7 @@ use evaluation::latency::measure_latency;
 use evaluation::point::Point;
 use evaluation::queries::preset_query_2;
 use evaluation::query_performance::measure_query_performance;
-use evaluation::settings::{Base, EvaluationScript, MultiRun, SystemUnderTest};
+use evaluation::settings::{Base, EvaluationScript, MultiRun};
 use evaluation::thermal_throttle::processor_cooldown;
 use evaluation::{read_points, reset_data_folder};
 use git_version::git_version;

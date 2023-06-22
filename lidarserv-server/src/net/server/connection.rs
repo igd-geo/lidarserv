@@ -2,7 +2,7 @@ use crate::common::las::Las;
 use crate::index::DynIndex;
 use crate::net::protocol::connection::Connection;
 use crate::net::protocol::messages::Message::{IncrementalResult, ResultComplete};
-use crate::net::protocol::messages::{CoordinateSystem, DeviceType, LasPointData, Message, Query};
+use crate::net::protocol::messages::{CoordinateSystem, DeviceType, Message, Query};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::{BaseAABB, OptionAABB};
 use lidarserv_common::geometry::grid::LodLevel;

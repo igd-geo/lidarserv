@@ -1,4 +1,3 @@
-use log::debug;
 use crate::las::LasPointAttributes;
 use serde::{Deserialize, Serialize};
 
@@ -348,7 +347,7 @@ mod tests {
     #[test]
     fn test_overlap_single_bound() {
 
-        let mut bounds = LasPointAttributeBounds::new();
+        let bounds = LasPointAttributeBounds::new();
 
         let bound1 : Option<(u16, u16)> = Some((0, 10));
         let bound2 : Option<(u16, u16)> = Some((5, 15));

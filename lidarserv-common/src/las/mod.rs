@@ -18,7 +18,6 @@ use std::fmt::Debug;
 use std::io::SeekFrom::Start;
 use std::io::{Cursor, Error, Read, Seek, SeekFrom, Write};
 use std::sync::Arc;
-use log::debug;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]

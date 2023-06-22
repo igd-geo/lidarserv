@@ -1,10 +1,9 @@
 use crate::queries::{preset_query_1, preset_query_2, preset_query_3};
 use crate::Point;
-use lidarserv_common::index::{Index, Node, Reader};
+use lidarserv_common::index::{Index, Reader};
 use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::query::Query;
 use serde_json::json;
-use std::io::Cursor;
 use std::time::Instant;
 
 pub fn measure_query_performance<I>(mut index: I) -> serde_json::value::Value
@@ -41,6 +40,7 @@ where
     let time_finish_load = Instant::now();
 
     json!({
+        "nr_nodes": nr_nodes,
         "nr_points": nr_points,
         "query_time_seconds": (time_finish_query - time_start).as_secs_f64(),
         "load_time_seconds": (time_finish_load - time_finish_query).as_secs_f64(),

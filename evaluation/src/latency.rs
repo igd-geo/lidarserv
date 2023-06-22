@@ -1,13 +1,11 @@
 use crate::settings::SingleLatencyMeasurement;
 use crate::{Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
-use lidarserv_common::index::{Index, Node, NodeId, Reader, Writer};
-use lidarserv_common::las::I32LasReadWrite;
+use lidarserv_common::index::{Index, NodeId, Reader, Writer};
 use lidarserv_common::query::Query;
 use serde_json::json;
 use std::cmp::{min, Ordering};
 use std::collections::HashMap;
-use std::io::Cursor;
 use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -177,7 +175,6 @@ where
         let points = HashMap::new();
         receive_times.push(points);
     }
-    let las_loader = I32LasReadWrite::new(true, 3);
 
     while reader.blocking_update(&mut queries, &mut filters) {
         reader.remove_one();

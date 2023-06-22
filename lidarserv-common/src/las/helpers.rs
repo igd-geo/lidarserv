@@ -12,7 +12,6 @@ use std::borrow::Borrow;
 use std::io;
 use std::io::{Read, Write};
 use std::string::FromUtf8Error;
-use log::debug;
 
 pub fn init_las_header(
     is_compressed: bool,

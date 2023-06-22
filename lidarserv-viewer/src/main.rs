@@ -221,6 +221,8 @@ async fn network_thread(
                             camera_matrix.window_size.x,
                             args.point_distance,
                             None,
+                            false,
+                            false
                         )
                         .await
                         .unwrap()

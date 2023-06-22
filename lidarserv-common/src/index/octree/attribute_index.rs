@@ -1,12 +1,11 @@
 use std::collections::HashMap;
-use std::{fmt, io};
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use ciborium::de::from_reader;
 use log::{debug};
 use csv::Writer;
-use crate::geometry::grid::{GridCell, LeveledGridCell, LodLevel};
+use crate::geometry::grid::{GridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::las::LasPointAttributes;
 
