@@ -35,25 +35,12 @@ where
     let time_finish_query = Instant::now();
     let nr_nodes = nodes.len();
     let mut nr_points = 0;
-    for node in nodes {
-        let point_chunks: Vec<_> = node
-            .las_files()
-            .into_iter()
-            .map(|data| {
-                las_loader
-                    .read_las(Cursor::new(data.as_ref()))
-                    .map(|las| las.points as Vec<Point>)
-                    .unwrap_or_else(|_| Vec::new())
-            })
-            .collect();
-        for points in point_chunks {
-            nr_points += points.len();
-        }
+    for points in nodes {
+        nr_points += points.len();
     }
     let time_finish_load = Instant::now();
 
     json!({
-        "nr_nodes": nr_nodes,
         "nr_points": nr_points,
         "query_time_seconds": (time_finish_query - time_start).as_secs_f64(),
         "load_time_seconds": (time_finish_load - time_finish_query).as_secs_f64(),

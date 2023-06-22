@@ -166,7 +166,7 @@ where
 pub fn read_thread<I>(
     mut reader: I::Reader,
     mut queries: crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-    mut filters: crossbeam_channel::Receiver<Option<LasPointAttributeBounds>>
+    mut filters: crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool)>
 ) -> Vec<HashMap<usize, Instant>>
 where
     I: Index<Point>,
@@ -181,42 +181,21 @@ where
 
     while reader.blocking_update(&mut queries, &mut filters) {
         reader.remove_one();
-        if let Some((node_id, node, coordinate_system)) = reader.load_one() {
-            let point_chunks: Vec<_> = node
-                .las_files()
-                .into_iter()
-                .map(|data| {
-                    las_loader
-                        .read_las(Cursor::new(data.as_ref()))
-                        .map(|las| las.points as Vec<Point>)
-                        .unwrap_or_else(|_| Vec::new())
-                })
-                .collect();
-
+        if let Some((node_id, points, coordinate_system)) = reader.load_one() {
             let now = Instant::now();
             let lod_index = node_id.lod().level() as usize;
-            for points in point_chunks {
-                for point in points {
-                    let index: usize = point.attribute::<PointIdAttribute>().0;
-                    receive_times[lod_index].entry(index).or_insert(now);
-                }
+            for point in points {
+                let index: usize = point.attribute::<PointIdAttribute>().0;
+                receive_times[lod_index].entry(index).or_insert(now);
             }
         }
         if let Some((_, _, repl)) = reader.update_one() {
             let now = Instant::now();
-            for (node_id, node) in repl {
-                let points = node.las_files().into_iter().map(|data| {
-                    las_loader
-                        .read_las(Cursor::new(data.as_ref()))
-                        .map(|las| las.points as Vec<Point>)
-                        .unwrap_or_else(|_| Vec::new())
-                });
+            for (node_id, points) in repl {
                 let lod_index = node_id.lod().level() as usize;
-                for points in points {
-                    for point in points {
-                        let index: usize = point.attribute::<PointIdAttribute>().0;
-                        receive_times[lod_index].entry(index).or_insert(now);
-                    }
+                for point in points {
+                    let index: usize = point.attribute::<PointIdAttribute>().0;
+                    receive_times[lod_index].entry(index).or_insert(now);
                 }
             }
         }
