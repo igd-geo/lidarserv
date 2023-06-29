@@ -23,6 +23,7 @@ static DEFAULT_LAS_POINT_ATTRS: LasPointAttributes = LasPointAttributes {
 pub struct Point {
     pub position: I32Position,
     pub point_id: PointIdAttribute,
+    pub las_attributes: LasPointAttributes,
 }
 
 impl PointType for Point {
@@ -42,15 +43,11 @@ impl PointType for Point {
 
 impl WithAttr<LasPointAttributes> for Point {
     fn value(&self) -> &LasPointAttributes {
-        // return a dummy value - we don't care about the las attributes in the evaluation code.
-        // this point attribute is only here to make the las writer happy.
-        // (and since ALL points are read into memory for the evaluation, points should not be to big)
-        &DEFAULT_LAS_POINT_ATTRS
+        &self.las_attributes
     }
 
-    fn set_value(&mut self, _: LasPointAttributes) {
-        // ignore - we don't care about the las attributes in the evaluation code.
-        // this point attribute is only here to make the las writer happy.
+    fn set_value(&mut self, new_value: LasPointAttributes) {
+        *self.las_attributes = new_value
     }
 }
 
