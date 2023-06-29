@@ -23,6 +23,8 @@ pub struct Base {
     pub data_folder: PathBuf,
     pub points_file: PathBuf,
     pub trajectory_file: PathBuf,
+    pub las_point_record_format: u8,
+
 
     #[serde(rename = "output_file")]
     pub output_file_pattern: String,
@@ -92,6 +94,9 @@ pub struct SingleIndex {
 
     #[serde(default = "SingleIndex::default_nr_bogus_points")]
     pub nr_bogus_points: (usize, usize),
+
+    #[serde(default = "SingleIndex::default_enable_attribute_index")]
+    pub enable_attribute_index: bool,
 }
 
 impl Default for SingleIndex {
@@ -104,6 +109,7 @@ impl Default for SingleIndex {
             node_size: 10000,
             compression: true,
             nr_bogus_points: (0, 0),
+            enable_attribute_index: false,
         }
     }
 }
@@ -130,6 +136,10 @@ pub struct MultiIndex {
 
     #[serde(default)]
     pub nr_bogus_points: Option<Vec<(usize, usize)>>,
+
+    #[serde(default)]
+    pub enable_attribute_index: Option<Vec<bool>>,
+
 }
 
 macro_rules! apply_default {
@@ -172,15 +182,18 @@ impl MultiIndex {
                         for &num_threads in expect(&self.num_threads) {
                             for &node_size in expect(&self.node_size) {
                                 for &nr_bogus_points in expect(&self.nr_bogus_points) {
-                                    results.push(SingleIndex {
-                                        typ,
-                                        priority_function,
-                                        num_threads,
-                                        cache_size,
-                                        node_size,
-                                        compression,
-                                        nr_bogus_points,
-                                    })
+                                    for &enable_attribute_index in expect(&self.enable_attribute_index) {
+                                        results.push(SingleIndex {
+                                            typ,
+                                            priority_function,
+                                            num_threads,
+                                            cache_size,
+                                            node_size,
+                                            compression,
+                                            nr_bogus_points,
+                                            enable_attribute_index,
+                                        })
+                                    }
                                 }
                             }
                         }
