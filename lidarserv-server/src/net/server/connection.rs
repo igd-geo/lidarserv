@@ -11,7 +11,7 @@ use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::nalgebra::Point3;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use lidarserv_common::query::view_frustum::ViewFrustumQuery;
-use log::{debug, info};
+use log::{debug, info, trace};
 use std::io::Cursor;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -212,7 +212,7 @@ async fn viewer_mode(
             // check for new nodes to update
             debug!("Checking for updated nodes.");
             if let Some((node_id, replacements)) = reader.update_one() {
-                debug!("Replacing node {:?} with nodes {:?}.", node_id, replacements);
+                debug!("Replacing node {:?}.", node_id);
                 match updates_sender.blocking_send(IncrementalResult {
                     replaces: Some(node_id),
                     nodes: replacements
