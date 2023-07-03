@@ -47,7 +47,7 @@ impl WithAttr<LasPointAttributes> for Point {
     }
 
     fn set_value(&mut self, new_value: LasPointAttributes) {
-        *self.las_attributes = new_value
+        self.las_attributes = new_value
     }
 }
 

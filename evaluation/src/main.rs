@@ -83,6 +83,7 @@ fn main() {
     for (name, mut run) in config.runs.clone() {
         info!("=== {} ===", name);
         run.apply_defaults(&config.defaults);
+        info!("Applied defaults: {:?}", run);
         let mut run_results = Vec::new();
         for index in &run.index {
             let result = evaluate(&points, &run, &config.base, || {

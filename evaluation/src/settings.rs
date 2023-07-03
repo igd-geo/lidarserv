@@ -171,6 +171,7 @@ impl MultiIndex {
         apply_default_vec!(self.num_threads <- defaults);
         apply_default_vec!(self.node_size <- defaults);
         apply_default_vec!(self.nr_bogus_points <- defaults);
+        apply_default_vec!(self.enable_attribute_index <- defaults);
     }
 
     pub fn individual_runs(&self) -> Vec<SingleIndex> {

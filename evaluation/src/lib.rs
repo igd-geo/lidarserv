@@ -21,31 +21,45 @@ pub mod thermal_throttle;
 pub fn read_points(
     coordinate_system: &I32CoordinateSystem,
     settings: &settings::Base,
-) -> Vec<LasPoint> {
+) -> Vec<Point> {
     info!("Reading points...");
 
-    let mut points: Vec<LasPoint> = Vec::new();
+    let mut points: Vec<Point> = Vec::new();
 
     // check file format
-    if settings.trajectory_file.extension().unwrap() != "las" {
+    if settings.points_file.extension().unwrap() != "las" {
         // CSV / TXT Format
         points = iter_points(
             &settings.trajectory_file,
             &settings.points_file,
             settings.offset,
         )
-            .unwrap()
-            .enumerate()
-            .map(|(id, (_, p))| {
-                p.into_las_point(coordinate_system).unwrap()
-            })
-            .collect();
+        .unwrap()
+        .enumerate()
+        .map(|(id, (_, p))| {
+            let las_point = p.into_las_point(coordinate_system).unwrap();
+            Point {
+                position: las_point.position().clone(),
+                point_id: PointIdAttribute(id),
+                las_attributes: las_point.attribute().clone(),
+            }
+        })
+        .collect();
     } else {
         // LAS Format
         let f = File::open(&settings.points_file).unwrap();
         let mut reader = BufReader::new(f);
         let las_reader : I32LasReadWrite = I32LasReadWrite::new(false, settings.las_point_record_format);
         let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader).unwrap();
+
+        //convert Vec<LasPoint> to Vec<Point>
+        points = result.points.drain(..).map(|las_point| {
+            Point {
+                position: las_point.position().clone(),
+                point_id: PointIdAttribute::default(),
+                las_attributes: las_point.attribute().clone(),
+            }
+        }).collect();
     }
     info!("Read a total of {} points.", points.len());
     points
