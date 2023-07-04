@@ -1,6 +1,6 @@
 data_folder = "data/evaluation"
 output_file = "evaluation/results/evaluation_%d_%i.json"
-points_file = "data/frankfurt.las"
+points_file = "data/FullAttributeAirborneLIDAR.las"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
@@ -16,10 +16,11 @@ nr_bogus_points = [0, 0]
 insertion_rate.target_point_pressure = 1_000_000
 query_perf.enable = true
 latency.enable = true
-latency.points_per_sec = 300000
-latency.frames_per_sec = 50
+latency.points_per_sec = 20000
+latency.frames_per_sec = 5
 enable_attribute_indexing = true
 
 [runs.example]
 compression = [true, false]
-cache_size = [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+cache_size = [4096]
+enable_attribute_indexing = [true, false]
