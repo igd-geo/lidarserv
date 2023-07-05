@@ -6,7 +6,7 @@ use lidarserv_common::geometry::position::I32CoordinateSystem;
 use log::info;
 use std::path::PathBuf;
 use input_file_replay::iter_points::iter_points;
-use lidarserv_common::las::{I32LasReadWrite, Las};
+use lidarserv_common::las::{I32LasReadWrite, Las, LasPointAttributes};
 use lidarserv_server::index::point::LasPoint;
 
 pub mod indexes;
@@ -60,6 +60,10 @@ pub fn read_points(
                 las_attributes: las_point.attribute().clone(),
             }
         }).collect();
+
+        //sort points by gps_time
+        info!("Sorting LAS points by time");
+        points.sort_by(|a, b| a.attribute::<LasPointAttributes>().gps_time.partial_cmp(&b.attribute::<LasPointAttributes>().gps_time).unwrap());
     }
     info!("Read a total of {} points.", points.len());
     points

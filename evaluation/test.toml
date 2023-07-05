@@ -1,26 +1,25 @@
 data_folder = "data/evaluation"
 output_file = "evaluation/results/evaluation_%d_%i.json"
-points_file = "data/FullAttributeAirborneLIDAR.las"
-trajectory_file = ""
-offset = [0,0,0]
-las_point_record_format = 3
+points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
+trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
+offset = [412785.340004, 5318821.784996, 290.0]
+las_point_record_format = 0
 
 [defaults]
 type = "Octree"
 priority_function = "NrPointsWeightedByTaskAge"
 num_threads = 4
-cache_size = 500
+cache_size = 4096
 node_size = 10000
 compression = true
-nr_bogus_points = [0, 0]
+nr_bogus_points = [0, 3000]
 insertion_rate.target_point_pressure = 1_000_000
 query_perf.enable = true
-latency.enable = true
+latency.enable = false
 latency.points_per_sec = 20000
 latency.frames_per_sec = 5
-enable_attribute_indexing = true
+enable_attribute_index = true
 
 [runs.example]
 compression = [true, false]
-cache_size = [4096]
-enable_attribute_indexing = [true, false]
+enable_attribute_index = [true, false]
