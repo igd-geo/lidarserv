@@ -27,7 +27,7 @@ pub fn read_points(
     let mut points: Vec<Point> = Vec::new();
 
     // check file format
-    if settings.points_file.extension().unwrap() != "las" {
+    if settings.points_file.extension().unwrap() == "txt" {
         // CSV / TXT Format
         points = iter_points(
             &settings.trajectory_file,
@@ -45,11 +45,12 @@ pub fn read_points(
             }
         })
         .collect();
-    } else {
-        // LAS Format
+    } else if settings.points_file.extension().unwrap() == "las" || settings.points_file.extension().unwrap() == "laz" {
+        // LAS / LAZ Format
         let f = File::open(&settings.points_file).unwrap();
         let mut reader = BufReader::new(f);
-        let las_reader : I32LasReadWrite = I32LasReadWrite::new(false, settings.las_point_record_format);
+        let compression = settings.points_file.extension().unwrap() == "laz";
+        let las_reader : I32LasReadWrite = I32LasReadWrite::new(compression, settings.las_point_record_format);
         let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader).unwrap();
 
         //convert Vec<LasPoint> to Vec<Point>
@@ -64,6 +65,8 @@ pub fn read_points(
         //sort points by gps_time
         info!("Sorting LAS points by time");
         points.sort_by(|a, b| a.attribute::<LasPointAttributes>().gps_time.partial_cmp(&b.attribute::<LasPointAttributes>().gps_time).unwrap());
+    } else {
+        panic!("Unknown file format");
     }
     info!("Read a total of {} points.", points.len());
     points
