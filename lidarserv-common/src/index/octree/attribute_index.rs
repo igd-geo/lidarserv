@@ -22,7 +22,7 @@ impl AttributeIndex {
     /// Creates a new attribute index
     /// If an index file (file_name) exists, it is loaded, otherwise a new one is created
     pub fn new(num_lods: usize, file_name: PathBuf) -> Self {
-        if let Ok(index) = Self::load_from_file(num_lods, &file_name) {
+        if let Ok(index) = Self::load_from_file(num_lods + 1, &file_name) {
             // index exists, load it
             debug!("Loaded attribute index from file {:?}", file_name);
             return AttributeIndex {
@@ -32,8 +32,8 @@ impl AttributeIndex {
         } else {
             // index does not exist, create new one
             debug!("Created new attribute index at {:?}", file_name);
-            let mut index = Vec::with_capacity(num_lods);
-            for _ in 0..num_lods {
+            let mut index = Vec::with_capacity(num_lods + 1);
+            for _ in 0..num_lods+1 {
                 index.push(RwLock::new(HashMap::new()));
             }
             AttributeIndex {
@@ -57,6 +57,8 @@ impl AttributeIndex {
         // TODO Measure performance, maybe remove readlock because most times new bounds are NOT in bounds
         let index_read = self.index[lod.level() as usize].read().unwrap();
         let entry = index_read.get_key_value(&grid_cell);
+
+        // TODO may make performance worse
         let _ = match entry {
             Some(bounds) => {
                 // if new bounds are within old bounds, do nothing
