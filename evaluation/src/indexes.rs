@@ -8,6 +8,7 @@ use lidarserv_common::index::octree::page_manager::OctreePageLoader;
 use lidarserv_common::index::octree::{Octree, OctreeParams};
 use lidarserv_common::las::I32LasReadWrite;
 use std::path::PathBuf;
+use lidarserv_common::index::octree::attribute_index::AttributeIndex;
 
 pub type I32Octree = Octree<Point, GridCenterSampling<Point>, GridCenterSamplingFactory<Point>>;
 
@@ -28,6 +29,12 @@ pub fn create_octree_index(
     directory_file_name.push("directory.bin");
     let page_directory = GridCellDirectory::new(&max_lod, directory_file_name).unwrap();
     let (max_bogus_inner, max_bogus_leaf) = settings.nr_bogus_points;
+    let mut attribute_index = None;
+    if settings.enable_attribute_index {
+        let mut attribute_index_file_name = data_folder.clone();
+        attribute_index_file_name.push("attribute_index.bin");
+        attribute_index = Some(AttributeIndex::new(max_lod.level() as usize, attribute_index_file_name));
+    }
 
     Octree::new(OctreeParams {
         num_threads: settings.num_threads,
@@ -35,7 +42,7 @@ pub fn create_octree_index(
         max_lod,
         max_bogus_inner,
         max_bogus_leaf,
-        attribute_index: None,
+        attribute_index,
         node_hierarchy,
         page_loader,
         page_directory,
