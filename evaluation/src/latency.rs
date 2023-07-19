@@ -164,7 +164,7 @@ where
 pub fn read_thread<I>(
     mut reader: I::Reader,
     mut queries: crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-    mut filters: crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool)>
+    mut filters: crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>
 ) -> Vec<HashMap<usize, Instant>>
 where
     I: Index<Point>,

@@ -88,7 +88,7 @@ impl AttributeIndex {
 
     /// Checks if a grid cell OVERLAPS with the given attribute bounds
     /// Also checks the histogram, if enabled
-    pub fn cell_overlaps_with_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds) -> bool {
+    pub fn cell_overlaps_with_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds, check_histogram: bool) -> bool {
         // aquire read lock for lod level
         let index_read = self.index[lod.level() as usize].read().unwrap();
         let entry = index_read.get_key_value(&grid_cell);
@@ -100,7 +100,7 @@ impl AttributeIndex {
                 let is_in_bounds = bounds.is_bounds_overlapping_bounds(&cell_bounds);
 
                 // also check histograms if enabled
-                if is_in_bounds && self.enable_histograms && histograms.is_some() {
+                if is_in_bounds && check_histogram && histograms.is_some() {
                     histograms.as_ref().unwrap().is_attribute_range_in_histograms(bounds)
                 } else {
                     return is_in_bounds
@@ -471,9 +471,9 @@ mod tests {
         attribute_index.update_bounds_and_histograms(lod, &grid_cell, &smaller_bounds(), &None);
 
         // check if values are correct
-        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &smaller_bounds()), true);
-        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &max_bounds()), true);
-        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &not_overlapping_bounds()), false);
+        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &smaller_bounds(), false), true);
+        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &max_bounds(), false), true);
+        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &not_overlapping_bounds(), false), false);
 
         // delete file if exists
         delete_file(&PathBuf::from("test.bin"));

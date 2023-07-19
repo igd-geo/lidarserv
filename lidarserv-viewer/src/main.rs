@@ -222,6 +222,7 @@ async fn network_thread(
                             args.point_distance,
                             None,
                             false,
+                            false,
                             false
                         )
                         .await

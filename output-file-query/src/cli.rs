@@ -23,9 +23,15 @@ pub struct Args {
     #[structopt(long, default_value = "0")]
     pub lod: u16,
 
-    /// Enable usage attribute-index acceleration structure.
+    /// Enable usage of range-based attribute-index acceleration structure.
+    /// Only works, if the attribute index was created during the indexing process.
     #[structopt(long)]
     pub enable_attribute_acceleration: bool,
+
+    /// Enable usage of additional histogram-based acceleration structure.
+    /// Only works, if the histograms were created during the indexing process.
+    #[structopt(long)]
+    pub enable_histogram_acceleration: bool,
 
     /// Enable point based filtering for spatial queries and attribute filters.
     #[structopt(long)]

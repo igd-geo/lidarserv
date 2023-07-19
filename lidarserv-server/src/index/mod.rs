@@ -59,7 +59,7 @@ pub trait DynReader: Send + Sync
     fn blocking_update(
         &mut self,
         queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool)>,
+        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
     ) -> bool;
 
     /// Checks if there are updates available.
@@ -67,7 +67,7 @@ pub trait DynReader: Send + Sync
     fn updates_available(
         &mut self,
         queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool)>,
+        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
     ) -> bool;
 
     /// Returns a node from the loading queue.
@@ -150,11 +150,11 @@ impl DynReader
     for OctreeReader<LasPoint, GridCenterSampling<LasPoint>, GridCenterSamplingFactory<LasPoint>>
 {
 
-    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool)>) -> bool {
+    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>) -> bool {
         Reader::blocking_update(self, queries, filters)
     }
 
-    fn updates_available(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool)>) -> bool {
+    fn updates_available(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>) -> bool {
         Reader::updates_available(self, queries, filters)
     }
 

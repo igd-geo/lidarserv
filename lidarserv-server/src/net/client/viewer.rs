@@ -130,6 +130,7 @@ where
         lod: &LodLevel,
         filter: Option<LasPointAttributeBounds>,
         enable_attribute_acceleration: bool,
+        enable_histogram_acceleration: bool,
         enable_point_filtering: bool,
     ) -> Result<(), LidarServerError> {
         let csys = F64CoordinateSystem::new();
@@ -144,6 +145,7 @@ where
                 }),
                 filter,
                 enable_attribute_acceleration,
+                enable_histogram_acceleration,
                 enable_point_filtering,
             }).await
     }
@@ -156,6 +158,7 @@ where
         min_distance_pixels: f64,
         filter: Option<LasPointAttributeBounds>,
         enable_attribute_acceleration: bool,
+        enable_histogram_acceleration: bool,
         enable_point_filtering: bool,
     ) -> Result<(), LidarServerError> {
         self.connection
@@ -168,6 +171,7 @@ where
                 }),
                 filter,
                 enable_attribute_acceleration,
+                enable_histogram_acceleration,
                 enable_point_filtering,
             }).await
     }

@@ -37,6 +37,7 @@ pub enum Message {
         query: Box<Query>,
         filter: Option<LasPointAttributeBounds>,
         enable_attribute_acceleration: bool,
+        enable_histogram_acceleration: bool,
         enable_point_filtering: bool,
     },
 
