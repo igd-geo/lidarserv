@@ -63,7 +63,6 @@ impl LasPointAttributeHistograms {
     }
 
     pub fn is_attribute_range_in_histograms(&self, attribute_bounds: &LasPointAttributeBounds) -> bool {
-        let angle = attribute_bounds.scan_angle_rank.unwrap(); // has to be casted to i16, because the histogram has to be i16
         self.intensity.range_contains_values(attribute_bounds.intensity.unwrap()) &&
         self.return_number.range_contains_values(attribute_bounds.return_number.unwrap()) &&
         self.number_of_returns.range_contains_values(attribute_bounds.number_of_returns.unwrap()) &&

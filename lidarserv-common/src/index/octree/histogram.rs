@@ -42,8 +42,8 @@ impl Histogram<u8> {
 
     // Increment the appropriate bin for the given value
     pub fn add(&mut self, mut value: u8) {
-        if value < self.min_value { value = self.min_value; debug!("value {} is smaller than min_value {}", value, self.min_value); }
-        if value > self.max_value { value = self.max_value; debug!("value {} is larger than max_value {}", value, self.max_value); }
+        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
+        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
 
         let bin_index = self.get_bin_index(value);
         self.bins[bin_index] += 1;
@@ -51,8 +51,8 @@ impl Histogram<u8> {
 
     // calculate bin index from value
     pub fn get_bin_index(&self, mut value: u8) -> usize {
-        if value < self.min_value { value = self.min_value; debug!("value {} is smaller than min_value {}", value, self.min_value); }
-        if value > self.max_value { value = self.max_value; debug!("value {} is larger than max_value {}", value, self.max_value); }
+        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
+        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
 
         let bin_index = ((value as u16 - self.min_value as u16) / self.bin_width as u16).to_usize().unwrap().min(self.bins.len() - 1);
         bin_index
@@ -93,8 +93,8 @@ impl Histogram<u16> {
 
     // Increment the appropriate bin for the given value
     pub fn add(&mut self, mut value: u16) {
-        if value < self.min_value { value = self.min_value; debug!("value {} is smaller than min_value {}", value, self.min_value); }
-        if value > self.max_value { value = self.max_value; debug!("value {} is larger than max_value {}", value, self.max_value); }
+        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
+        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
 
         let bin_index = self.get_bin_index(value);
         self.bins[bin_index] += 1;
@@ -102,8 +102,8 @@ impl Histogram<u16> {
 
     // calculate bin index from value
     pub fn get_bin_index(&self, mut value: u16) -> usize {
-        if value < self.min_value { value = self.min_value; debug!("value {} is smaller than min_value {}", value, self.min_value); }
-        if value > self.max_value { value = self.max_value; debug!("value {} is larger than max_value {}", value, self.max_value); }
+        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
+        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
 
         let bin_index = ((value as u32 - self.min_value as u32) / self.bin_width as u32).to_usize().unwrap().min(self.bins.len() - 1);
         bin_index
@@ -144,8 +144,8 @@ impl Histogram<i8> {
 
     // Increment the appropriate bin for the given value
     pub fn add(&mut self, mut value: i8) {
-        if value < self.min_value { value = self.min_value; debug!("value {} is smaller than min_value {}", value, self.min_value); }
-        if value > self.max_value { value = self.max_value; debug!("value {} is larger than max_value {}", value, self.max_value); }
+        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
+        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
 
         let bin_index = self.get_bin_index(value);
         self.bins[bin_index] += 1;
@@ -153,8 +153,8 @@ impl Histogram<i8> {
 
     // calculate bin index from value
     pub fn get_bin_index(&self, mut value: i8) -> usize {
-        if value < self.min_value { value = self.min_value; debug!("value {} is smaller than min_value {}", value, self.min_value); }
-        if value > self.max_value { value = self.max_value; debug!("value {} is larger than max_value {}", value, self.max_value); }
+        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
+        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
 
         let bin_index = ((value as i16 - self.min_value as i16) / self.bin_width as i16).to_usize().unwrap().min(self.bins.len() - 1);
         bin_index

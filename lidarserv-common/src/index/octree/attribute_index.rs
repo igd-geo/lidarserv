@@ -98,11 +98,15 @@ impl AttributeIndex {
             Some((_, (cell_bounds, histograms))) => {
                 // check bounds
                 let is_in_bounds = bounds.is_bounds_overlapping_bounds(&cell_bounds);
+                debug!("Cell {:?} overlaps with bounds: {}", grid_cell, is_in_bounds);
 
                 // also check histograms if enabled
                 if is_in_bounds && check_histogram && histograms.is_some() {
-                    histograms.as_ref().unwrap().is_attribute_range_in_histograms(bounds)
+                    let histogram_check = histograms.as_ref().unwrap().is_attribute_range_in_histograms(bounds);
+                    debug!("Cell {:?} overlaps with histogram: {}", grid_cell, histogram_check);
+                    return histogram_check;
                 } else {
+                    debug!("Returning: {}", is_in_bounds);
                     return is_in_bounds
                 }
             },
