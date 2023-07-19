@@ -9,7 +9,7 @@ pub struct LasPointAttributeHistograms {
     pub return_number: Histogram<u8>,
     pub number_of_returns: Histogram<u8>,
     pub classification: Histogram<u8>,
-    pub scan_angle_rank: Histogram<i16>,
+    pub scan_angle_rank: Histogram<i8>,
     pub user_data: Histogram<u8>,
     pub point_source_id: Histogram<u16>,
     pub color_r: Histogram<u16>,
@@ -27,7 +27,7 @@ impl LasPointAttributeHistograms {
             return_number: Histogram::<u8>::new(0,7, 8),
             number_of_returns: Histogram::<u8>::new(0,7,8),
             classification: Histogram::<u8>::new(0,255,bin_count_8bit),
-            scan_angle_rank: Histogram::<i16>::new(-90,90,bin_count_8bit),
+            scan_angle_rank: Histogram::<i8>::new(-90,90,bin_count_8bit),
             user_data: Histogram::<u8>::new(0,255,bin_count_8bit),
             point_source_id: Histogram::<u16>::new(0,65535,bin_count_16bit),
             color_r: Histogram::<u16>::new(0,65535,bin_count_16bit),
@@ -41,7 +41,7 @@ impl LasPointAttributeHistograms {
         self.return_number.add(attributes.return_number);
         self.number_of_returns.add(attributes.number_of_returns);
         self.classification.add(attributes.classification);
-        self.scan_angle_rank.add(attributes.scan_angle_rank as i16);
+        self.scan_angle_rank.add(attributes.scan_angle_rank);
         self.user_data.add(attributes.user_data);
         self.point_source_id.add(attributes.point_source_id);
         self.color_r.add(attributes.color.0);
@@ -68,7 +68,7 @@ impl LasPointAttributeHistograms {
         self.return_number.range_contains_values(attribute_bounds.return_number.unwrap()) &&
         self.number_of_returns.range_contains_values(attribute_bounds.number_of_returns.unwrap()) &&
         self.classification.range_contains_values(attribute_bounds.classification.unwrap()) &&
-        self.scan_angle_rank.range_contains_values((angle.0 as i16, angle.1 as i16)) &&
+        self.scan_angle_rank.range_contains_values(attribute_bounds.scan_angle_rank.unwrap()) &&
         self.user_data.range_contains_values(attribute_bounds.user_data.unwrap()) &&
         self.point_source_id.range_contains_values(attribute_bounds.point_source_id.unwrap()) &&
         self.color_r.range_contains_values(attribute_bounds.color_r.unwrap()) &&
