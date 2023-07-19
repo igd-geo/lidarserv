@@ -43,6 +43,7 @@ pub fn create_octree_index(
         max_bogus_inner,
         max_bogus_leaf,
         attribute_index,
+        enable_histogram_acceleration: settings.enable_histogram_acceleration,
         node_hierarchy,
         page_loader,
         page_directory,

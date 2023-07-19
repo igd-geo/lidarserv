@@ -18,9 +18,11 @@ use std::str::FromStr;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 use std::{mem, thread};
+use std::ops::Deref;
 use thiserror::Error;
 use tracy_client::{create_plot, Plot};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
+use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
 
 static TASKS_DEFAULT_PLOT: Plot = create_plot!("Task queue length");
 static POINTS_DEFAULT_PLOT: Plot = create_plot!("Task queue length in points");
@@ -390,9 +392,21 @@ where
 
         // update attribute index
         if self.inner.attribute_index.is_some() {
-            let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-            let _ = &task.points.iter().for_each(|p| bounds.update_by_attributes(p.attribute()));
-            self.inner.attribute_index.as_ref().unwrap().update_by_bounds(node_id.lod, &node_id.pos, &bounds);
+            if self.inner.enable_histogram_acceleration {
+                // WITH HISTOGRAMS
+                let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
+                let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new();
+                let _ = &task.points.iter().for_each(|p| {
+                    bounds.update_by_attributes(p.attribute());
+                    histogram.fill_with(p.attribute());
+                });
+                self.inner.attribute_index.as_ref().unwrap().update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &Some(histogram));
+            } else {
+                // NO HISTOGRAMS
+                let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
+                let _ = &task.points.iter().for_each(|p| bounds.update_by_attributes(p.attribute()));
+                self.inner.attribute_index.as_ref().unwrap().update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &None);
+            }
         }
 
         // insert new points

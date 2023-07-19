@@ -3,7 +3,7 @@ use std::io::BufReader;
 use crate::point::{Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
-use log::info;
+use log::{debug, info};
 use std::path::PathBuf;
 use input_file_replay::iter_points::iter_points;
 use lidarserv_common::las::{I32LasReadWrite, Las, LasPointAttributes};
@@ -69,6 +69,7 @@ pub fn read_points(
         panic!("Unknown file format");
     }
     info!("Read a total of {} points.", points.len());
+    debug!("Size of first point: {}", std::mem::size_of::<Point>());
     points
 }
 

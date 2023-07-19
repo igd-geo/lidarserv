@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::las::LasPointAttributes;
 use serde::{Deserialize, Serialize};
 
@@ -146,7 +147,7 @@ impl LasPointAttributeBounds {
 
     /// Check if a bound is overlapping with another bound
     /// If one of the bounds is None, it is considered to be overlapping
-    fn is_bound_overlapping_bound<T: PartialOrd + Copy>(&self, current_bound: Option<(T, T)>, new_bound: Option<(T, T)>) -> bool {
+    fn is_bound_overlapping_bound<T: PartialOrd + Copy + Debug>(&self, current_bound: Option<(T, T)>, new_bound: Option<(T, T)>) -> bool {
         match (current_bound, new_bound) {
             (Some((min_val, max_val)), Some((new_min, new_max))) => {
                 new_min <= max_val && min_val <= new_max
@@ -264,7 +265,7 @@ mod tests {
         bounds.color_b = Some((0, 65535));
         bounds
     }
-
+    
     fn smaller_bounds() -> LasPointAttributeBounds {
         let mut bounds = LasPointAttributeBounds::new();
         bounds.intensity = Some((3, 19));

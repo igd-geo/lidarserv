@@ -34,6 +34,7 @@ pub fn run(init_options: InitOptions) -> Result<()> {
                 .mno_bogus_leaf
                 .unwrap_or(init_options.mno_bogus),
             enable_attribute_indexing: init_options.enable_attribute_indexing,
+            enable_histogram_acceleration: init_options.enable_histogram_acceleration,
             use_metrics: init_options.mno_use_metrics,
             point_grid_shift: 31
                 - (init_options.point_grid_size / init_options.las_scale.0.x)

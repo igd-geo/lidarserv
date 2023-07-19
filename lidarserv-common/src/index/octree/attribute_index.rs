@@ -7,14 +7,21 @@ use log::{debug};
 use csv::Writer;
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
+use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
 use crate::las::LasPointAttributes;
+
+/// Vec for LOD levels
+/// RwLock for concurrent access
+/// HashMap holds grid cells
+/// (LasPointAttributeBounds, Option<LasPointAttributeHistograms>) holds attribute bounds and histograms for each cell
+type Index = Vec<RwLock<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>>>;
 
 /// Holds attribute bounds for grid cells.
 /// Elements of vector correspond to LOD levels.
 /// HashMaps map grid cells to attribute bounds.
-#[derive(Debug)]
 pub struct AttributeIndex {
-    index: Arc<Vec<RwLock<HashMap<GridCell, LasPointAttributeBounds>>>>,
+    index: Arc<Index>,
+    enable_histograms: bool,
     file_name: PathBuf,
 }
 
@@ -27,6 +34,7 @@ impl AttributeIndex {
             debug!("Loaded attribute index from file {:?}", file_name);
             return AttributeIndex {
                 index,
+                enable_histograms: false,
                 file_name,
             };
         } else {
@@ -38,46 +46,48 @@ impl AttributeIndex {
             }
             AttributeIndex {
                 index: Arc::new(index),
+                enable_histograms: false,
                 file_name,
             }
         }
+    }
 
+    /// sets the histogram acceleration flag
+    pub fn set_histogram_acceleration(&mut self, enable: bool) {
+        self.enable_histograms = enable;
+    }
 
+    /// Updates attribute bounds and histograms for a grid cell using new bounds and histograms
+    pub fn update_bounds_and_histograms(
+        &self,
+        lod: LodLevel,
+        grid_cell: &GridCell,
+        new_bounds: &LasPointAttributeBounds,
+        new_histogram: &Option<LasPointAttributeHistograms>)
+    {
+        // aquire write lock for lod level
+        let mut index_write = self.index[lod.level() as usize].write().unwrap();
+        let (bounds, histogram) = index_write.entry(grid_cell.clone()).or_insert((new_bounds.clone(), new_histogram.clone()));
+
+        // update bounds and optionally histograms
+        bounds.update_by_bounds(&new_bounds);
+        if new_histogram.is_some() && self.enable_histograms {
+            if histogram.is_none() {
+                *histogram = new_histogram.clone();
+            } else {
+                histogram.as_mut().unwrap().add_histograms(&new_histogram.as_ref().unwrap());
+            }
+        }
     }
 
     /// Updates attribute bounds for a grid cell by attributes
     pub fn update_by_attributes(&self, lod: LodLevel, grid_cell: &GridCell, attributes: &LasPointAttributes) {
         let bounds = LasPointAttributeBounds::from_attributes(attributes);
-        self.update_by_bounds(lod, grid_cell, &bounds);
-    }
-
-    /// Updates attribute bounds for a grid cell by new bounds
-    pub fn update_by_bounds(&self, lod: LodLevel, grid_cell: &GridCell, new_bounds: &LasPointAttributeBounds) {
-        // aquire read lock for lod level
-        // TODO Measure performance, maybe remove readlock because most times new bounds are NOT in bounds
-        let index_read = self.index[lod.level() as usize].read().unwrap();
-        let entry = index_read.get_key_value(&grid_cell);
-
-        // TODO may make performance worse
-        let _ = match entry {
-            Some(bounds) => {
-                // if new bounds are within old bounds, do nothing
-                if bounds.1.is_bounds_in_bounds(new_bounds) {
-                    debug!("Bounds are within old bounds, do nothing (lod {:?} cell {:?})", lod, grid_cell);
-                    return;
-                }
-            },
-            None => {},
-        };
-
-        // aquire write lock for lod level and update bounds
-        drop(index_read);
-        let mut index_write = self.index[lod.level() as usize].write().unwrap();
-        let bounds = index_write.entry(grid_cell.clone()).or_insert(new_bounds.clone());
-        bounds.update_by_bounds(new_bounds);
+        self.update_bounds_and_histograms(lod, grid_cell, &bounds, &None);
     }
 
     /// Checks if a grid cell OVERLAPS with the given attribute bounds
+    /// Also checks the histogram, if enabled
     pub fn cell_overlaps_with_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds) -> bool {
         // aquire read lock for lod level
         let index_read = self.index[lod.level() as usize].read().unwrap();
@@ -85,9 +95,16 @@ impl AttributeIndex {
 
         // check if cell is in bounds
         let _ = match entry {
-            Some(cell_bounds) => {
-                let is_in_bounds = bounds.is_bounds_overlapping_bounds(&cell_bounds.1);
-                return is_in_bounds;
+            Some((_, (cell_bounds, histograms))) => {
+                // check bounds
+                let is_in_bounds = bounds.is_bounds_overlapping_bounds(&cell_bounds);
+
+                // also check histograms if enabled
+                if is_in_bounds && self.enable_histograms && histograms.is_some() {
+                    histograms.as_ref().unwrap().is_attribute_range_in_histograms(bounds)
+                } else {
+                    return is_in_bounds
+                }
             },
             None => {
                 true
@@ -97,7 +114,7 @@ impl AttributeIndex {
     }
 
     /// Loads attribute index from file
-    fn load_from_file(num_lods: usize, file_name: &Path) -> Result<Arc<Vec<RwLock<HashMap<GridCell, LasPointAttributeBounds>>>>, std::io::Error> {
+    fn load_from_file(num_lods: usize, file_name: &Path) -> Result<Arc<Index>, std::io::Error> {
 
         // check existence of file and open it
         if !file_name.exists() {
@@ -106,10 +123,11 @@ impl AttributeIndex {
         let f = File::open(file_name)?;
 
         // read from file
-        let decoded: Vec<HashMap<GridCell, LasPointAttributeBounds>> = from_reader(&f).expect("Error while reading attribute index");
+        let decoded: Vec<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>> =
+            from_reader(&f).expect("Error while reading attribute index");
 
-        // convert to Vec<RwLock<HashMap<GridCell, LasPointAttributeBounds>>> and return
-        let mut vector : Vec<RwLock<HashMap<GridCell, LasPointAttributeBounds>>> = Vec::with_capacity(num_lods);
+        // convert to Vec<RwLock<HashMap<GridCell, (LasPointAttributeBounds, LasPointAttributeHistograms)>>> and return
+        let mut vector : Index = Vec::with_capacity(num_lods);
         for i in 0..num_lods {
             vector.push(RwLock::new(decoded[i].clone()));
         }
@@ -127,7 +145,8 @@ impl AttributeIndex {
             .open(&self.file_name)?;
 
         // convert into vector without mutex and arc
-        let mut vector : Vec<HashMap<GridCell, LasPointAttributeBounds>> = Vec::with_capacity(self.index.len());
+        let mut vector : Vec<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>>
+            = Vec::with_capacity(self.index.len());
         for lock in self.index.iter() {
             let index = lock.read().unwrap();
             vector.push(index.clone());
@@ -149,7 +168,7 @@ impl AttributeIndex {
         let entry = index_read.get_key_value(&grid_cell);
         match entry {
             Some(bounds) => {
-                Some(bounds.1.clone())
+                Some(bounds.1.0.clone())
             },
             None => {
                 None
@@ -209,32 +228,32 @@ impl AttributeIndex {
                     grid_cell.x.to_string(),
                     grid_cell.y.to_string(),
                     grid_cell.z.to_string(),
-                    bounds.intensity.unwrap().0.to_string(),
-                    bounds.intensity.unwrap().1.to_string(),
-                    bounds.return_number.unwrap().0.to_string(),
-                    bounds.return_number.unwrap().1.to_string(),
-                    bounds.number_of_returns.unwrap().0.to_string(),
-                    bounds.number_of_returns.unwrap().1.to_string(),
-                    bounds.scan_direction.unwrap().0.to_string(),
-                    bounds.scan_direction.unwrap().1.to_string(),
-                    bounds.edge_of_flight_line.unwrap().0.to_string(),
-                    bounds.edge_of_flight_line.unwrap().1.to_string(),
-                    bounds.classification.unwrap().0.to_string(),
-                    bounds.classification.unwrap().1.to_string(),
-                    bounds.scan_angle_rank.unwrap().0.to_string(),
-                    bounds.scan_angle_rank.unwrap().1.to_string(),
-                    bounds.user_data.unwrap().0.to_string(),
-                    bounds.user_data.unwrap().1.to_string(),
-                    bounds.point_source_id.unwrap().0.to_string(),
-                    bounds.point_source_id.unwrap().1.to_string(),
-                    bounds.gps_time.unwrap().0.to_string(),
-                    bounds.gps_time.unwrap().1.to_string(),
-                    bounds.color_r.unwrap().0.to_string(),
-                    bounds.color_r.unwrap().1.to_string(),
-                    bounds.color_g.unwrap().0.to_string(),
-                    bounds.color_g.unwrap().1.to_string(),
-                    bounds.color_b.unwrap().0.to_string(),
-                    bounds.color_b.unwrap().1.to_string(),
+                    bounds.0.intensity.unwrap().0.to_string(),
+                    bounds.0.intensity.unwrap().1.to_string(),
+                    bounds.0.return_number.unwrap().0.to_string(),
+                    bounds.0.return_number.unwrap().1.to_string(),
+                    bounds.0.number_of_returns.unwrap().0.to_string(),
+                    bounds.0.number_of_returns.unwrap().1.to_string(),
+                    bounds.0.scan_direction.unwrap().0.to_string(),
+                    bounds.0.scan_direction.unwrap().1.to_string(),
+                    bounds.0.edge_of_flight_line.unwrap().0.to_string(),
+                    bounds.0.edge_of_flight_line.unwrap().1.to_string(),
+                    bounds.0.classification.unwrap().0.to_string(),
+                    bounds.0.classification.unwrap().1.to_string(),
+                    bounds.0.scan_angle_rank.unwrap().0.to_string(),
+                    bounds.0.scan_angle_rank.unwrap().1.to_string(),
+                    bounds.0.user_data.unwrap().0.to_string(),
+                    bounds.0.user_data.unwrap().1.to_string(),
+                    bounds.0.point_source_id.unwrap().0.to_string(),
+                    bounds.0.point_source_id.unwrap().1.to_string(),
+                    bounds.0.gps_time.unwrap().0.to_string(),
+                    bounds.0.gps_time.unwrap().1.to_string(),
+                    bounds.0.color_r.unwrap().0.to_string(),
+                    bounds.0.color_r.unwrap().1.to_string(),
+                    bounds.0.color_g.unwrap().0.to_string(),
+                    bounds.0.color_g.unwrap().1.to_string(),
+                    bounds.0.color_b.unwrap().0.to_string(),
+                    bounds.0.color_b.unwrap().1.to_string(),
                 ])?;
             }
         }
@@ -245,6 +264,7 @@ impl AttributeIndex {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use super::*;
 
     fn create_attribute_1() -> LasPointAttributes {
@@ -271,7 +291,7 @@ mod tests {
             scan_direction: false,
             edge_of_flight_line: false,
             classification: 10,
-            scan_angle_rank: -100,
+            scan_angle_rank: -90,
             user_data: 0,
             point_source_id: 1234,
             gps_time: 234.567,
@@ -287,7 +307,7 @@ mod tests {
         bounds.scan_direction = Some((false, true));
         bounds.edge_of_flight_line = Some((false, true));
         bounds.classification = Some((0, 255));
-        bounds.scan_angle_rank = Some((-128, 127));
+        bounds.scan_angle_rank = Some((-90, 127));
         bounds.user_data = Some((0, 255));
         bounds.point_source_id = Some((0, 65535));
         bounds.gps_time = Some((-1.7976931348623157e308, 1.7976931348623157e308));
@@ -323,7 +343,7 @@ mod tests {
         bounds.scan_direction = Some((false, true));
         bounds.edge_of_flight_line = Some((false, true));
         bounds.classification = Some((30, 255));
-        bounds.scan_angle_rank = Some((-128, 127));
+        bounds.scan_angle_rank = Some((-90, 127));
         bounds.user_data = Some((0, 255));
         bounds.point_source_id = Some((0, 65535));
         bounds.gps_time = Some((-1.7976931348623157e308, 1.7976931348623157e308));
@@ -333,44 +353,18 @@ mod tests {
         bounds
     }
 
-    #[test]
-    fn test_attribute_index_update() {
-
-        // create attribute index
-        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
-        let lod = LodLevel::base();
-        let grid_cell = GridCell{ x: 0, y: 0, z: 0};
-
-        // update with values
-        attribute_index.update_by_attributes(lod, &grid_cell, &create_attribute_1());
-        attribute_index.update_by_attributes(lod, &grid_cell, &create_attribute_2());
-
-        // check if values are correct
-        let index = &attribute_index.index[0].read().unwrap();
-        let bounds = index.get(&grid_cell).unwrap();
-        assert_eq!(bounds.intensity, Some((0, 10)));
-        assert_eq!(bounds.return_number, Some((1, 2)));
-        assert_eq!(bounds.number_of_returns, Some((1, 3)));
-        assert_eq!(bounds.scan_direction, Some((false, true)));
-        assert_eq!(bounds.edge_of_flight_line, Some((false, false)));
-        assert_eq!(bounds.classification, Some((2, 10)));
-        assert_eq!(bounds.scan_angle_rank, Some((-100, -5)));
-        assert_eq!(bounds.user_data, Some((0, 0)));
-        assert_eq!(bounds.point_source_id, Some((123, 1234)));
-        assert_eq!(bounds.gps_time, Some((123.456, 234.567)));
-        assert_eq!(bounds.color_r, Some((0, 255)));
-        assert_eq!(bounds.color_g, Some((0, 255)));
-        assert_eq!(bounds.color_b, Some((0, 0)));
-
-        // delete file if it exists
-        let file_name = PathBuf::from("test.bin");
-        if file_name.exists() {
-            std::fs::remove_file(file_name).unwrap();
+    fn delete_file(path: &PathBuf) {
+        if path.exists() {
+            fs::remove_file(path).unwrap();
         }
     }
 
     #[test]
-    fn load_and_save() {
+    fn test_attribute_index_update() {
+
+        // delete file if exists
+        delete_file(&PathBuf::from("test.bin"));
+
         // create attribute index
         let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
@@ -380,23 +374,74 @@ mod tests {
         attribute_index.update_by_attributes(lod, &grid_cell, &create_attribute_1());
         attribute_index.update_by_attributes(lod, &grid_cell, &create_attribute_2());
 
+        // check if values are correct
+        let index = &attribute_index.index[0].read().unwrap();
+        let bounds = index.get(&grid_cell).unwrap();
+        assert_eq!(bounds.0.intensity, Some((0, 10)));
+        assert_eq!(bounds.0.return_number, Some((1, 2)));
+        assert_eq!(bounds.0.number_of_returns, Some((1, 3)));
+        assert_eq!(bounds.0.scan_direction, Some((false, true)));
+        assert_eq!(bounds.0.edge_of_flight_line, Some((false, false)));
+        assert_eq!(bounds.0.classification, Some((2, 10)));
+        assert_eq!(bounds.0.scan_angle_rank, Some((-90, -5)));
+        assert_eq!(bounds.0.user_data, Some((0, 0)));
+        assert_eq!(bounds.0.point_source_id, Some((123, 1234)));
+        assert_eq!(bounds.0.gps_time, Some((123.456, 234.567)));
+        assert_eq!(bounds.0.color_r, Some((0, 255)));
+        assert_eq!(bounds.0.color_g, Some((0, 255)));
+        assert_eq!(bounds.0.color_b, Some((0, 0)));
+
+        // delete file if exists
+        delete_file(&PathBuf::from("test.bin"));
+    }
+
+    #[test]
+    fn load_and_save() {
+        // delete file if exists
+        delete_file(&PathBuf::from("test.bin"));
+
+        // create attribute index
+        println!("Creating attribute index");
+        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let lod = LodLevel::base();
+        let grid_cell = GridCell{ x: 0, y: 0, z: 0};
+
+        // creating bounds and histograms
+        println!("Creating bounds and histograms");
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.update_by_attributes(&create_attribute_1());
+        bounds.update_by_attributes(&create_attribute_2());
+
+        let mut histograms = LasPointAttributeHistograms::new();
+        histograms.fill_with(&create_attribute_1());
+        histograms.fill_with(&create_attribute_2());
+
+        // Updating bounds and histograms
+        println!("Updating attribute index");
+        attribute_index.update_bounds_and_histograms(lod, &grid_cell, &bounds, &Some(histograms));
+
         // write to file
+        println!("Writing attribute index to file");
         let write_result = attribute_index.write_to_file();
         assert!(write_result.is_ok());
 
         // read from file
+        println!("Reading attribute index from file");
         let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
 
-        // check if values are correct
+        // extract bounds and histograms
+        println!("Checking attribute index values");
         let index = &attribute_index.index[0].read().unwrap();
-        let bounds = index.get(&grid_cell).unwrap();
+        let (bounds, histograms) = index.get(&grid_cell).unwrap();
+
+        // check if bounds are correct
         assert_eq!(bounds.intensity, Some((0, 10)));
         assert_eq!(bounds.return_number, Some((1, 2)));
         assert_eq!(bounds.number_of_returns, Some((1, 3)));
         assert_eq!(bounds.scan_direction, Some((false, true)));
         assert_eq!(bounds.edge_of_flight_line, Some((false, false)));
         assert_eq!(bounds.classification, Some((2, 10)));
-        assert_eq!(bounds.scan_angle_rank, Some((-100, -5)));
+        assert_eq!(bounds.scan_angle_rank, Some((-90, -5)));
         assert_eq!(bounds.user_data, Some((0, 0)));
         assert_eq!(bounds.point_source_id, Some((123, 1234)));
         assert_eq!(bounds.gps_time, Some((123.456, 234.567)));
@@ -404,29 +449,34 @@ mod tests {
         assert_eq!(bounds.color_g, Some((0, 255)));
         assert_eq!(bounds.color_b, Some((0, 0)));
 
-        // delete file
-        std::fs::remove_file("test.bin").unwrap();
+        // check if histograms are correct
+        assert!(histograms.is_some());
+        let histograms = histograms.as_ref().unwrap();
+        assert!(histograms.is_attribute_range_in_histograms(&bounds));
+
+        // delete file if exists
+        delete_file(&PathBuf::from("test.bin"));
     }
 
     #[test]
     fn overlap() {
+        // delete file if exists
+        delete_file(&PathBuf::from("test.bin"));
+
         let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
         let grid_cell = GridCell{ x: 0, y: 0, z: 0};
 
         // update with values
-        attribute_index.update_by_bounds(lod, &grid_cell, &smaller_bounds());
+        attribute_index.update_bounds_and_histograms(lod, &grid_cell, &smaller_bounds(), &None);
 
         // check if values are correct
         assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &smaller_bounds()), true);
         assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &max_bounds()), true);
         assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &not_overlapping_bounds()), false);
 
-        // delete file if it exists
-        let file_name = PathBuf::from("test.bin");
-        if file_name.exists() {
-            std::fs::remove_file(file_name).unwrap();
-        }
+        // delete file if exists
+        delete_file(&PathBuf::from("test.bin"));
     }
 
 

@@ -10,6 +10,7 @@ use lidarserv_common::index::octree::live_metrics_collector::{LiveMetricsCollect
 use lidarserv_common::index::octree::OctreeParams;
 use lidarserv_common::las::I32LasReadWrite;
 use std::path::{Path, PathBuf};
+use log::debug;
 use thiserror::Error;
 use lidarserv_common::index::octree::attribute_index::AttributeIndex;
 
@@ -51,6 +52,14 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
         let mut attribute_index_file_name = data_path.to_owned();
         attribute_index_file_name.push("attribute_index.bin");
         attribute_index = Option::from(AttributeIndex::new(octree_settings.max_lod.level() as usize, attribute_index_file_name));
+        if attribute_index.is_some() {
+            debug!("Attribute indexing enabled");
+            if octree_settings.enable_histogram_acceleration {
+                debug!("Histogram acceleration enabled");
+                attribute_index.as_mut().unwrap().set_histogram_acceleration(true);
+
+            }
+        }
     }
 
     // metrics
@@ -77,6 +86,7 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
         max_bogus_inner: octree_settings.max_bogus_inner,
         max_bogus_leaf: octree_settings.max_bogus_leaf,
         attribute_index,
+        enable_histogram_acceleration: octree_settings.enable_histogram_acceleration,
         node_hierarchy,
         page_loader,
         page_directory,

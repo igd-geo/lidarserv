@@ -5,6 +5,8 @@ pub mod reader;
 pub mod writer;
 pub mod attribute_index;
 pub mod attribute_bounds;
+pub mod attribute_histograms;
+pub mod histogram;
 
 use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
@@ -34,6 +36,7 @@ struct Inner<Point, Sampl, SamplF> {
     subscriptions: Mutex<Vec<crossbeam_channel::Sender<LeveledGridCell>>>,
     page_cache: LasPageManager<Sampl, Point>,
     attribute_index: Option<AttributeIndex>,
+    enable_histogram_acceleration: bool,
     sample_factory: SamplF,
     loader: I32LasReadWrite,
     coordinate_system: I32CoordinateSystem,
@@ -48,6 +51,7 @@ pub struct OctreeParams<Point, Sampl, SamplF> {
     pub max_bogus_inner: usize,
     pub max_bogus_leaf: usize,
     pub attribute_index: Option<AttributeIndex>,
+    pub enable_histogram_acceleration: bool,
     pub node_hierarchy: I32GridHierarchy,
     pub page_loader: OctreePageLoader<Page<Sampl, Point>>,
     pub page_directory: GridCellDirectory,
@@ -80,6 +84,7 @@ where
             max_bogus_inner,
             max_bogus_leaf,
             attribute_index,
+            enable_histogram_acceleration,
             node_hierarchy,
             page_loader,
             page_directory,
@@ -102,6 +107,7 @@ where
                 subscriptions: Mutex::new(vec![]),
                 page_cache: LasPageManager::new(page_loader, page_directory, max_cache_size),
                 attribute_index,
+                enable_histogram_acceleration,
                 sample_factory,
                 loader,
                 coordinate_system,

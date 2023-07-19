@@ -84,6 +84,10 @@ pub struct InitOptions {
     #[structopt(long)]
     pub enable_attribute_indexing: bool,
 
+    /// Enable acceleration of the attribute indexing using additional histograms for each attribute
+    #[structopt(long)]
+    pub enable_histogram_acceleration: bool,
+
     /// If enabled, some metrics are collected during indexing and written to a file named 'metrics_%i.cbor',
     /// where %i is a sequentially increasing number.
     #[structopt(long)]
