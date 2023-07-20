@@ -21,6 +21,7 @@ impl LasPointAttributeHistograms {
 
     pub fn new() -> Self {
         let bin_count_8bit = 25;
+        let bin_count_i8 = 25;
         let bin_count_16bit = 25;
         Self {
             intensity: Histogram::<u16>::new(0,65535,bin_count_16bit),

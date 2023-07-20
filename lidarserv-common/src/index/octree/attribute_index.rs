@@ -3,7 +3,7 @@ use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use ciborium::de::from_reader;
-use log::{debug};
+use log::{debug, info};
 use csv::Writer;
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
@@ -73,8 +73,13 @@ impl AttributeIndex {
         bounds.update_by_bounds(&new_bounds);
         if new_histogram.is_some() && self.enable_histograms {
             if histogram.is_none() {
+                debug!("Creating new histogram for cell {:?}", grid_cell);
+                debug!("New histogram: {:?}", new_histogram);
                 *histogram = new_histogram.clone();
             } else {
+                debug!("Updating histogram for cell {:?}", grid_cell);
+                debug!("Old histogram: {:?}", histogram);
+                debug!("New histogram: {:?}", new_histogram);
                 histogram.as_mut().unwrap().add_histograms(&new_histogram.as_ref().unwrap());
             }
         }
@@ -104,6 +109,9 @@ impl AttributeIndex {
                 if is_in_bounds && check_histogram && histograms.is_some() {
                     let histogram_check = histograms.as_ref().unwrap().is_attribute_range_in_histograms(bounds);
                     debug!("Cell {:?} overlaps with histogram: {}", grid_cell, histogram_check);
+                    if !histogram_check {
+                        info!("Cell {:?} overlaps with bounds, but not with histogram", grid_cell);
+                    }
                     return histogram_check;
                 } else {
                     debug!("Returning: {}", is_in_bounds);
@@ -124,13 +132,16 @@ impl AttributeIndex {
         if !file_name.exists() {
             return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist"));
         }
+        debug!("Loading attribute index from file {:?}", file_name);
         let f = File::open(file_name)?;
 
         // read from file
+        debug!("Decoding attribute index file");
         let decoded: Vec<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>> =
             from_reader(&f).expect("Error while reading attribute index");
 
         // convert to Vec<RwLock<HashMap<GridCell, (LasPointAttributeBounds, LasPointAttributeHistograms)>>> and return
+        debug!("Converting attribute index to vector");
         let mut vector : Index = Vec::with_capacity(num_lods);
         for i in 0..num_lods {
             vector.push(RwLock::new(decoded[i].clone()));
@@ -142,6 +153,7 @@ impl AttributeIndex {
     pub fn write_to_file(&self) -> Result<(), std::io::Error> {
 
         // create file
+        debug!("Writing attribute index to file {:?}", self.file_name);
         let f = OpenOptions::new()
             .write(true)
             .create(true)
@@ -149,6 +161,7 @@ impl AttributeIndex {
             .open(&self.file_name)?;
 
         // convert into vector without mutex and arc
+        debug!("Converting attribute index to vector");
         let mut vector : Vec<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>>
             = Vec::with_capacity(self.index.len());
         for lock in self.index.iter() {
@@ -157,6 +170,7 @@ impl AttributeIndex {
         }
 
         // write to file
+        debug!("Writing file");
         ciborium::ser::into_writer(&vector, &f).expect("Error while writing attribute index");
         f.sync_all()?;
 

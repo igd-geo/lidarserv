@@ -23,7 +23,7 @@ impl Histogram<u8> {
     pub fn new(min_value: u8, max_value: u8, num_bins: usize) -> Self {
         assert!(min_value < max_value, "min_value must be less than max_value");
         assert!(num_bins > 0, "num_bins must be greater than 0");
-        assert!(num_bins <= max_value as usize + 1, "num_bins must be less than or equal to the maximum value");
+        assert!(num_bins <= (max_value as u16 - min_value as u16) as usize + 1, "num_bins must be less than or equal than the number of possible values");
 
         // calculate the bin width
         // has to be casted to u16 to avoid overflow (e.g. 255 - 0 + 1 = 256)
@@ -76,7 +76,7 @@ impl Histogram<u16> {
     pub fn new(min_value: u16, max_value: u16, num_bins: usize) -> Self {
         assert!(min_value < max_value, "min_value must be less than max_value");
         assert!(num_bins > 0, "num_bins must be greater than 0");
-        assert!(num_bins <= max_value as usize + 1, "num_bins must be less than or equal to the maximum value");
+        assert!(num_bins <= (max_value as u32 - min_value as u32) as usize + 1, "num_bins must be less than or equal than the number of possible values");
 
         let bin_width = (((max_value as u32 - min_value as u32) + 1) / num_bins as u32) as u16;
         assert!(bin_width > 0, "bin_width must be greater than 0");
@@ -127,7 +127,7 @@ impl Histogram<i8> {
     pub fn new(min_value: i8, max_value: i8, num_bins: usize) -> Self {
         assert!(min_value < max_value, "min_value must be less than max_value");
         assert!(num_bins > 0, "num_bins must be greater than 0");
-        assert!(num_bins <= max_value as usize + 1, "num_bins must be less than or equal to the maximum value");
+        assert!(num_bins <= (max_value as i16 - min_value as i16) as usize + 1, "num_bins must be less than or equal than the number of possible values");
 
         let bin_width = (((max_value as i16 - min_value as i16) + 1) / num_bins as i16) as i8;
         assert!(bin_width > 0, "bin_width must be greater than 0");
