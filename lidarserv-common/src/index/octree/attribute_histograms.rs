@@ -4,6 +4,31 @@ use crate::index::octree::histogram::Histogram;
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct HistogramSettings {
+    pub bin_count_intensity: usize,
+    pub bin_count_return_number: usize,
+    pub bin_count_classification: usize,
+    pub bin_count_scan_angle_rank: usize,
+    pub bin_count_user_data: usize,
+    pub bin_count_point_source_id: usize,
+    pub bin_count_color: usize,
+}
+
+impl Default for HistogramSettings {
+    fn default() -> Self {
+        Self {
+            bin_count_intensity: 25,
+            bin_count_return_number: 8,
+            bin_count_classification: 256,
+            bin_count_scan_angle_rank: 25,
+            bin_count_user_data: 25,
+            bin_count_point_source_id: 25,
+            bin_count_color: 25,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LasPointAttributeHistograms {
     pub intensity: Histogram<u16>,
     pub return_number: Histogram<u8>,
@@ -18,22 +43,18 @@ pub struct LasPointAttributeHistograms {
 }
 
 impl LasPointAttributeHistograms {
-
-    pub fn new() -> Self {
-        let bin_count_8bit = 25;
-        let bin_count_i8 = 25;
-        let bin_count_16bit = 25;
+    pub fn new(settings: &HistogramSettings) -> Self {
         Self {
-            intensity: Histogram::<u16>::new(0,65535,bin_count_16bit),
-            return_number: Histogram::<u8>::new(0,7, 8),
-            number_of_returns: Histogram::<u8>::new(0,7,8),
-            classification: Histogram::<u8>::new(0,255,bin_count_8bit),
-            scan_angle_rank: Histogram::<i8>::new(-90,90,bin_count_8bit),
-            user_data: Histogram::<u8>::new(0,255,bin_count_8bit),
-            point_source_id: Histogram::<u16>::new(0,65535,bin_count_16bit),
-            color_r: Histogram::<u16>::new(0,65535,bin_count_16bit),
-            color_g: Histogram::<u16>::new(0,65535,bin_count_16bit),
-            color_b: Histogram::<u16>::new(0,65535,bin_count_16bit),
+            intensity: Histogram::<u16>::new(0,65535,settings.bin_count_intensity),
+            return_number: Histogram::<u8>::new(0,7, settings.bin_count_return_number),
+            number_of_returns: Histogram::<u8>::new(0,7,settings.bin_count_return_number),
+            classification: Histogram::<u8>::new(0,255,settings.bin_count_classification),
+            scan_angle_rank: Histogram::<i8>::new(-90,90,settings.bin_count_scan_angle_rank),
+            user_data: Histogram::<u8>::new(0,255,settings.bin_count_user_data),
+            point_source_id: Histogram::<u16>::new(0,65535,settings.bin_count_point_source_id),
+            color_r: Histogram::<u16>::new(0,65535,settings.bin_count_color),
+            color_g: Histogram::<u16>::new(0,65535,settings.bin_count_color),
+            color_b: Histogram::<u16>::new(0,65535,settings.bin_count_color),
         }
     }
 
@@ -84,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_creation() {
-        let histograms = LasPointAttributeHistograms::new();
+        let histograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
     }
 
 }

@@ -24,6 +24,7 @@ use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::option::Option;
 use thiserror::Error;
+use crate::index::octree::attribute_histograms::HistogramSettings;
 use crate::index::octree::attribute_index::AttributeIndex;
 
 struct Inner<Point, Sampl, SamplF> {
@@ -37,6 +38,7 @@ struct Inner<Point, Sampl, SamplF> {
     page_cache: LasPageManager<Sampl, Point>,
     attribute_index: Option<AttributeIndex>,
     enable_histogram_acceleration: bool,
+    histogram_settings: HistogramSettings,
     sample_factory: SamplF,
     loader: I32LasReadWrite,
     coordinate_system: I32CoordinateSystem,
@@ -52,6 +54,7 @@ pub struct OctreeParams<Point, Sampl, SamplF> {
     pub max_bogus_leaf: usize,
     pub attribute_index: Option<AttributeIndex>,
     pub enable_histogram_acceleration: bool,
+    pub histogram_settings: HistogramSettings,
     pub node_hierarchy: I32GridHierarchy,
     pub page_loader: OctreePageLoader<Page<Sampl, Point>>,
     pub page_directory: GridCellDirectory,
@@ -85,6 +88,7 @@ where
             max_bogus_leaf,
             attribute_index,
             enable_histogram_acceleration,
+            histogram_settings,
             node_hierarchy,
             page_loader,
             page_directory,
@@ -108,6 +112,7 @@ where
                 page_cache: LasPageManager::new(page_loader, page_directory, max_cache_size),
                 attribute_index,
                 enable_histogram_acceleration,
+                histogram_settings,
                 sample_factory,
                 loader,
                 coordinate_system,

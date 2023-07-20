@@ -88,6 +88,41 @@ pub struct InitOptions {
     #[structopt(long)]
     pub enable_histogram_acceleration: bool,
 
+    /// Sets number of bins of the intensity histograms
+    /// Only used if '--enable-histogram-acceleration' is enabled
+    #[structopt(long)]
+    pub bin_count_intensity: Option<usize>,
+
+    /// Sets number of bins of the return number histograms
+    /// Only used if '--enable-histogram-acceleration' is enabled
+    #[structopt(long)]
+    pub bin_count_return_number: Option<usize>,
+
+    /// Sets number of bins of the classification histograms
+    /// Only used if '--enable-histogram-acceleration' is enabled
+    #[structopt(long)]
+    pub bin_count_classification: Option<usize>,
+
+    /// Sets number of bins of the scan angle rank histograms
+    /// Only used if '--enable-histogram-acceleration' is enabled
+    #[structopt(long)]
+    pub bin_count_scan_angle_rank: Option<usize>,
+
+    /// Sets number of bins of the user data histograms
+    /// Only used if '--enable-histogram-acceleration' is enabled
+    #[structopt(long)]
+    pub bin_count_user_data: Option<usize>,
+
+    /// Sets number of bins of the point source id histograms
+    /// Only used if '--enable-histogram-acceleration' is enabled
+    #[structopt(long)]
+    pub bin_count_point_source_id: Option<usize>,
+
+    /// Sets number of bins of the color histograms
+    /// Only used if '--enable-histogram-acceleration' is enabled
+    #[structopt(long)]
+    pub bin_count_color: Option<usize>,
+
     /// If enabled, some metrics are collected during indexing and written to a file named 'metrics_%i.cbor',
     /// where %i is a sequentially increasing number.
     #[structopt(long)]

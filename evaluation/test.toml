@@ -1,9 +1,10 @@
 data_folder = "data/evaluation"
 output_file = "evaluation/results/evaluation_%d_%i.json"
-points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
-trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
-offset = [412785.340004, 5318821.784996, 290.0]
-las_point_record_format = 0
+points_file = "data/testdata_histogram_pf3-1000000.las"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = false
 
 [defaults]
 type = "Octree"
@@ -19,7 +20,15 @@ latency.enable = false
 latency.points_per_sec = 20000
 latency.frames_per_sec = 5
 enable_attribute_index = true
+enable_histogram_acceleration = true
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 25
+bin_count_color = 25
 
 [runs.example]
-compression = [true, false]
 enable_attribute_index = [true, false]
+enable_histogram_acceleration = [true, false]

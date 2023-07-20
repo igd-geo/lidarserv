@@ -282,7 +282,9 @@ impl AttributeIndex {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, thread};
+    use std::time::Duration;
+    use crate::index::octree::attribute_histograms::HistogramSettings;
     use super::*;
 
     fn create_attribute_1() -> LasPointAttributes {
@@ -374,6 +376,7 @@ mod tests {
     fn delete_file(path: &PathBuf) {
         if path.exists() {
             fs::remove_file(path).unwrap();
+            thread::sleep(Duration::from_millis(100));
         }
     }
 
@@ -430,7 +433,7 @@ mod tests {
         bounds.update_by_attributes(&create_attribute_1());
         bounds.update_by_attributes(&create_attribute_2());
 
-        let mut histograms = LasPointAttributeHistograms::new();
+        let mut histograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
         histograms.fill_with(&create_attribute_1());
         histograms.fill_with(&create_attribute_2());
 

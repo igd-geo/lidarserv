@@ -88,7 +88,7 @@ fn main() {
         for index in &run.index {
             let result = evaluate(&points, &run, &config.base, || {
                     create_octree_index(coordinate_system.clone(), &config.base, &index)
-            });
+            }, config.base.enable_cooldown);
             run_results.push(json!({
                 "index": index,
                 "results": result,
@@ -267,6 +267,7 @@ fn evaluate<I, F>(
     run: &MultiRun,
     base_config: &Base,
     make_index: F,
+    enable_cooldown: bool,
 ) -> serde_json::Value
 where
     I: Index<Point>,
@@ -276,7 +277,7 @@ where
     // measure insertion rate
     reset_data_folder(base_config);
     let mut index = make_index();
-    processor_cooldown();
+    if enable_cooldown {processor_cooldown()};
     info!("Measuring insertion rate...");
     let (result_insertion_rate, max_pps) =
         measure_insertion_rate(&mut index, points, &run.insertion_rate.single());
@@ -284,7 +285,7 @@ where
 
     // measure query performance
     let result_query_perf = if run.query_perf.single().is_some() {
-        processor_cooldown();
+        if enable_cooldown {processor_cooldown()};
         info!("Measuring query perf...");
         let sensorpos_query_perf = measure_query_performance(index);
         info!("Results: {}", &sensorpos_query_perf);
@@ -305,7 +306,7 @@ where
             continue;
         }
         reset_data_folder(base_config);
-        processor_cooldown();
+        if enable_cooldown {processor_cooldown()};
         info!(
             "Measuring latency at {} points/sec...",
             measurement_settings.points_per_sec

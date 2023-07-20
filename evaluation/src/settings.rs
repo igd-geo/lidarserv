@@ -24,6 +24,7 @@ pub struct Base {
     pub points_file: PathBuf,
     pub trajectory_file: PathBuf,
     pub las_point_record_format: u8,
+    pub enable_cooldown: bool,
 
     #[serde(rename = "output_file")]
     pub output_file_pattern: String,
@@ -99,6 +100,27 @@ pub struct SingleIndex {
 
     #[serde(default = "SingleIndex::default_enable_histogram_acceleration")]
     pub enable_histogram_acceleration: bool,
+
+    #[serde(default = "SingleIndex::default_bin_count_intensity")]
+    pub bin_count_intensity: usize,
+
+    #[serde(default = "SingleIndex::default_bin_count_return_number")]
+    pub bin_count_return_number: usize,
+
+    #[serde(default = "SingleIndex::default_bin_count_classification")]
+    pub bin_count_classification: usize,
+
+    #[serde(default = "SingleIndex::default_bin_count_scan_angle_rank")]
+    pub bin_count_scan_angle_rank: usize,
+
+    #[serde(default = "SingleIndex::default_bin_count_user_data")]
+    pub bin_count_user_data: usize,
+
+    #[serde(default = "SingleIndex::default_bin_count_point_source_id")]
+    pub bin_count_point_source_id: usize,
+
+    #[serde(default = "SingleIndex::default_bin_count_color")]
+    pub bin_count_color: usize,
 }
 
 impl Default for SingleIndex {
@@ -113,6 +135,13 @@ impl Default for SingleIndex {
             nr_bogus_points: (0, 0),
             enable_attribute_index: false,
             enable_histogram_acceleration: false,
+            bin_count_intensity: 10,
+            bin_count_return_number: 8,
+            bin_count_classification: 255,
+            bin_count_scan_angle_rank: 10,
+            bin_count_user_data: 10,
+            bin_count_point_source_id: 10,
+            bin_count_color: 10,
         }
     }
 }
@@ -145,6 +174,27 @@ pub struct MultiIndex {
 
     #[serde(default)]
     pub enable_histogram_acceleration: Option<Vec<bool>>,
+
+    #[serde(default)]
+    pub bin_count_intensity: Option<Vec<usize>>,
+
+    #[serde(default)]
+    pub bin_count_return_number: Option<Vec<usize>>,
+
+    #[serde(default)]
+    pub bin_count_classification: Option<Vec<usize>>,
+
+    #[serde(default)]
+    pub bin_count_scan_angle_rank: Option<Vec<usize>>,
+
+    #[serde(default)]
+    pub bin_count_user_data: Option<Vec<usize>>,
+
+    #[serde(default)]
+    pub bin_count_point_source_id: Option<Vec<usize>>,
+
+    #[serde(default)]
+    pub bin_count_color: Option<Vec<usize>>,
 
 }
 
@@ -179,6 +229,13 @@ impl MultiIndex {
         apply_default_vec!(self.nr_bogus_points <- defaults);
         apply_default_vec!(self.enable_attribute_index <- defaults);
         apply_default_vec!(self.enable_histogram_acceleration <- defaults);
+        apply_default_vec!(self.bin_count_intensity <- defaults);
+        apply_default_vec!(self.bin_count_return_number <- defaults);
+        apply_default_vec!(self.bin_count_classification <- defaults);
+        apply_default_vec!(self.bin_count_scan_angle_rank <- defaults);
+        apply_default_vec!(self.bin_count_user_data <- defaults);
+        apply_default_vec!(self.bin_count_point_source_id <- defaults);
+        apply_default_vec!(self.bin_count_color <- defaults);
     }
 
     pub fn individual_runs(&self) -> Vec<SingleIndex> {
@@ -192,17 +249,38 @@ impl MultiIndex {
                                 for &nr_bogus_points in expect(&self.nr_bogus_points) {
                                     for &enable_attribute_index in expect(&self.enable_attribute_index) {
                                         for &enable_histogram_acceleration in expect(&self.enable_histogram_acceleration) {
-                                            results.push(SingleIndex {
-                                                typ,
-                                                priority_function,
-                                                num_threads,
-                                                cache_size,
-                                                node_size,
-                                                compression,
-                                                nr_bogus_points,
-                                                enable_attribute_index,
-                                                enable_histogram_acceleration,
-                                            })
+                                            for &bin_count_intensity in expect(&self.bin_count_intensity) {
+                                                for &bin_count_return_number in expect(&self.bin_count_return_number) {
+                                                    for &bin_count_classification in expect(&self.bin_count_classification) {
+                                                        for &bin_count_scan_angle_rank in expect(&self.bin_count_scan_angle_rank) {
+                                                            for &bin_count_user_data in expect(&self.bin_count_user_data) {
+                                                                for &bin_count_point_source_id in expect(&self.bin_count_point_source_id) {
+                                                                    for &bin_count_color in expect(&self.bin_count_color) {
+                                                                        results.push(SingleIndex {
+                                                                            typ,
+                                                                            priority_function,
+                                                                            num_threads,
+                                                                            cache_size,
+                                                                            node_size,
+                                                                            compression,
+                                                                            nr_bogus_points,
+                                                                            enable_attribute_index,
+                                                                            enable_histogram_acceleration,
+                                                                            bin_count_intensity,
+                                                                            bin_count_return_number,
+                                                                            bin_count_classification,
+                                                                            bin_count_scan_angle_rank,
+                                                                            bin_count_user_data,
+                                                                            bin_count_point_source_id,
+                                                                            bin_count_color,
+                                                                        })
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }

@@ -395,7 +395,7 @@ where
             if self.inner.enable_histogram_acceleration {
                 // WITH HISTOGRAMS
                 let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-                let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new();
+                let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new(&self.inner.histogram_settings);
                 let _ = &task.points.iter().for_each(|p| {
                     bounds.update_by_attributes(p.attribute());
                     histogram.fill_with(p.attribute());

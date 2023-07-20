@@ -44,7 +44,8 @@ pub fn run(init_options: InitOptions) -> Result<()> {
                 - (init_options.mno_node_grid_size / init_options.las_scale.0.x)
                 .log2()
                 .round() as u16,
-        }
+        },
+        histogram_settings: Default::default(),
     };
     settings.save_to_data_folder(&init_options.path)?;
     Ok(())

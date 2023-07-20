@@ -27,6 +27,7 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
     let IndexSettings {
         general_settings,
         octree_settings,
+        histogram_settings,
     } = settings;
 
     // tree stuff
@@ -87,6 +88,7 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
         max_bogus_leaf: octree_settings.max_bogus_leaf,
         attribute_index,
         enable_histogram_acceleration: octree_settings.enable_histogram_acceleration,
+        histogram_settings: histogram_settings,
         node_hierarchy,
         page_loader,
         page_directory,

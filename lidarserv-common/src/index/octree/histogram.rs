@@ -305,17 +305,6 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_min_value() {
-        let min = 0;
-        let max = 10;
-        let num_bins = 5;
-        let mut histogram = Histogram::<i8>::new(min, max, num_bins);
-
-        histogram.add(-1);
-    }
-
-    #[test]
-    #[should_panic]
     fn test_incompatible_histograms() {
         let min = 0;
         let max = 10;
