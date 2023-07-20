@@ -25,12 +25,13 @@ cargo run --release --bin lidarserv-server -- --help
 
 Overview of the included binaries:
 
-| Binary            | Description                                                              |
-|-------------------|--------------------------------------------------------------------------|
-| lidarserv-server  | The server                                                               |
-| lidarserv-viewer  | Client that connects to the server and visualizes the served point cloud |
-| input-file-replay | Simulates a LiDAR scanner that sends point data to the server            |
-| evaluation        | Evaluation for the index data structures                                 |
+| Binary            | Description                                                                       |
+|-------------------|-----------------------------------------------------------------------------------|
+| lidarserv-server  | The server                                                                        |
+| lidarserv-viewer  | Client that connects to the server and visualizes the served point cloud          |
+| output-file-query | Client that sends queries to the server and stores the queried points as las file |
+| input-file-replay | Simulates a LiDAR scanner that sends point data to the server                     |
+| evaluation        | Evaluation for the index data structures                                          |
 
 If you are working with these tools a lot, it might be helpful to install them into your system
 so that you don't have to repeat the full cargo command every time:
@@ -38,6 +39,7 @@ so that you don't have to repeat the full cargo command every time:
 ```shell
 cargo install --path ./lidarserv-server
 cargo install --path ./lidarserv-viewer
+cargo install --path ./output-file-query
 cargo install --path ./input-file-replay
 cargo install --path ./evaluation
 ```
@@ -150,6 +152,8 @@ output_file = "evaluation/results/evaluation_%d_%i.json"
 points_file = "data/20210427_messjob/20210427_mess3/IAPS_20210427_162821.txt"
 trajectory_file = "data/20210427_messjob/20210427_mess3/trajectory.txt"
 offset = [412785.340004, 5318821.784996, 290.0]
+las_point_record_format = 0
+enable_cooldown = true
 
 [defaults]
 type = "Octree"
@@ -178,6 +182,8 @@ The file begins with a few mandatory file paths:
    - `%i` Will be replaced by an ascending sequence of numbers. (Each time the evaluation is executed, `%i` is incremented by 1)
  - `points_file`, `trajectory_file`: Files containing the point data to use for the tests.
  - `offset`: New origin of the point data.
+ - `las_point_record_format`: The point record format of the internal indexed files. Possible values: `0` to `3`.
+ - `enable_cooldown`: If set to `true`, the evaluation will wait for a cooldown period after each run. This is useful to prevent the CPU from overheating during long evaluations.
 
 The evaluation consists of several runs. Each run is configured in its own section `[runs.*]`. The example above only 
 defines a single run called `example`, in the `[runs.example]` section. Each run will execute tests for all possible 
@@ -188,20 +194,29 @@ values for the full evaluation across all for all runs.
 The following table gives an overview of all keys, that can occur in a `[runs.*]` 
 section or in the `[defaults]` section:
 
-| Key                                    | Type                 | Description                                                                                                                                                |
-|----------------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `type`                                 | String               | Which index structure to test. Possible values: `"Octree"` or `"SensorPosTree"`                                                                            |
-| `num_threads`                          | Integer              | Number of worker threads used for indexing.                                                                                                                |
-| `cache_size`                           | Integer              | Number of nodes, that fitr into the node LRU cache.                                                                                                        |
-| `compression`                          | Boolean              | Weather to enable LasZIP compression (`*.laz`) for storing the point data.                                                                                 |
-| `priority_function`                    | String               | (Octree index:) The priority function that the octree index uses. Possible values: `"NrPoints"` or `"Lod"` or `"TaskAge"` or `"NrPointsWeightedByTaskAge"` |
-| `nr_bogus_points`                      | \[Integer, Integer\] | (Octree index:) The maximum number of bogus points that a node can store, for inner nodes and leaf nodes, respectively.                                    |
-| `node_size`                            | Integer              | (Sensor pos index:) Number of points, at which a node split is performed.                                                                                  |
-| `insertion_rate.target_point_pressure` | Integer              | Always fill up the internal buffers to this number of points.                                                                                              |
-| `latency.enable`                       | Boolean              | Weather to do the latency measurement                                                                                                                      |
-| `latency.points_per_sec`               | Integer              | How quickly to insert points when measuring the latency.                                                                                                   |
-| `latency.frames_per_sec`               | Integer              | How many times per second to insert points when measuring the latency,                                                                                     |
-| `query_perf.enable`                    | Boolean              | Weather to measure the query performance                                                                                                                   |
+| Key                                    | Type                 | Description                                                                                                                                                   |
+|----------------------------------------|----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `type`                                 | String               | Which index structure to test. Possible values: `"Octree"` or `"SensorPosTree"`                                                                               |
+| `num_threads`                          | Integer              | Number of worker threads used for indexing.                                                                                                                   |
+| `cache_size`                           | Integer              | Number of nodes, that fitr into the node LRU cache.                                                                                                           |
+| `compression`                          | Boolean              | Weather to enable LasZIP compression (`*.laz`) for storing the point data.                                                                                    |
+| `priority_function`                    | String               | (Octree index:) The priority function that the octree index uses. Possible values: `"NrPoints"` or `"Lod"` or `"TaskAge"` or `"NrPointsWeightedByTaskAge"`    |
+| `nr_bogus_points`                      | \[Integer, Integer\] | (Octree index:) The maximum number of bogus points that a node can store, for inner nodes and leaf nodes, respectively.                                       |
+| `node_size`                            | Integer              | (Sensor pos index:) Number of points, at which a node split is performed.                                                                                     |
+| `insertion_rate.target_point_pressure` | Integer              | Always fill up the internal buffers to this number of points.                                                                                                 |
+| `latency.enable`                       | Boolean              | Weather to do the latency measurement                                                                                                                         |
+| `latency.points_per_sec`               | Integer              | How quickly to insert points when measuring the latency.                                                                                                      |
+| `latency.frames_per_sec`               | Integer              | How many times per second to insert points when measuring the latency,                                                                                        |
+| `enable_attribute_index`               | Boolean              | Enables the creation of an attribute index, stores bounds of each attribute in each octree node to accelerate attribute-filtered queries                      |
+| `enable_histogram_acceleration`        | Boolean              | Enables the creation of additional histograms for defined attributes in each octree node for further acceleration, only works with attribute-indexing enabled |
+| `bin_count_intensity`                  | Integer              | Sets the bin count for the intensity histograms. Histogram acceleration has to be enabled.                                                                    |
+| `bin_count_return_number`              | Integer              | Sets the bin count for the return number histograms. Histogram acceleration has to be enabled.                                                                |
+| `bin_count_classification`             | Integer              | Sets the bin count for the classification histograms. Histogram acceleration has to be enabled.                                                               |
+| `bin_count_scan_angle_rank`            | Integer              | Sets the bin count for the scan angle rank histograms. Histogram acceleration has to be enabled.                                                              |
+| `bin_count_user_data`                  | Integer              | Sets the bin count for the user data histograms. Histogram acceleration has to be enabled.                                                                    |
+| `bin_count_point_source_id`            | Integer              | Sets the bin count for the point source id histograms. Histogram acceleration has to be enabled.                                                              |
+| `bin_count_color`                      | Integer              | Sets the bin count for the color histograms. Histogram acceleration has to be enabled.                                                                        |
+
 
 There are three kind of performance measurements, that the evaluation executable can do:
 
@@ -228,7 +243,7 @@ This section describes the communication protocol used by the LiDAR Server and i
 
 Through this protocol, it is possible to
  - Stream points to the server for insertion into the point cloud.
- - Access the point cloud by subscribing to queries.
+ - Access the point cloud by subscribing to queries and attribute filters.
  
 The protocol has no built-in security (authentication & authorisation, encryption, ...). Make sure, that only trusted clients can access the server.
 
@@ -283,7 +298,7 @@ Therefore, if the client receives a Hello message from the server, it should beh
  - If `server_protocol_version < own_protocol_version` - Client is connected to an older server: The client should test, if it is backwards compatible to the server's protocol version. If it is, continue normally. Otherwise: Close the connection.
  - If `server_protocol_version > own_protocol_version` - Client is connected to a newer Server: The server will check, if it can be backwards compatible to the client's protocol version. The client should continue normally, but expect the server to close the connection.
 
-The current protocol version (that is described in this document) has the version number `1`.
+The current protocol version (that is described in this document) has the version number `2`.
 
 #### Message: PointCloudInfo
 
@@ -353,12 +368,13 @@ The point data is encoded in the LAS format. The data may (but does not have to)
 
 #### Viewer mode
 
-In Viewer mode, the client can subscribe to a query. The server will return the query result and keep it up-to-date as new points are added to the point cloud.
+In Viewer mode, the client can subscribe to a query and attribute filters. The server will return the query result and keep it up-to-date as new points are added to the point cloud.
 
 The client starts with an empty query result. The server will send a series of `IncrementalResult` messages that contain 
 instructions for the client of how to update the current query result. Like this, the server keeps the 
 client-side query result in sync with the actual query result, updating it whenever new points are added to the point 
 cloud, or after the query has been changed by the client.
+When the server has no more updates for the client currently, it will send a `ResultComplete` message. This message is used to store the las file in the output-file-query client.
 
 ![](img/mermaid-diagram-query.svg)
 [Diagram source](https://mermaid-js.github.io/mermaid-live-editor/edit/#pako:eNp9kk1OwzAQha8SeUt6AS8qoYJEF6BCJVbZjOwpWHVmgjMGVVXvjqNJiCIoXo3f-8bPf2fj2KOxpsePjOTwLsBbgrahqowOkgQXOiCp9pg-Mf3WXwN-TfoTC1ZcsJGu1bTVloIEiKEHCUwKq7dar5W11QPGyOqpVLxpgf-8HQeSTeTst3TgK4tvmAjdkP5YDmyvbFvVemrSaTV0KBmZO63-DHnOmE6zv6QXe7-Zb8YlbJEE4gv2Ocqy4SdiNWYodOuOM4fkdVIKU5sWUwvBlzc9D3Jj5L0ENMaW0kM6NqahS-Fy50Hw3gfhZOwBYo-1gSy8P5EzVlLGCRo_xUhdvgF9-7pg)
@@ -380,7 +396,11 @@ AABB-Queries:
       "min_bounds": [0.0, 0.0, 0.0],
       "max_bounds": [5.0, 5.0, 5.0],
       "lod_level": 5
-    }
+    },
+    "filter": "TODO",
+    "enable_attribute_acceleration": true,
+    "enable_histogram_acceleration": true,
+    "enable_point_filtering": true
   }
 }
 ```
@@ -404,7 +424,11 @@ ViewFrustumQuery-Queries:
       ],
       "window_width_pixels": 500.0,
       "min_distance_pixels": 10.0
-    }
+    },
+    "filter": "TODO",
+    "enable_attribute_acceleration": true,
+    "enable_histogram_acceleration": true,
+    "enable_point_filtering": true
   }
 }
 ```
@@ -510,6 +534,8 @@ To know the number of in-flight messages, the server keeps track of how many `In
 }
 ```
 
+TODO ResultComplete Message
+
 ## Encoding of point data
 
 - LAS 1.2
@@ -547,22 +573,38 @@ USAGE:
     lidarserv-server init [FLAGS] [OPTIONS] [path]
 
 FLAGS:
-    -h, --help                  Prints help information
-        --las-no-compression    Disables laz compression of point data
-    -V, --version               Prints version information
+        --enable-attribute-indexing        Enable indexing attributes of points
+        --enable-histogram-acceleration    Enable acceleration of the attribute indexing using additional histograms for each attribute
+    -h, --help                             Prints help information
+        --las-no-compression               Disables laz compression of point data
+        --mno-use-metrics                  If enabled, some metrics are collected during indexing and written to a file named 'metrics_%i.cbor', where %i is a sequentially increasing number
+    -V, --version                          Prints version information
 
 OPTIONS:
-        --cache-size <cache-size>                              Maximum number of nodes to keep in memory, while indexing [default: 500]
-        --las-offset <las-offset>                              The offset used for storing point data. (usually fine to be left at '0.0, 0.0, 0.0') [default: 0]
-        --las-scale <las-scale>                                The resolution used for storing point data [default: 0.001]
-        --max-lod <max-lod>                                    Maximum level of detail of the index [default: 10]
-        --mno-node-grid-size <mno-node-grid-size>              The size of the nodes at the coarsest level of detail. With each finer LOD, the node size will be halved. This option only applies to the mno index [default: 1024.0]
-        --mno-task-priority <mno-task-priority>                The order, in which to process pending tasks. This option only applies to the mno index [default: nr_points]  [possible values: nr_points, lod, newest_point, oldest_point, task_age]
-        --num-threads <num-threads>                            Number of threads used for indexing the points [default: 4]
-        --point-grid-size <point-grid-size>                    The distance between two points at the coarsest level of detail [default: 8.0]
+        --bin-count-classification <bin-count-classification>      Sets number of bins of the classification histograms Only used if '--enable-histogram-acceleration' is enabled
+        --bin-count-color <bin-count-color>                        Sets number of bins of the color histograms Only used if '--enable-histogram-acceleration' is enabled
+        --bin-count-intensity <bin-count-intensity>                Sets number of bins of the intensity histograms Only used if '--enable-histogram-acceleration' is enabled
+        --bin-count-point-source-id <bin-count-point-source-id>    Sets number of bins of the point source id histograms Only used if '--enable-histogram-acceleration' is enabled
+        --bin-count-return-number <bin-count-return-number>        Sets number of bins of the return number histograms Only used if '--enable-histogram-acceleration' is enabled
+        --bin-count-scan-angle-rank <bin-count-scan-angle-rank>    Sets number of bins of the scan angle rank histograms Only used if '--enable-histogram-acceleration' is enabled
+        --bin-count-user-data <bin-count-user-data>                Sets number of bins of the user data histograms Only used if '--enable-histogram-acceleration' is enabled
+        --cache-size <cache-size>                                  Maximum number of nodes to keep in memory, while indexing [default: 500]
+        --las-offset <las-offset>                                  The offset used for storing point data. (usually fine to be left at '0.0, 0.0, 0.0') [default: 0]
+        --las-point-record-format <las-point-record-format>        Selection of LAS Point Record Format (0-3 supported) [default: 0]
+        --las-scale <las-scale>                                    The resolution used for storing point data [default: 0.001]
+        --max-lod <max-lod>                                        Maximum level of detail of the index [default: 10]
+        --mno-bogus <mno-bogus>                                    Maximum number of bogus points per node [default: 0]
+        --mno-bogus-inner <mno-bogus-inner>                        Maximum number of bogus points per inner (non-leaf) node. Overwrites the '--mno-bogus' option, if provided
+        --mno-bogus-leaf <mno-bogus-leaf>                          Maximum number of bogus points per leaf node. Overwrites the '--mno-bogus' option, if provided
+        --mno-node-grid-size <mno-node-grid-size>                  The size of the nodes at the coarsest level of detail. With each finer LOD, the node size will be halved. The value will be rounded towards the
+                                                                   closest valid value [default: 131.072]
+        --mno-task-priority <mno-task-priority>                    The order, in which to process pending tasks [default: NrPoints]  [possible values: NrPoints, Lod, OldestPoint, TaskAge, NrPointsTaskAge]
+        --num-threads <num-threads>                                Number of threads used for indexing the points [default: 4]
+        --point-grid-size <point-grid-size>                        The distance between two points at the coarsest level of detail. The value will be rounded towards the closest valid value [default: 1.024]
 
 ARGS:
     <path>    Folder, that the point cloud will be created in. By default, the current folder will be used
+
 ```
 
 #### `lidarserv-server serve` subcommand
@@ -576,7 +618,6 @@ USAGE:
 FLAGS:
         --help       
             Prints help information
-
     -V, --version    
             Prints version information
 
@@ -584,7 +625,6 @@ FLAGS:
 OPTIONS:
     -h, --host <host>    
             Hostname to listen on [default: ::1]
-
     -p, --port <port>    
             Port to listen on [default: 4567]
 
@@ -599,26 +639,39 @@ ARGS:
 
 ```
 USAGE:
-    lidarserv-viewer [OPTIONS]
+    lidarserv-viewer [FLAGS] [OPTIONS]
 
 FLAGS:
-        --help       Prints help information
-    -V, --version    Prints version information
+        --disable-eye-dome-lighting    
+        --help                         
+            Prints help information
+    -V, --version                      
+            Prints version information
+
 
 OPTIONS:
-    -h, --host <host>                         [default: ::1]
-        --log-level <log-level>              Verbosity of the command line output [default: info]  [possible values: trace, debug, info, warn, error]
-        --point-color <point-color>           [default: fixed]  [possible values: fixed, intensity]
-        --point-distance <point-distance>     [default: 10]
-        --point-size <point-size>             [default: 10]
-    -p, --port <port>                         [default: 4567]
+    -h, --host <host>                        
+             [default: ::1]
+        --log-level <log-level>              
+            Verbosity of the command line output [default: info]  [possible values: trace, debug, info, warn, error]
+        --multisampling <multisampling>      
+            The multisampling level used during rendering.
+            The value MUST be a power of 2. A value of `0` indicates, that multisampling is disabled. [default: 2]
+        --point-color <point-color>          
+             [default: fixed]  [possible values: fixed, intensity, rgb]
+        --point-distance <point-distance>    
+             [default: 10]
+        --point-size <point-size>            
+             [default: 10]
+    -p, --port <port>                        
+             [default: 4567]
 ```
 
 ### `input-file-replay`
 
 ```
 USAGE:
-    file-replay [OPTIONS] <SUBCOMMAND>
+    input-file-replay [OPTIONS] <SUBCOMMAND>
 
 FLAGS:
     -h, --help       Prints help information
@@ -637,12 +690,15 @@ SUBCOMMANDS:
 #### `file-replay convert` subcommand
 
 ```
+Converts either velodyne csv files (trajectory + points) or a laz file to a laz file that can be used with the replay command
+
 USAGE:
-    file-replay convert [OPTIONS] --output-file <output-file> --points-file <points-file>
+    input-file-replay convert [FLAGS] [OPTIONS] --output-file <output-file> --points-file <points-file>
 
 FLAGS:
-        --help       Prints help information
-    -V, --version    Prints version information
+        --help                 Prints help information
+        --skip-empty-frames    Do not store frames that do not contain any points
+    -V, --version              Prints version information
 
 OPTIONS:
         --fps <fps>                            Frames per second at which to store point data [default: 20]
@@ -663,7 +719,7 @@ OPTIONS:
 Replays the given laz file. Each frame sent to the server at the given frame rate (fps) contains exactly one chunk of compressed point data from the input file
 
 USAGE:
-    file-replay replay [OPTIONS] <input-file>
+    input-file-replay replay [OPTIONS] <input-file>
 
 FLAGS:
         --help       Prints help information
@@ -684,7 +740,7 @@ ARGS:
 Replays the point data directly from the csv files containing the point and trajectory information. Calculation of point positions and encoding of LAZ data is done on-the-fly
 
 USAGE:
-    file-replay live-replay [FLAGS] [OPTIONS] --points-file <points-file> --trajectory-file <trajectory-file>
+    input-file-replay live-replay [FLAGS] [OPTIONS] --points-file <points-file> --trajectory-file <trajectory-file>
 
 FLAGS:
         --help              
@@ -725,4 +781,56 @@ OPTIONS:
 
         --trajectory-file <trajectory-file>    
             File with the sensor trajectory
+```
+
+### `output-file-query`
+```
+USAGE:
+    output-file-query [FLAGS] [OPTIONS] --max-x <max-x> --max-y <max-y> --max-z <max-z> --min-x <min-x> --min-y <min-y> --min-z <min-z>
+
+FLAGS:
+        --enable-attribute-acceleration    Enable usage of range-based attribute-index acceleration structure. Only works, if the attribute index was created during the indexing process
+        --enable-histogram-acceleration    Enable usage of additional histogram-based acceleration structure. Only works, if the histograms were created during the indexing process
+        --enable-point-filtering           Enable point based filtering for spatial queries and attribute filters
+        --help                             Prints help information
+    -V, --version                          Prints version information
+
+OPTIONS:
+    -h, --host <host>                                          Host to bind to [default: ::1]
+        --lod <lod>                                            Level of detail of the point cloud [default: 0]
+        --log-level <log-level>                                Verbosity of the command line output [default: info]  [possible values: trace, debug, info, warn, error]
+        --max-classification <max-classification>              Maximum classification attribute filter
+        --max-color-b <max-color-b>                            Maximum blue color attribute filter
+        --max-color-g <max-color-g>                            Maximum green color attribute filter
+        --max-color-r <max-color-r>                            Maximum red color attribute filter
+        --max-edge-of-flight-line <max-edge-of-flight-line>    Maximum edge of flight line attribute filter
+        --max-gps-time <max-gps-time>                          Maximum gps time attribute filter
+        --max-intensity <max-intensity>                        Maximum intensity attribute filter
+        --max-number-of-returns <max-number-of-returns>        Maximum number of returns attribute filter
+        --max-point-source-id <max-point-source-id>            Maximum point source id attribute filter
+        --max-return-number <max-return-number>                Maximum return number attribute filter
+        --max-scan-angle <max-scan-angle>                      Maximum scan angle attribute filter
+        --max-scan-direction <max-scan-direction>              Maximum scan direction attribute filter
+        --max-user-data <max-user-data>                        Maximum user data attribute filter
+        --max-x <max-x>                                        Maximum x value of the bounding box
+        --max-y <max-y>                                        Maximum y value of the bounding box
+        --max-z <max-z>                                        Maximum z value of the bounding box
+        --min-classification <min-classification>              Minimum classification attribute filter
+        --min-color-b <min-color-b>                            Minimum blue color attribute filter
+        --min-color-g <min-color-g>                            Minimum green color attribute filter
+        --min-color-r <min-color-r>                            Minimum red color attribute filter
+        --min-edge-of-flight-line <min-edge-of-flight-line>    Minimum edge of flight line attribute filter
+        --min-gps-time <min-gps-time>                          Minimum gps time attribute filter
+        --min-intensity <min-intensity>                        Minimum intensity attribute filter
+        --min-number-of-returns <min-number-of-returns>        Minimum number of returns attribute filter
+        --min-point-source-id <min-point-source-id>            Minimum point source id attribute filter
+        --min-return-number <min-return-number>                Minimum return number attribute filter
+        --min-scan-angle <min-scan-angle>                      Minimum scan angle attribute filter
+        --min-scan-direction <min-scan-direction>              Minimum scan direction attribute filter
+        --min-user-data <min-user-data>                        Minimum user data attribute filter
+        --min-x <min-x>                                        Minimum x value of the bounding box
+        --min-y <min-y>                                        Minimum y value of the bounding box
+        --min-z <min-z>                                        Minimum z value of the bounding box
+        --output-file <output-file>                            Folder, that the las file will be stored in. Default is the current directory [default: ]
+    -p, --port <port>                                          Port to bind to [default: 4567]
 ```
