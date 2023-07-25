@@ -1,0 +1,52 @@
+data_folder = "data/evaluation"
+output_file = "evaluation/results/macbook_parameter_overview_v1_%d_%i.json"
+points_file = "data/frankfurt_big.las"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = true
+
+[defaults]
+type = "Octree"
+priority_function = "TaskAge"
+num_threads = 8
+cache_size = 10000
+node_size = 10000
+compression = false
+nr_bogus_points = [0, 0]
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = false
+latency.enable = false
+latency.points_per_sec = 20000
+latency.frames_per_sec = 5
+enable_attribute_index = false
+enable_histogram_acceleration = false
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 25
+bin_count_color = 25
+
+[runs.num_threads]
+num_threads = [1,2,4,8,12,16]
+
+[runs.cache_size]
+cache_size = [100, 500, 1000, 5000, 10000, 50000, 1000000]
+
+[runs.node_size]
+node_size = [5000, 10000, 15000]
+
+[runs.compression]
+compression = [true, false]
+
+[runs.nr_bogus_points]
+nr_bogus_points = [[0, 0], [1000, 1000], [2000, 2000], [3000, 3000]]
+
+[runs.priority_function]
+priority_function = ["NrPoints", "TaskAge",  "NrPointsWeightedByTaskAge"]
+
+[runs.attribute_index]
+enable_attribute_index = [true, false]
+enable_histogram_acceleration = [true, false]

@@ -1,0 +1,71 @@
+{
+  "env": {
+    "finished_at": "2023-07-06T07:44:09.017079Z",
+    "hostname": "eduroam449.igd.fraunhofer.de",
+    "input_file": "evaluation/test.toml",
+    "started_at": "2023-07-06T07:41:22.615421Z",
+    "version": "git:c470654-modified"
+  },
+  "runs": {
+    "example": [
+      {
+        "index": {
+          "cache_size": 4096,
+          "compression": true,
+          "enable_attribute_index": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            3000
+          ],
+          "num_threads": 4,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.9907765,
+            "duration_seconds": 63.616045334,
+            "insertion_rate_points_per_sec": 1348693.08467957,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 4096,
+          "compression": true,
+          "enable_attribute_index": false,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            3000
+          ],
+          "num_threads": 4,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.6209402920000002,
+            "duration_seconds": 63.74490275,
+            "insertion_rate_points_per_sec": 1353590.2790106835,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ]
+  }
+}

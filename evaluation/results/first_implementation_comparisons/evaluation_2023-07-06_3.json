@@ -1,0 +1,42 @@
+{
+  "env": {
+    "finished_at": "2023-07-06T08:29:04.169556Z",
+    "hostname": "eduroam449.igd.fraunhofer.de",
+    "input_file": "evaluation/test.toml",
+    "started_at": "2023-07-06T08:22:34.949295Z",
+    "version": "git:712af18-modified"
+  },
+  "runs": {
+    "example": [
+      {
+        "index": {
+          "cache_size": 4096,
+          "compression": true,
+          "enable_attribute_index": false,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            3000
+          ],
+          "num_threads": 4,
+          "priority_function": "NrPointsWeightedByTaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 12.035956375,
+            "duration_seconds": 303.827406625,
+            "insertion_rate_points_per_sec": 109660.41034648263,
+            "nr_points": 34637706,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ]
+  }
+}

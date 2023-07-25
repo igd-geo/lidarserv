@@ -1,5 +1,5 @@
 data_folder = "data/evaluation"
-output_file = "evaluation/test_%d_%i.json"
+output_file = "evaluation/results/macbook_parameter_overview_v3_%d_%i.json"
 points_file = "data/frankfurt_big.las"
 trajectory_file = ""
 offset = [0,0,0]
@@ -8,19 +8,19 @@ enable_cooldown = false
 
 [defaults]
 type = "Octree"
-priority_function = "TaskAge" #best = TaskAge
-num_threads = 136 #sweetspot macbook = 136
-cache_size = 20000 # more = better, swap memory is faster than disk accesses, at some point whole point cloud is in memory
-node_size = 10000 # doesnt make a big difference at indexing
+priority_function = "TaskAge"
+num_threads = 156
+cache_size = 10000
+node_size = 10000
 compression = false
-nr_bogus_points = [1000, 1000] # more than 1000 is kind of cheating
+nr_bogus_points = [1000, 1000]
 insertion_rate.target_point_pressure = 1_000_000
 query_perf.enable = false
 latency.enable = false
 latency.points_per_sec = 20000
 latency.frames_per_sec = 5
-enable_attribute_index = true
-enable_histogram_acceleration = true
+enable_attribute_index = false
+enable_histogram_acceleration = false
 bin_count_intensity = 25
 bin_count_return_number = 8
 bin_count_classification = 256
@@ -29,4 +29,7 @@ bin_count_user_data = 25
 bin_count_point_source_id = 25
 bin_count_color = 25
 
-[runs.example]
+
+[runs.big_cache_size]
+num_threads = [128]
+cache_size = [130000, 140000, 150000, 160000]
