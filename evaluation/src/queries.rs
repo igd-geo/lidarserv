@@ -3,12 +3,13 @@ use lidarserv_common::geometry::grid::LodLevel;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use nalgebra::{Matrix4, Point3};
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 /// A query that "looks down at an overwiew of the full point cloud".
 /// It mostly covers shallow lod levels.
 #[rustfmt::skip]
 #[allow(clippy::approx_constant)]
-pub fn preset_query_1() -> ViewFrustumQuery {
+pub fn vf__preset_query_1() -> ViewFrustumQuery {
     ViewFrustumQuery::new_raw(
         Matrix4::new(
             2.414213562373095, 0.0000000000000001045301427691423, 0.00000000000000003295012305146171, 0.000000000000000032950057151281516,
@@ -30,7 +31,7 @@ pub fn preset_query_1() -> ViewFrustumQuery {
 /// A query, that "looks down the street".
 /// As a result, it covers both detailed lod levels close to the camera and shallow lod levels far away.
 #[rustfmt::skip]
-pub fn preset_query_2() -> ViewFrustumQuery {
+pub fn vf_preset_query_2() -> ViewFrustumQuery {
     ViewFrustumQuery::new_raw(
         Matrix4::new(
             -2.011705014272859, 0.2674860964718512, 0.5416431284229128, 0.5416420451377393,
@@ -52,7 +53,7 @@ pub fn preset_query_2() -> ViewFrustumQuery {
 /// A query, that "looks at a detail on the ground".
 /// As a result, it covers very detailed lod levels.
 #[rustfmt::skip]
-pub fn preset_query_3() -> ViewFrustumQuery {
+pub fn vf_preset_query_3() -> ViewFrustumQuery {
     ViewFrustumQuery::new_raw(
         Matrix4::new(
             -2.33458662155896, 0.6149247361946918, 0.0, 0.0,
@@ -71,12 +72,175 @@ pub fn preset_query_3() -> ViewFrustumQuery {
     )
 }
 
-pub fn preset_query_4() -> BoundingBoxQuery {
+/// AABB query, that covers the whole point cloud with a very high lod level.
+pub fn aabb_full() -> BoundingBoxQuery {
     BoundingBoxQuery::new(
         AABB::new(
-            Point3::new(-30000, 10000, -20000),
+            Point3::new(-10000, -10000, -10000),
             Point3::new(10000, 70000, 20000),
         ),
-        LodLevel::from_level(5),
+        LodLevel::from_level(20),
     )
+}
+
+pub fn ground_classification() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: Some((11,11)),
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+pub fn no_cars_classification() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: Some((0,20)),
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+pub fn high_intensity() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: Some((64000, 65535)),
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: None,
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+pub fn low_intensity() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: Some((0, 1000)),
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: None,
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+pub fn one_return() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: Some((1, 1)),
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: None,
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+pub fn time_range() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: None,
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: Some((-710108.82202797, 191462.59930070)),
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+pub fn full_red_part() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: None,
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: Some((255, 255)),
+        color_g: None,
+        color_b: None,
+    }
+}
+
+pub fn mixed_ground_and_time() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: Some((11,11)),
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: Some((-710108.82202797, 191462.59930070)),
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+pub fn mixed_ground_and_one_return() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: Some((1, 1)),
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: Some((11,11)),
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
 }

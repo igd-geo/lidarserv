@@ -2,7 +2,7 @@ use evaluation::indexes::create_octree_index;
 use evaluation::insertion_rate::measure_insertion_rate;
 use evaluation::latency::measure_latency;
 use evaluation::point::Point;
-use evaluation::queries::preset_query_2;
+use evaluation::queries::{aabb_full, ground_classification};
 use evaluation::query_performance::measure_query_performance;
 use evaluation::settings::{Base, EvaluationScript, MultiRun};
 use evaluation::thermal_throttle::processor_cooldown;
@@ -313,7 +313,7 @@ where
         );
         let result_latency = {
             let index = make_index();
-            let query = preset_query_2();
+            let query = aabb_full();
             measure_latency(index, points, query, &measurement_settings)
         };
         results_latency.push(result_latency);
