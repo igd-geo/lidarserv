@@ -1,0 +1,33 @@
+data_folder = "data/evaluation"
+output_file = "evaluation/results/node_size_comparison/node_size_comparison_v1_%d_%i.json"
+points_file = "data/frankfurt_big.las"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = true
+
+[defaults]
+type = "Octree"
+priority_function = "TaskAge" #best = TaskAge
+num_threads = 136 #sweetspot macbook = 136
+cache_size = 20000 # more = better, swap memory is faster than disk accesses, at some point whole point cloud is in memory
+node_size = 10000 # doesnt make a big difference at indexing
+compression = false
+nr_bogus_points = [0, 0] # more than 1000 is kind of cheating
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = false
+latency.enable = false
+latency.points_per_sec = 20000
+latency.frames_per_sec = 5
+enable_attribute_index = true
+enable_histogram_acceleration = true
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 25
+bin_count_color = 25
+
+[runs.node_sizes_overview]
+node_size = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000]

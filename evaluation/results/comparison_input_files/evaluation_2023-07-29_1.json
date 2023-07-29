@@ -1,0 +1,42 @@
+// Input File: fraunhofer igd data
+{
+  "env": {
+    "finished_at": "2023-07-29T21:12:20.118423Z",
+    "hostname": "Paul-Macbook.fritz.box",
+    "input_file": "evaluation/example.toml",
+    "started_at": "2023-07-29T21:10:28.594551Z",
+    "version": "git:26c9ae8-modified",
+  },
+  "runs": {
+    "example": [
+      {
+        "index": {
+          "cache_size": 20000,
+          "compression": false,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            1000,
+            1000
+          ],
+          "num_threads": 136,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.10555425,
+            "duration_seconds": 15.629672917,
+            "insertion_rate_points_per_sec": 5708983.991562351,
+            "nr_points": 89832160,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ]
+  }
+}
