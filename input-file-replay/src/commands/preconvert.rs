@@ -52,7 +52,11 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
             }
             Some("las") => {
                 // read points from input files (las)
-                thread::spawn(move || read_points_from_las(&args, chunks_sender, &coordinate_system, point_record_format))
+                thread::spawn(move || read_points_from_las(&args, chunks_sender, &coordinate_system, point_record_format, false))
+            }
+            Some("laz") => {
+                // read points from input files (laz)
+                thread::spawn(move || read_points_from_las(&args, chunks_sender, &coordinate_system, point_record_format, true))
             }
             _ => bail!("Unknown file extension"),
         }
@@ -157,6 +161,7 @@ fn read_points_from_las(
     sender: crossbeam_channel::Sender<Vec<LasPoint>>,
     coordinate_system: &I32CoordinateSystem,
     point_record_format: u8,
+    compression: bool,
 ) -> Result<()> {
 
     // read args
@@ -167,7 +172,7 @@ fn read_points_from_las(
     info!("Reading points from {:?}", points_file);
     let f = File::open(points_file)?;
     let mut reader = BufReader::new(f);
-    let las_reader : I32LasReadWrite = I32LasReadWrite::new(false, point_record_format);
+    let las_reader : I32LasReadWrite = I32LasReadWrite::new(compression, point_record_format);
     let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader)?;
     info!("LAS File Coordinate System: {:?}", result.coordinate_system);
 
