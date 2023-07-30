@@ -3,6 +3,7 @@ use crate::lru_cache::pager::PageDirectory;
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
+use serde_json::json;
 use thiserror::Error;
 
 pub struct GridCellDirectory {
@@ -107,6 +108,21 @@ impl GridCellDirectory {
             .children()
             .into_iter()
             .all(|child| !self.exists(&child))
+    }
+
+    pub fn info(&self) -> serde_json::Value {
+        let mut num_nodes = 0;
+        let mut num_nodes_per_level = Vec::new();
+        for level in 0..self.cells.len() {
+            let num_nodes_at_level = self.cells[level].len();
+            num_nodes += num_nodes_at_level;
+            num_nodes_per_level.push(num_nodes_at_level);
+        };
+        json!(
+            {
+                "num_nodes": num_nodes,
+                "num_nodes_per_level": num_nodes_per_level,
+            })
     }
 }
 

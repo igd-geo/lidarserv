@@ -24,6 +24,7 @@ use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::option::Option;
 use log::debug;
+use serde_json::{json, Value};
 use thiserror::Error;
 use crate::index::octree::attribute_histograms::HistogramSettings;
 use crate::index::octree::attribute_index::AttributeIndex;
@@ -188,5 +189,9 @@ where
 
     fn flush(&mut self) -> Result<(), Box<dyn Error>> {
         Octree::flush(self).map_err(|e| Box::new(e) as Box<dyn Error>)
+    }
+
+    fn index_info(&self) -> Value {
+        self.inner.page_cache.directory().info()
     }
 }

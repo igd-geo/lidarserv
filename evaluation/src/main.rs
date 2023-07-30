@@ -283,6 +283,8 @@ where
         measure_insertion_rate(&mut index, points, &run.insertion_rate.single());
     info!("Results: {}", &result_insertion_rate);
 
+    let index_info = index.index_info();
+
     // measure query performance
     let result_query_perf = if run.query_perf.single().is_some() {
         if enable_cooldown {processor_cooldown()};
@@ -320,6 +322,7 @@ where
     }
 
     json!({
+        "index_info": index_info,
         "latency": results_latency,
         "insertion_rate": result_insertion_rate,
         "query_performance": result_query_perf
