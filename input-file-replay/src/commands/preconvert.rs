@@ -67,6 +67,7 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
     // wait for read / write threads to finish
     t1.join().unwrap()?;
     t2.join().unwrap()?;
+    info!("Preconvert finished");
     Ok(())
 }
 
@@ -160,6 +161,7 @@ fn read_points_from_las(
 
     // read args
     let points_file = PathBuf::from(&args.points_file);
+    let offset = Vector3::new(args.offset_x, args.offset_y, args.offset_z);
 
     // read points
     info!("Reading points from {:?}", points_file);
@@ -169,9 +171,13 @@ fn read_points_from_las(
     let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader)?;
     info!("LAS File Coordinate System: {:?}", result.coordinate_system);
 
+    // offset coordinate system
+    let mut offset_coordinate_system = result.coordinate_system.clone();
+    offset_coordinate_system.add_offset(offset);
+    info!("Offsetting coordinate system by {:?} from {:?} to {:?}", offset, result.coordinate_system.offset(), offset_coordinate_system.offset());
+
     //sort points by time
     info!("Sorting points by time");
-    // result.points.sort_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
     result.points.par_sort_unstable_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
 
     let t0 = result.points[0].attribute().gps_time;
@@ -195,7 +201,7 @@ fn read_points_from_las(
         }
 
         // convert from las file coordinate system to server coordinate system
-        let pos = point.position().transcode(&result.coordinate_system, coordinate_system).unwrap();
+        let pos = point.position().transcode(&offset_coordinate_system, coordinate_system).unwrap();
         //TODO handle better
 
         // create new point with new position and same attributes
