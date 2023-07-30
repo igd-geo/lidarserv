@@ -135,10 +135,10 @@ impl AttributeIndex {
         debug!("Loading attribute index from file {:?}", file_name);
         let f = File::open(file_name)?;
 
-        // read from file
+        // read from file using bincode
         debug!("Decoding attribute index file");
         let decoded: Vec<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>> =
-            from_reader(&f).expect("Error while reading attribute index");
+            bincode::deserialize_from(&f).expect("Error while reading attribute index");
 
         // convert to Vec<RwLock<HashMap<GridCell, (LasPointAttributeBounds, LasPointAttributeHistograms)>>> and return
         debug!("Converting attribute index to vector");
@@ -169,9 +169,9 @@ impl AttributeIndex {
             vector.push(index.clone());
         }
 
-        // write to file
+        // write to file with bincode
         debug!("Writing file");
-        ciborium::ser::into_writer(&vector, &f).expect("Error while writing attribute index");
+        bincode::serialize_into(&f, &vector).expect("Error while writing attribute index");
         f.sync_all()?;
 
         // DEBUG CSV OUTPUT
