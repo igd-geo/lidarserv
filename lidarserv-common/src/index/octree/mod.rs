@@ -23,6 +23,7 @@ use crate::query::Query;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::option::Option;
+use log::debug;
 use thiserror::Error;
 use crate::index::octree::attribute_histograms::HistogramSettings;
 use crate::index::octree::attribute_index::AttributeIndex;
@@ -137,16 +138,20 @@ where
     }
 
     pub fn flush(&mut self) -> Result<(), FlushError> {
+        let size = self.inner.page_cache.size();
+        debug!("Flushing all octree pages: max={:?}, curr={:?}", size.0, size.1);
         self.inner
             .page_cache
             .flush()
             .map_err(|e| FlushError(format!("{}", e)))?;
 
+        debug!("Flushing directory");
         let mut directory = self.inner.page_cache.directory();
         directory
             .write_to_file()
             .map_err(|e| FlushError(format!("{}", e)))?;
 
+        debug!("Flushing attribute index");
         let attribute_index = &self.inner.attribute_index;
         match attribute_index {
             Some(index) => index.write_to_file().map_err(|e| FlushError(format!("{}", e)))?,

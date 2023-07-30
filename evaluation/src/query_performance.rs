@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::queries::{aabb_full, ground_classification};
 use crate::Point;
 use lidarserv_common::index::{Index, Reader};
@@ -5,6 +6,7 @@ use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::query::Query;
 use serde_json::json;
 use std::time::Instant;
+use log::{debug, info};
 use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub fn measure_query_performance<I>(
@@ -25,21 +27,28 @@ fn measure_one_query<I, Q>(
 ) -> serde_json::value::Value
     where
         I: Index<Point>,
-        Q: Query + Send + Sync + 'static + Clone,
+        Q: Query + Send + Sync + 'static + Clone + Debug,
 {
+    info!("Measuring query performance for query: {:?} and filter {:?}", query, filter);
+
     // measure point filtering without acceleration
+    debug!("measure point filtering without acceleration");
     let raw_point_filtering = measure_one_query_part(index, query.clone(), filter, false, false, true);
 
     // measure point filtering with node acceleration
+    debug!("measure point filtering with node acceleration");
     let point_filtering_with_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, true);
 
     // measure point filtering with node acceleration and histogram acceleration
+    debug!("measure point filtering with node acceleration and histogram acceleration");
     let point_filtering_with_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, true);
 
     // measure only node filtering
+    debug!("measure only node filtering");
     let only_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, false);
 
     // measure only node filtering with histogram acceleration
+    debug!("measure only node filtering with histogram acceleration");
     let only_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, false);
 
     json!({
@@ -64,6 +73,7 @@ where
     I: Index<Point>,
     Q: Query + Send + Sync + 'static,
 {
+    debug!("Flushing index");
     index.flush().unwrap();
 
     let las_loader = I32LasReadWrite::new(true, 3);

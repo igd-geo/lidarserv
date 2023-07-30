@@ -9,7 +9,7 @@ use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 /// It mostly covers shallow lod levels.
 #[rustfmt::skip]
 #[allow(clippy::approx_constant)]
-pub fn vf__preset_query_1() -> ViewFrustumQuery {
+pub fn vf_preset_query_1() -> ViewFrustumQuery {
     ViewFrustumQuery::new_raw(
         Matrix4::new(
             2.414213562373095, 0.0000000000000001045301427691423, 0.00000000000000003295012305146171, 0.000000000000000032950057151281516,
@@ -77,7 +77,7 @@ pub fn aabb_full() -> BoundingBoxQuery {
     BoundingBoxQuery::new(
         AABB::new(
             Point3::new(-10000, -10000, -10000),
-            Point3::new(10000, 70000, 20000),
+            Point3::new(10000, 10000, 10000),
         ),
         LodLevel::from_level(20),
     )
