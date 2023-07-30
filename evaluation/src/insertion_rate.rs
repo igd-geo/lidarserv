@@ -24,7 +24,7 @@ where
 
     // Progress bar
     let pb = ProgressBar::new(points.len() as u64);
-    pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} ({eta})")
+    pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} [{msg}PPS] ({eta})")
         .unwrap()
         .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
         .progress_chars("#>-"));
@@ -55,6 +55,8 @@ where
 
         if i % 1000 == 0 {
             pb.set_position(read_pos as u64);
+            let current_pps = read_pos as f64 / time_start.elapsed().as_secs_f64();
+            pb.set_message(&format!("{:.0}", current_pps));
         }
         // if i % 1000 == 0 && Instant::now().duration_since(time_start) > Duration::from_secs(estimated_duration as u64)
         // {
