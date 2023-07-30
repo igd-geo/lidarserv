@@ -250,6 +250,10 @@ impl I32CoordinateSystem {
     pub fn offset(&self) -> &Vector3<f64> {
         &self.offset
     }
+
+    pub fn add_offset(&mut self, offset: Vector3<f64>) {
+        self.offset += offset;
+    }
 }
 
 impl CoordinateSystem for I32CoordinateSystem {
