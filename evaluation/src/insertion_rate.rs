@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use crate::settings::SingleInsertionRateMeasurement;
 use crate::Point;
 use lidarserv_common::index::{Index, Writer};
@@ -5,6 +6,8 @@ use nalgebra::min;
 use serde_json::json;
 use std::thread;
 use std::time::{Duration, Instant};
+use log::info;
+use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressState, ProgressStyle};
 
 pub fn measure_insertion_rate<I>(
     index: &mut I,
@@ -14,12 +17,26 @@ pub fn measure_insertion_rate<I>(
 where
     I: Index<Point>,
 {
+    // Init
     let target_point_pressure = settings.target_point_pressure;
+    let estimated_duration = points.len() as f64 / target_point_pressure as f64;
+    info!("Inserting {} points into index. Minimal duration: {} seconds", points.len(), estimated_duration);
+
+    // Progress bar
+    let pb = ProgressBar::new(points.len() as u64);
+    pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} ({eta})")
+        .unwrap()
+        .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+        .progress_chars("#>-"));
+
+    // Prepare insertion
     let mut writer = index.writer();
     let mut read_pos = 0;
     let time_start = Instant::now();
     let mut nr_times_to_slow = 0;
     let mut i = 0;
+
+    // Insertion loop
     while read_pos < points.len() {
         let backlog = writer.backlog_size();
         if backlog < target_point_pressure {
@@ -35,18 +52,27 @@ where
         }
         thread::sleep(Duration::from_secs_f64(0.005));
         i += 1;
-        if i % 1000 == 0 && Instant::now().duration_since(time_start) > Duration::from_secs(60 * 5)
-        {
-            // has been running since more than 5 minutes
-            break;
+
+        if i % 1000 == 0 {
+            pb.set_position(read_pos as u64);
         }
+        // if i % 1000 == 0 && Instant::now().duration_since(time_start) > Duration::from_secs(estimated_duration as u64)
+        // {
+        //     // if we are slower than the estimated duration, break
+        //     info!("Insertion rate measurement took longer than estimated duration. Breaking.");
+        //     break;
+        // }
     }
+
+    // Finalize
     let finished_at = Instant::now();
     drop(writer);
     let finalize_duration = Instant::now().duration_since(finished_at);
     let nr_points = read_pos;
     let duration = finished_at.duration_since(time_start);
     let pps = nr_points as f64 / (duration + finalize_duration).as_secs_f64();
+    pb.finish_with_message("All points inserted");
+
     (
         json!({
             "settings": settings,
