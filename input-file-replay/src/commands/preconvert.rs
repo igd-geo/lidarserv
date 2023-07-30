@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::thread;
 use tokio::net::TcpStream;
 use log::{info};
+use rayon::prelude::ParallelSliceMut;
 use lidarserv_server::common::geometry::points::{PointType, WithAttr};
 
 pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
@@ -161,6 +162,7 @@ fn read_points_from_las(
     let points_file = PathBuf::from(&args.points_file);
 
     // read points
+    info!("Reading points from {:?}", points_file);
     let f = File::open(points_file)?;
     let mut reader = BufReader::new(f);
     let las_reader : I32LasReadWrite = I32LasReadWrite::new(false, point_record_format);
@@ -169,13 +171,15 @@ fn read_points_from_las(
 
     //sort points by time
     info!("Sorting points by time");
-    result.points.sort_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
+    // result.points.sort_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
+    result.points.par_sort_unstable_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
 
     let t0 = result.points[0].attribute().gps_time;
     let mut current_frame = 0;
     let mut current_frame_points = Vec::new();
 
     // chunk points into frames and send them
+    info!("Chunking points into frames");
     for point in result.points {
         let t = point.attribute::<LasPointAttributes>().gps_time;
         let frame_number = ((t - t0) / args.speed_factor * args.fps as f64) as i32;

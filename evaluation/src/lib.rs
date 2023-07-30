@@ -5,6 +5,7 @@ use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use log::{debug, info};
 use std::path::PathBuf;
+use rayon::prelude::ParallelSliceMut;
 use input_file_replay::iter_points::iter_points;
 use lidarserv_common::las::{I32LasReadWrite, Las, LasPointAttributes};
 use lidarserv_server::index::point::LasPoint;
@@ -64,7 +65,7 @@ pub fn read_points(
 
         //sort points by gps_time
         info!("Sorting LAS points by time");
-        points.sort_by(|a, b| a.attribute::<LasPointAttributes>().gps_time.partial_cmp(&b.attribute::<LasPointAttributes>().gps_time).unwrap());
+        result.points.par_sort_unstable_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
     } else {
         panic!("Unknown file format");
     }

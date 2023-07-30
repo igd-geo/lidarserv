@@ -17,3 +17,4 @@ itertools = "0.10.1"
 crossbeam-channel = "0.5.1"
 las = { version = "0.7.5", features = ["laz"] }
 laz = "0.6.0"
+rayon = "1.7"
