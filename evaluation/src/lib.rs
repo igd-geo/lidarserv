@@ -69,7 +69,6 @@ pub fn read_points(
         panic!("Unknown file format");
     }
     info!("Read a total of {} points.", points.len());
-    debug!("Size of first point: {}", std::mem::size_of::<Point>());
     points
 }
 

@@ -53,7 +53,7 @@ where
         thread::sleep(Duration::from_secs_f64(0.005));
         i += 1;
 
-        if i % 1000 == 0 {
+        if i % 100 == 0 {
             pb.set_position(read_pos as u64);
             let current_pps = read_pos as f64 / time_start.elapsed().as_secs_f64();
             pb.set_message(format!("{} pps, backlog: {}", current_pps as u64, writer.backlog_size()));
