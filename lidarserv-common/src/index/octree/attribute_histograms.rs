@@ -43,6 +43,8 @@ pub struct LasPointAttributeHistograms {
 }
 
 impl LasPointAttributeHistograms {
+    /// Creates a new histogram with the given settings.
+    /// Bounds are set to the values from the LAS specification.
     pub fn new(settings: &HistogramSettings) -> Self {
         Self {
             intensity: Histogram::<u16>::new(0,65535,settings.bin_count_intensity),
@@ -58,6 +60,7 @@ impl LasPointAttributeHistograms {
         }
     }
 
+    /// Inserts the attributes of a point into the histograms.
     pub fn fill_with(&mut self, attributes: &LasPointAttributes) {
         self.intensity.add(attributes.intensity);
         self.return_number.add(attributes.return_number);
@@ -71,6 +74,8 @@ impl LasPointAttributeHistograms {
         self.color_b.add(attributes.color.2);
     }
 
+    /// Adds the values of another histogram to this one.
+    /// All histograms must have the same bin count and bounds.
     pub fn add_histograms(&mut self, other: &LasPointAttributeHistograms) {
         self.intensity.add_histogram(&other.intensity);
         self.return_number.add_histogram(&other.return_number);
@@ -84,17 +89,19 @@ impl LasPointAttributeHistograms {
         self.color_b.add_histogram(&other.color_b);
     }
 
+    /// Returns true if the given attribute bounds are contained in the histograms.
+    /// If the attribute bounds are None, the corresponding attribute is ignored.
     pub fn is_attribute_range_in_histograms(&self, attribute_bounds: &LasPointAttributeBounds) -> bool {
-        self.intensity.range_contains_values(attribute_bounds.intensity.unwrap()) &&
-        self.return_number.range_contains_values(attribute_bounds.return_number.unwrap()) &&
-        self.number_of_returns.range_contains_values(attribute_bounds.number_of_returns.unwrap()) &&
-        self.classification.range_contains_values(attribute_bounds.classification.unwrap()) &&
-        self.scan_angle_rank.range_contains_values(attribute_bounds.scan_angle_rank.unwrap()) &&
-        self.user_data.range_contains_values(attribute_bounds.user_data.unwrap()) &&
-        self.point_source_id.range_contains_values(attribute_bounds.point_source_id.unwrap()) &&
-        self.color_r.range_contains_values(attribute_bounds.color_r.unwrap()) &&
-        self.color_g.range_contains_values(attribute_bounds.color_g.unwrap()) &&
-        self.color_b.range_contains_values(attribute_bounds.color_b.unwrap())
+        self.intensity.range_contains_values(attribute_bounds.intensity.unwrap_or((0,65535))) &&
+        self.return_number.range_contains_values(attribute_bounds.return_number.unwrap_or((0,7))) &&
+        self.number_of_returns.range_contains_values(attribute_bounds.number_of_returns.unwrap_or((0,7))) &&
+        self.classification.range_contains_values(attribute_bounds.classification.unwrap_or((0,255))) &&
+        self.scan_angle_rank.range_contains_values(attribute_bounds.scan_angle_rank.unwrap_or((-90,90))) &&
+        self.user_data.range_contains_values(attribute_bounds.user_data.unwrap_or((0,255))) &&
+        self.point_source_id.range_contains_values(attribute_bounds.point_source_id.unwrap_or((0,65535))) &&
+        self.color_r.range_contains_values(attribute_bounds.color_r.unwrap_or((0,65535))) &&
+        self.color_g.range_contains_values(attribute_bounds.color_g.unwrap_or((0,65535))) &&
+        self.color_b.range_contains_values(attribute_bounds.color_b.unwrap_or((0,65535)))
     }
 
 }
