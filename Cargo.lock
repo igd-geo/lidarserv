@@ -1151,6 +1151,7 @@ checksum = "701ed544a1ad145f1a171e15f2def7d6f537a17e2cf0957577e4129bf00a2dce"
 name = "lidarserv-common"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "ciborium",
  "core_affinity",
  "crossbeam-channel",
