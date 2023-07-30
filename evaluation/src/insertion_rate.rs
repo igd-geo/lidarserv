@@ -56,7 +56,7 @@ where
         if i % 1000 == 0 {
             pb.set_position(read_pos as u64);
             let current_pps = read_pos as f64 / time_start.elapsed().as_secs_f64();
-            pb.set_message(&format!("{:.0}", current_pps));
+            pb.set_message(format!("{:.0}", current_pps));
         }
         // if i % 1000 == 0 && Instant::now().duration_since(time_start) > Duration::from_secs(estimated_duration as u64)
         // {
