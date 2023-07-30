@@ -174,10 +174,22 @@ impl AttributeIndex {
         ciborium::ser::into_writer(&vector, &f).expect("Error while writing attribute index");
         f.sync_all()?;
 
-        // DEBUG
-        self.write_to_csv().unwrap();
+        // DEBUG CSV OUTPUT
+        // self.write_to_csv().unwrap();
 
         Ok(())
+    }
+
+    /// Returns the size of the index in bytes
+    pub fn size(&self) -> usize {
+        let mut size = std::mem::size_of_val(&self.index);
+        for lock in self.index.iter() {
+            let index = lock.read().unwrap();
+            size += index.len() * std::mem::size_of::<GridCell>();
+            size += index.len() * std::mem::size_of::<LasPointAttributeBounds>();
+            size += index.len() * std::mem::size_of::<LasPointAttributeHistograms>();
+        }
+        size
     }
 
     /// Return bounds of a grid cell
@@ -411,6 +423,8 @@ mod tests {
         assert_eq!(bounds.0.color_r, Some((0, 255)));
         assert_eq!(bounds.0.color_g, Some((0, 255)));
         assert_eq!(bounds.0.color_b, Some((0, 0)));
+
+        attribute_index.size();
 
         // delete file if exists
         delete_file(&PathBuf::from("test.bin"));

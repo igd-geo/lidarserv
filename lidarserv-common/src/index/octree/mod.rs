@@ -192,6 +192,15 @@ where
     }
 
     fn index_info(&self) -> Value {
-        self.inner.page_cache.directory().info()
+        let attribute_index_size = match &self.inner.attribute_index {
+            Some(index) => index.size(),
+            None => 0,
+        };
+        json!(
+            {
+                "attribute_index": attribute_index_size,
+                "directory_info": self.inner.page_cache.directory().info()
+            }
+        )
     }
 }

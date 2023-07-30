@@ -32,23 +32,23 @@ fn measure_one_query<I, Q>(
     info!("Measuring query performance for query: {:?} and filter {:?}", query, filter);
 
     // measure point filtering without acceleration
-    debug!("measure point filtering without acceleration");
+    info!("measure point filtering without acceleration");
     let raw_point_filtering = measure_one_query_part(index, query.clone(), filter, false, false, true);
 
     // measure point filtering with node acceleration
-    debug!("measure point filtering with node acceleration");
+    info!("measure point filtering with node acceleration");
     let point_filtering_with_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, true);
 
     // measure point filtering with node acceleration and histogram acceleration
-    debug!("measure point filtering with node acceleration and histogram acceleration");
+    info!("measure point filtering with node acceleration and histogram acceleration");
     let point_filtering_with_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, true);
 
     // measure only node filtering
-    debug!("measure only node filtering");
+    info!("measure only node filtering");
     let only_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, false);
 
     // measure only node filtering with histogram acceleration
-    debug!("measure only node filtering with histogram acceleration");
+    info!("measure only node filtering with histogram acceleration");
     let only_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, false);
 
     json!({

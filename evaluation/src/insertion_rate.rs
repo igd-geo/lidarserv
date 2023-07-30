@@ -24,7 +24,7 @@ where
 
     // Progress bar
     let pb = ProgressBar::new(points.len() as u64);
-    pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} [{msg}PPS] ({eta})")
+    pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} [{msg}] ({eta})")
         .unwrap()
         .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
         .progress_chars("#>-"));
@@ -56,7 +56,7 @@ where
         if i % 1000 == 0 {
             pb.set_position(read_pos as u64);
             let current_pps = read_pos as f64 / time_start.elapsed().as_secs_f64();
-            pb.set_message(format!("{:.0}", current_pps));
+            pb.set_message(format!("{} pps, backlog: {}", current_pps as u64, writer.backlog_size()));
         }
         // if i % 1000 == 0 && Instant::now().duration_since(time_start) > Duration::from_secs(estimated_duration as u64)
         // {
@@ -65,6 +65,8 @@ where
         //     break;
         // }
     }
+    pb.set_position(points.len() as u64);
+    pb.finish();
 
     // Finalize
     let finished_at = Instant::now();
@@ -73,7 +75,6 @@ where
     let nr_points = read_pos;
     let duration = finished_at.duration_since(time_start);
     let pps = nr_points as f64 / (duration + finalize_duration).as_secs_f64();
-    pb.finish_with_message("All points inserted");
 
     (
         json!({

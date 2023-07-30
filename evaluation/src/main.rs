@@ -285,6 +285,7 @@ where
         measure_insertion_rate(&mut index, points, &run.insertion_rate.single());
     info!("Results: {}", &result_insertion_rate);
 
+    // store index info (e.g. number of nodes)
     let index_info = index.index_info();
 
     // measure query performance
