@@ -69,6 +69,16 @@ fn main() {
         }
     };
 
+    // create output file
+    let out_file_name = get_output_filename(&config.base.output_file_pattern);
+    let out_file = match std::fs::File::create(out_file_name) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("Could not open output file for writing: {}", e);
+            return;
+        }
+    };
+
     // read point data
     info!("Reading point data");
     let coordinate_system = I32CoordinateSystem::from_las_transform(
@@ -118,14 +128,6 @@ fn main() {
         "runs": all_results
     });
     println!("{}", &output);
-    let out_file_name = get_output_filename(&config.base.output_file_pattern);
-    let out_file = match std::fs::File::create(out_file_name) {
-        Ok(f) => f,
-        Err(e) => {
-            error!("Could not open output file for writing: {}", e);
-            return;
-        }
-    };
     match serde_json::to_writer_pretty(out_file, &output) {
         Ok(_) => (),
         Err(e) => error!("Could not write output file: {}", e),
