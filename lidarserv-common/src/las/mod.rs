@@ -475,3 +475,238 @@ where
 
     Ok(())
 }
+
+/// Comparison between self-written LAS reader/writer and the las crate reader/writer.
+/// Also shows how to use the different writers and readers.
+#[cfg(test)]
+mod tests {
+    use std::fs::File;
+    use std::io::{BufReader, BufWriter, Write};
+    use std::ops::Deref;
+    use std::path::Path;
+    use las::point::ScanDirection;
+    use las::{Builder, Color, Point, raw, Read, Reader, Write as LasWrite, Writer};
+    use serde_json::{json, Value};
+    use crate::geometry::points::{PointType, WithAttr};
+    use crate::geometry::position::{I32CoordinateSystem, I32Position, Position};
+    use crate::geometry;
+    use super::*;
+
+    /// Some implementations and definitions from the server to be able to use it here
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct GenericPoint<Position> {
+        position: Position,
+        las_attributes: Box<LasPointAttributes>,
+    }
+    pub type LasPoint = GenericPoint<I32Position>;
+    impl<Pos> PointType for GenericPoint<Pos>
+        where
+            Pos: Position + Default,
+    {
+        type Position = Pos;
+
+        fn new(position: Self::Position) -> Self {
+            GenericPoint {
+                position,
+                las_attributes: Default::default(),
+            }
+        }
+
+        fn position(&self) -> &Self::Position {
+            &self.position
+        }
+    }
+
+    impl<Pos> WithAttr<LasPointAttributes> for GenericPoint<Pos> {
+        fn value(&self) -> &LasPointAttributes {
+            self.las_attributes.as_ref()
+        }
+
+        fn set_value(&mut self, new_value: LasPointAttributes) {
+            *self.las_attributes = new_value
+        }
+    }
+
+    #[test]
+    /// Compare the self-written LAS reader/writer with the las crate reader/writer.
+    /// Output a json file with the results.
+    fn compare_writer_reader() {
+
+        // tests of las crate
+        let mut las_crate = json!({});
+        for num_points in [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000].iter() {
+            let result = write_read_las_crate(*num_points);
+            las_crate[format!("{:?}", num_points)] = result;
+        }
+
+        // tests of self-written las reader/writer
+        let mut custom_las = json!({});
+        for num_points in [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000].iter() {
+            let result = write_read_custom(*num_points);
+            custom_las[format!("{:?}", num_points)] = result;
+        }
+
+        // write json
+        let path = Path::new("test.json");
+        let file = File::create(path).unwrap();
+        let json = json!({
+            "las_crate": las_crate,
+            "custom_las": custom_las,
+        });
+        serde_json::to_writer_pretty(file, &json).unwrap();
+    }
+
+    /// Create a pointcloud with the las crate.
+    fn las_crate_pointcloud(num_points: usize) -> Vec<Point> {
+        let mut pointcloud = Vec::new();
+        for i in 0..num_points {
+            let mut point = Point { x: 1., y: 2., z: 3., ..Default::default() };
+            point.gps_time = Some(i as f64);
+            point.color = Some(Color::new(0,0,0));
+            pointcloud.push(point);
+        }
+        pointcloud
+    }
+
+    /// Create a pointcloud with custom point type.
+    fn custom_pointcloud(num_points: usize) -> Vec<LasPoint> {
+        let mut pointcloud = Vec::new();
+        for i in 0..num_points {
+            let position = I32Position::default();
+            let las_attributes = Box::new(LasPointAttributes::default());
+            pointcloud.push(LasPoint {
+                position,
+                las_attributes
+            });
+        }
+        pointcloud
+    }
+
+    /// Write and read a pointcloud with the las crate.
+    fn write_read_las_crate(num_points: usize) -> serde_json::Value {
+
+        /// WRITING
+        // Init
+        println!("TESTING {:?} POINTS", num_points);
+        let pointcloud = las_crate_pointcloud(num_points);
+        let path = Path::new("test.las");
+
+        // Init Writing
+        let init_time = std::time::Instant::now();
+        let mut builder = Builder::from((1, 4));
+        builder.point_format = Format::new(3).unwrap();
+        let header = builder.into_header().unwrap();
+        let mut writer = Writer::from_path(&path, header).unwrap();
+        let mut errors = 0;
+
+        // Writing
+        let start_time = std::time::Instant::now();
+        for point in pointcloud.iter() {
+            let result = writer.write(point.clone());
+            if result.is_err() {
+                errors += 1;
+            }
+        }
+        let end_time = std::time::Instant::now();
+        writer.close().unwrap();
+        let close_time = std::time::Instant::now();
+
+        let init_start_write = start_time.duration_since(init_time);
+        let start_end_write = end_time.duration_since(start_time);
+        let end_close_write = close_time.duration_since(end_time);
+        let total_write = close_time.duration_since(init_time);
+        let pps_write = pointcloud.len() as f64 / start_end_write.as_secs_f64();
+
+        println!("WRITING");
+        println!("Number of points: {:?}, Number of errors {:?}", writer.header().number_of_points(), errors);
+        println!("Init time: {:?}, Write Time: {:?}, Close time: {:?}", init_start_write, start_end_write, end_close_write);
+        println!("Total time: {:?}", total_write);
+        println!("Points per second: {:?}", pps_write);
+
+        /// READING
+        // Init
+        let init_time = std::time::Instant::now();
+        let read = BufReader::new(File::open(&path).unwrap());
+        let mut reader = Reader::new(read).unwrap();
+
+        // Reading
+        let mut pointcloud : Vec<Point> = Vec::new();
+        let start_time = std::time::Instant::now();
+        for wrapped_point in reader.points() {
+            let point = wrapped_point.unwrap();
+            pointcloud.push(point);
+        }
+        let end_time = std::time::Instant::now();
+
+        let init_start_read = start_time.duration_since(init_time);
+        let start_end_read = end_time.duration_since(start_time);
+        let total_read = end_time.duration_since(init_time);
+        let pps_read = pointcloud.len() as f64 / start_end_read.as_secs_f64();
+
+        println!("READING");
+        println!("Number of points: {:?}", pointcloud.len());
+        println!("Init time: {:?}, Write Time: {:?}", init_start_read, start_end_read);
+        println!("Total time: {:?}", total_read);
+        println!("Points per second: {:?}", pps_read);
+
+        // Remove file if it exists
+        if path.exists() {
+            std::fs::remove_file(path).unwrap();
+        }
+
+        // Return results
+        json!(
+            {
+                "total_write": total_write.as_secs_f64(),
+                "total_read": total_read.as_secs_f64(),
+            }
+        )
+    }
+
+    fn write_read_custom(num_points: usize) -> Value {
+        /// Init
+        let pointcloud = custom_pointcloud(num_points);
+        let path = Path::new("test.las");
+
+        /// Writing
+        let init_time = std::time::Instant::now();
+        let loader = I32LasReadWrite::new(false, 3);
+        let start_time = std::time::Instant::now();
+        let data = loader.write_las::<LasPoint, _>(Las {
+            points: pointcloud.iter(),
+            bounds: OptionAABB::default(),
+            non_bogus_points: Some(pointcloud.len() as u32),
+            coordinate_system: I32CoordinateSystem::new(Point3::new(0.0,0.0,0.0), Point3::new(3.0,3.0,3.0)),
+        });
+        let mut file = File::create(&path).unwrap();
+        file.write_all(data.as_slice()).unwrap();
+        file.sync_all().unwrap();
+        let end_time = std::time::Instant::now();
+        let total_write = end_time.duration_since(init_time);
+
+        /// Reading
+        let init_time = std::time::Instant::now();
+        let loader = I32LasReadWrite::new(false, 3);
+        let start_time = std::time::Instant::now();
+        let mut reader = BufReader::new(File::open(&path).unwrap());
+        let result : Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
+        let end_time = std::time::Instant::now();
+        let total_read = end_time.duration_since(init_time);
+
+        // Remove file if it exists
+        if path.exists() {
+            std::fs::remove_file(path).unwrap();
+        }
+
+        // Return results
+        json!(
+            {
+                "total_write": total_write.as_secs_f64(),
+                "total_read": total_read.as_secs_f64(),
+            }
+        )
+    }
+
+
+
+}
