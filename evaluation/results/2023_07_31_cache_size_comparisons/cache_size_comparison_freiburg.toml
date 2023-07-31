@@ -1,0 +1,33 @@
+data_folder = "data/evaluation"
+output_file = "evaluation/results/2023_07_31_cache_size_comparisons/results/freiburg_%d_%i.json"
+points_file = "data/freiburg.laz"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = true
+
+[defaults]
+type = "Octree"
+priority_function = "TaskAge"
+num_threads = 10
+node_size = 10000
+compression = false
+nr_bogus_points = [0, 0]
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = false
+latency.enable = false
+enable_attribute_index = true
+enable_histogram_acceleration = true
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 25
+bin_count_color = 25
+
+# Goal is to measure, if the time-space-locality from the tracy measurement really has a size of around 300 pages
+# We should be able to see a drastic increase in performance
+# if we set the cache size above 300 pages (frankfurt) or 100 pages (freiburg)
+[runs.cache_size]
+cache_size = [0,50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000]
