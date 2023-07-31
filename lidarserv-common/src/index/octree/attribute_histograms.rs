@@ -51,7 +51,7 @@ impl LasPointAttributeHistograms {
             return_number: Histogram::<u8>::new(0,7, settings.bin_count_return_number),
             number_of_returns: Histogram::<u8>::new(0,7,settings.bin_count_return_number),
             classification: Histogram::<u8>::new(0,255,settings.bin_count_classification),
-            scan_angle_rank: Histogram::<i8>::new(-90,90,settings.bin_count_scan_angle_rank),
+            scan_angle_rank: Histogram::<i8>::new(-128,127,settings.bin_count_scan_angle_rank),
             user_data: Histogram::<u8>::new(0,255,settings.bin_count_user_data),
             point_source_id: Histogram::<u16>::new(0,65535,settings.bin_count_point_source_id),
             color_r: Histogram::<u16>::new(0,65535,settings.bin_count_color),
