@@ -1,0 +1,50 @@
+{
+  "env": {
+    "finished_at": "2023-07-29T21:30:14.211386Z",
+    "hostname": "Paul-Macbook.fritz.box",
+    "input_file": "evaluation/test.toml",
+    "started_at": "2023-07-29T21:30:10.043732Z",
+    "version": "git:1019e22-modified"
+  },
+  "runs": {
+    "example": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 25,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 20000,
+          "compression": false,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            1000,
+            1000
+          ],
+          "num_threads": 136,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.165812917,
+            "duration_seconds": 1.497718875,
+            "insertion_rate_points_per_sec": 3973371.012076215,
+            "nr_points": 6609829,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ]
+  }
+}

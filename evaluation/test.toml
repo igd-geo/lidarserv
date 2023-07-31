@@ -1,6 +1,6 @@
 data_folder = "data/evaluation"
 output_file = "evaluation/test_%d_%i.json"
-points_file = "data/frankfurt_big.las"
+points_file = "data/freiburg.laz"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
@@ -9,16 +9,14 @@ enable_cooldown = false
 [defaults]
 type = "Octree"
 priority_function = "TaskAge" #best = TaskAge
-num_threads = 136 #sweetspot macbook = 136
-cache_size = 20000 # more = better, swap memory is faster than disk accesses, at some point whole point cloud is in memory
+num_threads = 10 #sweetspot macbook = 136
+cache_size = 10000 # more = better, swap memory is faster than disk accesses, at some point whole point cloud is in memory
 node_size = 10000 # doesnt make a big difference at indexing
 compression = false
-nr_bogus_points = [1000, 1000] # more than 1000 is kind of cheating
+nr_bogus_points = [0, 0] # more than 1000 is kind of cheating
 insertion_rate.target_point_pressure = 1_000_000
-query_perf.enable = false
+query_perf.enable = true
 latency.enable = false
-latency.points_per_sec = 20000
-latency.frames_per_sec = 5
 enable_attribute_index = true
 enable_histogram_acceleration = true
 bin_count_intensity = 25
