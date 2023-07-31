@@ -76,10 +76,10 @@ pub fn vf_preset_query_3() -> ViewFrustumQuery {
 pub fn aabb_full() -> BoundingBoxQuery {
     BoundingBoxQuery::new(
         AABB::new(
-            Point3::new(-10000, -10000, -10000),
-            Point3::new(10000, 10000, 10000),
+            Point3::new(-10000000, -10000000, -10000000),
+            Point3::new(10000000, 10000000, 10000000),
         ),
-        LodLevel::from_level(20),
+        LodLevel::from_level(10),
     )
 }
 
