@@ -1,0 +1,69 @@
+{
+  "env": {
+    "finished_at": "2023-07-31T14:50:37.255214Z",
+    "hostname": "MacBook-Pro-von-Paul-2.fritz.box",
+    "input_file": "tomls/frankfurt_slice5.toml",
+    "started_at": "2023-07-31T14:50:34.164158Z",
+    "version": "git:485a8ed-modified"
+  },
+  "runs": {
+    "indexing": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 25,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 0,
+          "compression": false,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_size": 10000,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 10,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 70872,
+            "directory_info": {
+              "num_nodes": 172,
+              "num_nodes_per_level": [
+                1,
+                1,
+                1,
+                1,
+                4,
+                9,
+                18,
+                42,
+                40,
+                37,
+                18
+              ]
+            }
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 3.072306334,
+            "duration_seconds": 0.007258041,
+            "insertion_rate_points_per_sec": 7920.60078302471,
+            "nr_points": 24392,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ]
+  }
+}

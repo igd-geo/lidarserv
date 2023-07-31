@@ -1,0 +1,30 @@
+data_folder = "../../../data/evaluation"
+output_file = "output_slices_100000p/frankfurt_slice16_%d_%i.json"
+points_file = "../../../data/slices/frankfurt_slices_100000p/slice16.las"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = false
+
+[defaults]
+type = "Octree"
+priority_function = "TaskAge" #best = TaskAge
+num_threads = 10#sweetspot macbook = 136
+cache_size = 0 # more = better, swap memory is faster than disk accesses, at some point whole point cloud is in memory
+node_size = 10000 # doesnt make a big difference at indexing
+compression = false
+nr_bogus_points = [0, 0] # more than 1000 is kind of cheating
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = false
+latency.enable = false
+enable_attribute_index = true
+enable_histogram_acceleration = true
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 25
+bin_count_color = 25
+
+[runs.indexing]
