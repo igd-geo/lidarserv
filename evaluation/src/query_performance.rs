@@ -1,8 +1,6 @@
 use std::fmt::Debug;
-use crate::queries::{aabb_full, ground_classification};
 use crate::Point;
 use lidarserv_common::index::{Index, Reader};
-use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::query::Query;
 use serde_json::json;
 use std::time::Instant;
@@ -10,7 +8,7 @@ use log::{debug, info};
 use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub fn measure_query_performance<I>(
-    mut index: I,
+    index: I,
 ) -> serde_json::value::Value
 where
     I: Index<Point>,
@@ -75,8 +73,6 @@ where
 {
     debug!("Flushing index");
     index.flush().unwrap();
-
-    let las_loader = I32LasReadWrite::new(true, 3);
 
     let time_start = Instant::now();
     let mut r = index.reader(query);

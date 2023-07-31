@@ -24,7 +24,7 @@ pub struct OctreeReader<Point, Sampl, SamplF> {
     enable_attribute_acceleration: bool,
     enable_histogram_acceleration: bool,
     enable_point_filtering: bool,
-    changed_nodes_receiver: crossbeam_channel::Receiver<LeveledGridCell>,
+    changed_nodes_receiver: Receiver<LeveledGridCell>,
     loaded: HashSet<LeveledGridCell>,
     frontier: HashMap<LeveledGridCell, FrontierElement>,
     load_queue: HashSet<LeveledGridCell>,
@@ -219,7 +219,7 @@ where
 
     pub fn wait_update_or<T>(
         &mut self,
-        other: &crossbeam_channel::Receiver<T>,
+        other: &Receiver<T>,
     ) -> Option<Result<T, crossbeam_channel::RecvError>> {
         loop {
             crossbeam_channel::select! {

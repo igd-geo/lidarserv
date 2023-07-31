@@ -4,7 +4,6 @@ use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::query::Query;
 use std::error::Error;
 use std::sync::Arc;
-use serde_json::json;
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub mod octree;

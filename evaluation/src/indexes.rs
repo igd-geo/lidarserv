@@ -37,7 +37,7 @@ pub fn create_octree_index(
     }
     let mut histogram_settings = lidarserv_common::index::octree::attribute_histograms::HistogramSettings::default();
     if settings.enable_histogram_acceleration {
-        let histogram_settings = lidarserv_common::index::octree::attribute_histograms::HistogramSettings {
+        histogram_settings = lidarserv_common::index::octree::attribute_histograms::HistogramSettings {
             bin_count_intensity: settings.bin_count_intensity,
             bin_count_return_number: settings.bin_count_return_number,
             bin_count_classification: settings.bin_count_classification,

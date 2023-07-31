@@ -103,7 +103,7 @@ fn main(args: Args) {
             let IncrementalUpdate {
                 mut remove,
                 mut insert,
-                result_complete
+                ..
             } = update;
 
             debug!("Received update with {} insertions", insert.len());

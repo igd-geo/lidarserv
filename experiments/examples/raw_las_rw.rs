@@ -111,7 +111,7 @@ fn write_compressed(points: Vec<Point3<i32>>) -> Result<Vec<u8>, Box<dyn Error>>
         let mut laz_items = LazItemRecordBuilder::new();
         laz_items.add_item(LazItemType::Point10);
         if format.extra_bytes > 0 {
-            laz_items.add_item(laz::LazItemType::Byte(format.extra_bytes));
+            laz_items.add_item(LazItemType::Byte(format.extra_bytes));
         }
         LazVlr::from_laz_items(laz_items.build())
     };

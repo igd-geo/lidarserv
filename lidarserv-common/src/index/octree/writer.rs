@@ -18,7 +18,6 @@ use std::str::FromStr;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 use std::{mem, thread};
-use std::ops::Deref;
 use thiserror::Error;
 use tracy_client::{create_plot, Plot};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;

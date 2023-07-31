@@ -19,7 +19,7 @@ pub fn init_las_header(
     bounds_max: Point3<f64>,
     coordinate_system: &I32CoordinateSystem,
     point_record_format: u8,
-) -> (las::raw::Header, Format) {
+) -> (Header, Format) {
     // las 1.2, Point format 0-3
     let version = Version::new(1, 2);
     let mut format = Format::new(point_record_format).unwrap();
@@ -35,7 +35,7 @@ pub fn init_las_header(
         point_data_record_format |= 0x80;
     }
 
-    let header = las::raw::Header {
+    let header = Header {
         version,
         system_identifier: lidarserv,
         generating_software: lidarserv,

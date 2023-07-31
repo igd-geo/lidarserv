@@ -1,9 +1,6 @@
 use std::fmt::Debug;
-use std::ops::{Add, AddAssign};
-use std::ops::Sub;
-use std::ops::Div;
 use log::debug;
-use num_traits::{FromPrimitive, Num, One, ToPrimitive};
+use num_traits::{FromPrimitive, Num, ToPrimitive};
 use serde::{Serialize, Deserialize};
 
 // Define a generic histogram struct
@@ -211,7 +208,6 @@ impl<T: Num + Copy + PartialOrd + ToPrimitive + FromPrimitive> Histogram<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Add;
     use super::*;
 
     #[test]
@@ -310,7 +306,7 @@ mod tests {
         let max = 10;
         let num_bins = 5;
         let mut histogram1 = Histogram::<u8>::new(min, max, num_bins);
-        let mut histogram2 = Histogram::<u8>::new(min, max, num_bins + 1);
+        let histogram2 = Histogram::<u8>::new(min, max, num_bins + 1);
 
         histogram1.add_histogram(&histogram2);
     }

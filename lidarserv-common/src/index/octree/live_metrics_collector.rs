@@ -19,7 +19,7 @@ pub struct LiveMetricsCollector {
 #[derive(Debug, Error)]
 pub enum MetricsError {
     #[error(transparent)]
-    IO(#[from] std::io::Error),
+    IO(#[from] io::Error),
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]

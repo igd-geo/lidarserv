@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_creation() {
-        let histograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
+        let _histograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
     }
 
 }

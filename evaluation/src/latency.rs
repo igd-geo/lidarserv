@@ -25,7 +25,7 @@ where
     // query thread
     let reader = index.reader(query);
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded(); // we will never actually push a new query. but the channel is still used to tell the queryer when to stop.
-    let (filters_sender, filters_receiver) = crossbeam_channel::unbounded();
+    let (_filters_sender, filters_receiver) = crossbeam_channel::unbounded();
     let rt = thread::spawn(move || read_thread::<I>(reader, queries_receiver, filters_receiver));
 
     // do the insertions in the current thread
@@ -178,7 +178,7 @@ where
 
     while reader.blocking_update(&mut queries, &mut filters) {
         reader.remove_one();
-        if let Some((node_id, points, coordinate_system)) = reader.load_one() {
+        if let Some((node_id, points, _coordinate_system)) = reader.load_one() {
             let now = Instant::now();
             let lod_index = node_id.lod().level() as usize;
             for point in points {

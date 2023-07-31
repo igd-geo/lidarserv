@@ -16,7 +16,7 @@ pub struct GenericPoint<Position> {
 /// Point type for the lidar server, with the positions being stored the same way as
 /// they are in LAS, as integer coordinates. However, the positions are only really
 /// meaningful in the context of some coordinate system
-/// ([lidarserv_common::geometry::position::I32CoordinateSystem]), that will apply some scale
+/// ([I32CoordinateSystem]), that will apply some scale
 /// and offset transformation.
 pub type LasPoint = GenericPoint<I32Position>;
 

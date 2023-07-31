@@ -11,7 +11,7 @@ use lidarserv_common::las::I32LasReadWrite;
 use lidarserv_common::nalgebra::Point3;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use lidarserv_common::query::view_frustum::ViewFrustumQuery;
-use log::{debug, info, trace};
+use log::{debug, info};
 use std::io::Cursor;
 use std::net::SocketAddr;
 use std::sync::Arc;

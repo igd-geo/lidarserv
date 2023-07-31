@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use ciborium::de::from_reader;
 use log::{debug, info};
 use csv::Writer;
 use crate::geometry::grid::{GridCell, LodLevel};
@@ -106,16 +105,16 @@ impl AttributeIndex {
                 debug!("Cell {:?} overlaps with bounds: {}", grid_cell, is_in_bounds);
 
                 // also check histograms if enabled
-                if is_in_bounds && check_histogram && histograms.is_some() {
+                return if is_in_bounds && check_histogram && histograms.is_some() {
                     let histogram_check = histograms.as_ref().unwrap().is_attribute_range_in_histograms(bounds);
                     debug!("Cell {:?} overlaps with histogram: {}", grid_cell, histogram_check);
                     if !histogram_check {
                         info!("Cell {:?} overlaps with bounds, but not with histogram", grid_cell);
                     }
-                    return histogram_check;
+                    histogram_check
                 } else {
                     debug!("Returning: {}", is_in_bounds);
-                    return is_in_bounds
+                    is_in_bounds
                 }
             },
             None => {

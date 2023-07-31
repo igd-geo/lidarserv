@@ -175,7 +175,7 @@ where
 
     fn point_distance(
         &self,
-    ) -> <<Self::Point as PointType>::Position as crate::geometry::position::Position>::Component
+    ) -> <<Self::Point as PointType>::Position as Position>::Component
     {
         let example_cell = self.grid.cell_bounds(&GridCell { x: 0, y: 0, z: 0 });
         let min = example_cell.min::<I32Position>();
@@ -189,7 +189,7 @@ where
         &self,
         position: &<Self::Point as PointType>::Position,
     ) -> AABB<
-        <<Self::Point as PointType>::Position as crate::geometry::position::Position>::Component,
+        <<Self::Point as PointType>::Position as Position>::Component,
     > {
         let cell = self.grid.cell_at(position);
         self.grid.cell_bounds(&cell)
@@ -209,7 +209,7 @@ where
     fn bounding_box(
         &self,
     ) -> OptionAABB<
-        <<Self::Point as PointType>::Position as crate::geometry::position::Position>::Component,
+        <<Self::Point as PointType>::Position as Position>::Component,
     > {
         let mut bounds = OptionAABB::empty();
         for p in self.points.values() {
@@ -241,7 +241,7 @@ where
                     let dist = existing_entry.center.distance_to(point.position());
                     if dist < existing_entry.center_distance {
                         patch_rejected(&point, &mut existing_entry.point);
-                        std::mem::swap(&mut point, &mut existing_entry.point);
+                        mem::swap(&mut point, &mut existing_entry.point);
                         existing_entry.center_distance = dist;
                         self.dirty = true;
                     }
@@ -302,7 +302,7 @@ where
                     let existing_entry = o.get_mut();
                     if entry.center_distance < existing_entry.center_distance {
                         patch_rejected(&entry.point, &mut existing_entry.point);
-                        std::mem::swap(&mut entry, existing_entry);
+                        mem::swap(&mut entry, existing_entry);
                         self.dirty = true;
                     }
                     rejected.push(entry.point);

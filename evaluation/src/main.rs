@@ -2,7 +2,7 @@ use evaluation::indexes::create_octree_index;
 use evaluation::insertion_rate::measure_insertion_rate;
 use evaluation::latency::measure_latency;
 use evaluation::point::Point;
-use evaluation::queries::{aabb_full, ground_classification};
+use evaluation::queries::{aabb_full};
 use evaluation::query_performance::measure_query_performance;
 use evaluation::settings::{Base, EvaluationScript, MultiRun};
 use evaluation::thermal_throttle::processor_cooldown;
@@ -32,7 +32,7 @@ fn main() {
     info!("LidarServ Evaluation Tool {}", VERSION);
     dotenv::dotenv().ok();
     pretty_env_logger::init();
-    let started_at = time::OffsetDateTime::now_utc();
+    let started_at = OffsetDateTime::now_utc();
 
     // parse cli
     info!("Parsing CLI arguments");
@@ -113,7 +113,7 @@ fn main() {
     let start_date = started_at
         .format(&Rfc3339)
         .unwrap_or_else(|_| "unknown".to_string());
-    let end_date = time::OffsetDateTime::now_utc()
+    let end_date = OffsetDateTime::now_utc()
         .format(&Rfc3339)
         .unwrap_or_else(|_| "unknown".to_string());
     let input_file_str = input_file.to_string_lossy().into_owned();

@@ -148,7 +148,7 @@ mod shaders {
         display: &Display,
         config: &ShaderConfig,
     ) -> Result<Program, ProgramCreationError> {
-        let mut vertex_shader = self::shader_src_parts::POINT_VERT.to_owned();
+        let mut vertex_shader = shader_src_parts::POINT_VERT.to_owned();
 
         vertex_shader += &match config.point_color {
             PointColorShader::Fixed => shader_src_parts::FN_COLOR_CONST.to_owned(),
@@ -172,7 +172,7 @@ mod shaders {
             PointSizeShader::Depth => shader_src_parts::FN_SIZE_DEPTH,
         };
 
-        let mut fragment_shader = self::shader_src_parts::POINT_FRAG.to_owned();
+        let mut fragment_shader = shader_src_parts::POINT_FRAG.to_owned();
 
         fragment_shader += match config.point_shape {
             PointShape::Square => shader_src_parts::FN_SHAPE_SQUARE,
@@ -279,7 +279,7 @@ struct PointCloudDrawCall {
 impl PointCloudDrawCall {
     fn new(
         settings: &PointCloudRenderSettings,
-        program_manager: &mut self::shaders::ProgramManager,
+        program_manager: &mut ProgramManager,
         display: &Display,
         position_buffer: &GpuVertexData,
         attribute_buffers: &[GpuAttribute],
@@ -1036,7 +1036,7 @@ impl PointCloudsRenderer {
             view_projection_matrix: &Matrix4<f64>,
         ) -> RendererResult<()>
         where
-            F: glium::Surface + ?Sized,
+            F: Surface + ?Sized,
         {
             frame_buffer.clear_color_and_depth((0.0, 0.0, 0.0, 0.0), 1.0);
             for cloud in point_clouds.values() {

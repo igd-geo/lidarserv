@@ -7,7 +7,7 @@ use serde_json::json;
 use std::thread;
 use std::time::{Duration, Instant};
 use log::info;
-use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressState, ProgressStyle};
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 
 pub fn measure_insertion_rate<I>(
     index: &mut I,

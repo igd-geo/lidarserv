@@ -31,7 +31,7 @@ pub struct IndexInfo<'a> {
     pub point_record_format: u8
 }
 
-/// object safe wrapper for a point cloud index, otherwise very similar to [lidarserv_common::index::Index].
+/// object safe wrapper for a point cloud index, otherwise very similar to [Index].
 pub trait DynIndex: Send + Sync
 {
     fn index_info(&self) -> IndexInfo;

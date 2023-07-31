@@ -586,7 +586,7 @@ impl<K, V, F, D> PageManagerInner<K, V, F, D> {
         let interval = Duration::from_secs(1);
         let now = Instant::now();
         let mut count = 0;
-        for (key, entry) in &self.cache.entries {
+        for (_key, entry) in &self.cache.entries {
             if now - entry.data.last_change < interval {
                 count += 1;
             }

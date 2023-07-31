@@ -31,7 +31,7 @@ async fn network_thread(args: Args) -> Result<(), LidarServerError> {
 
     // connect
     info!("Connecting to server at {}:{}", args.host, args.port);
-    let (exit_sender, mut exit_receiver) = tokio::sync::broadcast::channel(1);
+    let (_exit_sender, mut exit_receiver) = tokio::sync::broadcast::channel(1);
     let client = ViewerClient::connect((args.host, args.port), &mut exit_receiver).await?;
 
     // create channel
@@ -91,24 +91,24 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
             false => ScanDirection::RightToLeft,
         };
         // needed for this point format
-        let mut classification = point.attribute().classification as u8;
+        let mut classification = point.attribute().classification;
         if classification > 31 {
             classification = 31;
         }
         let point = Point {
-            x: point.position().x() as f64,
-            y: point.position().y() as f64,
-            z: point.position().z() as f64,
-            intensity: point.attribute().intensity as u16,
-            return_number: point.attribute().return_number as u8,
-            number_of_returns: point.attribute().number_of_returns as u8,
+            x: point.position().x(),
+            y: point.position().y(),
+            z: point.position().z(),
+            intensity: point.attribute().intensity,
+            return_number: point.attribute().return_number,
+            number_of_returns: point.attribute().number_of_returns,
             scan_direction: direction,
             is_edge_of_flight_line: point.attribute().edge_of_flight_line,
             classification: Classification::new(classification).unwrap_or(Classification::new(0).unwrap()),
             scan_angle: point.attribute().scan_angle_rank as f32,
-            user_data: point.attribute().user_data as u8,
-            point_source_id: point.attribute().point_source_id as u16,
-            gps_time: Option::from(point.attribute().gps_time as f64),
+            user_data: point.attribute().user_data,
+            point_source_id: point.attribute().point_source_id,
+            gps_time: Option::from(point.attribute().gps_time),
             color: Option::from(Color::new(point.attribute().color.0, point.attribute().color.1, point.attribute().color.2)),
             .. Default::default()
         };

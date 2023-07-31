@@ -37,7 +37,7 @@ pub(crate) mod private {
 
 /// This trait is implemented by each render backend,
 /// allowing to run the render thread with that backend.
-pub trait RenderThreadBuilderExt: private::RenderThreadBuilder {
+pub trait RenderThreadBuilderExt: RenderThreadBuilder {
     /// Runs the render thread.
     ///
     /// Once the renderer is fully initialized, the provided callback will be called with
