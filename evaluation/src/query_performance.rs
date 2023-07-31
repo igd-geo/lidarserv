@@ -6,9 +6,10 @@ use serde_json::json;
 use std::time::Instant;
 use log::{debug, info};
 use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
+use crate::queries::*;
 
 pub fn measure_query_performance<I>(
-    index: I,
+    mut index: I,
 ) -> serde_json::value::Value
 where
     I: Index<Point>,
