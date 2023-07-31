@@ -26,12 +26,15 @@ pub struct OctreeFileHandle<Page> {
     _phantom: PhantomData<fn(&Page) -> Page>,
 }
 
+/// Thread safe octree Page in memory, either as binary or as node.
 pub struct Page<Sampl, Point> {
     binary: RwLock<Option<Arc<Vec<u8>>>>,
     node: RwLock<Option<SharedNodeResult<Sampl, Point>>>,
 }
 
 #[derive(Clone)]
+/// Octree Node representation.
+/// Sampling contains the points.
 pub struct Node<Sampl, Point> {
     pub sampling: Sampl,
     pub bogus_points: Vec<Point>,
@@ -54,6 +57,7 @@ where
     Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
     Sampl: Sampling<Point = Point>,
 {
+    /// Create a new page from binary representation.
     pub fn from_binary(data: Vec<u8>) -> Self {
         Page {
             binary: RwLock::new(Some(Arc::new(data))),
@@ -61,6 +65,7 @@ where
         }
     }
 
+    /// Create a new page from node struct.
     pub fn from_node(node: Node<Sampl, Point>) -> Self {
         Page {
             binary: RwLock::new(None),
@@ -68,6 +73,8 @@ where
         }
     }
 
+    /// Return the binary representation of the page.
+    /// If not present, convert the node to binary.
     pub fn get_binary(&self, loader: &I32LasReadWrite) -> Arc<Vec<u8>> {
         // try getting existing
         {
@@ -97,6 +104,8 @@ where
         arc
     }
 
+    /// Return all points in the page.
+    /// If node is not present, parse the binary representation.
     pub fn get_points(&self, loader: &I32LasReadWrite) -> Result<Vec<Point>, ReadLasError> {
         // try to get points from node
         {
@@ -117,6 +126,8 @@ where
         loader.read_las(cursor).map(|las| las.points)
     }
 
+    /// Return the node struct of the page.
+    /// If not present, parse the binary representation.
     pub fn get_node<F>(
         &self,
         loader: &I32LasReadWrite,

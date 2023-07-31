@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use serde_json::json;
 use thiserror::Error;
 
+/// Directory of all existing grid cells.
+/// Only keeps track of existence of grid cells, not their content.
 pub struct GridCellDirectory {
     // each element of vector is a lod level
     cells: Vec<HashSet<GridCell>>,

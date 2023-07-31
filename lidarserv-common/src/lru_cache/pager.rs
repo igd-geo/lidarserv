@@ -70,12 +70,17 @@ struct File<F> {
 
 static DEFAULT_TRACY_PLOT: Plot = create_plot!("Page LRU Cache size");
 
+/// Manages all existing nodes and the cache.
 pub struct PageManager<P, K, V, F, D> {
     loader: P,
     inner: Mutex<PageManagerInner<K, V, F, D>>,
     wakeup: Condvar,
 }
 
+/// Inner part of the PageManager, that is protected by a mutex.
+/// Holds the actual cache and the directory of all existing pages.
+/// * max_size is the maximum number of pages that can be stored in the cache.
+/// * plot is a tracy plot that is updated with the current cache size.
 struct PageManagerInner<K, V, F, D> {
     cache: Lru<K, Page<V, F>>,
     directory: D,
@@ -84,7 +89,7 @@ struct PageManagerInner<K, V, F, D> {
     plot: &'static Plot,
 }
 
-/// Responsible for loading pages to/from disk.
+/// Responsible for loading pages to/from disk (filename handling).
 pub trait PageLoader {
     type FileName;
     type FileHandle: PageFileHandle;
@@ -164,6 +169,8 @@ where
     F: PageFileHandle<Data = V>,
     D: PageDirectory<Key = K>,
 {
+    /// Creates a new PageManager.
+    /// Only needed when server/evaluation is started.
     pub fn new(page_loader: P, page_directory: D, max_size: usize) -> Self {
         PageManager {
             loader: page_loader,
@@ -201,11 +208,13 @@ where
         (lock.max_size, lock.cache.len())
     }
 
+    /// Returns the inner page directory.
     pub fn directory(&self) -> DirectoryGuard<'_, K, V, F, D> {
         DirectoryGuard(self.inner.lock().unwrap())
     }
 
     #[inline]
+    /// Used to overwrite page at key/node_id with new_value.
     pub fn store(&self, key: &K, new_value: V) {
         self.store_arc(key, Arc::new(new_value))
     }
@@ -261,11 +270,14 @@ where
     }
 
     #[inline]
+    /// Load page. If it does not exist or an error occurs, return default page.
+    /// Internally calls [Self::load]
     pub fn load_or_default(&self, key: &K) -> Result<Arc<V>, CacheLoadError> {
         self.load(key)
             .map(|maybe_value| maybe_value.unwrap_or_else(|| Arc::new(V::default())))
     }
 
+    /// Load a page. If it is not in the cache, load it from disk.
     pub fn load(&self, key: &K) -> Result<Option<Arc<V>>, CacheLoadError> {
         let s = span!("load");
 
