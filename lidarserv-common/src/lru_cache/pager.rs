@@ -6,6 +6,7 @@ use std::hash::Hash;
 use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::time::{Duration, Instant};
 use thiserror::Error;
 use tracy_client::{create_plot, Plot};
 
@@ -20,6 +21,9 @@ struct Page<V, F> {
     /// the version number is incremented each time the value is changed, allowing
     /// changes to the value to be detected.
     version_number: u32,
+
+    /// the last time the page was accessed. Timestamp
+    last_change: Instant,
 
     /// the actual value stored in the page.
     /// lock for synchronizing mutable access to the data.
@@ -68,7 +72,8 @@ struct File<F> {
     handle: F,
 }
 
-static DEFAULT_TRACY_PLOT: Plot = create_plot!("Page LRU Cache size");
+static DEFAULT_CACHE_SIZE_PLOT: Plot = create_plot!("Page LRU Cache size");
+static DEFAULT_RECENTLY_USED_PLOT: Plot = create_plot!("Page LRU Cache recently used");
 
 /// Manages all existing nodes and the cache.
 pub struct PageManager<P, K, V, F, D> {
@@ -80,13 +85,15 @@ pub struct PageManager<P, K, V, F, D> {
 /// Inner part of the PageManager, that is protected by a mutex.
 /// Holds the actual cache and the directory of all existing pages.
 /// * max_size is the maximum number of pages that can be stored in the cache.
-/// * plot is a tracy plot that is updated with the current cache size.
+/// * num_pages_plot is a tracy plot that is updated with the current cache size.
+/// * recently_used_plot is a tracy plot that is updated with the number of pages that were
 struct PageManagerInner<K, V, F, D> {
     cache: Lru<K, Page<V, F>>,
     directory: D,
     max_size: usize,
     next_page_number: u32,
-    plot: &'static Plot,
+    num_pages_plot: &'static Plot,
+    recently_used_plot: &'static Plot,
 }
 
 /// Responsible for loading pages to/from disk (filename handling).
@@ -179,7 +186,8 @@ where
                 directory: page_directory,
                 max_size,
                 next_page_number: 0,
-                plot: &DEFAULT_TRACY_PLOT,
+                num_pages_plot: &DEFAULT_CACHE_SIZE_PLOT,
+                recently_used_plot: &DEFAULT_RECENTLY_USED_PLOT,
             }),
             wakeup: Condvar::new(),
         }
@@ -237,6 +245,7 @@ where
                     })),
                     data: Later::new(Ok(new_value)),
                     version_number: 1,
+                    last_change: Instant::now(),
                     is_in_cleanup: 0,
                     page_number: cache_lock.next_page_number,
                     dirty: true,
@@ -245,6 +254,7 @@ where
                 cache_lock.next_page_number += 1;
                 cache_lock.cache.insert(key.clone(), page);
                 cache_lock.plot_cache_size();
+                cache_lock.plot_recently_used();
                 self.wakeup.notify_all();
             }
 
@@ -300,6 +310,7 @@ where
                     let page = Page {
                         file: Arc::clone(&file),
                         version_number: 0,
+                        last_change: Instant::now(),
                         data: later,
                         is_in_cleanup: 0,
                         page_number: cache_lock.next_page_number,
@@ -308,6 +319,7 @@ where
                     cache_lock.next_page_number += 1;
                     cache_lock.cache.insert(key.clone(), page);
                     cache_lock.plot_cache_size();
+                    cache_lock.plot_recently_used();
                     drop(cache_lock);
                     self.wakeup.notify_all();
 
@@ -375,6 +387,7 @@ where
         };
         cache_lock.cache.remove(&key);
         cache_lock.plot_cache_size();
+        cache_lock.plot_recently_used();
         self.wakeup.notify_all();
     }
 
@@ -405,6 +418,7 @@ where
         if !page.dirty {
             cache_lock.cache.remove(&key);
             cache_lock.plot_cache_size();
+            cache_lock.plot_recently_used();
             self.wakeup.notify_all();
             return Ok(true);
         }
@@ -490,6 +504,7 @@ where
         //   the cache, it is also impossible to create even newer versions.
         cache_lock.cache.remove(&key);
         cache_lock.plot_cache_size();
+        cache_lock.plot_recently_used();
         self.wakeup.notify_all();
         drop(s3);
         drop(s);
@@ -550,6 +565,7 @@ impl<V, F> Clone for Page<V, F> {
             page_number: self.page_number,
             file: Arc::clone(&self.file),
             version_number: self.version_number,
+            last_change: self.last_change,
             data: self.data.clone(),
             is_in_cleanup: self.is_in_cleanup,
             dirty: self.dirty,
@@ -560,7 +576,22 @@ impl<V, F> Clone for Page<V, F> {
 impl<K, V, F, D> PageManagerInner<K, V, F, D> {
     #[inline]
     fn plot_cache_size(&self) {
-        self.plot.point(self.cache.len() as f64)
+        self.num_pages_plot.point(self.cache.len() as f64)
+    }
+
+    /// Plots the number of pages that were used in the defined time interval.
+    /// Only counts pages that are still in the cache.
+    #[inline]
+    fn plot_recently_used(&self) {
+        let interval = Duration::from_secs(1);
+        let now = Instant::now();
+        let mut count = 0;
+        for (key, entry) in &self.cache.entries {
+            if now - entry.data.last_change < interval {
+                count += 1;
+            }
+        }
+        self.recently_used_plot.point(count as f64)
     }
 }
 

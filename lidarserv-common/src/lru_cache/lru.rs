@@ -4,13 +4,13 @@ use std::{mem, ptr};
 
 /// A map with last recently used ordering
 pub struct Lru<K, V> {
-    entries: HashMap<K, Entry<K, V>>,
+    pub entries: HashMap<K, Entry<K, V>>,
     first: Option<K>,
     last: Option<K>,
 }
 
-struct Entry<K, V> {
-    data: V,
+pub struct Entry<K, V> {
+    pub data: V,
     next: Option<K>,
     prev: Option<K>,
 }
@@ -34,6 +34,7 @@ impl<K, V> Lru<K, V> {
     pub fn len(&self) -> usize {
         self.entries.len()
     }
+
 }
 
 impl<K, V> Lru<K, V>
