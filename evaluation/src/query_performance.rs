@@ -15,6 +15,14 @@ where
 {
     json!({
         "ground_classification": measure_one_query(&mut index, aabb_full(), ground_classification()),
+        "no_cars_classification": measure_one_query(&mut index, aabb_full(), no_cars_classification()),
+        "high_intensity": measure_one_query(&mut index, aabb_full(), high_intensity()),
+        "low_intensity": measure_one_query(&mut index, aabb_full(), low_intensity()),
+        "one_return": measure_one_query(&mut index, aabb_full(), one_return()),
+        "time_range": measure_one_query(&mut index, aabb_full(), time_range()),
+        "full_red_part": measure_one_query(&mut index, aabb_full(), full_red_part()),
+        "mixed_ground_and_time": measure_one_query(&mut index, aabb_full(), mixed_ground_and_time()),
+        "mixed_ground_and_one_return": measure_one_query(&mut index, aabb_full(), mixed_ground_and_one_return()),
     })
 }
 
