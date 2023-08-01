@@ -6,12 +6,17 @@ import matplotlib as mpl
 import numpy as np
 
 PROJECT_ROOT = join(dirname(__file__), "..")
-INPUT_FILES_PARAMETER_OVERVIEW_V1 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+INPUT_FILES_PARAMETER_OVERVIEW_V1 = [join(PROJECT_ROOT, "evaluation/results/2023-07-24_macbook_parameter_overview_v1/", file) for file in [
     "macbook_parameter_overview_v1_2023-07-24_1.json",
 ]]
 
-INPUT_FILES_PARAMETER_OVERVIEW_V2 = [join(PROJECT_ROOT, "evaluation/results/", file) for file in [
+INPUT_FILES_PARAMETER_OVERVIEW_V2 = [join(PROJECT_ROOT, "evaluation/results/2023-07-25_macbook_parameter_overview_v2/", file) for file in [
     "macbook_parameter_overview_v2_2023-07-25_1.json",
+]]
+
+INPUT_FILES_CACHE_SIZE_COMPARISON = [join(PROJECT_ROOT, "evaluation/results/2023-07-31_cache_size_comparisons/", file) for file in [
+    "frankfurt_2023-08-01_1.json",
+    "freiburg_2023-08-01_1.json",
 ]]
 
 
@@ -64,6 +69,21 @@ def main():
         plot_insertion_rate_by_nr_threads(
             test_runs=data["runs"]["num_threads_compression"],
             filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
+        )
+
+    for input_file in INPUT_FILES_CACHE_SIZE_COMPARISON:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_rate_by_cache_size(
+            test_runs=data["runs"]["cache_size"],
+            filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
         )
 
 def make_y_insertion_rate(ax, test_runs):

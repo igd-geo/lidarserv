@@ -1,0 +1,32 @@
+data_folder = "data/evaluation"
+output_file = "evaluation/results/2023_07_31_query_overview/query_overview_%d_%i.json"
+points_file = "data/frankfurt_big.las"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = true
+
+[defaults]
+type = "Octree"
+priority_function = "TaskAge"
+num_threads = 136
+cache_size = 10000
+node_size = 1000
+compression = false
+nr_bogus_points = [0, 0] # keep it deactived here to prevent wrong results with queries
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = true
+latency.enable = false
+enable_attribute_index = true
+enable_histogram_acceleration = true
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 25
+bin_count_color = 25
+
+[runs.querying]
+# only one run for all queries
+# indexing frankfurt_big takes long enough anyway
