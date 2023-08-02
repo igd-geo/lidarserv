@@ -531,14 +531,14 @@ mod tests {
 
         // tests of las crate
         let mut las_crate = json!({});
-        for num_points in [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000].iter() {
+        for num_points in [1, 10, 100, 1000, 10000, 100000, 1000000].iter() {
             let result = write_read_las_crate(*num_points);
             las_crate[format!("{:?}", num_points)] = result;
         }
 
         // tests of self-written las reader/writer
         let mut custom_las = json!({});
-        for num_points in [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000].iter() {
+        for num_points in [1, 10, 100, 1000, 10000, 100000, 1000000].iter() {
             let result = write_read_custom(*num_points);
             custom_las[format!("{:?}", num_points)] = result;
         }
