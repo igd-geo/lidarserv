@@ -128,7 +128,7 @@ impl LasPointAttributeBounds {
             Some((min_val, max_val)) => {
                 value >= min_val && value <= max_val
             }
-            None => false,
+            None => true,
         }
     }
 
