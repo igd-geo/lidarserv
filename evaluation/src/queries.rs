@@ -203,7 +203,7 @@ pub fn full_red_part() -> LasPointAttributeBounds {
         user_data: None,
         point_source_id: None,
         gps_time: None,
-        color_r: Some((255, 255)),
+        color_r: Some((250, 255)),
         color_g: None,
         color_b: None,
     }
