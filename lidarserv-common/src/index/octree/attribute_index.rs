@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use log::{debug, info};
+use log::{debug, info, trace};
 use csv::Writer;
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
@@ -117,18 +117,18 @@ impl AttributeIndex {
             Some((_, (cell_bounds, histograms))) => {
                 // check bounds
                 let is_in_bounds = bounds.is_bounds_overlapping_bounds(&cell_bounds);
-                debug!("Cell {:?} overlaps with bounds: {}", grid_cell, is_in_bounds);
+                trace!("Cell {:?} overlaps with bounds: {}", grid_cell, is_in_bounds);
 
                 // also check histograms if enabled
                 return if is_in_bounds && check_histogram && histograms.is_some() {
                     let histogram_check = histograms.as_ref().unwrap().is_attribute_range_in_histograms(bounds);
-                    debug!("Cell {:?} overlaps with histogram: {}", grid_cell, histogram_check);
+                    trace!("Cell {:?} overlaps with histogram: {}", grid_cell, histogram_check);
                     if !histogram_check {
-                        info!("Cell {:?} overlaps with bounds, but not with histogram", grid_cell);
+                        trace!("Cell {:?} overlaps with bounds, but not with histogram", grid_cell);
                     }
                     histogram_check
                 } else {
-                    debug!("Returning: {}", is_in_bounds);
+                    trace!("Returning: {}", is_in_bounds);
                     is_in_bounds
                 }
             },
