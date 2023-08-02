@@ -74,6 +74,7 @@ pub fn read_points(
 }
 
 pub fn reset_data_folder(settings: &settings::Base) {
+    info!("Resetting data folder...");
     let data_folder: PathBuf = settings.data_folder.clone();
     std::fs::remove_dir_all(&data_folder).unwrap();
     std::fs::create_dir(&data_folder).unwrap();

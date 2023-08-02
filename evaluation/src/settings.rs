@@ -25,6 +25,7 @@ pub struct Base {
     pub trajectory_file: PathBuf,
     pub las_point_record_format: u8,
     pub enable_cooldown: bool,
+    pub use_existing_index: bool,
 
     #[serde(rename = "output_file")]
     pub output_file_pattern: String,

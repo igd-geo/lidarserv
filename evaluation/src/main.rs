@@ -80,12 +80,18 @@ fn main() {
     };
 
     // read point data
-    info!("Reading point data");
+    let mut points: Vec<Point> = Vec::new();
     let coordinate_system = I32CoordinateSystem::from_las_transform(
         Vector3::new(0.001, 0.001, 0.001),
         Vector3::new(0.0, 0.0, 0.0),
     );
-    let points = read_points(&coordinate_system, &config.base);
+    if config.base.use_existing_index {
+        info!("Using existing index, skipping point data read");
+    } else {
+        info!("Reading point data");
+        points = read_points(&coordinate_system, &config.base);
+    }
+
 
     // run tests
     info!("Running tests");
@@ -276,14 +282,24 @@ where
     I::Reader: Send + 'static,
     F: Fn() -> I,
 {
-    // measure insertion rate
-    reset_data_folder(base_config);
+    // reset data folder if necessary
+    if !base_config.use_existing_index {
+        reset_data_folder(base_config);
+    }
+
+    // Create index
     let mut index = make_index();
-    if enable_cooldown {processor_cooldown()};
-    info!("Measuring insertion rate...");
-    let (result_insertion_rate, max_pps) =
-        measure_insertion_rate(&mut index, points, &run.insertion_rate.single());
-    info!("Results: {}", &result_insertion_rate);
+
+    // measure insertion rate
+    let mut max_pps= 0.0;
+    let mut result_insertion_rate = serde_json::Value::Null;
+    if !base_config.use_existing_index {
+        if enable_cooldown { processor_cooldown() };
+        info!("Measuring insertion rate...");
+        let (result_insertion_rate, max_pps) =
+            measure_insertion_rate(&mut index, points, &run.insertion_rate.single());
+        info!("Results: {}", &result_insertion_rate);
+    }
 
     // store index info (e.g. number of nodes)
     let index_info = index.index_info();
