@@ -22,6 +22,7 @@ pub struct AttributeIndex {
     index: Arc<Index>,
     enable_histograms: bool,
     file_name: PathBuf,
+    dirty: Arc<RwLock<bool>>,
 }
 
 impl AttributeIndex {
@@ -35,6 +36,7 @@ impl AttributeIndex {
                 index,
                 enable_histograms: false,
                 file_name,
+                dirty: Arc::new(RwLock::new(false))
             };
         } else {
             // index does not exist, create new one
@@ -47,13 +49,25 @@ impl AttributeIndex {
                 index: Arc::new(index),
                 enable_histograms: false,
                 file_name,
+                dirty: Arc::new(RwLock::new(true))
             }
         }
+    }
+
+    /// Checks, if index has been updated since last save
+    pub fn is_dirty(&self) -> bool {
+        *self.dirty.read().unwrap()
+    }
+
+    /// Sets dirty flag of index
+    pub fn set_dirty(&self, dirty: bool) {
+        *self.dirty.write().unwrap() = dirty;
     }
 
     /// sets the histogram acceleration flag
     pub fn set_histogram_acceleration(&mut self, enable: bool) {
         self.enable_histograms = enable;
+        self.set_dirty(true);
     }
 
     /// Updates attribute bounds and histograms for a grid cell using new bounds and histograms
@@ -82,10 +96,11 @@ impl AttributeIndex {
                 histogram.as_mut().unwrap().add_histograms(&new_histogram.as_ref().unwrap());
             }
         }
+        self.set_dirty(true);
     }
 
     /// Updates attribute bounds for a grid cell by attributes
-    pub fn update_by_attributes(&self, lod: LodLevel, grid_cell: &GridCell, attributes: &LasPointAttributes) {
+    pub fn update_by_attributes(&mut self, lod: LodLevel, grid_cell: &GridCell, attributes: &LasPointAttributes) {
         let bounds = LasPointAttributeBounds::from_attributes(attributes);
         self.update_bounds_and_histograms(lod, grid_cell, &bounds, &None);
     }
@@ -176,6 +191,17 @@ impl AttributeIndex {
         // DEBUG CSV OUTPUT
         // self.write_to_csv().unwrap();
 
+        Ok(())
+    }
+
+    /// Writes attribute index to file if it is dirty
+    pub fn write_to_file_if_dirty(&self) -> Result<(), std::io::Error> {
+        if self.is_dirty() {
+            self.write_to_file()?;
+            self.set_dirty(false)
+        } else {
+            debug!("Attribute index is not dirty, not writing to file");
+        }
         Ok(())
     }
 
@@ -398,7 +424,7 @@ mod tests {
         delete_file(&PathBuf::from("test.bin"));
 
         // create attribute index
-        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
         let grid_cell = GridCell{ x: 0, y: 0, z: 0};
 
@@ -436,7 +462,7 @@ mod tests {
 
         // create attribute index
         println!("Creating attribute index");
-        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
         let grid_cell = GridCell{ x: 0, y: 0, z: 0};
 
@@ -497,7 +523,7 @@ mod tests {
         // delete file if exists
         delete_file(&PathBuf::from("test.bin"));
 
-        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
         let grid_cell = GridCell{ x: 0, y: 0, z: 0};
 

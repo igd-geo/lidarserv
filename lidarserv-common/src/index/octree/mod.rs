@@ -155,7 +155,7 @@ where
         debug!("Flushing attribute index");
         let attribute_index = &self.inner.attribute_index;
         match attribute_index {
-            Some(index) => index.write_to_file().map_err(|e| FlushError(format!("{}", e)))?,
+            Some(index) => index.write_to_file_if_dirty().map_err(|e| FlushError(format!("{}", e)))?,
             None => {}
         }
         Ok(())
