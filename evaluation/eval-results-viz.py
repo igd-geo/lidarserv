@@ -4,6 +4,7 @@ import json
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
+from matplotlib.lines import Line2D
 
 PROJECT_ROOT = join(dirname(__file__), "..")
 INPUT_FILES_PARAMETER_OVERVIEW_V1 = [join(PROJECT_ROOT, "evaluation/results/2023-07-24_macbook_parameter_overview_v1/", file) for file in [
@@ -17,6 +18,11 @@ INPUT_FILES_PARAMETER_OVERVIEW_V2 = [join(PROJECT_ROOT, "evaluation/results/2023
 INPUT_FILES_CACHE_SIZE_COMPARISON = [join(PROJECT_ROOT, "evaluation/results/2023-07-31_cache_size_comparisons/", file) for file in [
     "frankfurt_2023-08-01_1.json",
     "freiburg_2023-08-01_1.json",
+]]
+
+INPUT_FILES_QUERY_OVERVIEW = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file in [
+    "query_overview_2023-08-02_1.json",
+    "query_overview_2023-08-02_2.json",
 ]]
 
 
@@ -85,6 +91,29 @@ def main():
             test_runs=data["runs"]["cache_size"],
             filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
         )
+
+    for input_file in INPUT_FILES_QUERY_OVERVIEW:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_query_by_num_points(
+            test_runs=data["runs"]["querying"],
+            filename=join(output_folder, "query-by-num-points.pdf"),
+            nr_points=data["env"]["input_file_nr_points"]
+        )
+
+        plot_query_by_time(
+            test_runs=data["runs"]["querying"],
+            filename=join(output_folder, "query-by-time.pdf"),
+        )
+
+
 
 def make_y_insertion_rate(ax, test_runs):
     ys = [i["results"]["insertion_rate"]["insertion_rate_points_per_sec"] for i in test_runs]
@@ -465,6 +494,82 @@ def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
+def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
+    fig, ax = plt.subplots(figsize=[10, 6])
+
+    queries = list(test_runs[0]["results"]["query_performance"].keys())
+    subqueries = ["only_node_acc", "only_full_acc", "raw_point_filtering"]
+
+    bar_width = 0.15
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+
+    for run in test_runs:
+        for p in range(len(queries)):
+
+            # number of points per subquery
+            plt.bar(p, nr_points, bar_width, label="nr_points", color="#DB4437")
+            for i, subquery in enumerate(subqueries):
+
+                nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
+                plt.bar([p + (i+1)*bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i+1])
+
+
+        plt.xlabel('Queries')
+        plt.ylabel('Number of Points')
+        plt.title(title)
+        plt.xticks([p + bar_width*2 for p in index], queries, rotation=90)
+
+        custom_legend_labels = ['All points', 'Range Filter', 'Range and Histogram Filter', 'Point Filter']  # Custom legend labels
+        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title)
+        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
+def plot_query_by_time(test_runs, filename, title=None):
+    fig, ax = plt.subplots(figsize=[10, 6])
+
+    queries = list(test_runs[0]["results"]["query_performance"].keys())
+    subqueries = ["raw_point_filtering", "point_filtering_with_node_acc", "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
+
+    bar_width = 0.15
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#7CBB00']
+
+    for run in test_runs:
+        for p in range(len(queries)):
+
+            # number of points per subquery
+            for i, subquery in enumerate(subqueries):
+                nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
+                plt.bar([p + i*bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
+
+
+        plt.xlabel('Queries')
+        plt.ylabel('Execution Time | seconds')
+        plt.title(title)
+        plt.xticks([p + bar_width*2 for p in index], queries, rotation=90)
+
+        custom_legend_labels = ['Point Filter', 'Point Filter + Range Acceleration', 'Point Filter + Full Acceleration', 'Only Range Acceleration', 'Only Range + Full Acceleration']  # Custom legend labels
+        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title)
+        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
+
 
 
 def rename_tpf(tpf):

@@ -1,17 +1,19 @@
-data_folder = "data/evaluation"
-output_file = "evaluation/results/2023_07_31_query_overview/query_overview_%d_%i.json"
+data_folder = "data/frankfurt_big_octree"
+output_file = "evaluation/results/2023-08-02_query_overview/query_overview_%d_%i.json"
 points_file = "data/frankfurt_big.las"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
-enable_cooldown = true
+enable_cooldown = false
+use_existing_index = false
+
 
 [defaults]
 type = "Octree"
 priority_function = "TaskAge"
 num_threads = 136
-cache_size = 10000
-node_size = 1000
+cache_size = 1000
+node_size = 10000
 compression = false
 nr_bogus_points = [0, 0] # keep it deactived here to prevent wrong results with queries
 insertion_rate.target_point_pressure = 1_000_000

@@ -53,7 +53,7 @@ fn main() {
     };
 
     // read input file
-    info!("Reading input file");
+    info!("Reading input file {}", input_file.to_string_lossy());
     let mut f = std::fs::File::open(&input_file).unwrap();
     let mut config_toml = String::new();
     f.read_to_string(&mut config_toml).unwrap();
@@ -80,17 +80,11 @@ fn main() {
     };
 
     // read point data
-    let mut points: Vec<Point> = Vec::new();
     let coordinate_system = I32CoordinateSystem::from_las_transform(
         Vector3::new(0.001, 0.001, 0.001),
         Vector3::new(0.0, 0.0, 0.0),
     );
-    if config.base.use_existing_index {
-        info!("Using existing index, skipping point data read");
-    } else {
-        info!("Reading point data");
-        points = read_points(&coordinate_system, &config.base);
-    }
+    let points = read_points(&coordinate_system, &config.base);
 
 
     // run tests
@@ -128,6 +122,7 @@ fn main() {
             "version": VERSION,
             "hostname": hostname,
             "input_file": input_file_str,
+            "input_file_nr_points": points.len(),
             "started_at": start_date,
             "finished_at": end_date,
         },
