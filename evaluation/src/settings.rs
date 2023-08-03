@@ -87,9 +87,6 @@ pub struct SingleIndex {
     #[serde(default = "SingleIndex::default_cache_size")]
     pub cache_size: usize,
 
-    #[serde(default = "SingleIndex::default_node_size")]
-    pub node_size: usize,
-
     #[serde(default = "SingleIndex::default_compression")]
     pub compression: bool,
 
@@ -131,7 +128,6 @@ impl Default for SingleIndex {
             priority_function: TaskPriorityFunction::NrPointsWeightedByTaskAge,
             num_threads: 4,
             cache_size: 500,
-            node_size: 10000,
             compression: true,
             nr_bogus_points: (0, 0),
             enable_attribute_index: false,
@@ -160,9 +156,6 @@ pub struct MultiIndex {
 
     #[serde(default)]
     pub cache_size: Option<Vec<usize>>,
-
-    #[serde(default)]
-    pub node_size: Option<Vec<usize>>,
 
     #[serde(default)]
     pub compression: Option<Vec<bool>>,
@@ -226,7 +219,6 @@ impl MultiIndex {
         apply_default_vec!(self.typ <- defaults);
         apply_default_vec!(self.compression <- defaults);
         apply_default_vec!(self.num_threads <- defaults);
-        apply_default_vec!(self.node_size <- defaults);
         apply_default_vec!(self.nr_bogus_points <- defaults);
         apply_default_vec!(self.enable_attribute_index <- defaults);
         apply_default_vec!(self.enable_histogram_acceleration <- defaults);
@@ -246,36 +238,33 @@ impl MultiIndex {
                 for &typ in expect(&self.typ) {
                     for &compression in expect(&self.compression) {
                         for &num_threads in expect(&self.num_threads) {
-                            for &node_size in expect(&self.node_size) {
-                                for &nr_bogus_points in expect(&self.nr_bogus_points) {
-                                    for &enable_attribute_index in expect(&self.enable_attribute_index) {
-                                        for &enable_histogram_acceleration in expect(&self.enable_histogram_acceleration) {
-                                            for &bin_count_intensity in expect(&self.bin_count_intensity) {
-                                                for &bin_count_return_number in expect(&self.bin_count_return_number) {
-                                                    for &bin_count_classification in expect(&self.bin_count_classification) {
-                                                        for &bin_count_scan_angle_rank in expect(&self.bin_count_scan_angle_rank) {
-                                                            for &bin_count_user_data in expect(&self.bin_count_user_data) {
-                                                                for &bin_count_point_source_id in expect(&self.bin_count_point_source_id) {
-                                                                    for &bin_count_color in expect(&self.bin_count_color) {
-                                                                        results.push(SingleIndex {
-                                                                            typ,
-                                                                            priority_function,
-                                                                            num_threads,
-                                                                            cache_size,
-                                                                            node_size,
-                                                                            compression,
-                                                                            nr_bogus_points,
-                                                                            enable_attribute_index,
-                                                                            enable_histogram_acceleration,
-                                                                            bin_count_intensity,
-                                                                            bin_count_return_number,
-                                                                            bin_count_classification,
-                                                                            bin_count_scan_angle_rank,
-                                                                            bin_count_user_data,
-                                                                            bin_count_point_source_id,
-                                                                            bin_count_color,
-                                                                        })
-                                                                    }
+                            for &nr_bogus_points in expect(&self.nr_bogus_points) {
+                                for &enable_attribute_index in expect(&self.enable_attribute_index) {
+                                    for &enable_histogram_acceleration in expect(&self.enable_histogram_acceleration) {
+                                        for &bin_count_intensity in expect(&self.bin_count_intensity) {
+                                            for &bin_count_return_number in expect(&self.bin_count_return_number) {
+                                                for &bin_count_classification in expect(&self.bin_count_classification) {
+                                                    for &bin_count_scan_angle_rank in expect(&self.bin_count_scan_angle_rank) {
+                                                        for &bin_count_user_data in expect(&self.bin_count_user_data) {
+                                                            for &bin_count_point_source_id in expect(&self.bin_count_point_source_id) {
+                                                                for &bin_count_color in expect(&self.bin_count_color) {
+                                                                    results.push(SingleIndex {
+                                                                        typ,
+                                                                        priority_function,
+                                                                        num_threads,
+                                                                        cache_size,
+                                                                        compression,
+                                                                        nr_bogus_points,
+                                                                        enable_attribute_index,
+                                                                        enable_histogram_acceleration,
+                                                                        bin_count_intensity,
+                                                                        bin_count_return_number,
+                                                                        bin_count_classification,
+                                                                        bin_count_scan_angle_rank,
+                                                                        bin_count_user_data,
+                                                                        bin_count_point_source_id,
+                                                                        bin_count_color,
+                                                                    })
                                                                 }
                                                             }
                                                         }
@@ -439,5 +428,4 @@ impl MultiQueryPerfMeasurement {
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SystemUnderTest {
     Octree,
-    SensorPosTree,
 }

@@ -55,10 +55,6 @@ def main():
             test_runs=data["runs"]["cache_size"],
             filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
         )
-        plot_insertion_rate_by_node_size(
-            test_runs=data["runs"]["node_size"],
-            filename=join(output_folder, "insertion-rate-by-node_size.pdf")
-        )
 
     for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
         # read file
@@ -189,12 +185,6 @@ def make_x_nr_bogus_points(ax, test_runs):
     return [int(i["index"]["nr_bogus_points"][0]) for i in test_runs]
 
 
-def make_x_node_size(ax, test_runs):
-    ax.set_xlabel("Max Node Size | nr points")
-    ax.set_xscale("log")
-    return [int(i["index"]["node_size"]) for i in test_runs]
-
-
 def make_x_priority_function(ax, test_runs):
     labels = [rename_tpf(i["index"]["priority_function"]) for i in test_runs]
     xs = list(range(len(labels)))
@@ -240,46 +230,6 @@ def plot_latency_by_cache_size(test_runs, filename, title=None):
     ax: plt.Axes = fig.subplots()
     xs = make_x_cache_size(ax, test_runs)
     draw_y_latency(ax, xs, test_runs, x_log=True)
-    if title is not None:
-        ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-
-
-def plot_insertion_rate_by_node_size(test_runs, filename, title=None):
-    fig: plt.Figure = plt.figure()
-    ax: plt.Axes = fig.subplots()
-    xs = make_x_node_size(ax, test_runs)
-    ys = make_y_insertion_rate(ax, test_runs)
-    ax.scatter(xs, ys)
-    if title is not None:
-        ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-
-
-def plot_query_time_by_node_size(test_runs, filename, title=None):
-    fig: plt.Figure = plt.figure()
-    ax: plt.Axes = fig.subplots()
-    xs = make_x_node_size(ax, test_runs)
-    ys1 = [test_run["sensor_pos_index"]["query_performance"]["query_1"]["query_time_seconds"] +
-           test_run["sensor_pos_index"]["query_performance"]["query_1"]["load_time_seconds"] for test_run in test_runs]
-    ys2 = [test_run["sensor_pos_index"]["query_performance"]["query_2"]["query_time_seconds"] +
-           test_run["sensor_pos_index"]["query_performance"]["query_2"]["load_time_seconds"] for test_run in test_runs]
-    ys3 = [test_run["sensor_pos_index"]["query_performance"]["query_3"]["query_time_seconds"] +
-           test_run["sensor_pos_index"]["query_performance"]["query_3"]["load_time_seconds"] for test_run in test_runs]
-    # ax.scatter(xs, ys1, label="Query 1")
-    ax.scatter(xs, ys2, label="Query 2")
-    ax.scatter(xs, ys3, label="Query 3")
-    ax.legend()
-    if title is not None:
-        ax.set_title(title)
-    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-
-
-def plot_latency_by_node_size(test_runs, filename, title=None):
-    fig: plt.Figure = plt.figure()
-    ax: plt.Axes = fig.subplots()
-    xs = make_x_node_size(ax, test_runs)
-    draw_y_latency(ax, xs, test_runs, "sensor_pos_index", x_log=True)
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
