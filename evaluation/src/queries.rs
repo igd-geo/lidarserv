@@ -159,7 +159,7 @@ pub fn one_return() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
         return_number: None,
-        number_of_returns: Some((1, 1)),
+        number_of_returns: Some((1, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
         classification: None,
@@ -184,12 +184,13 @@ pub fn time_range() -> LasPointAttributeBounds {
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
-        gps_time: Some((-710108.82202797, 191462.59930070)),
+        gps_time: Some((350980318.906602, 350980380.2797588)),
         color_r: None,
         color_g: None,
         color_b: None,
     }
 }
+
 
 pub fn full_red_part() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
@@ -203,7 +204,7 @@ pub fn full_red_part() -> LasPointAttributeBounds {
         user_data: None,
         point_source_id: None,
         gps_time: None,
-        color_r: Some((250, 255)),
+        color_r: Some((58982, 65535)),
         color_g: None,
         color_b: None,
     }
@@ -220,7 +221,7 @@ pub fn mixed_ground_and_time() -> LasPointAttributeBounds {
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
-        gps_time: Some((-710108.82202797, 191462.59930070)),
+        gps_time: Some((350980318.906602, 350980380.2797588)),
         color_r: None,
         color_g: None,
         color_b: None,
@@ -231,7 +232,7 @@ pub fn mixed_ground_and_one_return() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
         return_number: None,
-        number_of_returns: Some((1, 1)),
+        number_of_returns: Some((1, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
         classification: Some((11,11)),

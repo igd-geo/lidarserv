@@ -23,6 +23,7 @@ INPUT_FILES_CACHE_SIZE_COMPARISON = [join(PROJECT_ROOT, "evaluation/results/2023
 INPUT_FILES_QUERY_OVERVIEW = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file in [
     "query_overview_2023-08-02_1.json",
     "query_overview_2023-08-02_2.json",
+    "query_overview_2023-08-03_2.json",
 ]]
 
 
