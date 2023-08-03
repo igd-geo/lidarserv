@@ -293,9 +293,11 @@ where
     if !base_config.use_existing_index {
         if enable_cooldown { processor_cooldown() };
         info!("Measuring insertion rate...");
-        let (result_insertion_rate, max_pps) =
+        let (inner_result_insertion_rate, inner_max_pps) =
             measure_insertion_rate(&mut index, points, &run.insertion_rate.single(), base_config.indexing_timeout_seconds);
         info!("Results: {}", &result_insertion_rate);
+        result_insertion_rate = inner_result_insertion_rate;
+        max_pps = inner_max_pps;
     }
 
     // store index info (e.g. number of nodes)
