@@ -8,9 +8,9 @@ pub mod attribute_bounds;
 pub mod attribute_histograms;
 pub mod histogram;
 
-use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
+use crate::geometry::grid::{GridCell, I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{I32CoordinateSystem, I32Position};
+use crate::geometry::position::{CoordinateSystem, I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::grid_cell_directory::GridCellDirectory;
 use crate::index::octree::live_metrics_collector::LiveMetricsCollector;
@@ -196,9 +196,14 @@ where
             Some(index) => index.size(),
             None => 0,
         };
+        // Calculate the size of the root cell
+        let root_cell: LeveledGridCell = LeveledGridCell { lod: LodLevel::from_level(0), pos: GridCell { x: 0, y: 0, z: 0 } };
+        let root_cell_size : I32Position = self.inner.node_hierarchy.get_leveled_cell_bounds(&root_cell).max();
+        let root_cell_size_decoded = self.coordinate_system().decode_position(&root_cell_size);
         json!(
             {
                 "attribute_index": attribute_index_size,
+                "root_cell_size": root_cell_size_decoded,
                 "directory_info": self.inner.page_cache.directory().info()
             }
         )

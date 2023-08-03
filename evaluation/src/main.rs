@@ -294,7 +294,7 @@ where
         if enable_cooldown { processor_cooldown() };
         info!("Measuring insertion rate...");
         let (result_insertion_rate, max_pps) =
-            measure_insertion_rate(&mut index, points, &run.insertion_rate.single());
+            measure_insertion_rate(&mut index, points, &run.insertion_rate.single(), base_config.indexing_timeout_seconds);
         info!("Results: {}", &result_insertion_rate);
     }
 

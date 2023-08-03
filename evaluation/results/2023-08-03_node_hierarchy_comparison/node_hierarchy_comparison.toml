@@ -1,0 +1,38 @@
+data_folder = "data/evaluation"
+output_file = "evaluation/results/2023-08-02_query_overview/query_overview_%d_%i.json"
+points_file = "data/frankfurt_street.las"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = false
+indexing_timeout_seconds = 86400 # one day
+use_existing_index = false
+
+
+[defaults]
+type = "Octree"
+priority_function = "TaskAge"
+num_threads = 10
+cache_size = 1000
+compression = false
+nr_bogus_points = [0, 0]
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = true
+latency.enable = false
+enable_attribute_index = true
+enable_histogram_acceleration = true
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 25
+bin_count_color = 25
+
+[runs.shift1]
+node_hierarchy = [11]
+point_hierarchy = [17]
+
+[runs.shift2]
+node_hierarchy = [14]
+point_hierarchy = [21]

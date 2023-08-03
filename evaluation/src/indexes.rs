@@ -19,8 +19,8 @@ pub fn create_octree_index(
 ) -> I32Octree {
     let mut data_folder: PathBuf = base_settings.data_folder.clone();
     data_folder.push("octree");
-    let node_hierarchy = I32GridHierarchy::new(11);
-    let point_hierarchy = I32GridHierarchy::new(17);
+    let node_hierarchy = I32GridHierarchy::new(settings.node_hierarchy);
+    let point_hierarchy = I32GridHierarchy::new(settings.point_hierarchy);
     let max_lod = LodLevel::from_level(10);
     let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
     let las_loader = I32LasReadWrite::new(settings.compression, 3);

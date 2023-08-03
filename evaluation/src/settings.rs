@@ -25,6 +25,7 @@ pub struct Base {
     pub trajectory_file: PathBuf,
     pub las_point_record_format: u8,
     pub enable_cooldown: bool,
+    pub indexing_timeout_seconds: u64,
     pub use_existing_index: bool,
 
     #[serde(rename = "output_file")]
@@ -78,6 +79,12 @@ pub struct SingleIndex {
     #[serde(default = "SingleIndex::default_typ", rename = "type")]
     pub typ: SystemUnderTest,
 
+    #[serde(default = "SingleIndex::default_node_hierarchy")]
+    pub node_hierarchy: u16,
+
+    #[serde(default = "SingleIndex::default_point_hierarchy")]
+    pub point_hierarchy: u16,
+
     #[serde(default = "SingleIndex::default_priority_function")]
     pub priority_function: TaskPriorityFunction,
 
@@ -125,13 +132,15 @@ impl Default for SingleIndex {
     fn default() -> Self {
         SingleIndex {
             typ: SystemUnderTest::Octree,
+            node_hierarchy: 11,
+            point_hierarchy: 17,
             priority_function: TaskPriorityFunction::NrPointsWeightedByTaskAge,
             num_threads: 4,
             cache_size: 500,
             compression: true,
             nr_bogus_points: (0, 0),
-            enable_attribute_index: false,
-            enable_histogram_acceleration: false,
+            enable_attribute_index: true,
+            enable_histogram_acceleration: true,
             bin_count_intensity: 10,
             bin_count_return_number: 8,
             bin_count_classification: 255,
@@ -147,6 +156,12 @@ impl Default for SingleIndex {
 pub struct MultiIndex {
     #[serde(default, rename = "type")]
     pub typ: Option<Vec<SystemUnderTest>>,
+
+    #[serde(default)]
+    pub node_hierarchy: Option<Vec<u16>>,
+
+    #[serde(default)]
+    pub point_hierarchy: Option<Vec<u16>>,
 
     #[serde(default)]
     pub priority_function: Option<Vec<TaskPriorityFunction>>,
@@ -217,6 +232,8 @@ impl MultiIndex {
         apply_default_vec!(self.cache_size <- defaults);
         apply_default_vec!(self.priority_function <- defaults);
         apply_default_vec!(self.typ <- defaults);
+        apply_default_vec!(self.node_hierarchy <- defaults);
+        apply_default_vec!(self.point_hierarchy <- defaults);
         apply_default_vec!(self.compression <- defaults);
         apply_default_vec!(self.num_threads <- defaults);
         apply_default_vec!(self.nr_bogus_points <- defaults);
@@ -236,35 +253,41 @@ impl MultiIndex {
         for &cache_size in expect(&self.cache_size) {
             for &priority_function in expect(&self.priority_function) {
                 for &typ in expect(&self.typ) {
-                    for &compression in expect(&self.compression) {
-                        for &num_threads in expect(&self.num_threads) {
-                            for &nr_bogus_points in expect(&self.nr_bogus_points) {
-                                for &enable_attribute_index in expect(&self.enable_attribute_index) {
-                                    for &enable_histogram_acceleration in expect(&self.enable_histogram_acceleration) {
-                                        for &bin_count_intensity in expect(&self.bin_count_intensity) {
-                                            for &bin_count_return_number in expect(&self.bin_count_return_number) {
-                                                for &bin_count_classification in expect(&self.bin_count_classification) {
-                                                    for &bin_count_scan_angle_rank in expect(&self.bin_count_scan_angle_rank) {
-                                                        for &bin_count_user_data in expect(&self.bin_count_user_data) {
-                                                            for &bin_count_point_source_id in expect(&self.bin_count_point_source_id) {
-                                                                for &bin_count_color in expect(&self.bin_count_color) {
-                                                                    results.push(SingleIndex {
-                                                                        typ,
-                                                                        priority_function,
-                                                                        num_threads,
-                                                                        cache_size,
-                                                                        compression,
-                                                                        nr_bogus_points,
-                                                                        enable_attribute_index,
-                                                                        enable_histogram_acceleration,
-                                                                        bin_count_intensity,
-                                                                        bin_count_return_number,
-                                                                        bin_count_classification,
-                                                                        bin_count_scan_angle_rank,
-                                                                        bin_count_user_data,
-                                                                        bin_count_point_source_id,
-                                                                        bin_count_color,
-                                                                    })
+                    for &node_hierarchy in expect(&self.node_hierarchy) {
+                        for &point_hierarchy in expect(&self.point_hierarchy) {
+                            for &compression in expect(&self.compression) {
+                                for &num_threads in expect(&self.num_threads) {
+                                    for &nr_bogus_points in expect(&self.nr_bogus_points) {
+                                        for &enable_attribute_index in expect(&self.enable_attribute_index) {
+                                            for &enable_histogram_acceleration in expect(&self.enable_histogram_acceleration) {
+                                                for &bin_count_intensity in expect(&self.bin_count_intensity) {
+                                                    for &bin_count_return_number in expect(&self.bin_count_return_number) {
+                                                        for &bin_count_classification in expect(&self.bin_count_classification) {
+                                                            for &bin_count_scan_angle_rank in expect(&self.bin_count_scan_angle_rank) {
+                                                                for &bin_count_user_data in expect(&self.bin_count_user_data) {
+                                                                    for &bin_count_point_source_id in expect(&self.bin_count_point_source_id) {
+                                                                        for &bin_count_color in expect(&self.bin_count_color) {
+                                                                            results.push(SingleIndex {
+                                                                                typ,
+                                                                                node_hierarchy,
+                                                                                point_hierarchy,
+                                                                                priority_function,
+                                                                                num_threads,
+                                                                                cache_size,
+                                                                                compression,
+                                                                                nr_bogus_points,
+                                                                                enable_attribute_index,
+                                                                                enable_histogram_acceleration,
+                                                                                bin_count_intensity,
+                                                                                bin_count_return_number,
+                                                                                bin_count_classification,
+                                                                                bin_count_scan_angle_rank,
+                                                                                bin_count_user_data,
+                                                                                bin_count_point_source_id,
+                                                                                bin_count_color,
+                                                                            })
+                                                                        }
+                                                                    }
                                                                 }
                                                             }
                                                         }

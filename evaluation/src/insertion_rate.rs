@@ -13,6 +13,7 @@ pub fn measure_insertion_rate<I>(
     index: &mut I,
     points: &[Point],
     settings: &SingleInsertionRateMeasurement,
+    timeout_seconds: u64,
 ) -> (serde_json::value::Value, f64)
 where
     I: Index<Point>,
@@ -20,7 +21,7 @@ where
     // Init
     let target_point_pressure = settings.target_point_pressure;
     let estimated_duration = points.len() as f64 / target_point_pressure as f64;
-    info!("Inserting {} points into index. Minimal duration: {} seconds", points.len(), estimated_duration);
+    info!("Inserting {} points into index. Minimal duration: {} seconds, Timeout: {}", points.len(), estimated_duration, timeout_seconds);
 
     // Progress bar
     let pb = ProgressBar::new(points.len() as u64);
@@ -53,19 +54,21 @@ where
         thread::sleep(Duration::from_secs_f64(0.005));
         i += 1;
 
+        // Update progress bar
         if i % 100 == 0 {
             pb.set_position(read_pos as u64);
             let current_pps = read_pos as f64 / time_start.elapsed().as_secs_f64();
             pb.set_message(format!("{} pps, backlog: {}", current_pps as u64, writer.backlog_size()));
         }
-        // if i % 1000 == 0 && Instant::now().duration_since(time_start) > Duration::from_secs(estimated_duration as u64)
-        // {
-        //     // if we are slower than the estimated duration, break
-        //     info!("Insertion rate measurement took longer than estimated duration. Breaking.");
-        //     break;
-        // }
+
+        // Handle timeout
+        if i % 1000 == 0 && Instant::now().duration_since(time_start) > Duration::from_secs(timeout_seconds)
+        {
+            info!("Insertion rate measurement timed out after {} seconds", timeout_seconds);
+            break;
+        }
     }
-    pb.set_position(points.len() as u64);
+    pb.set_position(read_pos as u64);
     pb.finish();
 
     // Finalize
