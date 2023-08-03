@@ -110,6 +110,12 @@ def main():
             nr_points=data["env"]["input_file_nr_points"]
         )
 
+        plot_query_by_num_points_stacked(
+            test_runs=data["runs"]["querying"],
+            filename=join(output_folder, "query-by-num-points-stacked.pdf"),
+            nr_points=data["env"]["input_file_nr_points"]
+        )
+
         plot_query_by_time(
             test_runs=data["runs"]["querying"],
             filename=join(output_folder, "query-by-time.pdf"),
@@ -500,7 +506,18 @@ def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename
 def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
     fig, ax = plt.subplots(figsize=[10, 6])
 
-    queries = list(test_runs[0]["results"]["query_performance"].keys())
+    queries =\
+        [
+            'time_range',
+            'ground_classification',
+            'no_cars_classification',
+            'high_intensity',
+            'low_intensity',
+            'full_red_part',
+            'one_return',
+            'mixed_ground_and_one_return',
+            'mixed_ground_and_time',
+        ]
     subqueries = ["only_node_acc", "only_full_acc", "raw_point_filtering"]
 
     bar_width = 0.15
@@ -522,10 +539,100 @@ def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
         plt.xlabel('Queries')
         plt.ylabel('Number of Points')
         plt.title(title)
-        plt.xticks([p + bar_width*2 for p in index], queries, rotation=90)
+        labels = \
+            [
+                'Time\nSmall Range',
+                'Classification\nGround',
+                'Classification\nNo Cars',
+                'Intensity\nHigh Value',
+                'Intensity\nLow Value',
+                'Color\nHigh Red Value',
+                'Number of Returns\nOne or More Returns',
+                'Mixed\nGround and One Return',
+                'Mixed\nGround and Time Range',
+            ]
+        plt.xticks([p + bar_width*2 for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['All points', 'Bounds Filter', 'Bounds and Histogram Filter', 'Point Filter']  # Custom legend labels
+        custom_legend_labels = ['All points', 'Bounds Filter', 'Histogram Filter', 'Point Filter']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title)
+        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+
+def plot_query_by_num_points_stacked(test_runs, nr_points, filename, title=None):
+    fig, ax = plt.subplots(figsize=[10, 6])
+
+    queries = \
+        [
+            'time_range',
+            'ground_classification',
+            'no_cars_classification',
+            'high_intensity',
+            'low_intensity',
+            'full_red_part',
+            'one_return',
+            'mixed_ground_and_one_return',
+            'mixed_ground_and_time',
+        ]
+    subqueries = ["raw_point_filtering", "only_full_acc", "only_node_acc"]
+
+    bar_width = 0.6
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+    colors = colors[::-1]
+
+    for run in test_runs:
+        # plt.axhline(y=nr_points, color='#DB4437', linestyle='-')
+        for p in range(len(queries)):
+            bottom = 0
+            for i, subquery in enumerate(subqueries):
+                nr_points_subquery = run["results"]["query_performance"][queries[p]][subquery]["nr_points"]
+
+                plt.bar(
+                    p,
+                    nr_points_subquery - bottom,
+                    bar_width,
+                    bottom=bottom,
+                    label=subquery if i == 0 else "",
+                    color=colors[i],
+                )
+                bottom += nr_points_subquery - bottom
+            plt.bar(
+                p,
+                nr_points - bottom,
+                bar_width,
+                bottom=bottom,
+                label=subquery if i == 0 else "",
+                color=colors[i + 1],
+                )
+
+        plt.xlabel('Queries')
+        plt.ylabel('Number of Points')
+        plt.title(title)
+        labels = \
+            [
+                'Time\nSmall Range',
+                'Classification\nGround',
+                'Classification\nNo Cars',
+                'Intensity\nHigh Value',
+                'Intensity\nLow Value',
+                'Color\nHigh Red Value',
+                'Number of Returns\nOne or More Returns',
+                'Mixed\nGround and One Return',
+                'Mixed\nGround and Time Range',
+            ]
+        plt.xticks([p for p in index], labels, rotation=90, ha='right')
+
+        custom_legend_labels = ['Point Filter', 'Histogram Filter', 'Bounds Filter', 'All Points']  # Custom legend labels
+        custom_legend_labels = custom_legend_labels[::-1]
+        colors = colors[::-1]
+        custom_legend_colors = colors[0:4]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
 
@@ -538,7 +645,18 @@ def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
 def plot_query_by_time(test_runs, filename, title=None):
     fig, ax = plt.subplots(figsize=[10, 6])
 
-    queries = list(test_runs[0]["results"]["query_performance"].keys())
+    queries = \
+        [
+            'time_range',
+            'ground_classification',
+            'no_cars_classification',
+            'high_intensity',
+            'low_intensity',
+            'full_red_part',
+            'one_return',
+            'mixed_ground_and_one_return',
+            'mixed_ground_and_time',
+        ]
     subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc", "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
 
     bar_width = 1/(len(subqueries)+1)
@@ -562,9 +680,28 @@ def plot_query_by_time(test_runs, filename, title=None):
         plt.xlabel('Queries')
         plt.ylabel('Execution Time | seconds')
         plt.title(title)
-        plt.xticks([p + bar_width*2 for p in index], queries, rotation=90)
+        labels = \
+            [
+                'Time\nSmall Range',
+                'Classification\nGround',
+                'Classification\nNo Cars',
+                'Intensity\nHigh Value',
+                'Intensity\nLow Value',
+                'Color\nHigh Red Value',
+                'Number of Returns\nOne or More Returns',
+                'Mixed\nGround and One Return',
+                'Mixed\nGround and Time Range',
+            ]
+        plt.xticks([p + bar_width*2 for p in index], labels, rotation=90)
 
-        custom_legend_labels = ['Only Spatial Query', 'Point Filter', 'Point Filter + Bounds Acceleration', 'Point Filter + Bounds + Histogram Acceleration', 'Only Bounds Acceleration', 'Only Bounds + Histogram Acceleration']  # Custom legend labels
+        custom_legend_labels = [
+            'Spatial Query',
+            'Spatial Query\nPoint Filter',
+            'Spatial Query\nBounds Filter\nPoint Filter',
+            'Spatial Query\nBounds Filter\nHistogram Filter\nPoint Filter',
+            'Bounds Filter',
+            'Bounds Filter\nHistogram Filter',
+        ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
