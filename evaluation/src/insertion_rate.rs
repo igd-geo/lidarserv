@@ -21,7 +21,7 @@ where
     // Init
     let target_point_pressure = settings.target_point_pressure;
     let estimated_duration = points.len() as f64 / target_point_pressure as f64;
-    info!("Inserting {} points into index. Minimal duration: {} seconds, Timeout: {}", points.len(), estimated_duration, timeout_seconds);
+    info!("Inserting {} points into index. Minimal duration: {} seconds, Timeout: {} seconds", points.len(), estimated_duration, timeout_seconds);
 
     // Progress bar
     let pb = ProgressBar::new(points.len() as u64);
@@ -68,8 +68,11 @@ where
             break;
         }
     }
-    pb.set_position(read_pos as u64);
-    pb.finish();
+    if read_pos == points.len() {
+        pb.finish_with_message("Finished");
+    } else {
+        pb.finish_with_message("Timed out");
+    }
 
     // Finalize
     let finished_at = Instant::now();
