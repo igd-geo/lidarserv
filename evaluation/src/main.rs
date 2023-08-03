@@ -295,7 +295,7 @@ where
         info!("Measuring insertion rate...");
         let (inner_result_insertion_rate, inner_max_pps) =
             measure_insertion_rate(&mut index, points, &run.insertion_rate.single(), base_config.indexing_timeout_seconds);
-        info!("Results: {}", &result_insertion_rate);
+        info!("Results: {}", &inner_result_insertion_rate);
         result_insertion_rate = inner_result_insertion_rate;
         max_pps = inner_max_pps;
     }
