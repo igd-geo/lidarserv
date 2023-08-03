@@ -83,6 +83,7 @@ pub fn aabb_full() -> BoundingBoxQuery {
     )
 }
 
+/// Classification Filter, that only accepts Ground Points (Frankfurt dataset)
 pub fn ground_classification() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -101,6 +102,7 @@ pub fn ground_classification() -> LasPointAttributeBounds {
     }
 }
 
+/// Classification Filter, that only accepts Points, NOT classified as cars (Frankfurt dataset)
 pub fn no_cars_classification() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -119,9 +121,10 @@ pub fn no_cars_classification() -> LasPointAttributeBounds {
     }
 }
 
+/// Intensity Filter, which only accepts Points with 98%-100% intensity (Frankfurt dataset)
 pub fn high_intensity() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
-        intensity: Some((64000, 65535)),
+        intensity: Some((64224, 65535)),
         return_number: None,
         number_of_returns: None,
         scan_direction: None,
@@ -137,9 +140,10 @@ pub fn high_intensity() -> LasPointAttributeBounds {
     }
 }
 
+/// Intensity Filter, which only accepts Points with 0%-2% intensity (Frankfurt dataset)
 pub fn low_intensity() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
-        intensity: Some((0, 1000)),
+        intensity: Some((0, 1311)),
         return_number: None,
         number_of_returns: None,
         scan_direction: None,
@@ -155,6 +159,7 @@ pub fn low_intensity() -> LasPointAttributeBounds {
     }
 }
 
+/// Number of Returns Filter, which only accepts Points with 1 or more returns (Frankfurt dataset)
 pub fn one_return() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -173,6 +178,7 @@ pub fn one_return() -> LasPointAttributeBounds {
     }
 }
 
+/// Time Filter which only accepts specific time range (Frankfurt dataset)
 pub fn time_range() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -191,7 +197,7 @@ pub fn time_range() -> LasPointAttributeBounds {
     }
 }
 
-
+/// Color Filter, which only accepts points with a red-value over 90% (Frankfurt dataset)
 pub fn full_red_part() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -210,6 +216,7 @@ pub fn full_red_part() -> LasPointAttributeBounds {
     }
 }
 
+/// Mixed Filter, which only accepts points of a certain time range and a ground classification (Frankfurt dataset)
 pub fn mixed_ground_and_time() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -228,6 +235,7 @@ pub fn mixed_ground_and_time() -> LasPointAttributeBounds {
     }
 }
 
+/// Mixed Filter, which only accepts ground points which have 1 or more returns (Frankfurt dataset)
 pub fn mixed_ground_and_one_return() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -235,7 +243,7 @@ pub fn mixed_ground_and_one_return() -> LasPointAttributeBounds {
         number_of_returns: Some((1, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((11,11)),
+        classification: Some((10,12)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,

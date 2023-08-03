@@ -125,6 +125,8 @@ fn main() {
             "input_file_nr_points": points.len(),
             "started_at": start_date,
             "finished_at": end_date,
+            "duration:": (OffsetDateTime::now_utc() - started_at).whole_seconds(),
+
         },
         "runs": all_results
     });

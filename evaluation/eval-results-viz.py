@@ -23,6 +23,7 @@ INPUT_FILES_CACHE_SIZE_COMPARISON = [join(PROJECT_ROOT, "evaluation/results/2023
 INPUT_FILES_QUERY_OVERVIEW = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file in [
     "query_overview_2023-08-02_1.json",
     "query_overview_2023-08-02_2.json",
+    "query_overview_2023-08-03_1.json",
     "query_overview_2023-08-03_2.json",
 ]]
 
@@ -523,7 +524,7 @@ def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
         plt.title(title)
         plt.xticks([p + bar_width*2 for p in index], queries, rotation=90)
 
-        custom_legend_labels = ['All points', 'Range Filter', 'Range and Histogram Filter', 'Point Filter']  # Custom legend labels
+        custom_legend_labels = ['All points', 'Bounds Filter', 'Bounds and Histogram Filter', 'Point Filter']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
@@ -538,20 +539,24 @@ def plot_query_by_time(test_runs, filename, title=None):
     fig, ax = plt.subplots(figsize=[10, 6])
 
     queries = list(test_runs[0]["results"]["query_performance"].keys())
-    subqueries = ["raw_point_filtering", "point_filtering_with_node_acc", "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
+    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc", "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
 
-    bar_width = 0.15
+    bar_width = 1/(len(subqueries)+1)
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#7CBB00']
+    colors = ['#FF6D00', '#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#7CBB00']
 
     for run in test_runs:
         for p in range(len(queries)):
 
             # number of points per subquery
             for i, subquery in enumerate(subqueries):
-                nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
-                plt.bar([p + i*bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
+                # try catch, because raw_spatial_query is not always available
+                try:
+                    nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
+                    plt.bar([p + i*bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
+                except:
+                    pass
 
 
         plt.xlabel('Queries')
@@ -559,7 +564,7 @@ def plot_query_by_time(test_runs, filename, title=None):
         plt.title(title)
         plt.xticks([p + bar_width*2 for p in index], queries, rotation=90)
 
-        custom_legend_labels = ['Point Filter', 'Point Filter + Range Acceleration', 'Point Filter + Full Acceleration', 'Only Range Acceleration', 'Only Range + Full Acceleration']  # Custom legend labels
+        custom_legend_labels = ['Only Spatial Query', 'Point Filter', 'Point Filter + Bounds Acceleration', 'Point Filter + Bounds + Histogram Acceleration', 'Only Bounds Acceleration', 'Only Bounds + Histogram Acceleration']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')

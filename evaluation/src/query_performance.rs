@@ -15,12 +15,12 @@ where
     I: Index<Point>,
 {
     json!({
+        "time_range": measure_one_query(&mut index, aabb_full(), time_range()),
         "ground_classification": measure_one_query(&mut index, aabb_full(), ground_classification()),
         "no_cars_classification": measure_one_query(&mut index, aabb_full(), no_cars_classification()),
         "high_intensity": measure_one_query(&mut index, aabb_full(), high_intensity()),
         "low_intensity": measure_one_query(&mut index, aabb_full(), low_intensity()),
         "one_return": measure_one_query(&mut index, aabb_full(), one_return()),
-        "time_range": measure_one_query(&mut index, aabb_full(), time_range()),
         "full_red_part": measure_one_query(&mut index, aabb_full(), full_red_part()),
         "mixed_ground_and_time": measure_one_query(&mut index, aabb_full(), mixed_ground_and_time()),
         "mixed_ground_and_one_return": measure_one_query(&mut index, aabb_full(), mixed_ground_and_one_return()),
@@ -37,6 +37,10 @@ fn measure_one_query<I, Q>(
         Q: Query + Send + Sync + 'static + Clone + Debug,
 {
     info!("Measuring query performance for query: {:?} and filter {:?}", query, filter);
+
+    // measure only spatial query
+    info!("measure only spatial query");
+    let raw_spatial = measure_one_query_part(index, query.clone(), filter, false, false, false);
 
     // measure point filtering without acceleration
     info!("measure point filtering without acceleration");
@@ -59,6 +63,7 @@ fn measure_one_query<I, Q>(
     let only_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, false);
 
     json!({
+        "raw_spatial": raw_spatial,
         "raw_point_filtering": raw_point_filtering,
         "point_filtering_with_node_acc": point_filtering_with_node_acc,
         "point_filtering_with_full_acc": point_filtering_with_full_acc,
