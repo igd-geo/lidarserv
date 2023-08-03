@@ -5,14 +5,14 @@ trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
 enable_cooldown = false
-indexing_timeout_seconds = 86400 # one day
+indexing_timeout_seconds = 100000000
 use_existing_index = false
 
 
 [defaults]
 type = "Octree"
 priority_function = "TaskAge"
-num_threads = 10
+num_threads = 136
 cache_size = 1000
 compression = false
 nr_bogus_points = [0, 0]
@@ -29,10 +29,10 @@ bin_count_user_data = 25
 bin_count_point_source_id = 25
 bin_count_color = 25
 
-[runs.shift1]
-node_hierarchy = [11]
-point_hierarchy = [17]
+[runs.hierarchies]
+node_hierarchy = [11,12,13,14,15,16,17,18]
+point_hierarchy = [17,18,19,20,21,22,23,24]
 
-[runs.shift2]
-node_hierarchy = [14]
-point_hierarchy = [21]
+#[runs.hierarchies]
+#node_hierarchy = [11,12]
+#point_hierarchy = [17,18]

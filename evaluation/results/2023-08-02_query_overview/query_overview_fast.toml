@@ -6,11 +6,13 @@ offset = [0,0,0]
 las_point_record_format = 3
 enable_cooldown = false
 indexing_timeout_seconds = 86400 # one day
-use_existing_index = true
+use_existing_index = false
 
 
 [defaults]
 type = "Octree"
+node_hierarchy = 14
+point_hierarchy = 21
 priority_function = "TaskAge"
 num_threads = 136
 cache_size = 1000

@@ -5,27 +5,37 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 from matplotlib.lines import Line2D
+from labellines import labelLine, labelLines
 
 PROJECT_ROOT = join(dirname(__file__), "..")
-INPUT_FILES_PARAMETER_OVERVIEW_V1 = [join(PROJECT_ROOT, "evaluation/results/2023-07-24_macbook_parameter_overview_v1/", file) for file in [
-    "macbook_parameter_overview_v1_2023-07-24_1.json",
-]]
+INPUT_FILES_PARAMETER_OVERVIEW_V1 = [
+    join(PROJECT_ROOT, "evaluation/results/2023-07-24_macbook_parameter_overview_v1/", file) for file in [
+        "macbook_parameter_overview_v1_2023-07-24_1.json",
+    ]]
 
-INPUT_FILES_PARAMETER_OVERVIEW_V2 = [join(PROJECT_ROOT, "evaluation/results/2023-07-25_macbook_parameter_overview_v2/", file) for file in [
-    "macbook_parameter_overview_v2_2023-07-25_1.json",
-]]
+INPUT_FILES_PARAMETER_OVERVIEW_V2 = [
+    join(PROJECT_ROOT, "evaluation/results/2023-07-25_macbook_parameter_overview_v2/", file) for file in [
+        "macbook_parameter_overview_v2_2023-07-25_1.json",
+    ]]
 
-INPUT_FILES_CACHE_SIZE_COMPARISON = [join(PROJECT_ROOT, "evaluation/results/2023-07-31_cache_size_comparisons/", file) for file in [
-    "frankfurt_2023-08-01_1.json",
-    "freiburg_2023-08-01_1.json",
-]]
+INPUT_FILES_CACHE_SIZE_COMPARISON = [join(PROJECT_ROOT, "evaluation/results/2023-07-31_cache_size_comparisons/", file)
+                                     for file in [
+                                         "frankfurt_2023-08-01_1.json",
+                                         "freiburg_2023-08-01_1.json",
+                                     ]]
 
 INPUT_FILES_QUERY_OVERVIEW = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file in [
     "query_overview_2023-08-02_1.json",
     "query_overview_2023-08-02_2.json",
     "query_overview_2023-08-03_1.json",
     "query_overview_2023-08-03_2.json",
+    "query_overview_2023-08-03_3.json",
 ]]
+
+INPUT_FILES_NODE_HIERARCHY_COMPARISON = [
+    join(PROJECT_ROOT, "evaluation/results/2023-08-03_node_hierarchy_comparison/", file) for file in [
+        "node_hierarchy_comparison_2023-08-03_1.json",
+    ]]
 
 
 def main():
@@ -117,6 +127,25 @@ def main():
             filename=join(output_folder, "query-by-time.pdf"),
         )
 
+    for input_file in INPUT_FILES_NODE_HIERARCHY_COMPARISON:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_query_lod_nodes_by_runs(
+            test_runs=data["runs"],
+            filename=join(output_folder, "query-by-lod-nodes.pdf"),
+        )
+
+        plot_overall_performance_by_sizes(
+            test_runs=data["runs"],
+            filename=join(output_folder, "overall-performance.pdf"),
+        )
 
 
 def make_y_insertion_rate(ax, test_runs):
@@ -202,6 +231,7 @@ def plot_insertion_rate_by_nr_threads(test_runs, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_latency_by_nr_threads(test_runs, filename, title=None):
@@ -212,6 +242,7 @@ def plot_latency_by_nr_threads(test_runs, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_insertion_rate_by_cache_size(test_runs, filename, title=None):
@@ -223,6 +254,7 @@ def plot_insertion_rate_by_cache_size(test_runs, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_latency_by_cache_size(test_runs, filename, title=None):
@@ -233,6 +265,7 @@ def plot_latency_by_cache_size(test_runs, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_insertion_rate_by_priority_function(test_runs, filename, title=None):
@@ -244,6 +277,7 @@ def plot_insertion_rate_by_priority_function(test_runs, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=None):
@@ -259,6 +293,7 @@ def plot_insertion_rate_by_priority_function_bogus(test_runs, filename, title=No
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_insertion_rate_by_priority_function_cache(test_runs, filename, title=None):
@@ -274,6 +309,7 @@ def plot_insertion_rate_by_priority_function_cache(test_runs, filename, title=No
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_duration_cleanup_by_priority_function_bogus(test_runs, filename, title=None):
@@ -289,6 +325,7 @@ def plot_duration_cleanup_by_priority_function_bogus(test_runs, filename, title=
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_latency_by_priority_function(test_runs, filename, title=None):
@@ -299,6 +336,7 @@ def plot_latency_by_priority_function(test_runs, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_compare_insertion_rate(test_run, filename, title=None):
@@ -313,6 +351,7 @@ def plot_compare_insertion_rate(test_run, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_compare_latency(test_run, filename, title=None):
@@ -326,6 +365,7 @@ def plot_compare_latency(test_run, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_compare_query_time(test_run, filename, title=None):
@@ -357,6 +397,7 @@ def plot_compare_query_time(test_run, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_insertion_rates_by_disk_speed(data, filename, title=None):
@@ -378,6 +419,7 @@ def plot_insertion_rates_by_disk_speed(data, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_latencies_by_disk_speed(data, filename, title=None):
@@ -419,6 +461,7 @@ def plot_latencies_by_disk_speed(data, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_latency_by_insertion_rate(test_run, filename, title=None):
@@ -431,6 +474,7 @@ def plot_latency_by_insertion_rate(test_run, filename, title=None):
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename, title=None):
@@ -452,11 +496,13 @@ def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
+
 
 def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
     fig, ax = plt.subplots(figsize=[10, 6])
 
-    queries =\
+    queries = \
         [
             'time_range',
             'ground_classification',
@@ -476,15 +522,17 @@ def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
 
     for run in test_runs:
+        insertion_rate_block = run["results"]["insertion_rate"]
+        if insertion_rate_block is not None:
+            nr_points = insertion_rate_block["nr_points"]
+
         for p in range(len(queries)):
 
             # number of points per subquery
             plt.bar(p, nr_points, bar_width, label="nr_points", color="#DB4437")
             for i, subquery in enumerate(subqueries):
-
                 nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
-                plt.bar([p + (i+1)*bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i+1])
-
+                plt.bar([p + (i + 1) * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i + 1])
 
         plt.xlabel('Queries')
         plt.ylabel('Number of Points')
@@ -501,11 +549,13 @@ def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
                 'Mixed\nGround and One Return',
                 'Mixed\nGround and Time Range',
             ]
-        plt.xticks([p + bar_width*2 for p in index], labels, rotation=90, ha='right')
+        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['All points', 'Bounds Filter', 'Histogram Filter', 'Point Filter']  # Custom legend labels
+        custom_legend_labels = ['All points', 'Bounds Filter', 'Histogram Filter',
+                                'Point Filter']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
 
         plt.tight_layout()
@@ -513,22 +563,13 @@ def plot_query_by_num_points(test_runs, nr_points, filename, title=None):
         if title is not None:
             ax.set_title(title)
         fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
+
 
 def plot_query_by_num_points_stacked(test_runs, nr_points, filename, title=None):
     fig, ax = plt.subplots(figsize=[10, 6])
 
-    queries = \
-        [
-            'time_range',
-            'ground_classification',
-            'no_cars_classification',
-            'high_intensity',
-            'low_intensity',
-            'full_red_part',
-            'one_return',
-            'mixed_ground_and_one_return',
-            'mixed_ground_and_time',
-        ]
+    queries = query_names()
     subqueries = ["raw_point_filtering", "only_full_acc", "only_node_acc"]
 
     bar_width = 0.6
@@ -539,6 +580,9 @@ def plot_query_by_num_points_stacked(test_runs, nr_points, filename, title=None)
 
     for run in test_runs:
         # plt.axhline(y=nr_points, color='#DB4437', linestyle='-')
+        insertion_rate_block = run["results"]["insertion_rate"]
+        if insertion_rate_block is not None:
+            nr_points = insertion_rate_block["nr_points"]
         for p in range(len(queries)):
             bottom = 0
             for i, subquery in enumerate(subqueries):
@@ -560,30 +604,21 @@ def plot_query_by_num_points_stacked(test_runs, nr_points, filename, title=None)
                 bottom=bottom,
                 label=subquery if i == 0 else "",
                 color=colors[i + 1],
-                )
+            )
 
         plt.xlabel('Queries')
         plt.ylabel('Number of Points')
         plt.title(title)
-        labels = \
-            [
-                'Time\nSmall Range',
-                'Classification\nGround',
-                'Classification\nNo Cars',
-                'Intensity\nHigh Value',
-                'Intensity\nLow Value',
-                'Color\nHigh Red Value',
-                'Number of Returns\nOne or More Returns',
-                'Mixed\nGround and One Return',
-                'Mixed\nGround and Time Range',
-            ]
+        labels = query_pretty_names()
         plt.xticks([p for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['Point Filter', 'Histogram Filter', 'Bounds Filter', 'All Points']  # Custom legend labels
+        custom_legend_labels = ['Point Filter', 'Histogram Filter', 'Bounds Filter',
+                                'All Points']  # Custom legend labels
         custom_legend_labels = custom_legend_labels[::-1]
         colors = colors[::-1]
         custom_legend_colors = colors[0:4]  # Use the same colors for custom legend
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
 
         plt.tight_layout()
@@ -591,25 +626,17 @@ def plot_query_by_num_points_stacked(test_runs, nr_points, filename, title=None)
         if title is not None:
             ax.set_title(title)
         fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
+
 
 def plot_query_by_time(test_runs, filename, title=None):
     fig, ax = plt.subplots(figsize=[10, 6])
 
-    queries = \
-        [
-            'time_range',
-            'ground_classification',
-            'no_cars_classification',
-            'high_intensity',
-            'low_intensity',
-            'full_red_part',
-            'one_return',
-            'mixed_ground_and_one_return',
-            'mixed_ground_and_time',
-        ]
-    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc", "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
+    queries = query_names()
+    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
+                  "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
 
-    bar_width = 1/(len(subqueries)+1)
+    bar_width = 1 / (len(subqueries) + 1)
     index = range(len(queries))
 
     colors = ['#FF6D00', '#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#7CBB00']
@@ -621,28 +648,17 @@ def plot_query_by_time(test_runs, filename, title=None):
             for i, subquery in enumerate(subqueries):
                 # try catch, because raw_spatial_query is not always available
                 try:
-                    nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
-                    plt.bar([p + i*bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
+                    nr_points_subquery = [
+                        run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
+                    plt.bar([p + i * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
                 except:
                     pass
-
 
         plt.xlabel('Queries')
         plt.ylabel('Execution Time | seconds')
         plt.title(title)
-        labels = \
-            [
-                'Time\nSmall Range',
-                'Classification\nGround',
-                'Classification\nNo Cars',
-                'Intensity\nHigh Value',
-                'Intensity\nLow Value',
-                'Color\nHigh Red Value',
-                'Number of Returns\nOne or More Returns',
-                'Mixed\nGround and One Return',
-                'Mixed\nGround and Time Range',
-            ]
-        plt.xticks([p + bar_width*2 for p in index], labels, rotation=90)
+        labels = query_pretty_names()
+        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90)
 
         custom_legend_labels = [
             'Spatial Query',
@@ -653,7 +669,8 @@ def plot_query_by_time(test_runs, filename, title=None):
             'Bounds Filter\nHistogram Filter',
         ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in zip(custom_legend_colors, custom_legend_labels)]
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
 
         plt.tight_layout()
@@ -661,8 +678,131 @@ def plot_query_by_time(test_runs, filename, title=None):
         if title is not None:
             ax.set_title(title)
         fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
 
 
+# Plots the number of nodes per level for each run
+def plot_query_lod_nodes_by_runs(test_runs, filename, title=None):
+    fig, ax = plt.subplots(figsize=[10, 6])
+
+    # preprocessing data (get all lod lists from all runs)
+    lod_lists = []
+    for name, run in test_runs.items():
+        for multi_run in run:
+            node_hierarchy = multi_run["index"]["node_hierarchy"]
+            point_hierarchy = multi_run["index"]["point_hierarchy"]
+            run_name = "N" + str(node_hierarchy) + "P" + str(point_hierarchy)
+            lod_lists.append((run_name, multi_run["results"]["index_info"]["directory_info"]["num_nodes_per_level"]))
+
+    x = list(range(len(lod_lists[0][1])))  # Assuming both sublists have the same length
+
+    # plot data
+    for lod_list in lod_lists:
+        plt.plot(x, lod_list[1], label=lod_list[0])
+    plt.grid(True)
+    labelLines(ax.get_lines(), zorder=2.5)
+    plt.xlabel('LOD')
+    plt.ylabel('Number of Nodes')
+    plt.title('Number of Nodes per LOD')
+
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
+
+# Plots Insertion Speed, Query Time Speedup and Query Point Reduction according to the node and point hierarchy
+# IMPORTANT: Always use the same number of points for all runs (no timeout)
+# Else the query time speedup is not comparable (rest is probably fine)
+def plot_overall_performance_by_sizes(test_runs, filename, title=None):
+    fig, ax1 = plt.subplots(figsize=[10, 6])
+    ax2 = ax1.twinx()  # Create a twin Axes sharing the xaxis
+
+    names = []
+    sizes_of_roots = []
+    insertion_speeds = []
+    query_speedups = []
+    point_reductions = []
+
+    for name, run in test_runs.items():
+        for multi_run in run:
+            # name calculation
+            node_hierarchy = multi_run["index"]["node_hierarchy"]
+            point_hierarchy = multi_run["index"]["point_hierarchy"]
+            run_name = "N" + str(node_hierarchy) + "P" + str(point_hierarchy)
+            names.append(run_name)
+
+            # data calculation
+            sizes_of_roots.append(multi_run["results"]["index_info"]["root_cell_size"][0])
+            insertion_speeds.append(multi_run["results"]["insertion_rate"]["insertion_rate_points_per_sec"])
+            query_speedups.append(calculate_average_query_speedup_single_run(multi_run))
+            point_reductions.append(calculate_average_point_reduction_single_run(multi_run))
+
+    for i in range(len(names)):
+        names[i] = names[i] + "\n" + str(sizes_of_roots[i]) + "m"
+
+    # Plotting logic for Insertion Speed
+    ax1.plot(names, insertion_speeds, label='Insertion Speed', color='tab:blue')
+    ax1.set_xlabel('Runs')
+    ax1.set_ylabel('Insertion Speed', color='tab:blue')
+
+    # Plotting logic for Query Speedup
+    ax2.plot(names, query_speedups, marker='o', label='Average Query Speedup', color='tab:green')
+    ax2.set_ylabel('Average Query Speedup', color='tab:green')
+
+    # Creating a third y-axis for Point Reduction
+    ax3 = ax1.twinx()
+    ax3.spines['right'].set_position(('outward', 60))  # Adjust the position of the third y-axis
+
+    ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction', color='tab:red')
+    ax3.set_ylabel('Average Point Reduction', color='tab:red')
+
+    # Combine legends from all axes
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    lines3, labels3 = ax3.get_legend_handles_labels()
+
+    ax3.legend(lines + lines2 + lines3, labels + labels2 + labels3, loc='upper left')
+
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    ax2.tick_params(axis='y', labelcolor='tab:green')
+    ax3.tick_params(axis='y', labelcolor='tab:red')
+
+    plt.xticks(rotation=45, ha='right')
+    plt.title(title if title else 'Overall Performance by Run')
+    plt.tight_layout()
+
+    if title is not None:
+        ax1.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
+
+
+# Calculates the average time speedup over all queries in a single run
+# Speedup is calculated between raw_point_filtering and point_filtering_with_full_acc
+def calculate_average_query_speedup_single_run(run):
+    queries = run["results"]["query_performance"]
+    speedup_sum = 0
+    for query in queries:
+        raw_point_filtering = queries[query]["raw_point_filtering"]["query_time_seconds"]
+        point_filtering_with_full_acc = queries[query]["point_filtering_with_full_acc"]["query_time_seconds"]
+        speedup_sum += raw_point_filtering - point_filtering_with_full_acc
+    if len(queries) > 0:
+        return speedup_sum / len(queries)
+    return -1
+
+
+# Calculates the average point reduction over all queries in a single run
+# Point reduction is calculated between total number of points and only_full_acc in percent!
+def calculate_average_point_reduction_single_run(run):
+    queries = run["results"]["query_performance"]
+    nr_points = run["results"]["insertion_rate"]["nr_points"]
+    point_reduction_sum = 0
+    for query in queries:
+        point_filtering_with_full_acc = queries[query]["only_full_acc"]["nr_points"]
+        point_reduction_sum += nr_points - point_filtering_with_full_acc
+    if len(queries) > 0:
+        return (point_reduction_sum / len(queries)) / nr_points * 100
+    return 0
 
 
 def rename_tpf(tpf):
@@ -676,6 +816,34 @@ def rename_tpf(tpf):
     if tpf in replacements:
         return replacements[tpf]
     return tpf
+
+
+def query_names():
+    return [
+        'time_range',
+        'ground_classification',
+        'no_cars_classification',
+        'high_intensity',
+        'low_intensity',
+        'full_red_part',
+        'one_return',
+        'mixed_ground_and_one_return',
+        'mixed_ground_and_time',
+    ]
+
+
+def query_pretty_names():
+    return [
+        'Time\nSmall Range',
+        'Classification\nGround',
+        'Classification\nNo Cars',
+        'Intensity\nHigh Value',
+        'Intensity\nLow Value',
+        'Color\nHigh Red Value',
+        'Number of Returns\nOne or More Returns',
+        'Mixed\nGround and One Return',
+        'Mixed\nGround and Time Range',
+    ]
 
 
 if __name__ == '__main__':
