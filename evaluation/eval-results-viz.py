@@ -35,6 +35,7 @@ INPUT_FILES_QUERY_OVERVIEW = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_
 INPUT_FILES_NODE_HIERARCHY_COMPARISON = [
     join(PROJECT_ROOT, "evaluation/results/2023-08-03_node_hierarchy_comparison/", file) for file in [
         "node_hierarchy_comparison_2023-08-03_1.json",
+        "node_hierarchy_comparison_2023-08-05_2.json",
     ]]
 
 
@@ -145,6 +146,7 @@ def main():
         plot_overall_performance_by_sizes(
             test_runs=data["runs"],
             filename=join(output_folder, "overall-performance.pdf"),
+            nr_points=data["env"]["input_file_nr_points"]
         )
 
 
@@ -683,7 +685,7 @@ def plot_query_by_time(test_runs, filename, title=None):
 
 # Plots the number of nodes per level for each run
 def plot_query_lod_nodes_by_runs(test_runs, filename, title=None):
-    fig, ax = plt.subplots(figsize=[10, 6])
+    fig, ax = plt.subplots(figsize=[20, 12])
 
     # preprocessing data (get all lod lists from all runs)
     lod_lists = []
@@ -710,11 +712,12 @@ def plot_query_lod_nodes_by_runs(test_runs, filename, title=None):
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
     plt.close(fig)
 
+
 # Plots Insertion Speed, Query Time Speedup and Query Point Reduction according to the node and point hierarchy
 # IMPORTANT: Always use the same number of points for all runs (no timeout)
 # Else the query time speedup is not comparable (rest is probably fine)
-def plot_overall_performance_by_sizes(test_runs, filename, title=None):
-    fig, ax1 = plt.subplots(figsize=[10, 6])
+def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None):
+    fig, ax1 = plt.subplots(figsize=[20, 12])
     ax2 = ax1.twinx()  # Create a twin Axes sharing the xaxis
 
     names = []
@@ -722,6 +725,7 @@ def plot_overall_performance_by_sizes(test_runs, filename, title=None):
     insertion_speeds = []
     query_speedups = []
     point_reductions = []
+    timeouted = []
 
     for name, run in test_runs.items():
         for multi_run in run:
@@ -734,26 +738,42 @@ def plot_overall_performance_by_sizes(test_runs, filename, title=None):
             # data calculation
             sizes_of_roots.append(multi_run["results"]["index_info"]["root_cell_size"][0])
             insertion_speeds.append(multi_run["results"]["insertion_rate"]["insertion_rate_points_per_sec"])
-            query_speedups.append(calculate_average_query_speedup_single_run(multi_run))
+            query_speedups.append(calculate_average_query_time_single_run(multi_run))
             point_reductions.append(calculate_average_point_reduction_single_run(multi_run))
+
+            # check if timeouted
+            nr_points_run = multi_run["results"]["insertion_rate"]["nr_points"]
+            if nr_points_run != nr_points:
+                timeouted.append(True)
+            else:
+                timeouted.append(False)
 
     for i in range(len(names)):
         names[i] = names[i] + "\n" + str(sizes_of_roots[i]) + "m"
 
+    # Convert timeouted to color list
+    colors = []
+    for t in timeouted:
+        if t:
+            colors.append("red")
+        else:
+            colors.append("green")
+
     # Plotting logic for Insertion Speed
-    ax1.plot(names, insertion_speeds, label='Insertion Speed', color='tab:blue')
+    # plot insertion speed as bar plot with different colors for timeouted runs
+    ax1.bar(names, insertion_speeds, label='Insertion Speed (Points per Second)', color=colors)
     ax1.set_xlabel('Runs')
     ax1.set_ylabel('Insertion Speed', color='tab:blue')
 
     # Plotting logic for Query Speedup
-    ax2.plot(names, query_speedups, marker='o', label='Average Query Speedup', color='tab:green')
+    ax2.plot(names, query_speedups, marker='o', label='Average Query Time (Seconds)', color='tab:green')
     ax2.set_ylabel('Average Query Speedup', color='tab:green')
 
     # Creating a third y-axis for Point Reduction
     ax3 = ax1.twinx()
     ax3.spines['right'].set_position(('outward', 60))  # Adjust the position of the third y-axis
 
-    ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction', color='tab:red')
+    ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction (Percent)', color='tab:red')
     ax3.set_ylabel('Average Point Reduction', color='tab:red')
 
     # Combine legends from all axes
@@ -779,13 +799,11 @@ def plot_overall_performance_by_sizes(test_runs, filename, title=None):
 
 # Calculates the average time speedup over all queries in a single run
 # Speedup is calculated between raw_point_filtering and point_filtering_with_full_acc
-def calculate_average_query_speedup_single_run(run):
+def calculate_average_query_time_single_run(run):
     queries = run["results"]["query_performance"]
     speedup_sum = 0
     for query in queries:
-        raw_point_filtering = queries[query]["raw_point_filtering"]["query_time_seconds"]
-        point_filtering_with_full_acc = queries[query]["point_filtering_with_full_acc"]["query_time_seconds"]
-        speedup_sum += raw_point_filtering - point_filtering_with_full_acc
+        speedup_sum += queries[query]["point_filtering_with_full_acc"]["query_time_seconds"]
     if len(queries) > 0:
         return speedup_sum / len(queries)
     return -1

@@ -86,7 +86,6 @@ fn main() {
     );
     let points = read_points(&coordinate_system, &config.base);
 
-
     // run tests
     info!("Running tests");
     let mut all_results = HashMap::new();
@@ -94,8 +93,10 @@ fn main() {
         info!("=== {} ===", name);
         run.apply_defaults(&config.defaults);
         info!("Applied defaults: {:?}", run);
-        let mut run_results = Vec::new();
+        let mut run_results = Vec::new();;
+        let mut current_run = 1;
         for index in &run.index {
+            info!("Running index {}", current_run);
             let result = evaluate(&points, &run, &config.base, || {
                     create_octree_index(coordinate_system.clone(), &config.base, &index)
             }, config.base.enable_cooldown);
@@ -103,6 +104,7 @@ fn main() {
                 "index": index,
                 "results": result,
             }));
+            current_run += 1;
         }
         all_results.insert(name, run_results);
     }

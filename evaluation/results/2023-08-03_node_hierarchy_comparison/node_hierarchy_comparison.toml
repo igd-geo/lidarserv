@@ -1,22 +1,21 @@
 data_folder = "data/evaluation"
 output_file = "evaluation/results/2023-08-03_node_hierarchy_comparison/node_hierarchy_comparison_%d_%i.json"
-points_file = "data/frankfurt_street.las"
+points_file = "data/frankfurt_street_1000000.las"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
 enable_cooldown = false
-indexing_timeout_seconds = 100000000
+indexing_timeout_seconds = 300
 use_existing_index = false
-
 
 [defaults]
 type = "Octree"
 priority_function = "TaskAge"
-num_threads = 136
-cache_size = 1000
+num_threads = 10
+cache_size = 0
 compression = false
 nr_bogus_points = [0, 0]
-insertion_rate.target_point_pressure = 1_000_000
+insertion_rate.target_point_pressure = 200_000
 query_perf.enable = true
 latency.enable = false
 enable_attribute_index = true
@@ -29,10 +28,10 @@ bin_count_user_data = 25
 bin_count_point_source_id = 25
 bin_count_color = 25
 
-[runs.hierarchies]
-node_hierarchy = [11,12,13,14,15,16,17,18]
-point_hierarchy = [17,18,19,20,21,22,23,24]
-
 #[runs.hierarchies]
-#node_hierarchy = [11,12]
-#point_hierarchy = [17,18]
+#node_hierarchy = [11,12,13,14,15,16,17,18]
+#point_hierarchy = [17,18,19,20,21,22,23,24]
+
+[runs.hierarchies]
+node_hierarchy = [11,13,15,17]
+point_hierarchy = [18,20,22,24]
