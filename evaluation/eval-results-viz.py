@@ -6,6 +6,10 @@ import matplotlib as mpl
 import numpy as np
 from matplotlib.lines import Line2D
 from labellines import labelLine, labelLines
+from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits import mplot3d
+import matplotlib.cm as cm
+from matplotlib.gridspec import SubplotSpec
 
 PROJECT_ROOT = join(dirname(__file__), "..")
 INPUT_FILES_PARAMETER_OVERVIEW_V1 = [
@@ -36,6 +40,12 @@ INPUT_FILES_NODE_HIERARCHY_COMPARISON = [
     join(PROJECT_ROOT, "evaluation/results/2023-08-03_node_hierarchy_comparison/", file) for file in [
         "node_hierarchy_comparison_2023-08-03_1.json",
         "node_hierarchy_comparison_2023-08-05_2.json",
+        "node_hierarchy_comparison_v2_2023-08-05_1.json",
+    ]]
+
+INPUT_FILES_NODE_HIERARCHY_COMPARISON_3D = [
+    join(PROJECT_ROOT, "evaluation/results/2023-08-03_node_hierarchy_comparison/", file) for file in [
+        "node_hierarchy_comparison_v3_2023-08-06_1.json",
     ]]
 
 
@@ -48,85 +58,85 @@ def main():
     # regularly crashes the viewer...
     mpl.rcParams['pdf.fonttype'] = 42
 
-    for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V1:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        plot_insertion_rate_by_nr_threads(
-            test_runs=data["runs"]["num_threads"],
-            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
-        )
-        plot_insertion_rate_by_cache_size(
-            test_runs=data["runs"]["cache_size"],
-            filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
-        )
-
-    for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        plot_insertion_rate_by_cache_size(
-            test_runs=data["runs"]["big_cache_size"],
-            filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
-        )
-        plot_insertion_rate_by_nr_threads(
-            test_runs=data["runs"]["num_threads_compression"],
-            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
-        )
-
-    for input_file in INPUT_FILES_CACHE_SIZE_COMPARISON:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        plot_insertion_rate_by_cache_size(
-            test_runs=data["runs"]["cache_size"],
-            filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
-        )
-
-    for input_file in INPUT_FILES_QUERY_OVERVIEW:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        plot_query_by_num_points(
-            test_runs=data["runs"]["querying"],
-            filename=join(output_folder, "query-by-num-points.pdf"),
-            nr_points=data["env"]["input_file_nr_points"]
-        )
-
-        plot_query_by_num_points_stacked(
-            test_runs=data["runs"]["querying"],
-            filename=join(output_folder, "query-by-num-points-stacked.pdf"),
-            nr_points=data["env"]["input_file_nr_points"]
-        )
-
-        plot_query_by_time(
-            test_runs=data["runs"]["querying"],
-            filename=join(output_folder, "query-by-time.pdf"),
-        )
+    # for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V1:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     plot_insertion_rate_by_nr_threads(
+    #         test_runs=data["runs"]["num_threads"],
+    #         filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
+    #     )
+    #     plot_insertion_rate_by_cache_size(
+    #         test_runs=data["runs"]["cache_size"],
+    #         filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
+    #     )
+    #
+    # for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     plot_insertion_rate_by_cache_size(
+    #         test_runs=data["runs"]["big_cache_size"],
+    #         filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
+    #     )
+    #     plot_insertion_rate_by_nr_threads(
+    #         test_runs=data["runs"]["num_threads_compression"],
+    #         filename=join(output_folder, "insertion-rate-by-nr-threads.pdf")
+    #     )
+    #
+    # for input_file in INPUT_FILES_CACHE_SIZE_COMPARISON:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     plot_insertion_rate_by_cache_size(
+    #         test_runs=data["runs"]["cache_size"],
+    #         filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
+    #     )
+    #
+    # for input_file in INPUT_FILES_QUERY_OVERVIEW:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     plot_query_by_num_points(
+    #         test_runs=data["runs"]["querying"],
+    #         filename=join(output_folder, "query-by-num-points.pdf"),
+    #         nr_points=data["env"]["input_file_nr_points"]
+    #     )
+    #
+    #     plot_query_by_num_points_stacked(
+    #         test_runs=data["runs"]["querying"],
+    #         filename=join(output_folder, "query-by-num-points-stacked.pdf"),
+    #         nr_points=data["env"]["input_file_nr_points"]
+    #     )
+    #
+    #     plot_query_by_time(
+    #         test_runs=data["runs"]["querying"],
+    #         filename=join(output_folder, "query-by-time.pdf"),
+    #     )
 
     for input_file in INPUT_FILES_NODE_HIERARCHY_COMPARISON:
         # read file
@@ -146,6 +156,38 @@ def main():
         plot_overall_performance_by_sizes(
             test_runs=data["runs"],
             filename=join(output_folder, "overall-performance.pdf"),
+            nr_points=data["env"]["input_file_nr_points"]
+        )
+
+    for input_file in INPUT_FILES_NODE_HIERARCHY_COMPARISON_3D:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        hierarchies = {"hierarchies": data["runs"]["hierarchies"]}
+        plot_overall_performance_by_sizes(
+            test_runs=hierarchies,
+            filename=join(output_folder, "overall-performance_hierarchies.pdf"),
+            nr_points=data["env"]["input_file_nr_points"]
+
+        )
+
+        hierarchies_fast = {"hierarchies": data["runs"]["hierarchies_cached_high_threads"]}
+        plot_overall_performance_by_sizes(
+            test_runs=hierarchies_fast,
+            filename=join(output_folder, "overall-performance_hierarchies_fast.pdf"),
+            nr_points=data["env"]["input_file_nr_points"]
+
+        )
+
+        plot_overall_performance_by_sizes_3d(
+            data=data["runs"],
+            filename=join(output_folder, f"overall-performance-3d.pdf"),
             nr_points=data["env"]["input_file_nr_points"]
         )
 
@@ -716,14 +758,14 @@ def plot_query_lod_nodes_by_runs(test_runs, filename, title=None):
 # Plots Insertion Speed, Query Time Speedup and Query Point Reduction according to the node and point hierarchy
 # IMPORTANT: Always use the same number of points for all runs (no timeout)
 # Else the query time speedup is not comparable (rest is probably fine)
-def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None):
+def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None, insertion_color_threshold=300000):
     fig, ax1 = plt.subplots(figsize=[20, 12])
     ax2 = ax1.twinx()  # Create a twin Axes sharing the xaxis
 
     names = []
     sizes_of_roots = []
     insertion_speeds = []
-    query_speedups = []
+    query_speeds = []
     point_reductions = []
     timeouted = []
 
@@ -738,7 +780,7 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
             # data calculation
             sizes_of_roots.append(multi_run["results"]["index_info"]["root_cell_size"][0])
             insertion_speeds.append(multi_run["results"]["insertion_rate"]["insertion_rate_points_per_sec"])
-            query_speedups.append(calculate_average_query_time_single_run(multi_run))
+            query_speeds.append(calculate_average_query_time_single_run(multi_run))
             point_reductions.append(calculate_average_point_reduction_single_run(multi_run))
 
             # check if timeouted
@@ -752,10 +794,13 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
         names[i] = names[i] + "\n" + str(sizes_of_roots[i]) + "m"
 
     # Convert timeouted to color list
+    # Also check if insertion speed is below threshold and color it orange
     colors = []
-    for t in timeouted:
-        if t:
+    for i in range(len(names)):
+        if timeouted[i]:
             colors.append("red")
+        elif insertion_speeds[i] < insertion_color_threshold:
+            colors.append("orange")
         else:
             colors.append("green")
 
@@ -766,15 +811,15 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
     ax1.set_ylabel('Insertion Speed', color='tab:blue')
 
     # Plotting logic for Query Speedup
-    ax2.plot(names, query_speedups, marker='o', label='Average Query Time (Seconds)', color='tab:green')
-    ax2.set_ylabel('Average Query Speedup', color='tab:green')
+    ax2.plot(names, query_speeds, marker='o', label='Average Query Time (Seconds)', color='tab:green')
+    ax2.set_ylabel('Average Query Time (Seconds)', color='tab:green')
 
     # Creating a third y-axis for Point Reduction
     ax3 = ax1.twinx()
     ax3.spines['right'].set_position(('outward', 60))  # Adjust the position of the third y-axis
 
     ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction (Percent)', color='tab:red')
-    ax3.set_ylabel('Average Point Reduction', color='tab:red')
+    ax3.set_ylabel('Average Point Reduction (Percent)', color='tab:red')
 
     # Combine legends from all axes
     lines, labels = ax1.get_legend_handles_labels()
@@ -793,6 +838,123 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
 
     if title is not None:
         ax1.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
+
+# Plots overall performance by node and point hierarchy sizes (3D)
+# IMPORTANT: Always use the same number of points for all runs (no timeout)
+# Else the query time speedup is not comparable (rest is probably fine)
+def plot_overall_performance_by_sizes_3d(data, filename, nr_points, title=None):
+    # Create a 3D plot
+    num_runs = len(data.keys())
+    height = num_runs * 10
+    fig, axs = plt.subplots(num_runs, 2, figsize=(20, height))
+
+    # calculate global min and max for all runs
+    min_insertion_speed = 1000000
+    max_insertion_speed = 0
+    min_point_reduction = 1000000
+    max_point_reduction = 0
+    for key in data.keys():
+        run = data[key]
+        for multi_run in run:
+            # data calculation
+            insertion_speed = multi_run["results"]["insertion_rate"]["insertion_rate_points_per_sec"]
+            point_reduction = calculate_average_point_reduction_single_run(multi_run)
+
+            if insertion_speed < min_insertion_speed:
+                min_insertion_speed = insertion_speed
+
+            if insertion_speed > max_insertion_speed:
+                max_insertion_speed = insertion_speed
+
+            if point_reduction < min_point_reduction:
+                min_point_reduction = point_reduction
+
+            if point_reduction > max_point_reduction:
+                max_point_reduction = point_reduction
+
+    i = 1
+    for key in data.keys():
+        run = data[key]
+
+        node_hierarchies = []
+        point_hierarchies = []
+        query_times = []
+        point_reductions = []
+        insertion_speeds = []
+        timeouted = []
+
+        for multi_run in run:
+            # data calculation
+            node_hierarchies.append(multi_run["index"]["node_hierarchy"])
+            point_hierarchies.append(multi_run["index"]["point_hierarchy"])
+            insertion_speeds.append(multi_run["results"]["insertion_rate"]["insertion_rate_points_per_sec"])
+            query_times.append(calculate_average_query_time_single_run(multi_run))
+            point_reductions.append(calculate_average_point_reduction_single_run(multi_run))
+
+            # check if timeouted
+            nr_points_run = multi_run["results"]["insertion_rate"]["nr_points"]
+            if nr_points_run != nr_points:
+                timeouted.append(True)
+            else:
+                timeouted.append(False)
+
+        ax1 = plt.subplot(num_runs, 2, i, projection='3d')
+        ax2 = plt.subplot(num_runs, 2, i + 1, projection='3d')
+
+        # Calculate colors of bars
+        cmap = cm.get_cmap('jet')
+        colors_indexing_speed = [cmap((x - min_insertion_speed) / (max_insertion_speed - min_insertion_speed)) for x in
+                                 insertion_speeds]
+        colors_query_point_reduction = [cmap((x - min_point_reduction) / (max_point_reduction - min_point_reduction))
+                                        for x in point_reductions]
+
+        # map timeouted runs to gray
+        for j in range(len(timeouted)):
+            if timeouted[j]:
+                colors_indexing_speed[j] = (0.5, 0.5, 0.5, 1)
+                colors_query_point_reduction[j] = (0.5, 0.5, 0.5, 1)
+
+        # Plot the data
+        x = node_hierarchies
+        y = point_hierarchies
+        bottom = np.zeros_like(insertion_speeds)
+        width = depth = 0.3
+        ax1.bar3d(x, y, bottom, width, depth, insertion_speeds, shade=True, color=colors_indexing_speed)
+        ax2.bar3d(x, y, bottom, width, depth, point_reductions, shade=True, color=colors_query_point_reduction)
+
+        # Set ticks
+        ax1.set_xticks(node_hierarchies)
+        ax1.set_yticks(point_hierarchies)
+        ax2.set_xticks(node_hierarchies)
+        ax2.set_yticks(point_hierarchies)
+
+        # set scale of z axis by min and max values
+        ax1.set_zlim(min_insertion_speed, max_insertion_speed)
+        ax2.set_zlim(min_point_reduction, max_point_reduction)
+
+        # Set labels and title
+        ax1.set_xlabel('Node Hierarchy Size')
+        ax1.set_ylabel('Point Hierarchy Size')
+        ax1.set_zlabel('Insertion Speed (Points per Second)')
+        ax1.set_title('Insertion Speed ' + str(key))
+
+        ax2.set_xlabel('Node Hierarchy Size')
+        ax2.set_ylabel('Point Hierarchy Size')
+        ax2.set_zlabel('Average Point Reduction (Percent)')
+        ax2.set_title('Average Point Reduction (Percent) ' + str(key))
+
+        ax1.view_init(45, -45)
+        ax2.view_init(45, -45)
+
+        i += 2
+
+    # Output the final plot
+    plt.tight_layout()
+    if title is not None:
+        ax1.set_title(title)
+        ax2.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
     plt.close(fig)
 
