@@ -1,23 +1,21 @@
 data_folder = "data/evaluation"
-output_file = "evaluation/test_%d_%i.json"
-points_file = "data/frankfurt_small.las"
+output_file = "evaluation/results/2023-08-03_node_hierarchy_comparison/node_hierarchy_comparison_v5_%d_%i.json"
+points_file = "data/frankfurt_street_1000000.las"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
 enable_cooldown = false
+indexing_timeout_seconds = 300
 use_existing_index = false
-indexing_timeout_seconds = 86400 # one day
 
 [defaults]
 type = "Octree"
-priority_function = "TaskAge" #best = TaskAge
-num_threads = 10
+priority_function = "TaskAge"
+num_threads = 136
 cache_size = 1000
-node_hierarchy = 12
-point_hierarchy = 22
-compression = true
+compression = false
 nr_bogus_points = [0, 0]
-insertion_rate.target_point_pressure = 1_000_000
+insertion_rate.target_point_pressure = 200_000
 query_perf.enable = true
 latency.enable = false
 enable_attribute_index = true
@@ -30,4 +28,6 @@ bin_count_user_data = 25
 bin_count_point_source_id = 25
 bin_count_color = 25
 
-[runs.example]
+[runs.hierarchies]
+node_hierarchy = [12,13,14,15,16,17,18,19,20,21,22]
+point_hierarchy = [23,24]

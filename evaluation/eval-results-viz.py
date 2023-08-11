@@ -34,6 +34,8 @@ INPUT_FILES_QUERY_OVERVIEW = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_
     "query_overview_2023-08-03_1.json",
     "query_overview_2023-08-03_2.json",
     "query_overview_2023-08-03_3.json",
+    "query_overview_v2_2023-08-06_1.json",
+    "query_overview_v3_2023-08-07_1.json",
 ]]
 
 INPUT_FILES_NODE_HIERARCHY_COMPARISON = [
@@ -46,6 +48,8 @@ INPUT_FILES_NODE_HIERARCHY_COMPARISON = [
 INPUT_FILES_NODE_HIERARCHY_COMPARISON_3D = [
     join(PROJECT_ROOT, "evaluation/results/2023-08-03_node_hierarchy_comparison/", file) for file in [
         "node_hierarchy_comparison_v3_2023-08-06_1.json",
+        "node_hierarchy_comparison_v4_2023-08-07_1.json",
+        "node_hierarchy_comparison_v5_2023-08-07_1.json",
     ]]
 
 
@@ -111,32 +115,32 @@ def main():
     #         filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
     #     )
     #
-    # for input_file in INPUT_FILES_QUERY_OVERVIEW:
-    #     # read file
-    #     with open(input_file) as f:
-    #         print("Reading file: ", input_file)
-    #         data = json.load(f)
-    #
-    #     # ensure output folder exists
-    #     output_folder = f"{input_file}.diagrams"
-    #     os.makedirs(output_folder, exist_ok=True)
-    #
-    #     plot_query_by_num_points(
-    #         test_runs=data["runs"]["querying"],
-    #         filename=join(output_folder, "query-by-num-points.pdf"),
-    #         nr_points=data["env"]["input_file_nr_points"]
-    #     )
-    #
-    #     plot_query_by_num_points_stacked(
-    #         test_runs=data["runs"]["querying"],
-    #         filename=join(output_folder, "query-by-num-points-stacked.pdf"),
-    #         nr_points=data["env"]["input_file_nr_points"]
-    #     )
-    #
-    #     plot_query_by_time(
-    #         test_runs=data["runs"]["querying"],
-    #         filename=join(output_folder, "query-by-time.pdf"),
-    #     )
+    for input_file in INPUT_FILES_QUERY_OVERVIEW:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_query_by_num_points(
+            test_runs=data["runs"]["querying"],
+            filename=join(output_folder, "query-by-num-points.pdf"),
+            nr_points=data["env"]["input_file_nr_points"]
+        )
+
+        plot_query_by_num_points_stacked(
+            test_runs=data["runs"]["querying"],
+            filename=join(output_folder, "query-by-num-points-stacked.pdf"),
+            nr_points=data["env"]["input_file_nr_points"]
+        )
+
+        plot_query_by_time(
+            test_runs=data["runs"]["querying"],
+            filename=join(output_folder, "query-by-time.pdf"),
+        )
 
     for input_file in INPUT_FILES_NODE_HIERARCHY_COMPARISON:
         # read file
@@ -177,13 +181,18 @@ def main():
 
         )
 
-        hierarchies_fast = {"hierarchies": data["runs"]["hierarchies_cached_high_threads"]}
-        plot_overall_performance_by_sizes(
-            test_runs=hierarchies_fast,
-            filename=join(output_folder, "overall-performance_hierarchies_fast.pdf"),
-            nr_points=data["env"]["input_file_nr_points"]
+        if "hierarchies_cached" in data["runs"]:
+            hierarchies_cached = {"hierarchies": data["runs"]["hierarchies_cached"]}
+            plot_overall_performance_by_sizes(
+                test_runs=hierarchies_cached,
+                filename=join(output_folder, "overall-performance_hierarchies_cached.pdf"),
+                nr_points=data["env"]["input_file_nr_points"]
 
-        )
+            )
+            plot_query_lod_nodes_by_runs(
+                test_runs=hierarchies_cached,
+                filename=join(output_folder, "query-by-lod-nodes_hierarchies_cached.pdf"),
+            )
 
         plot_overall_performance_by_sizes_3d(
             data=data["runs"],
@@ -758,8 +767,8 @@ def plot_query_lod_nodes_by_runs(test_runs, filename, title=None):
 # Plots Insertion Speed, Query Time Speedup and Query Point Reduction according to the node and point hierarchy
 # IMPORTANT: Always use the same number of points for all runs (no timeout)
 # Else the query time speedup is not comparable (rest is probably fine)
-def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None, insertion_color_threshold=300000):
-    fig, ax1 = plt.subplots(figsize=[20, 12])
+def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None, insertion_color_threshold=150000):
+    fig, ax1 = plt.subplots(figsize=[30, 20])
     ax2 = ax1.twinx()  # Create a twin Axes sharing the xaxis
 
     names = []
@@ -965,7 +974,7 @@ def calculate_average_query_time_single_run(run):
     queries = run["results"]["query_performance"]
     speedup_sum = 0
     for query in queries:
-        speedup_sum += queries[query]["point_filtering_with_full_acc"]["query_time_seconds"]
+        speedup_sum += queries[query]["point_filtering_with_node_acc"]["query_time_seconds"]
     if len(queries) > 0:
         return speedup_sum / len(queries)
     return -1
@@ -978,7 +987,7 @@ def calculate_average_point_reduction_single_run(run):
     nr_points = run["results"]["insertion_rate"]["nr_points"]
     point_reduction_sum = 0
     for query in queries:
-        point_filtering_with_full_acc = queries[query]["only_full_acc"]["nr_points"]
+        point_filtering_with_full_acc = queries[query]["only_node_acc"]["nr_points"]
         point_reduction_sum += nr_points - point_filtering_with_full_acc
     if len(queries) > 0:
         return (point_reduction_sum / len(queries)) / nr_points * 100
