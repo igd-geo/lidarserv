@@ -110,9 +110,94 @@ impl LasPointAttributeHistograms {
 mod tests {
     use super::*;
 
+    fn create_attribute_1() -> LasPointAttributes {
+        LasPointAttributes {
+            intensity: 10,
+            return_number: 1,
+            number_of_returns: 1,
+            scan_direction: true,
+            edge_of_flight_line: false,
+            classification: 2,
+            scan_angle_rank: -5,
+            user_data: 0,
+            point_source_id: 123,
+            gps_time: 123.456,
+            color: (255, 0, 0),
+        }
+    }
+
+    fn create_attribute_2() -> LasPointAttributes {
+        LasPointAttributes {
+            intensity: 100,
+            return_number: 2,
+            number_of_returns: 2,
+            scan_direction: false,
+            edge_of_flight_line: true,
+            classification: 3,
+            scan_angle_rank: 5,
+            user_data: 255,
+            point_source_id: 456,
+            gps_time: 789.123,
+            color: (0, 255, 0),
+        }
+    }
+
     #[test]
     fn test_creation() {
         let _histograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
+    }
+
+    #[test]
+    fn test_fill_with() {
+
+        // create histograms
+        let settings = HistogramSettings {
+            bin_count_intensity: 10,
+            bin_count_return_number: 8,
+            bin_count_classification: 256,
+            bin_count_scan_angle_rank: 10,
+            bin_count_user_data: 10,
+            bin_count_point_source_id: 10,
+            bin_count_color: 10,
+        };
+        let mut histograms = LasPointAttributeHistograms::new(&settings);
+
+        // fill with attributes
+        histograms.fill_with(&create_attribute_1());
+
+        // check correct creation
+        assert_eq!(histograms.intensity.num_bins(), 10);
+        assert_eq!(histograms.return_number.num_bins(), 8);
+        assert_eq!(histograms.number_of_returns.num_bins(), 8);
+        assert_eq!(histograms.classification.num_bins(), 256);
+        assert_eq!(histograms.scan_angle_rank.num_bins(), 10);
+        assert_eq!(histograms.user_data.num_bins(), 10);
+        assert_eq!(histograms.point_source_id.num_bins(), 10);
+        assert_eq!(histograms.color_r.num_bins(), 10);
+        assert_eq!(histograms.color_g.num_bins(), 10);
+        assert_eq!(histograms.color_b.num_bins(), 10);
+
+        // check correct binning
+        assert_eq!(histograms.intensity.get_bin_index(10), 0);
+        assert_eq!(histograms.classification.get_bin_index(0), 0);
+        assert_eq!(histograms.classification.get_bin_index(42), 42);
+        assert_eq!(histograms.classification.get_bin_index(255), 255);
+
+        // check correct filling
+        let attribute_1_bounds = LasPointAttributeBounds::from_attributes(&create_attribute_1());
+        let attribute_2_bounds = LasPointAttributeBounds::from_attributes(&create_attribute_2());
+        assert!(histograms.is_attribute_range_in_histograms(&attribute_1_bounds));
+        assert!(!histograms.is_attribute_range_in_histograms(&attribute_2_bounds));
+        assert_eq!(histograms.intensity.get_bin_count(0), Some(1));
+        assert_eq!(histograms.intensity.get_bin_count(1), Some(0));
+
+        // add histograms
+        let histograms_2 = histograms.clone();
+        histograms.add_histograms(&histograms_2);
+
+        // check correct addition
+        assert_eq!(histograms.intensity.get_bin_count(0), Some(2));
+        assert_eq!(histograms.classification.get_bin_count(2), Some(2));
     }
 
 }

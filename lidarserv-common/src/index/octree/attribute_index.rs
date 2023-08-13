@@ -92,8 +92,9 @@ impl AttributeIndex {
             } else {
                 debug!("Updating histogram for cell {:?}", grid_cell);
                 debug!("Old histogram: {:?}", histogram);
-                debug!("New histogram: {:?}", new_histogram);
+                debug!("Adding: {:?}", &new_histogram);
                 histogram.as_mut().unwrap().add_histograms(&new_histogram.as_ref().unwrap());
+                debug!("New histogram: {:?}", histogram);
             }
         }
         self.set_dirty(true);
@@ -356,6 +357,22 @@ mod tests {
         }
     }
 
+    fn create_attribute_3() -> LasPointAttributes {
+        LasPointAttributes {
+            intensity: 0,
+            return_number: 2,
+            number_of_returns: 3,
+            scan_direction: false,
+            edge_of_flight_line: false,
+            classification: 5,
+            scan_angle_rank: -90,
+            user_data: 0,
+            point_source_id: 1234,
+            gps_time: 234.567,
+            color: (0, 255, 0),
+        }
+    }
+
     fn max_bounds() -> LasPointAttributeBounds {
         let mut bounds = LasPointAttributeBounds::new();
         bounds.intensity = Some((0, 65535));
@@ -407,6 +424,18 @@ mod tests {
         bounds.color_r = Some((0, 65535));
         bounds.color_g = Some((0, 65535));
         bounds.color_b = Some((0, 65535));
+        bounds
+    }
+
+    fn search_bounds_1() -> LasPointAttributeBounds {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.classification = Some((0, 255));
+        bounds
+    }
+
+    fn search_bounds_2() -> LasPointAttributeBounds {
+        let mut bounds = LasPointAttributeBounds::new();
+        bounds.classification = Some((5, 5));
         bounds
     }
 
@@ -537,6 +566,46 @@ mod tests {
 
         // delete file if exists
         delete_file(&PathBuf::from("test.bin"));
+    }
+
+    #[test]
+    fn histogram_acceleration() {
+        // delete file if exists
+        delete_file(&PathBuf::from("test.bin"));
+
+        let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        attribute_index.set_histogram_acceleration(true);
+        assert!(attribute_index.is_dirty());
+        let lod = LodLevel::base();
+        let grid_cell = GridCell{ x: 0, y: 0, z: 0};
+
+        // update some values
+        let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
+        let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
+        bounds.update_by_attributes(&create_attribute_1());
+        histogram.fill_with(&create_attribute_1());
+        bounds.update_by_attributes(&create_attribute_2());
+        histogram.fill_with(&create_attribute_2());
+
+        // insert new values into index
+        attribute_index.update_bounds_and_histograms(lod, &grid_cell, &bounds, &Some(histogram.clone()));
+
+        // check if values are correct
+        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_1(), true));
+        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_2(), false));
+        assert!(!attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_2(), true));
+
+        // insert new values into index
+        let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
+        let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
+        bounds.update_by_attributes(&create_attribute_3());
+        histogram.fill_with(&create_attribute_3());
+        attribute_index.update_bounds_and_histograms(lod, &grid_cell, &bounds, &Some(histogram.clone()));
+
+        // check if values are correct
+        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_1(), true));
+        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_2(), false));
+        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_2(), true));
     }
 
 
