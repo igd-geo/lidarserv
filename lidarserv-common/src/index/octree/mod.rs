@@ -21,6 +21,7 @@ use crate::index::Index;
 use crate::las::{I32LasReadWrite, LasPointAttributes};
 use crate::query::Query;
 use std::error::Error;
+use std::fmt::Formatter;
 use std::sync::{Arc, Mutex};
 use std::option::Option;
 use log::debug;
@@ -75,6 +76,30 @@ pub struct Octree<Point, Sampl, SamplF> {
 #[derive(Error, Debug)]
 #[error("Error while flushing to disk: {0}")]
 pub struct FlushError(String);
+
+impl<Point, Sampl, SamplF> std::fmt::Debug for Octree<Point, Sampl, SamplF>
+where
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
+    Sampl: Sampling<Point = Point>,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Octree")
+            .field("num_threads", &self.inner.num_threads)
+            .field("max_lod", &self.inner.max_lod)
+            .field("max_bogus_inner", &self.inner.max_bogus_inner)
+            .field("max_bogus_leaf", &self.inner.max_bogus_leaf)
+            .field("node_hierarchy", &self.inner.node_hierarchy)
+            // .field("page_cache", &self.inner.page_cache)
+            // .field("attribute_index", &self.inner.attribute_index)
+            .field("enable_histogram_acceleration", &self.inner.enable_histogram_acceleration)
+            .field("histogram_settings", &self.inner.histogram_settings)
+            // .field("sample_factory", &self.inner.sample_factory)
+            .field("loader", &self.inner.loader)
+            .field("coordinate_system", &self.inner.coordinate_system)
+            // .field("metrics", &self.inner.metrics)
+            .finish()
+    }
+}
 
 impl<Point, Sampl, SamplF> Octree<Point, Sampl, SamplF>
 where
@@ -196,6 +221,10 @@ where
             Some(index) => index.size(),
             None => 0,
         };
+        let histogram_points = match &self.inner.attribute_index {
+            Some(index) => index.histogram_points(),
+            None => json!("N/A"),
+        };
         // Calculate the size of the root cell
         let root_cell: LeveledGridCell = LeveledGridCell { lod: LodLevel::from_level(0), pos: GridCell { x: 0, y: 0, z: 0 } };
         let root_cell_size : I32Position = self.inner.node_hierarchy.get_leveled_cell_bounds(&root_cell).max();
@@ -203,6 +232,7 @@ where
         json!(
             {
                 "attribute_index": attribute_index_size,
+                "histogram_points": histogram_points,
                 "root_cell_size": root_cell_size_decoded,
                 "directory_info": self.inner.page_cache.directory().info()
             }

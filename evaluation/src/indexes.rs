@@ -8,6 +8,7 @@ use lidarserv_common::index::octree::page_manager::OctreePageLoader;
 use lidarserv_common::index::octree::{Octree, OctreeParams};
 use lidarserv_common::las::I32LasReadWrite;
 use std::path::PathBuf;
+use log::{debug, info};
 use lidarserv_common::index::octree::attribute_index::AttributeIndex;
 
 pub type I32Octree = Octree<Point, GridCenterSampling<Point>, GridCenterSamplingFactory<Point>>;
@@ -34,6 +35,9 @@ pub fn create_octree_index(
         let mut attribute_index_file_name = data_folder.clone();
         attribute_index_file_name.push("attribute_index.bin");
         attribute_index = Some(AttributeIndex::new(max_lod.level() as usize, attribute_index_file_name));
+        if settings.enable_histogram_acceleration {
+            attribute_index.as_mut().unwrap().set_histogram_acceleration(true);
+        }
     }
     let mut histogram_settings = lidarserv_common::index::octree::attribute_histograms::HistogramSettings::default();
     if settings.enable_histogram_acceleration {
@@ -48,7 +52,7 @@ pub fn create_octree_index(
         };
     }
 
-    Octree::new(OctreeParams {
+    let octree = Octree::new(OctreeParams {
         num_threads: settings.num_threads,
         priority_function: settings.priority_function,
         max_lod,
@@ -66,5 +70,7 @@ pub fn create_octree_index(
         coordinate_system,
         metrics: None,
         point_record_format: 3,
-    })
+    });
+    info!("{:?}", octree);
+    octree
 }

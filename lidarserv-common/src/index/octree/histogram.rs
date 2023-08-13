@@ -16,6 +16,22 @@ pub struct Histogram<T> {
     bin_width: T,
 }
 
+impl std::fmt::Display for Histogram<u8> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
+
+        s.push_str(&format!("\"min: {}, max: {}, bin_width: {},", self.min_value, self.max_value, self.bin_width));
+
+        for i in 0..self.bins.len() {
+            s.push_str(&format!("{}: {}, ", i, self.bins[i]));
+        }
+
+        s.push_str("\"");
+
+        write!(f, "{}", s)
+    }
+}
+
 impl Histogram<u8> {
     pub fn new(min_value: u8, max_value: u8, num_bins: usize) -> Self {
         assert!(min_value < max_value, "min_value must be less than max_value");
@@ -66,6 +82,25 @@ impl Histogram<u8> {
             }
         }
         false
+    }
+
+    // Get total number of values in the histogram
+    pub fn total_count(&self) -> u64 {
+        self.bins.iter().sum()
+    }
+}
+
+impl std::fmt::Display for Histogram<u16> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
+
+        s.push_str(&format!("min: {}, max: {}, bin_width: {}\n", self.min_value, self.max_value, self.bin_width));
+
+        for i in 0..self.bins.len() {
+            s.push_str(&format!("{}: {}\n", i, self.bins[i]));
+        }
+
+        write!(f, "{}", s)
     }
 }
 
@@ -118,6 +153,25 @@ impl Histogram<u16> {
         }
         false
     }
+
+    // Get total number of values in the histogram
+    pub fn total_count(&self) -> u64 {
+        self.bins.iter().sum()
+    }
+}
+
+impl std::fmt::Display for Histogram<i8> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
+
+        s.push_str(&format!("min: {}, max: {}, bin_width: {}\n", self.min_value, self.max_value, self.bin_width));
+
+        for i in 0..self.bins.len() {
+            s.push_str(&format!("{}: {}\n", i, self.bins[i]));
+        }
+
+        write!(f, "{}", s)
+    }
 }
 
 impl Histogram<i8> {
@@ -168,6 +222,11 @@ impl Histogram<i8> {
             }
         }
         false
+    }
+
+    // Get total number of values in the histogram
+    pub fn total_count(&self) -> u64 {
+        self.bins.iter().sum()
     }
 }
 
@@ -309,5 +368,33 @@ mod tests {
         let histogram2 = Histogram::<u8>::new(min, max, num_bins + 1);
 
         histogram1.add_histogram(&histogram2);
+    }
+
+    #[test]
+    fn test_sum() {
+        let min = 0;
+        let max = 10;
+        let num_bins = 5;
+        let mut histogram = Histogram::<u8>::new(min, max, num_bins);
+
+        for i in min .. max {
+            histogram.add(i);
+        }
+
+        assert_eq!(histogram.total_count(), 10);
+    }
+
+    #[test]
+    fn test_big_sum() {
+        let min = 0;
+        let max = 255;
+        let num_bins = 256;
+        let mut histogram = Histogram::<u8>::new(min, max, num_bins);
+
+        for i in 0..100_000_000 {
+            histogram.add(42);
+        }
+
+        assert_eq!(histogram.total_count(), 100_000_000);
     }
 }

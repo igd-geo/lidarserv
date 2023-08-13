@@ -1,9 +1,11 @@
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use log::{debug, info, trace};
 use csv::Writer;
+use serde_json::{json, Value};
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
@@ -80,24 +82,34 @@ impl AttributeIndex {
     {
         // aquire write lock for lod level
         let mut index_write = self.index[lod.level() as usize].write().unwrap();
-        let (bounds, histogram) = index_write.entry(grid_cell.clone()).or_insert((new_bounds.clone(), new_histogram.clone()));
 
-        // update bounds and optionally histograms
-        bounds.update_by_bounds(&new_bounds);
-        if new_histogram.is_some() && self.enable_histograms {
-            if histogram.is_none() {
-                debug!("Creating new histogram for cell {:?}", grid_cell);
-                debug!("New histogram: {:?}", new_histogram);
-                *histogram = new_histogram.clone();
-            } else {
-                debug!("Updating histogram for cell {:?}", grid_cell);
-                debug!("Old histogram: {:?}", histogram);
-                debug!("Adding: {:?}", &new_histogram);
-                histogram.as_mut().unwrap().add_histograms(&new_histogram.as_ref().unwrap());
-                debug!("New histogram: {:?}", histogram);
+        match index_write.entry(grid_cell.clone()) {
+            Entry::Occupied(_) => {
+                debug!("Updating entry for cell {:?}", grid_cell);
+                let (bounds, ref mut histogram) = index_write.get_mut(&grid_cell).unwrap();
+                bounds.update_by_bounds(&new_bounds);
+                if new_histogram.is_some() && self.enable_histograms {
+                    if histogram.is_none() {
+                        debug!("Creating new histogram for cell {:?}", grid_cell);
+                        debug!("New histogram: {:?}", new_histogram);
+                        *histogram = new_histogram.clone();
+                    } else {
+                        debug!("Updating histogram for cell {:?}", grid_cell);
+                        debug!("Old histogram: {:?}", histogram);
+                        debug!("Adding: {:?}", &new_histogram);
+                        histogram.as_mut().unwrap().add_histograms(&new_histogram.as_ref().unwrap());
+                        debug!("New histogram: {:?}", histogram);
+                    }
+                } else {
+                    info!("Not updating histogram for cell {:?}, new_histogram.is_some(): {:?}, self.enable_histograms: {:?}", grid_cell, new_histogram.is_some(), self.enable_histograms);
+                }
+                self.set_dirty(true);
+            }
+            Entry::Vacant(_) => {
+                debug!("Creating new entry for cell {:?}", grid_cell);
+                index_write.insert(grid_cell.clone(), (new_bounds.clone(), new_histogram.clone()));
             }
         }
-        self.set_dirty(true);
     }
 
     /// Updates attribute bounds for a grid cell by attributes
@@ -190,7 +202,7 @@ impl AttributeIndex {
         f.sync_all()?;
 
         // DEBUG CSV OUTPUT
-        // self.write_to_csv().unwrap();
+        // self.write_to_csv(PathBuf::from("../../../../attribute_index_server.csv")).unwrap();
 
         Ok(())
     }
@@ -233,15 +245,15 @@ impl AttributeIndex {
     }
 
     /// Writes attribute index to human readable file (for debugging)
-    pub fn write_to_csv(&self) -> Result<(), std::io::Error> {
+    pub fn write_to_csv(&self, path : PathBuf) -> Result<(), std::io::Error> {
 
         // delete file
-        if Path::new("attribute_index.csv").exists() {
-            std::fs::remove_file("attribute_index.csv")?;
+        if path.exists() {
+            std::fs::remove_file(&path)?;
         }
 
         // create writer
-        let mut wtr = Writer::from_path("attribute_index.csv")?;
+        let mut wtr = Writer::from_path(path)?;
         wtr.write_record(&[
             "lod",
             "x",
@@ -249,30 +261,40 @@ impl AttributeIndex {
             "z",
             "intensity_min",
             "intensity_max",
+            "intensity_histogram",
             "return_number_min",
             "return_number_max",
+            "return_number_histogram",
             "number_of_returns_min",
             "number_of_returns_max",
+            "number_of_returns_histogram",
             "scan_direction_min",
             "scan_direction_max",
             "edge_of_flight_line_min",
             "edge_of_flight_line_max",
             "classification_min",
             "classification_max",
+            "classification_histogram",
             "scan_angle_rank_min",
             "scan_angle_rank_max",
+            "scan_angle_rank_histogram",
             "user_data_min",
             "user_data_max",
+            "user_data_histogram",
             "point_source_id_min",
             "point_source_id_max",
+            "point_source_id_histogram",
             "gps_time_min",
             "gps_time_max",
             "color_r_min",
             "color_r_max",
+            "color_r_histogram",
             "color_g_min",
             "color_g_max",
+            "color_g_histogram",
             "color_b_min",
             "color_b_max",
+            "color_b_histogram",
         ])?;
 
         // write to file
@@ -286,35 +308,84 @@ impl AttributeIndex {
                     grid_cell.z.to_string(),
                     bounds.0.intensity.unwrap().0.to_string(),
                     bounds.0.intensity.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().intensity.to_string(),
                     bounds.0.return_number.unwrap().0.to_string(),
                     bounds.0.return_number.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().return_number.to_string(),
                     bounds.0.number_of_returns.unwrap().0.to_string(),
                     bounds.0.number_of_returns.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().number_of_returns.to_string(),
                     bounds.0.scan_direction.unwrap().0.to_string(),
                     bounds.0.scan_direction.unwrap().1.to_string(),
                     bounds.0.edge_of_flight_line.unwrap().0.to_string(),
                     bounds.0.edge_of_flight_line.unwrap().1.to_string(),
                     bounds.0.classification.unwrap().0.to_string(),
                     bounds.0.classification.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().classification.to_string(),
                     bounds.0.scan_angle_rank.unwrap().0.to_string(),
                     bounds.0.scan_angle_rank.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().scan_angle_rank.to_string(),
                     bounds.0.user_data.unwrap().0.to_string(),
                     bounds.0.user_data.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().user_data.to_string(),
                     bounds.0.point_source_id.unwrap().0.to_string(),
                     bounds.0.point_source_id.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().point_source_id.to_string(),
                     bounds.0.gps_time.unwrap().0.to_string(),
                     bounds.0.gps_time.unwrap().1.to_string(),
                     bounds.0.color_r.unwrap().0.to_string(),
                     bounds.0.color_r.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().color_r.to_string(),
                     bounds.0.color_g.unwrap().0.to_string(),
                     bounds.0.color_g.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().color_g.to_string(),
                     bounds.0.color_b.unwrap().0.to_string(),
                     bounds.0.color_b.unwrap().1.to_string(),
+                    bounds.1.as_ref().unwrap().color_b.to_string(),
                 ])?;
             }
         }
         wtr.flush()?;
         Ok(())
+    }
+
+    /// Summarizes all points in the histograms of LOD 0 (for debugging)
+    pub fn histogram_points(&self) -> Value {
+        let index_read = self.index[0].read().unwrap();
+        let mut intensity = 0;
+        let mut return_number = 0;
+        let mut number_of_returns = 0;
+        let mut classification = 0;
+        let mut scan_angle_rank = 0;
+        let mut user_data = 0;
+        let mut point_source_id = 0;
+        let mut color_r = 0;
+        let mut color_g = 0;
+        let mut color_b = 0;
+        for (_grid_cell, bounds) in index_read.iter() {
+            intensity += bounds.1.as_ref().unwrap().intensity.total_count();
+            return_number += bounds.1.as_ref().unwrap().return_number.total_count();
+            number_of_returns += bounds.1.as_ref().unwrap().number_of_returns.total_count();
+            classification += bounds.1.as_ref().unwrap().classification.total_count();
+            scan_angle_rank += bounds.1.as_ref().unwrap().scan_angle_rank.total_count();
+            user_data += bounds.1.as_ref().unwrap().user_data.total_count();
+            point_source_id += bounds.1.as_ref().unwrap().point_source_id.total_count();
+            color_r += bounds.1.as_ref().unwrap().color_r.total_count();
+            color_g += bounds.1.as_ref().unwrap().color_g.total_count();
+            color_b += bounds.1.as_ref().unwrap().color_b.total_count();
+        }
+        json!({
+            "intensity": intensity,
+            "return_number": return_number,
+            "number_of_returns": number_of_returns,
+            "classification": classification,
+            "scan_angle_rank": scan_angle_rank,
+            "user_data": user_data,
+            "point_source_id": point_source_id,
+            "color_r": color_r,
+            "color_g": color_g,
+            "color_b": color_b,
+        })
     }
 }
 

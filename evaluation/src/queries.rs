@@ -91,7 +91,7 @@ pub fn filter_apply_defaults(bounds : LasPointAttributeBounds) -> LasPointAttrib
     attribute_bounds.scan_direction = Some((bounds.scan_direction.unwrap_or((false, true)).0, bounds.scan_direction.unwrap_or((false, true)).1));
     attribute_bounds.edge_of_flight_line = Some((bounds.edge_of_flight_line.unwrap_or((false, true)).0, bounds.edge_of_flight_line.unwrap_or((false, true)).1));
     attribute_bounds.classification = Some((bounds.classification.unwrap_or((0, u8::MAX)).0, bounds.classification.unwrap_or((0, u8::MAX)).1));
-    attribute_bounds.scan_angle_rank = Some((bounds.scan_angle_rank.unwrap_or((-90, 90)).0, bounds.scan_angle_rank.unwrap_or((-90, 90)).1));
+    attribute_bounds.scan_angle_rank = Some((bounds.scan_angle_rank.unwrap_or((-128, 127)).0, bounds.scan_angle_rank.unwrap_or((-128, 127)).1));
     attribute_bounds.user_data = Some((bounds.user_data.unwrap_or((0, u8::MAX)).0, bounds.user_data.unwrap_or((0, u8::MAX)).1));
     attribute_bounds.point_source_id = Some((bounds.point_source_id.unwrap_or((0, u16::MAX)).0, bounds.point_source_id.unwrap_or((0, u16::MAX)).1));
     attribute_bounds.gps_time = Some((bounds.gps_time.unwrap_or((f64::MIN, f64::MAX)).0, bounds.gps_time.unwrap_or((f64::MIN, f64::MAX)).1));

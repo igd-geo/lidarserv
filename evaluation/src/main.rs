@@ -93,7 +93,7 @@ fn main() {
         info!("=== {} ===", name);
         run.apply_defaults(&config.defaults);
         info!("Applied defaults: {:?}", run);
-        let mut run_results = Vec::new();;
+        let mut run_results = Vec::new();
         let mut current_run = 1;
         for index in &run.index {
             info!("Running index {}", current_run);
@@ -304,6 +304,7 @@ where
 
     // store index info (e.g. number of nodes)
     let index_info = index.index_info();
+    index.flush().unwrap();
 
     // measure query performance
     let result_query_perf = if run.query_perf.single().is_some() {
