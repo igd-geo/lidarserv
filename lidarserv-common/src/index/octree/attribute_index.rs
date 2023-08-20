@@ -101,7 +101,7 @@ impl AttributeIndex {
                         debug!("New histogram: {:?}", histogram);
                     }
                 } else {
-                    info!("Not updating histogram for cell {:?}, new_histogram.is_some(): {:?}, self.enable_histograms: {:?}", grid_cell, new_histogram.is_some(), self.enable_histograms);
+                    debug!("Not updating histogram for cell {:?}, new_histogram.is_some(): {:?}, self.enable_histograms: {:?}", grid_cell, new_histogram.is_some(), self.enable_histograms);
                 }
                 self.set_dirty(true);
             }
@@ -351,6 +351,9 @@ impl AttributeIndex {
 
     /// Summarizes all points in the histograms of LOD 0 (for debugging)
     pub fn histogram_points(&self) -> Value {
+        if !self.enable_histograms {
+            return json!({});
+        }
         let index_read = self.index[0].read().unwrap();
         let mut intensity = 0;
         let mut return_number = 0;
