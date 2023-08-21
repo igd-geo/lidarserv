@@ -182,7 +182,7 @@ pub fn one_return() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
         return_number: None,
-        number_of_returns: Some((1, 10)),
+        number_of_returns: Some((2, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
         classification: None,
@@ -234,6 +234,27 @@ pub fn full_red_part() -> LasPointAttributeBounds {
     }
 }
 
+/// Normal Filter on UserData
+/// (Modified Frankfurt dataset)
+/// Assumes, that NormalX is stored in UserData and filters Ground Points
+pub fn normal_x_vertical() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: None,
+        scan_angle_rank: None,
+        user_data: Some((110, 150)),
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
 /// Mixed Filter, which only accepts points of a certain time range and a ground classification (Frankfurt dataset)
 pub fn mixed_ground_and_time() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
@@ -258,12 +279,31 @@ pub fn mixed_ground_and_one_return() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
         return_number: None,
-        number_of_returns: Some((1, 10)),
+        number_of_returns: Some((2, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
         classification: Some((10,12)),
         scan_angle_rank: None,
         user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+/// Mixed Filter, which only accepts ground points, which have 1 or more returns and have a specific normal (Frankfurt dataset)
+pub fn mixed_ground_normal_one_return() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: Some((2, 10)),
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: Some((10,12)),
+        scan_angle_rank: None,
+        user_data: Some((110, 150)),
         point_source_id: None,
         gps_time: None,
         color_r: None,
