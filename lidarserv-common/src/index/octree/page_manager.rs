@@ -11,6 +11,7 @@ use std::io::{Cursor, Read, Write};
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+use tracy_client::span;
 
 type SharedNodeResult<Sampl, Point> = Result<Arc<Node<Sampl, Point>>, ReadLasError>;
 
@@ -107,6 +108,7 @@ where
     /// Return all points in the page.
     /// If node is not present, parse the binary representation.
     pub fn get_points(&self, loader: &I32LasReadWrite) -> Result<Vec<Point>, ReadLasError> {
+        let _span = span!("Page::get_points");
         // try to get points from node
         {
             let read_lock = self.node.read().unwrap();
@@ -137,6 +139,7 @@ where
     where
         F: FnOnce() -> Sampl,
     {
+        let _span = span!("Page::get_node");
         // try getting existing
         {
             let read_lock = self.node.read().unwrap();
@@ -259,6 +262,7 @@ where
     type Data = Page<Sampl, Point>;
 
     fn load(&mut self) -> Result<Self::Data, CacheLoadError> {
+        let _span = span!("PageFileHandle::load");
         let mut file = File::open(&self.file_name)?;
         let mut data = Vec::new();
         file.read_to_end(&mut data)?;
@@ -267,10 +271,19 @@ where
     }
 
     fn store(&mut self, page: &Self::Data) -> Result<(), IoError> {
+        let _span = span!("PageFileHandle::store");
+        let _span_1 = span!("PageFileHandle::store::get_binary");
         let data = page.get_binary(&self.loader);
+        drop (_span_1);
+        let _span_2 = span!("PageFileHandle::store::write_all");
         let mut file = File::create(&self.file_name)?;
+        drop (_span_2);
+        let _span_3 = span!("PageFileHandle::store::write_all");
         file.write_all(data.as_slice())?;
+        drop (_span_3);
+        let _span_4 = span!("PageFileHandle::store::sync_all");
         file.sync_all()?;
+        drop (_span_4);
         Ok(())
     }
 }

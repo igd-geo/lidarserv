@@ -6,6 +6,7 @@ use std::sync::{Arc, RwLock};
 use log::{debug, info, trace};
 use csv::Writer;
 use serde_json::{json, Value};
+use tracy_client::span;
 use crate::geometry::grid::{GridCell, LodLevel};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
@@ -80,6 +81,7 @@ impl AttributeIndex {
         new_bounds: &LasPointAttributeBounds,
         new_histogram: &Option<LasPointAttributeHistograms>)
     {
+        span!("AttributeIndex::update_bounds_and_histograms");
         // aquire write lock for lod level
         let mut index_write = self.index[lod.level() as usize].write().unwrap();
 
@@ -121,6 +123,7 @@ impl AttributeIndex {
     /// Checks if a grid cell OVERLAPS with the given attribute bounds
     /// Also checks the histogram, if enabled
     pub fn cell_overlaps_with_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds, check_histogram: bool) -> bool {
+        span!("AttributeIndex::cell_overlaps_with_bounds");
         // aquire read lock for lod level
         let index_read = self.index[lod.level() as usize].read().unwrap();
         let entry = index_read.get_key_value(&grid_cell);
@@ -154,6 +157,7 @@ impl AttributeIndex {
 
     /// Loads attribute index from file
     fn load_from_file(num_lods: usize, file_name: &Path) -> Result<Arc<Index>, std::io::Error> {
+        span!("AttributeIndex::load_from_file");
 
         // check existence of file and open it
         if !file_name.exists() {
@@ -178,6 +182,7 @@ impl AttributeIndex {
 
     /// Writes attribute index to file
     pub fn write_to_file(&self) -> Result<(), std::io::Error> {
+        span!("AttributeIndex::write_to_file");
 
         // create file
         debug!("Writing attribute index to file {:?}", self.file_name);

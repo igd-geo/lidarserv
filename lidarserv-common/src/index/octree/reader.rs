@@ -14,6 +14,7 @@ use crossbeam_channel::Receiver;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use log::debug;
+use tracy_client::span;
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub struct OctreeReader<Point, Sampl, SamplF> {
@@ -116,6 +117,7 @@ where
         enable_attribute_acceleration: bool,
         enable_histogram_acceleration: bool,
     ) -> bool {
+        span!("cell_matches_query_impl");
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
         let lod = cell.lod;
 
@@ -127,6 +129,7 @@ where
 
         // check attributes for cell
         if enable_attribute_acceleration {
+            span!("cell_matches_query_impl::attribute_acceleration");
             if let Some(filter) = filter {
                 let attribute_index = inner.attribute_index.as_ref().unwrap();
                 if !attribute_index.cell_overlaps_with_bounds(lod, &cell.pos, filter, enable_histogram_acceleration) {
@@ -142,6 +145,7 @@ where
     /// Filters out all points of the given Vector, that do not match the query or filter
     /// returns vector of points that match the query and filter.
     fn filter_points(&self, points: &Vec<Point>) -> Vec<Point> {
+        span!("filter_points");
         let mut filtered_points = Vec::new();
         for point in points {
             if self.query.matches_point(point, &self.inner.coordinate_system) {
@@ -328,6 +332,7 @@ where
     /// Returns LeveledGridCell of the loaded node and the node-page.
     /// Returns None if the load queue is empty.
     pub fn load_one(&mut self) -> Option<(LeveledGridCell, Vec<Point>, I32CoordinateSystem)> {
+        let _span = span!("load_one");
         // get a node to load
         let load = match self.load_queue.iter().next() {
             None => return None,

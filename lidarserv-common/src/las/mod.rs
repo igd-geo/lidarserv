@@ -19,6 +19,7 @@ use std::io::SeekFrom::Start;
 use std::io::{Cursor, Error, Read, Seek, SeekFrom, Write};
 use std::sync::Arc;
 use thiserror::Error;
+use tracy_client::span;
 
 #[derive(Error, Debug, Clone)]
 pub enum ReadLasError {
@@ -103,6 +104,7 @@ impl I32LasReadWrite {
         It::Item: Borrow<Point>,
         Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
     {
+        let _span = span!("I32LasReadWrite::write_las");
         let mut wr = Cursor::new(Vec::new());
         let Las {
             points,
@@ -209,6 +211,7 @@ impl I32LasReadWrite {
         R: Read + Seek + Send,
         Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
     {
+        let _span = span!("I32LasReadWrite::read_las");
         // read header
         let header = las::raw::Header::read_from(&mut read)?;
 
@@ -306,7 +309,9 @@ where
     Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes>,
     W: Write + Seek + Send,
 {
+    let _main_span = span!("async_write_compressed_las_with_variable_chunk_size");
     // header
+    let _header_span = span!("async_write_compressed_las_with_variable_chunk_size::header");
     let (mut header, format) = init_las_header(
         true,
         Point3::new(-1.0, -1.0, -1.0),
@@ -320,8 +325,10 @@ where
         Err(las::Error::Io(e)) => return Err(e),
         Err(_) => unreachable!(),
     }
+    drop(_header_span);
 
     // las vlr
+    let _vlr_span = span!("async_write_compressed_las_with_variable_chunk_size::vlr");
     let laz_vlr = LazVlrBuilder::default()
         .with_point_format(format.to_u8().unwrap(), format.extra_bytes)
         .unwrap()
@@ -340,8 +347,10 @@ where
     header.number_of_variable_length_records += 1;
     header.offset_to_point_data += vlr.len(false) as u32;
     vlr.into_raw(false).unwrap().write_to(&mut write).unwrap();
+    drop(_vlr_span);
 
     // points
+    let _points_span = span!("async_write_compressed_las_with_variable_chunk_size::points");
     let mut aabb = OptionAABB::empty();
     {
         let mut compressor = LasZipCompressor::new(&mut write, laz_vlr).unwrap();
@@ -373,8 +382,10 @@ where
         }))?;
         compressor.done()?;
     }
+    drop(_points_span);
 
     // update header
+    let _update_header_span = span!("async_write_compressed_las_with_variable_chunk_size::update_header");
     if let Some(aabb) = aabb.into_aabb() {
         let min = aabb.min::<I32Position>().decode(coordinate_system);
         let max = aabb.max::<I32Position>().decode(coordinate_system);
@@ -391,6 +402,7 @@ where
         Err(las::Error::Io(e)) => return Err(e),
         Err(_) => unreachable!(),
     }
+    drop(_update_header_span);
 
     Ok(())
 }

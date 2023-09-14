@@ -2,6 +2,7 @@ pub mod bounding_box;
 pub mod empty;
 pub mod view_frustum;
 
+use tracy_client::span;
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
@@ -59,6 +60,7 @@ where
         coordinate_system: &I32CoordinateSystem,
         lod: &LodLevel,
     ) -> bool {
+        span!("QueryExt::matches_node");
         match self.max_lod_area(bounds, coordinate_system) {
             None => false,
             Some(max_lod) => max_lod >= *lod,

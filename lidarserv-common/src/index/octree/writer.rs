@@ -19,7 +19,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 use std::{mem, thread};
 use thiserror::Error;
-use tracy_client::{create_plot, Plot};
+use tracy_client::{create_plot, Plot, span};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
 
@@ -304,6 +304,7 @@ where
     pub fn thread(&self) -> Result<(), IndexingThreadError> {
         loop {
             // get a task
+            let _span = span!("OctreeWorkerThread::thread - wait for task");
             let mut lock = self.inboxes.lock().unwrap();
             let (node_id, task) = loop {
                 // get task
@@ -322,8 +323,10 @@ where
                 lock = self.condvar.wait(lock).unwrap();
             };
             drop(lock);
+            drop(_span);
 
             // process task
+            let _span = span!("OctreeWorkerThread::thread - process task");
             let is_max_lod = self.inner.max_lod == node_id.lod;
             let task_min_generation = task.min_generation;
             let task_max_generation = task.max_generation;
@@ -351,8 +354,10 @@ where
                 }
                 lock.plot_nr_of_points();
             }
+            drop(_span);
 
             // notify subscriptions
+            let _span = span!("OctreeWorkerThread::thread - notify subscriptions");
             if should_notify {
                 let mut lock = self.inner.subscriptions.lock().unwrap();
                 let mut it_end = lock.len();
@@ -368,6 +373,7 @@ where
                     }
                 }
             }
+            drop(_span);
 
             // Free space in page cache
             self.inner.page_cache.cleanup()?;
@@ -382,14 +388,17 @@ where
         is_max_lod: bool,
     ) -> Result<(Option<[(LeveledGridCell, Vec<Point>); 8]>, bool), WriterTaskError> {
         // get points
+        let _span = span!("OctreeWorkerThread::writer_task - get points");
         let node_arc = self.inner.page_cache.load_or_default(&node_id)?.get_node(
             &self.inner.loader,
             || self.inner.sample_factory.build(&node_id.lod),
             &self.inner.coordinate_system,
         )?;
         let mut node = (*node_arc).clone();
+        drop(_span);
 
         // update attribute index
+        let _span = span!("OctreeWorkerThread::writer_task - update attribute index");
         if self.inner.attribute_index.is_some() {
             if self.inner.enable_histogram_acceleration {
                 // WITH HISTOGRAMS
@@ -407,8 +416,10 @@ where
                 self.inner.attribute_index.as_ref().unwrap().update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &None);
             }
         }
+        drop(_span);
 
         // insert new points
+        let _span = span!("OctreeWorkerThread::writer_task - insert new points");
         node.sampling.reset_dirty();
         let initial_nr_bogus = node.bogus_points.len();
         let mut next_lod_points = node.sampling.insert(task.points, |_, _| ());
