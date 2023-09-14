@@ -1,23 +1,24 @@
 data_folder = "data/evaluation"
-output_file = "evaluation/test_%d_%i.json"
-points_file = "data/frankfurt_big.las"
+output_file = "evaluation/results/2023-08-02_query_overview/query_overview_v6_%d_%i.json"
+points_file = "data/frankfurt_street_with_normals_as_userdata.las"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
 enable_cooldown = false
-use_existing_index = false
 indexing_timeout_seconds = 86400 # one day
+use_existing_index = false
+
 
 [defaults]
 type = "Octree"
 priority_function = "TaskAge"
 num_threads = 10
-cache_size = 5000
+cache_size = 10000
 node_hierarchy = 16
 point_hierarchy = 23
 compression = true
-nr_bogus_points = [0, 0]
-insertion_rate.target_point_pressure = 1_000_000
+nr_bogus_points = [200, 200] # keep it deactived here to prevent wrong results with queries
+insertion_rate.target_point_pressure = 3_000_000
 query_perf.enable = true
 latency.enable = false
 enable_attribute_index = true
@@ -30,4 +31,6 @@ bin_count_user_data = 25
 bin_count_point_source_id = 256
 bin_count_color = 25
 
-[runs.example]
+[runs.querying]
+# only one run for all queries
+# indexing frankfurt_big takes long enough anyway

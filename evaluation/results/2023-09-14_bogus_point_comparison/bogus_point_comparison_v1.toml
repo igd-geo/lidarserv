@@ -1,12 +1,12 @@
 data_folder = "data/evaluation"
-output_file = "evaluation/test_%d_%i.json"
-points_file = "data/frankfurt_big.las"
+output_file = "evaluation/results/2023-09-14_bogus_point_comparison/bogus_point_comparison_v1_%d_%i.json"
+points_file = "data/frankfurt_street_with_normals_as_userdata.las"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
 enable_cooldown = false
+indexing_timeout_seconds = 2600 # corresponds to 10000 points per second with frankfurt_street
 use_existing_index = false
-indexing_timeout_seconds = 86400 # one day
 
 [defaults]
 type = "Octree"
@@ -17,7 +17,7 @@ node_hierarchy = 16
 point_hierarchy = 23
 compression = true
 nr_bogus_points = [0, 0]
-insertion_rate.target_point_pressure = 1_000_000
+insertion_rate.target_point_pressure = 200_000
 query_perf.enable = true
 latency.enable = false
 enable_attribute_index = true
@@ -30,4 +30,5 @@ bin_count_user_data = 25
 bin_count_point_source_id = 256
 bin_count_color = 25
 
-[runs.example]
+[runs.bogus]
+nr_bogus_points = [[0, 0], [100, 100], [200, 200], [300, 300], [400, 400], [800, 800], [1_600, 1_600], [3_200, 3_200]]
