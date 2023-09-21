@@ -1,0 +1,35 @@
+data_folder = "data/evaluation"
+output_file = "evaluation/results/2023-09-21_hardware_comparison/hardware_comparison_v1_%d_%i.json"
+points_file = "data/frankfurt_street_with_normals_as_userdata.las"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = false
+indexing_timeout_seconds = 86400 # one day
+use_existing_index = false
+
+
+[defaults]
+type = "Octree"
+priority_function = "TaskAge"
+num_threads = 10
+cache_size = 5000
+node_hierarchy = 16
+point_hierarchy = 23
+compression = true
+nr_bogus_points = [0, 0]
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = true
+latency.enable = false
+enable_attribute_index = true
+enable_histogram_acceleration = true
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 256
+bin_count_color = 25
+
+[runs.compression_comparison]
+compression = [true, false]
