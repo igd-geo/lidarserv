@@ -1,6 +1,6 @@
 data_folder = "data/evaluation"
 output_file = "evaluation/results/2023-08-20_insertion_speed_comparison/insertion_speed_v2_%d_%i.json"
-points_file = "data/frankfurt_big.las"
+points_file = "data/frankfurt_big_with_normals_as_userdata.las"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
