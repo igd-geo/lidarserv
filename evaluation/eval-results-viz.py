@@ -28,30 +28,39 @@ INPUT_FILES_CACHE_SIZE_COMPARISON = [join(PROJECT_ROOT, "evaluation/results/2023
                                          "freiburg_2023-08-01_1.json",
                                      ]]
 
-INPUT_FILES_QUERY_OVERVIEW = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file in [
-    "query_overview_2023-08-02_1.json",
-    "query_overview_2023-08-02_2.json",
-    "query_overview_2023-08-03_1.json",
-    "query_overview_2023-08-03_2.json",
-    "query_overview_2023-08-03_3.json",
-    "query_overview_v2_2023-08-06_1.json",
-    "query_overview_v3_2023-08-07_1.json",
-    "query_overview_v3_2023-08-14_1.json",
-    "query_overview_v4_2023-08-18_1.json",
-]]
+INPUT_FILES_QUERY_OVERVIEW_STAGE1 = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file
+                                     in [
+                                         "query_overview_2023-08-02_1.json",
+                                         "query_overview_2023-08-02_2.json",
+                                         "query_overview_2023-08-03_1.json",
+                                         "query_overview_2023-08-03_2.json",
+                                         "query_overview_2023-08-03_3.json",
+                                         "query_overview_v2_2023-08-06_1.json",
+                                         "query_overview_v3_2023-08-07_1.json",
+                                         "query_overview_v3_2023-08-14_1.json",
+                                         "query_overview_v4_2023-08-18_1.json",
+                                     ]]
 
-INPUT_FILES_QUERY_OVERVIEW_NEW = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file in [
-    "query_overview_v5_2023-08-21_1.json",
-    "query_overview_v6_2023-09-14_1.json",
-]]
+INPUT_FILES_QUERY_OVERVIEW_STAGE2 = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file
+                                     in [
+                                         "query_overview_v5_2023-08-21_1.json",
+                                         "query_overview_v6_2023-09-14_1.json",
+                                         "query_overview_v6_2023-09-14_2.json",
+                                         "query_overview_v7_2023-09-15_1.json",
+                                     ]]
+
+INPUT_FILES_FALSE_POSITIVE_RATES = [join(PROJECT_ROOT, "evaluation/results/2023-08-02_query_overview/", file) for file
+                                    in [
+                                        "query_overview_v7_2023-09-15_1.json",
+                                    ]]
 
 INPUT_FILES_NODE_HIERARCHY_COMPARISON = [
     join(PROJECT_ROOT, "evaluation/results/2023-08-03_node_hierarchy_comparison/", file) for file in [
-        "node_hierarchy_comparison_2023-08-03_1.json",
-        "node_hierarchy_comparison_2023-08-05_2.json",
-        "node_hierarchy_comparison_v2_2023-08-05_1.json",
-        "node_hierarchy_comparison_v6_2023-08-23_1.json",
-        "node_hierarchy_comparison_v6_2023-08-23_2.json",
+        # "node_hierarchy_comparison_2023-08-03_1.json",
+        # "node_hierarchy_comparison_2023-08-05_2.json",
+        # "node_hierarchy_comparison_v2_2023-08-05_1.json",
+        # "node_hierarchy_comparison_v6_2023-08-23_1.json",
+        # "node_hierarchy_comparison_v6_2023-08-23_2.json",
         "node_hierarchy_comparison_v6_2023-08-23_3.json",
     ]]
 
@@ -137,7 +146,7 @@ def main():
     #         filename=join(output_folder, "insertion-rate-by-cache_size.pdf")
     #     )
     #
-    for input_file in INPUT_FILES_QUERY_OVERVIEW:
+    for input_file in INPUT_FILES_QUERY_OVERVIEW_STAGE1:
         # read file
         with open(input_file) as f:
             print("Reading file: ", input_file)
@@ -170,7 +179,7 @@ def main():
             filename=join(output_folder, "query-by-time.pdf"),
         )
 
-    for input_file in INPUT_FILES_QUERY_OVERVIEW_NEW:
+    for input_file in INPUT_FILES_QUERY_OVERVIEW_STAGE2:
         # read file
         with open(input_file) as f:
             print("Reading file: ", input_file)
@@ -184,29 +193,29 @@ def main():
             [
                 'time_range',
                 'ground_classification',
-                'no_cars_classification',
+                # 'no_cars_classification',
                 'normal_x_vertical',
                 'high_intensity',
                 'low_intensity',
                 'full_red_part',
-                'one_return',
-                'mixed_ground_and_one_return',
+                # 'one_return',
+                # 'mixed_ground_and_one_return',
                 'mixed_ground_and_time',
-                'mixed_ground_normal_one_return'
+                # 'mixed_ground_normal_one_return'
             ]
         labels = \
             [
                 'Time\nSmall Range',
                 'Classification\nGround',
-                'Classification\nNo Cars',
+                # 'Classification\nNo Cars',
                 'Normal\nVertical',
                 'Intensity\nHigh Value',
                 'Intensity\nLow Value',
                 'Color\nHigh Red Value',
-                'Number of Returns\nOne or More Returns',
-                'Mixed\nGround and One Return',
+                # 'Number of Returns\nOne or More Returns',
+                # 'Mixed\nGround and One Return',
                 'Mixed\nGround and Time Range',
-                'Mixed\nGround, Normal and One Return',
+                # 'Mixed\nGround, Normal and One Return',
             ]
 
         plot_query_by_num_points(
@@ -238,6 +247,15 @@ def main():
             labels=labels
         )
 
+        # if file in false positive rates
+        if input_file in INPUT_FILES_FALSE_POSITIVE_RATES:
+            plot_false_positive_rates(
+                test_runs=data["runs"]["querying"],
+                filename=join(output_folder, "fpr_rates.pdf"),
+                queries=queries,
+                labels=labels
+            )
+
     for input_file in INPUT_FILES_BOGUS_POINTS_COMPARISON:
         # read file
         with open(input_file) as f:
@@ -250,13 +268,13 @@ def main():
 
         plot_overall_performance_by_bogus(
             test_runs=data["runs"],
-            filename=join(output_folder, "overall-performance_node.pdf"),
+            filename=join(output_folder, "bogus-performance_node.pdf"),
             nr_points=data["env"]["input_file_nr_points"]
         )
 
         plot_overall_performance_by_bogus(
             test_runs=data["runs"],
-            filename=join(output_folder, "overall-performance_hist.pdf"),
+            filename=join(output_folder, "bogus-performance_hist.pdf"),
             nr_points=data["env"]["input_file_nr_points"],
             query_run="only_full_acc"
         )
@@ -278,59 +296,59 @@ def main():
 
         plot_overall_performance_by_sizes(
             test_runs=data["runs"],
-            filename=join(output_folder, "overall-performance_node.pdf"),
+            filename=join(output_folder, "nodesize-performance_node.pdf"),
             nr_points=data["env"]["input_file_nr_points"]
         )
 
         plot_overall_performance_by_sizes(
             test_runs=data["runs"],
-            filename=join(output_folder, "overall-performance_hist.pdf"),
+            filename=join(output_folder, "nodesize-performance_hist.pdf"),
             nr_points=data["env"]["input_file_nr_points"],
             query_run="only_full_acc"
         )
 
-    for input_file in INPUT_FILES_NODE_HIERARCHY_COMPARISON_3D:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        hierarchies = {"hierarchies": data["runs"]["hierarchies"]}
-        plot_overall_performance_by_sizes(
-            test_runs=hierarchies,
-            filename=join(output_folder, "overall-performance_hierarchies.pdf"),
-            nr_points=data["env"]["input_file_nr_points"]
-
-        )
-
-        plot_overall_performance_by_sizes(
-            test_runs=hierarchies,
-            filename=join(output_folder, "overall-performance_hierarchies_hist.pdf"),
-            nr_points=data["env"]["input_file_nr_points"],
-        )
-
-        if "hierarchies_cached" in data["runs"]:
-            hierarchies_cached = {"hierarchies": data["runs"]["hierarchies_cached"]}
-            plot_overall_performance_by_sizes(
-                test_runs=hierarchies_cached,
-                filename=join(output_folder, "overall-performance_hierarchies_cached.pdf"),
-                nr_points=data["env"]["input_file_nr_points"]
-
-            )
-            plot_query_lod_nodes_by_runs(
-                test_runs=hierarchies_cached,
-                filename=join(output_folder, "query-by-lod-nodes_hierarchies_cached.pdf"),
-            )
-
-        plot_overall_performance_by_sizes_3d(
-            data=data["runs"],
-            filename=join(output_folder, f"overall-performance-3d.pdf"),
-            nr_points=data["env"]["input_file_nr_points"]
-        )
+    # for input_file in INPUT_FILES_NODE_HIERARCHY_COMPARISON_3D:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     hierarchies = {"hierarchies": data["runs"]["hierarchies"]}
+    #     plot_overall_performance_by_sizes(
+    #         test_runs=hierarchies,
+    #         filename=join(output_folder, "nodesize-performance_hierarchies.pdf"),
+    #         nr_points=data["env"]["input_file_nr_points"]
+    #
+    #     )
+    #
+    #     plot_overall_performance_by_sizes(
+    #         test_runs=hierarchies,
+    #         filename=join(output_folder, "nodesize-performance_hierarchies_hist.pdf"),
+    #         nr_points=data["env"]["input_file_nr_points"],
+    #     )
+    #
+    #     if "hierarchies_cached" in data["runs"]:
+    #         hierarchies_cached = {"hierarchies": data["runs"]["hierarchies_cached"]}
+    #         plot_overall_performance_by_sizes(
+    #             test_runs=hierarchies_cached,
+    #             filename=join(output_folder, "nodesize-performance_hierarchies_cached.pdf"),
+    #             nr_points=data["env"]["input_file_nr_points"]
+    #
+    #         )
+    #         plot_query_lod_nodes_by_runs(
+    #             test_runs=hierarchies_cached,
+    #             filename=join(output_folder, "query-by-lod-nodes_hierarchies_cached.pdf"),
+    #         )
+    #
+    #     plot_overall_performance_by_sizes_3d(
+    #         data=data["runs"],
+    #         filename=join(output_folder, f"nodesize-performance-3d.pdf"),
+    #         nr_points=data["env"]["input_file_nr_points"]
+    #     )
 
     for input_file in INPUT_FILES_INSERTION_SPEED_COMPARISON:
         # read file
@@ -350,7 +368,7 @@ def main():
 
 def make_y_insertion_rate(ax, test_runs):
     ys = [i["results"]["insertion_rate"]["insertion_rate_points_per_sec"] for i in test_runs]
-    ax.set_ylabel("Insertion rate | points/s")
+    ax.set_ylabel("Insertion rate | Points/s")
     ymax = max(ys) * 1.1
     bottom, top = ax.get_ylim()
     if bottom != 0 or top < ymax:
@@ -360,7 +378,7 @@ def make_y_insertion_rate(ax, test_runs):
 
 def make_y_duration_cleanup(ax, test_runs):
     ys = [i["results"]["insertion_rate"]["duration_cleanup_seconds"] for i in test_runs]
-    ax.set_ylabel("Cleanup time | points/s")
+    ax.set_ylabel("Cleanup time | Points/s")
     return ys
 
 
@@ -606,7 +624,7 @@ def plot_insertion_rates_by_disk_speed(data, filename, title=None):
     ax: plt.Axes = fig.subplots()
     ax.set_xlabel("Disk speed | MiB/s")
     ax.set_xlim(left=0, right=max(xs) + 1.0)
-    ax.set_ylabel("Insertion rate | points/s")
+    ax.set_ylabel("Insertion rate | Points/s")
     y_flat = [jt for run in data for jt in run["data"]["compression"]]
     y_octree_compression = [it["octree_index"]["insertion_rate"]["insertion_rate_points_per_sec"] for it in y_flat if
                             it["config"]["compression"] is True]
@@ -669,7 +687,7 @@ def plot_latency_by_insertion_rate(test_run, filename, title=None):
     ax: plt.Axes = fig.subplots()
     latency_runs = test_run["results"]["latency"]
     xs = [it["settings"]["points_per_sec"] for it in latency_runs]
-    ax.set_xlabel("Insertion rate | points/s")
+    ax.set_xlabel("Insertion rate | Points/s")
     draw_y_latency(ax, xs, latency_runs, False)
     if title is not None:
         ax.set_title(title)
@@ -689,7 +707,7 @@ def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename
         ys_max = [it["all_lods"]["quantiles"][11]["value"] for it in latency_runs]  # 90% quantile
         ax.fill_between(xs, ys_min, ys_max, alpha=.2, linewidth=0)
         ax.plot(xs, ys_med, label=rename_tpf(prio_fn), marker=".")
-    ax.set_xlabel("Insertion rate | points/s")
+    ax.set_xlabel("Insertion rate | Points/s")
     ax.set_ylabel("Latency | seconds")
     ax.set_yscale("log")
     ax.legend()
@@ -753,7 +771,7 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['All points', 'Bounds Filter', 'Histogram Filter',
+        custom_legend_labels = ['All Points', 'Bounds Filter', 'Histogram Filter',
                                 'Point Filter']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
@@ -815,12 +833,20 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
                 nr_nodes_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_nodes"]]
                 plt.bar([p + (i + 1) * bar_width], nr_nodes_subquery, bar_width, label=subquery, color=colors[i + 1])
 
+            # check if nr_non_empty_nodes exist in json
+            if "nr_non_empty_nodes" in run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"]:
+                nr_non_empty_nodes = [run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
+                                          "nr_non_empty_nodes"]]
+                plt.bar([p + 3 * bar_width], nr_non_empty_nodes, bar_width, label="nr_non_empty_nodes",
+                        color=colors[i + 2])
+
         plt.xlabel('Queries')
         plt.ylabel('Number of Nodes')
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['All points', 'Bounds Filter', 'Histogram Filter']  # Custom legend labels
+        custom_legend_labels = ['All Nodes', 'Bounds Filter', 'Histogram Filter',
+                                'Nodes Containing\nSearched Points']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
@@ -897,6 +923,81 @@ def plot_query_by_num_points_stacked(test_runs, nr_points, filename, title=None)
         plt.close(fig)
 
 
+def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, title=None):
+    fig, ax = plt.subplots(figsize=[10, 6])
+    subqueries = ["raw_spatial", "only_node_acc", "only_full_acc", "point_filtering_with_full_acc"]
+
+    bar_width = 0.15
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+
+    for run in test_runs:
+        for p in range(len(queries)):
+            # total number of points
+            points_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_points"]
+            nodes_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_nodes"]
+
+            # number of points for node acceleration
+            points_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_points"]
+            nodes_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_nodes"]
+
+            # number of points for hist acceleration
+            points_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_points"]
+            nodes_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_nodes"]
+
+            # ground truth (minimum)
+            points_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
+                "nr_points"]
+            nodes_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
+                "nr_non_empty_nodes"]
+
+            # all not searched points (all negatives)
+            false_points = points_total - points_point_filtering
+            false_nodes = nodes_total - nodes_point_filtering
+
+            # all not searches points after node acceleration (false positives)
+            false_points_node = points_node_acc - points_point_filtering
+            false_nodes_node = nodes_node_acc - nodes_point_filtering
+
+            # all not searches points after hist acceleration (false positives)
+            false_points_full = points_full_acc - points_point_filtering
+            false_nodes_full = nodes_full_acc - nodes_point_filtering
+
+            # false positive percentage node acceleration
+            false_points_node_percentage = false_points_node / false_points * 100
+            false_nodes_node_percentage = false_nodes_node / false_nodes * 100
+
+            # false positive percentage hist acceleration
+            false_points_full_percentage = false_points_full / false_points * 100
+            false_nodes_full_percentage = false_nodes_full / false_nodes * 100
+
+            # plot it
+            plt.bar([p + 0 * bar_width], false_points_node_percentage, bar_width, color=colors[0])
+            plt.bar([p + 1 * bar_width], false_points_full_percentage, bar_width, color=colors[1])
+            plt.bar([p + 2.5 * bar_width], false_nodes_node_percentage, bar_width, color=colors[2])
+            plt.bar([p + 3.5 * bar_width], false_nodes_full_percentage, bar_width, color=colors[3])
+
+        plt.xlabel('Queries')
+        plt.ylabel('False Positive Rate | Percentage')
+        # plt.title(title)
+        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
+
+        custom_legend_labels = ['False Positive Points\nNode Acceleration', 'False Positive Points\nFull Acceleration', 'False Positive Nodes\nNode Acceleration',
+                                'False Positive Nodes\nFull Acceleration']  # Custom legend labels
+        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title)
+        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
+
+
 def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=None):
     fig, ax = plt.subplots(figsize=[10, 6])
 
@@ -904,13 +1005,15 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
         queries = query_names()
     if labels is None:
         labels = query_pretty_names()
+    # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
+    #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
     subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
-                  "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
+                  "point_filtering_with_full_acc"]
 
     bar_width = 1 / (len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#FF6D00', '#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#7CBB00']
+    colors = ['#9637DB', '#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
 
     for run in test_runs:
         for p in range(len(queries)):
@@ -926,7 +1029,7 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
                     pass
 
         plt.xlabel('Queries')
-        plt.ylabel('Execution Time | seconds')
+        plt.ylabel('Execution Time | Seconds')
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90)
 
@@ -935,8 +1038,8 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
             'Spatial Query\nPoint Filter',
             'Spatial Query\nBounds Filter\nPoint Filter',
             'Spatial Query\nBounds Filter\nHistogram Filter\nPoint Filter',
-            'Bounds Filter',
-            'Bounds Filter\nHistogram Filter',
+            # 'Bounds Filter',
+            # 'Bounds Filter\nHistogram Filter',
         ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
@@ -1000,7 +1103,7 @@ def plot_overall_performance_by_bogus(test_runs, filename, nr_points, title=None
         for multi_run in run:
             # name calculation
             bogus_points = multi_run["index"]["nr_bogus_points"]
-            run_name = str(bogus_points)
+            run_name = str(bogus_points[0])
             names.append(run_name)
 
             # data calculation
@@ -1030,20 +1133,23 @@ def plot_overall_performance_by_bogus(test_runs, filename, nr_points, title=None
     # Plotting logic for Insertion Speed
     # plot insertion speed as bar plot with different colors for timeouted runs
     # ax1.bar(names, insertion_speeds, label='Insertion Speed (Points per Second)', color=colors)
-    ax1.plot(names, insertion_speeds, marker='o', color='tab:blue')
-    ax1.set_xlabel('Runs')
-    ax1.set_ylabel('Insertion Speed', color='tab:blue')
+    ax1.plot(names, insertion_speeds, marker='o', label='Insertion Rate | Points/s', color='tab:blue')
+    ax1.set_xlabel('Number of Bogus Points')
+    ax1.set_ylabel('Insertion Rate (Points/s)', color='tab:blue')
 
     # Plotting logic for Query Speedup
-    ax2.plot(names, query_speeds, marker='o', label='Average Query Time (Seconds)', color='tab:green')
-    ax2.set_ylabel('Average Query Time (Seconds)', color='tab:green')
+    ax2.plot(names, query_speeds, marker='o', label='Average Query Time | Seconds', color='tab:green')
+    ax2.set_ylabel('Average Query Time | Seconds', color='tab:green')
 
     # Creating a third y-axis for Point Reduction
     ax3 = ax1.twinx()
     ax3.spines['right'].set_position(('outward', 60))  # Adjust the position of the third y-axis
 
-    ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction (Percent)', color='tab:red')
-    ax3.set_ylabel('Average Point Reduction (Percent)', color='tab:red')
+    ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction | Percentage', color='tab:red')
+    ax3.set_ylabel('Average Point Reduction | Percentage', color='tab:red')
+
+    # plt.axhline(y = 400000, color = 'b', linestyle = '-')
+    ax1.axhline(y=400000, color='grey', linestyle=':', label='Insertion Rate Goal (400000 Points/s)')
 
     # Combine legends from all axes
     lines, labels = ax1.get_legend_handles_labels()
@@ -1066,7 +1172,6 @@ def plot_overall_performance_by_bogus(test_runs, filename, nr_points, title=None
         ax1.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
     plt.close(fig)
-
 
 
 # Plots Insertion Speed, Query Time Speedup and Query Point Reduction according to the node and point hierarchy
@@ -1122,27 +1227,38 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
         else:
             colors.append("green")
 
+    # flip all lists
+    names = names[::-1]
+    insertion_speeds = insertion_speeds[::-1]
+    query_speeds = query_speeds[::-1]
+    point_reductions = point_reductions[::-1]
+    colors = colors[::-1]
+
     # Plotting logic for Insertion Speed
     # plot insertion speed as bar plot with different colors for timeouted runs
-    ax1.bar(names, insertion_speeds, label='Insertion Speed (Points per Second)', color=colors)
-    ax1.set_xlabel('Runs')
-    ax1.set_ylabel('Insertion Speed', color='tab:blue')
+    # ax1.bar(names, insertion_speeds, label='Insertion Rate | points/s', color=colors)
+    ax1.plot(names, insertion_speeds, marker='o', label='Insertion Rate | Points/s', color='tab:blue')
+    ax1.set_xlabel('Node Sizes')
+    ax1.set_ylabel('Insertion Rate | Points/s', color='tab:blue')
 
     # Plotting logic for Query Speedup
-    ax2.plot(names, query_speeds, marker='o', label='Average Query Time (Seconds)', color='tab:green')
-    ax2.set_ylabel('Average Query Time (Seconds)', color='tab:green')
+    ax2.plot(names, query_speeds, marker='o', label='Average Query Time | Seconds', color='tab:green')
+    ax2.set_ylabel('Average Query Time | Seconds', color='tab:green')
 
     # Creating a third y-axis for Point Reduction
     ax3 = ax1.twinx()
     ax3.spines['right'].set_position(('outward', 60))  # Adjust the position of the third y-axis
 
-    ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction (Percent)', color='tab:red')
-    ax3.set_ylabel('Average Point Reduction (Percent)', color='tab:red')
+    ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction | Percentage', color='tab:red')
+    ax3.set_ylabel('Average Point Reduction | Percentage', color='tab:red')
+
+    # ax1.axhline(y=400000, color='grey', linestyle=':', label='Insertion Rate Goal (400000 Points/s)')
 
     # Combine legends from all axes
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     lines3, labels3 = ax3.get_legend_handles_labels()
+    print(lines, labels)
 
     ax3.legend(lines + lines2 + lines3, labels + labels2 + labels3, loc='upper center', bbox_to_anchor=(0.5, -0.1))
     # legend position below diagram:
@@ -1258,13 +1374,13 @@ def plot_overall_performance_by_sizes_3d(data, filename, nr_points, title=None, 
         # Set labels and title
         ax1.set_xlabel('Node Hierarchy Size')
         ax1.set_ylabel('Point Hierarchy Size')
-        ax1.set_zlabel('Insertion Speed (Points per Second)')
+        ax1.set_zlabel('Insertion Rate | Points/s')
         ax1.set_title('Insertion Speed ' + str(key))
 
         ax2.set_xlabel('Node Hierarchy Size')
         ax2.set_ylabel('Point Hierarchy Size')
-        ax2.set_zlabel('Average Point Reduction (Percent)')
-        ax2.set_title('Average Point Reduction (Percent) ' + str(key))
+        ax2.set_zlabel('Average Point Reduction | Percentage')
+        ax2.set_title('Average Point Reduction | Percentage ' + str(key))
 
         ax1.view_init(45, -45)
         ax2.view_init(45, -45)
@@ -1284,8 +1400,24 @@ def plot_overall_performance_by_sizes_3d(data, filename, nr_points, title=None, 
 # Speedup is calculated between raw_point_filtering and point_filtering_with_full_acc
 def calculate_average_query_time_single_run(run):
     queries = run["results"]["query_performance"]
+
+    query_names = \
+        [
+            'time_range',
+            'ground_classification',
+            # 'no_cars_classification',
+            'normal_x_vertical',
+            'high_intensity',
+            'low_intensity',
+            'full_red_part',
+            # 'one_return',
+            # 'mixed_ground_and_one_return',
+            'mixed_ground_and_time',
+            # 'mixed_ground_normal_one_return'
+        ]
+
     speedup_sum = 0
-    for query in queries:
+    for query in query_names:
         speedup_sum += queries[query]["point_filtering_with_node_acc"]["query_time_seconds"]
     if len(queries) > 0:
         return speedup_sum / len(queries)
@@ -1296,13 +1428,34 @@ def calculate_average_query_time_single_run(run):
 # Point reduction is calculated between total number of points and only_full_acc in percent!
 def calculate_average_point_reduction_single_run(run, query_run="only_node_acc"):
     queries = run["results"]["query_performance"]
+
+    query_names = \
+        [
+            'time_range',
+            'ground_classification',
+            # 'no_cars_classification',
+            'normal_x_vertical',
+            'high_intensity',
+            'low_intensity',
+            'full_red_part',
+            # 'one_return',
+            # 'mixed_ground_and_one_return',
+            'mixed_ground_and_time',
+            # 'mixed_ground_normal_one_return'
+        ]
+
     nr_points = run["results"]["insertion_rate"]["nr_points"]
-    point_reduction_sum = 0
-    for query in queries:
-        point_filtering_with_full_acc = queries[query][query_run]["nr_points"]
-        point_reduction_sum += nr_points - point_filtering_with_full_acc
+    max_possible_reduction_sum = 0
+    real_reduction_sum = 0
+    for query in query_names:
+        point_filtered_points = queries[query]["raw_point_filtering"]["nr_points"]
+        max_possible_reduction = nr_points - point_filtered_points
+        accelerated_points = queries[query][query_run]["nr_points"]
+        real_reduction = nr_points - accelerated_points
+        max_possible_reduction_sum += max_possible_reduction
+        real_reduction_sum += real_reduction
     if len(queries) > 0:
-        return (point_reduction_sum / len(queries)) / nr_points * 100
+        return real_reduction_sum / max_possible_reduction_sum * 100
     return 0
 
 
@@ -1349,7 +1502,7 @@ def plot_insertion_speed_comparison(test_runs, filename):
 
     # Set labels, title, and tick labels
     plt.xlabel('Insertion Settings')
-    plt.ylabel('Points per Second')
+    plt.ylabel('Insertion Rate | Points/s')
     # plt.title("Insertion Speed Comparison")
     plt.xticks([p for p in index], custom_legend_labels, rotation=90)
 

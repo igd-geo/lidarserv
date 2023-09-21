@@ -6,7 +6,7 @@ offset = [0,0,0]
 las_point_record_format = 3
 enable_cooldown = false
 indexing_timeout_seconds = 86400 # one day
-use_existing_index = false
+use_existing_index = true
 
 
 [defaults]
@@ -17,7 +17,7 @@ cache_size = 10000
 node_hierarchy = 16
 point_hierarchy = 23
 compression = true
-nr_bogus_points = [200, 200] # keep it deactived here to prevent wrong results with queries
+nr_bogus_points = [3200, 3200] # keep it deactived here to prevent wrong results with queries
 insertion_rate.target_point_pressure = 3_000_000
 query_perf.enable = true
 latency.enable = false
