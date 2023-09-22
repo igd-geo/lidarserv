@@ -40,37 +40,37 @@ fn measure_one_query<I, Q>(
 {
     info!("Measuring query performance for query: {:?} and filter {:?}", query, filter);
 
-    // // measure only spatial query
-    // info!("measure only spatial query");
-    // let raw_spatial = measure_one_query_part(index, query.clone(), filter, false, false, false);
-    //
-    // // measure point filtering without acceleration
-    // info!("measure point filtering without acceleration");
-    // let raw_point_filtering = measure_one_query_part(index, query.clone(), filter, false, false, true);
-    //
-    // // measure point filtering with node acceleration
-    // info!("measure point filtering with node acceleration");
-    // let point_filtering_with_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, true);
+    // measure only spatial query
+    info!("measure only spatial query");
+    let raw_spatial = measure_one_query_part(index, query.clone(), filter, false, false, false);
+
+    // measure point filtering without acceleration
+    info!("measure point filtering without acceleration");
+    let raw_point_filtering = measure_one_query_part(index, query.clone(), filter, false, false, true);
+
+    // measure point filtering with node acceleration
+    info!("measure point filtering with node acceleration");
+    let point_filtering_with_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, true);
 
     // measure point filtering with node acceleration and histogram acceleration
     info!("measure point filtering with node acceleration and histogram acceleration");
     let point_filtering_with_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, true);
 
-    // // measure only node filtering
-    // info!("measure only node filtering");
-    // let only_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, false);
-    //
-    // // measure only node filtering with histogram acceleration
-    // info!("measure only node filtering with histogram acceleration");
-    // let only_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, false);
+    // measure only node filtering
+    info!("measure only node filtering");
+    let only_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, false);
+
+    // measure only node filtering with histogram acceleration
+    info!("measure only node filtering with histogram acceleration");
+    let only_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, false);
 
     json!({
-        // "raw_spatial": raw_spatial,
-        // "raw_point_filtering": raw_point_filtering,
-        // "point_filtering_with_node_acc": point_filtering_with_node_acc,
+        "raw_spatial": raw_spatial,
+        "raw_point_filtering": raw_point_filtering,
+        "point_filtering_with_node_acc": point_filtering_with_node_acc,
         "point_filtering_with_full_acc": point_filtering_with_full_acc,
-        // "only_node_acc": only_node_acc,
-        // "only_full_acc": only_full_acc,
+        "only_node_acc": only_node_acc,
+        "only_full_acc": only_full_acc,
     })
 }
 
