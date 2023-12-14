@@ -1,4 +1,4 @@
-use log::{info};
+use log::{info, warn};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -33,6 +33,7 @@ pub fn get_fans_rpm() -> Result<Vec<(String, u32)>, Box<dyn Error>> {
 
 #[cfg(target_os = "linux")]
 pub fn processor_cooldown() {
+    use log::{info, warn};
     info!("Taking a break to avoid thermal throttling...");
     loop {
         let fans = match get_fans_rpm() {
