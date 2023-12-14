@@ -1,6 +1,6 @@
 data_folder = "data/evaluation"
 output_file = "evaluation/test_%d_%i.json"
-points_file = "data/frankfurt_big_with_normals_as_userdata.las"
+points_file = "data/C_25GN1_1_1.laz"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
