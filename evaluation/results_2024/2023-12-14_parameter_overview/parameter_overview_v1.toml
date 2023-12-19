@@ -1,0 +1,62 @@
+data_folder = "data/evaluation"
+output_file = "evaluation/results_2024/2023-12-14_parameter_overview/parameter_overview_v1_%d_%i.json"
+points_file = "data/AHN4_66M.laz"
+trajectory_file = ""
+offset = [0,0,0]
+las_point_record_format = 3
+enable_cooldown = false
+use_existing_index = false
+indexing_timeout_seconds = 86400 # one day
+
+[defaults]
+type = "Octree"
+priority_function = "TaskAge" #best = TaskAge
+num_threads = 12
+cache_size = 5000
+compression = true
+nr_bogus_points = [0, 0]
+insertion_rate.target_point_pressure = 1_000_000
+query_perf.enable = true
+latency.enable = false
+enable_attribute_index = true
+enable_histogram_acceleration = true
+bin_count_intensity = 25
+bin_count_return_number = 8
+bin_count_classification = 256
+bin_count_scan_angle_rank = 25
+bin_count_user_data = 25
+bin_count_point_source_id = 256
+bin_count_color = 25
+
+
+[runs.n13p20]
+node_hierarchy = [13]
+point_hierarchy = [20]
+
+[runs.n14p21]
+node_hierarchy = [14]
+point_hierarchy = [21]
+
+[runs.n15p22]
+node_hierarchy = [15]
+point_hierarchy = [22]
+
+[runs.n16p23]
+node_hierarchy = [16]
+point_hierarchy = [23]
+
+[runs.n17p24]
+node_hierarchy = [17]
+point_hierarchy = [24]
+
+[runs.n18p25]
+node_hierarchy = [18]
+point_hierarchy = [25]
+
+[runs.n19p26]
+node_hierarchy = [19]
+point_hierarchy = [26]
+
+[runs.n20p27]
+node_hierarchy = [20]
+point_hierarchy = [27]
