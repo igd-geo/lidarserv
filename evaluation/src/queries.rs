@@ -101,7 +101,7 @@ pub fn filter_apply_defaults(bounds : LasPointAttributeBounds) -> LasPointAttrib
     attribute_bounds
 }
 
-/// Classification Filter, that only accepts Ground Points (Frankfurt dataset)
+/// Classification Filter, that only accepts Ground Points (AHN4 Dataset)
 pub fn ground_classification() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -109,7 +109,7 @@ pub fn ground_classification() -> LasPointAttributeBounds {
         number_of_returns: None,
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((10,12)),
+        classification: Some((2,2)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
@@ -120,15 +120,15 @@ pub fn ground_classification() -> LasPointAttributeBounds {
     }
 }
 
-/// Classification Filter, that only accepts Points, NOT classified as cars (Frankfurt dataset)
-pub fn no_cars_classification() -> LasPointAttributeBounds {
+/// Classification Filter, that only accepts Points, NOT classified as cars (AHN4 dataset)
+pub fn building_classification() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
         return_number: None,
         number_of_returns: None,
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((0,20)),
+        classification: Some((6,6)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
@@ -139,10 +139,10 @@ pub fn no_cars_classification() -> LasPointAttributeBounds {
     }
 }
 
-/// Intensity Filter, which only accepts Points with 98%-100% intensity (Frankfurt dataset)
+/// Intensity Filter, which only accepts Points with high intensity (AHN4 dataset)
 pub fn high_intensity() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
-        intensity: Some((64224, 65535)),
+        intensity: Some((1268, 65535)),
         return_number: None,
         number_of_returns: None,
         scan_direction: None,
@@ -158,10 +158,10 @@ pub fn high_intensity() -> LasPointAttributeBounds {
     }
 }
 
-/// Intensity Filter, which only accepts Points with 0%-2% intensity (Frankfurt dataset)
+/// Intensity Filter, which only accepts Points with low intensity (AHN4 dataset)
 pub fn low_intensity() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
-        intensity: Some((0, 1311)),
+        intensity: Some((0, 370)),
         return_number: None,
         number_of_returns: None,
         scan_direction: None,
@@ -177,7 +177,7 @@ pub fn low_intensity() -> LasPointAttributeBounds {
     }
 }
 
-/// Number of Returns Filter, which only accepts Points with 1 or more returns (Frankfurt dataset)
+/// Number of Returns Filter, which only accepts Points with 1 or more returns (AHN4 dataset)
 pub fn one_return() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -196,7 +196,7 @@ pub fn one_return() -> LasPointAttributeBounds {
     }
 }
 
-/// Time Filter which only accepts specific time range (Frankfurt dataset)
+/// Time Filter which only accepts specific time range (around 20M points) (AHN4 dataset)
 pub fn time_range() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -215,28 +215,10 @@ pub fn time_range() -> LasPointAttributeBounds {
     }
 }
 
-/// Color Filter, which only accepts points with a red-value over 90% (Frankfurt dataset)
-pub fn full_red_part() -> LasPointAttributeBounds {
-    LasPointAttributeBounds {
-        intensity: None,
-        return_number: None,
-        number_of_returns: None,
-        scan_direction: None,
-        edge_of_flight_line: None,
-        classification: None,
-        scan_angle_rank: None,
-        user_data: None,
-        point_source_id: None,
-        gps_time: None,
-        color_r: Some((58982, 65535)),
-        color_g: None,
-        color_b: None,
-    }
-}
-
 /// Normal Filter on UserData
-/// (Modified Frankfurt dataset)
-/// Assumes, that NormalX is stored in UserData and filters Ground Points
+/// (Modified AHN4 dataset)
+/// Assumes, that NormalX is stored in UserData
+/// Filters for upwards pointing x axis
 pub fn normal_x_vertical() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
         intensity: None,
@@ -246,7 +228,7 @@ pub fn normal_x_vertical() -> LasPointAttributeBounds {
         edge_of_flight_line: None,
         classification: None,
         scan_angle_rank: None,
-        user_data: Some((110, 150)),
+        user_data: Some((107, 147)),
         point_source_id: None,
         gps_time: None,
         color_r: None,
@@ -263,7 +245,7 @@ pub fn mixed_ground_and_time() -> LasPointAttributeBounds {
         number_of_returns: None,
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((10,12)),
+        classification: Some((2,2)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
@@ -282,7 +264,7 @@ pub fn mixed_ground_and_one_return() -> LasPointAttributeBounds {
         number_of_returns: Some((2, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((10,12)),
+        classification: Some((2,2)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
@@ -301,9 +283,9 @@ pub fn mixed_ground_normal_one_return() -> LasPointAttributeBounds {
         number_of_returns: Some((2, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((10,12)),
+        classification: Some((2,2)),
         scan_angle_rank: None,
-        user_data: Some((110, 150)),
+        user_data: Some((107, 147)),
         point_source_id: None,
         gps_time: None,
         color_r: None,
