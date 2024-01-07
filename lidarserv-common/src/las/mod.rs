@@ -537,6 +537,37 @@ mod tests {
     }
 
     #[test]
+    fn test_write_las() {
+        let pointcloud = custom_pointcloud(1);
+        let path = Path::new("test.las");
+        let loader = I32LasReadWrite::new(false, 3);
+        let data = loader.write_las::<LasPoint, _>(Las {
+            points: pointcloud.iter(),
+            bounds: OptionAABB::default(),
+            non_bogus_points: Some(pointcloud.len() as u32),
+            coordinate_system: I32CoordinateSystem::new(Point3::new(0.0,0.0,0.0), Point3::new(3.0,3.0,3.0)),
+        });
+        let mut file = File::create(&path).unwrap();
+        file.write_all(data.as_slice()).unwrap();
+        file.sync_all().unwrap();
+    }
+
+    #[test]
+    fn test_read_las() {
+        let path = Path::new("test.las");
+        let loader = I32LasReadWrite::new(false, 3);
+        let mut reader = BufReader::new(File::open(&path).unwrap());
+        println!("Point Record Format: {:?}", loader.point_record_format);
+        println!("Compression: {:?}", loader.compression);
+        let result : Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
+        println!("Coordinate System: {:?}", result.coordinate_system);
+        println!("Bounds: {:?}", result.bounds);
+        println!("Non Bogus Points: {:?}", result.non_bogus_points);
+        println!("Points: {:?}", result.points.len());
+        println!("{:?}", result.points.get(0).unwrap());
+    }
+
+    #[test]
     /// Compare the self-written LAS reader/writer with the las crate reader/writer.
     /// Output a json file with the results.
     fn compare_writer_reader() {
@@ -580,9 +611,14 @@ mod tests {
     /// Create a pointcloud with custom point type.
     fn custom_pointcloud(num_points: usize) -> Vec<LasPoint> {
         let mut pointcloud = Vec::new();
-        for _ in 0..num_points {
-            let position = I32Position::default();
-            let las_attributes = Box::new(LasPointAttributes::default());
+        for i in 0..num_points {
+            let position = I32Position::from_components(i as i32, i as i32, i as i32);
+            let mut mod_attributes = LasPointAttributes::default();
+            mod_attributes.return_number = 3;
+            mod_attributes.number_of_returns = 6;
+            mod_attributes.edge_of_flight_line = true;
+            mod_attributes.scan_direction = true;
+            let las_attributes = Box::new(mod_attributes);
             pointcloud.push(LasPoint {
                 position,
                 las_attributes
@@ -696,7 +732,7 @@ mod tests {
         let init_time = std::time::Instant::now();
         let loader = I32LasReadWrite::new(false, 3);
         let mut reader = BufReader::new(File::open(&path).unwrap());
-        let _result : Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
+        let result : Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
         let end_time = std::time::Instant::now();
         let total_read = end_time.duration_since(init_time);
 
@@ -704,6 +740,18 @@ mod tests {
         if path.exists() {
             std::fs::remove_file(path).unwrap();
         }
+
+        // check if result points are the same as the input points
+        let mut errors = 0;
+        for (point1, point2) in pointcloud.iter().zip(result.points.iter()) {
+            if point1.position().distance_to(point2.position()) > 0 {
+                errors += 1;
+            }
+            if point1.attribute().return_number != point2.attribute().return_number {
+                errors += 1;
+            }
+        }
+        println!("ERRORS: {:?}", errors);
 
         // Return results
         json!(
