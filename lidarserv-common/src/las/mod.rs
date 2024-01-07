@@ -249,6 +249,15 @@ impl I32LasReadWrite {
                 u32::from_le_bytes(le_bytes)
             });
 
+        // header.number_of_point_records is legacy and may be 0
+        // in this case, we need to use the large file header
+        let mut number_of_point_records: usize = header.number_of_point_records as usize;
+        if number_of_point_records == 0 {
+            if header.large_file.is_some() {
+                number_of_point_records = header.large_file.unwrap().number_of_point_records as usize;
+            };
+        };
+
         // read points - either compressed, or raw
         let points: Vec<Point> = if format.is_compressed {
             // find laszip vlr
@@ -281,11 +290,11 @@ impl I32LasReadWrite {
             read_point_data_i32(
                 data.as_slice(),
                 &format,
-                header.number_of_point_records as usize,
+                number_of_point_records,
             )?
         } else {
             read.seek(Start(header.offset_to_point_data as u64))?;
-            read_point_data_i32(read, &format, header.number_of_point_records as usize)?
+            read_point_data_i32(read, &format, number_of_point_records)?
         };
 
         let (coordinate_system, bounds) = get_header_info_i32(&header);
