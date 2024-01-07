@@ -92,10 +92,10 @@ where
             z: point.position().z(),
             intensity: attributes.intensity,
             flags: Flags::TwoByte(
-                ((attributes.return_number & 0x07) << 5)
-                    | ((attributes.number_of_returns & 0x07) << 2)
-                    | if attributes.scan_direction { 2 } else { 0 }
-                    | if attributes.edge_of_flight_line { 1 } else { 0 },
+                (attributes.return_number & 0b00000111)
+                    | ((attributes.number_of_returns & 0b00000111) << 3)
+                    | if attributes.scan_direction { 0b1000000 } else { 0 }
+                    | if attributes.edge_of_flight_line { 0b10000000 } else { 0 },
                 attributes.classification,
             ),
             scan_angle: ScanAngle::Rank(attributes.scan_angle_rank),
@@ -156,10 +156,10 @@ where
             ..Default::default()
         };
         if let Flags::TwoByte(b1, b2) = raw.flags {
-            las_attr.return_number = (b1 & 0xE0) >> 5;
-            las_attr.number_of_returns = (b1 & 0x1C) >> 2;
-            las_attr.scan_direction = (b1 & 0x02) == 0x02;
-            las_attr.edge_of_flight_line = (b1 & 0x01) == 0x01;
+            las_attr.return_number = b1 & 0b111;
+            las_attr.number_of_returns = (b1 & 0b111000) >> 3;
+            las_attr.scan_direction = (b1 & 0b1000000) == 0b1000000;
+            las_attr.edge_of_flight_line = (b1 & 0b10000000) == 0b10000000;
             las_attr.classification = b2;
         } else {
             unreachable!("Point format 0 will always have Flags::TwoByte.")
