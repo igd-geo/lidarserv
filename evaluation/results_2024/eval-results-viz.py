@@ -14,10 +14,8 @@ from matplotlib.gridspec import SubplotSpec
 PROJECT_ROOT = join(dirname(__file__), "..")
 
 INPUT_FILES_NODE_HIERARCHY_COMPARISON = [
-    join(PROJECT_ROOT, "/evaluation/results_2024/2023-12-14_parameter_overview/", file) for file in [
-        "parameter_overview_2023-12-14_1.json",
-    ]]
-
+    "2023-12-14_parameter_overview/parameter_overview_v2_2024-01-08_1.json",
+]
 def main():
     # plot style
     # plt.style.use("seaborn-notebook")
@@ -42,17 +40,14 @@ def main():
             filename=join(output_folder, "query-by-lod-nodes.pdf"),
         )
 
-        plot_overall_performance_by_sizes(
-            test_runs=data["runs"],
-            filename=join(output_folder, "nodesize-performance_node.pdf"),
-            nr_points=data["env"]["input_file_nr_points"]
+        plot_insertion_rate_by_nr_threads(
+            test_runs=data["runs"]["threads"],
+            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf"),
         )
 
-        plot_overall_performance_by_sizes(
-            test_runs=data["runs"],
-            filename=join(output_folder, "nodesize-performance_hist.pdf"),
-            nr_points=data["env"]["input_file_nr_points"],
-            query_run="only_full_acc"
+        plot_insertion_rate_by_cache_size(
+            test_runs=data["runs"]["cache_size"],
+            filename=join(output_folder, "insertion-rate-by-cache-size.pdf"),
         )
 
 def make_y_insertion_rate(ax, test_runs):
