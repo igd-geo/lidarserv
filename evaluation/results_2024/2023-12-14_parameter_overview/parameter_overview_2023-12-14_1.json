@@ -1,0 +1,4501 @@
+{
+  "env": {
+    "duration:": 1709,
+    "finished_at": "2023-12-14T10:42:24.96019819Z",
+    "hostname": "pc2681",
+    "input_file": "evaluation/results_2024/2023-12-14_parameter_overview/parameter_overview_v1.toml",
+    "input_file_nr_points": 82835472,
+    "started_at": "2023-12-14T10:13:55.192544042Z",
+    "version": "git:847cd51-modified"
+  },
+  "runs": {
+    "n13p20": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 13,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 12,
+          "point_hierarchy": 20,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 32992144,
+            "directory_info": {
+              "num_nodes": 80078,
+              "num_nodes_per_level": [
+                8,
+                8,
+                18,
+                60,
+                179,
+                677,
+                2483,
+                10067,
+                39925,
+                26000,
+                653
+              ]
+            },
+            "histogram_points": {
+              "classification": 82835472,
+              "color_b": 82835472,
+              "color_g": 82835472,
+              "color_r": 82835472,
+              "intensity": 82835472,
+              "number_of_returns": 82835472,
+              "point_source_id": 82835472,
+              "return_number": 82835472,
+              "scan_angle_rank": 82835472,
+              "user_data": 82835472
+            },
+            "root_cell_size": [
+              262.14300000000003,
+              262.14300000000003,
+              262.14300000000003
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.794660905,
+            "duration_seconds": 79.234875498,
+            "insertion_rate_points_per_sec": 1035061.2501723154,
+            "nr_points": 82835472,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "full_red_part": {
+              "only_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.892e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.88e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.979e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.984e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.911e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.9e-6
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.679e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.506e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.692e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.656e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.06e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.505e-6
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.859e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.872e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.46e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.689e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.741e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.881e-6
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 2.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.912e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.897e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.067e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 5.013e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.914e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.857e-6
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.789e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.942e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.833e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.97e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.89e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.82e-6
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.873e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.877e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.876e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.702e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.71e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.919e-6
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.675e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 4.377e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.671e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.727e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.846e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.302e-6
+              }
+            },
+            "no_cars_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.939e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.085e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.83e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.775e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.7e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.218e-6
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.008e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.887e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.858e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000017573
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.871e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.568e-6
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.646e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.758e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.719e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.87e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.803e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.906e-6
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.255e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000015197
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.007e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.089e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.429e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 5.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000020035
+              }
+            }
+          }
+        }
+      }
+    ],
+    "n14p21": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 14,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 12,
+          "point_hierarchy": 21,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 32994204,
+            "directory_info": {
+              "num_nodes": 80083,
+              "num_nodes_per_level": [
+                8,
+                18,
+                60,
+                179,
+                677,
+                2483,
+                10071,
+                39931,
+                26003,
+                653,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 82835472,
+              "color_b": 82835472,
+              "color_g": 82835472,
+              "color_r": 82835472,
+              "intensity": 82835472,
+              "number_of_returns": 82835472,
+              "point_source_id": 82835472,
+              "return_number": 82835472,
+              "scan_angle_rank": 82835472,
+              "user_data": 82835472
+            },
+            "root_cell_size": [
+              131.071,
+              131.071,
+              131.071
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.639495577,
+            "duration_seconds": 77.804011265,
+            "insertion_rate_points_per_sec": 1055988.8935976082,
+            "nr_points": 82835472,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "full_red_part": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.514e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.487e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.547e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.438e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.561e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.461e-6
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.697e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.599e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.676e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.867e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.708e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.776e-6
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.568e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.628e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.501e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.567e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.619e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.572e-6
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.595e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.567e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.678e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.415e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.615e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.617e-6
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.476e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.51e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.464e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.519e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.481e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.487e-6
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.462e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.467e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.437e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.552e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.51e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.522e-6
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.524e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.006e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.508e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.554e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.858e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.181e-6
+              }
+            },
+            "no_cars_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.584e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.869e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.529e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.623e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.537e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.576e-6
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.594e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.771e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.679e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.615e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.665e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.693e-6
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.771e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.514e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.474e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.523e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.489e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.87e-6
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.685e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.035e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.861e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.62e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 1.71e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 4.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000013834
+              }
+            }
+          }
+        }
+      }
+    ],
+    "n15p22": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 15,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 12,
+          "point_hierarchy": 22,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 33007388,
+            "directory_info": {
+              "num_nodes": 80115,
+              "num_nodes_per_level": [
+                18,
+                60,
+                179,
+                677,
+                2483,
+                10076,
+                39956,
+                26012,
+                654,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 82835472,
+              "color_b": 82835472,
+              "color_g": 82835472,
+              "color_r": 82835472,
+              "intensity": 82835472,
+              "number_of_returns": 82835472,
+              "point_source_id": 82835472,
+              "return_number": 82835472,
+              "scan_angle_rank": 82835472,
+              "user_data": 82835472
+            },
+            "root_cell_size": [
+              65.535,
+              65.535,
+              65.535
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.588024242,
+            "duration_seconds": 78.665278618,
+            "insertion_rate_points_per_sec": 1045198.9886948668,
+            "nr_points": 82835472,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "full_red_part": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.045e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.982e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.154e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.007e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.105e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.047e-6
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.03e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.137e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.113e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.209e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.082e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.773e-6
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.037e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.054e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.057e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.034e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.072e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.176e-6
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.049e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.041e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.188e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 4.533e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.057e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.15e-6
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.982e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.072e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.967e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.982e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.051e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.112e-6
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.038e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.998e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.046e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.017e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.017e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.111e-6
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.03e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.951e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.999e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.382e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.01e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.021e-6
+              }
+            },
+            "no_cars_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.043e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.963e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.166e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.008e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.085e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.09e-6
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.181e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000018156
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.154e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00001595
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.069e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.099e-6
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.041e-6
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.997e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.162e-6
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 2.983e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.154e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.045e-6
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000015915
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.514e-6
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000018153
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.106e-6
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 3.274e-6
+              },
+              "raw_spatial": {
+                "load_time_seconds": 4.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000015781
+              }
+            }
+          }
+        }
+      }
+    ],
+    "n16p23": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 16,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 12,
+          "point_hierarchy": 23,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 33048176,
+            "directory_info": {
+              "num_nodes": 80214,
+              "num_nodes_per_level": [
+                60,
+                179,
+                677,
+                2485,
+                10088,
+                40022,
+                26046,
+                657,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 82835472,
+              "color_b": 82835472,
+              "color_g": 82835472,
+              "color_r": 82835472,
+              "intensity": 82835472,
+              "number_of_returns": 82835472,
+              "point_source_id": 82835472,
+              "return_number": 82835472,
+              "scan_angle_rank": 82835472,
+              "user_data": 82835472
+            },
+            "root_cell_size": [
+              32.767,
+              32.767,
+              32.767
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.790110575,
+            "duration_seconds": 74.46119108,
+            "insertion_rate_points_per_sec": 1100784.5735316402,
+            "nr_points": 82835472,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "full_red_part": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00001117
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011262
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011152
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011138
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00001121
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00001169
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00002641
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011208
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011388
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026695
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000024146
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000012007
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010942
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011012
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010958
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011077
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011153
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011653
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011136
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011382
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011199
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011273
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011052
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011558
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010916
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010791
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010863
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00001107
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011068
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011503
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010945
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011004
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010937
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011076
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011055
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011765
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011048
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011261
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010992
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011036
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011064
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011519
+              }
+            },
+            "no_cars_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011275
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011137
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011059
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011158
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011256
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011973
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011263
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011256
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011052
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011112
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011227
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011928
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011028
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011043
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010942
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010931
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000010927
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011597
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000024294
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011492
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026377
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000011218
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000012021
+              },
+              "raw_spatial": {
+                "load_time_seconds": 4.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000028296
+              }
+            }
+          }
+        }
+      }
+    ],
+    "n17p24": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 17,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 12,
+          "point_hierarchy": 24,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 33189080,
+            "directory_info": {
+              "num_nodes": 80556,
+              "num_nodes_per_level": [
+                179,
+                677,
+                2486,
+                10109,
+                40212,
+                26230,
+                663,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 82835472,
+              "color_b": 82835472,
+              "color_g": 82835472,
+              "color_r": 82835472,
+              "intensity": 82835472,
+              "number_of_returns": 82835472,
+              "point_source_id": 82835472,
+              "return_number": 82835472,
+              "scan_angle_rank": 82835472,
+              "user_data": 82835472
+            },
+            "root_cell_size": [
+              16.383,
+              16.383,
+              16.383
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.788741643,
+            "duration_seconds": 72.789569295,
+            "insertion_rate_points_per_sec": 1125813.7207009338,
+            "nr_points": 82835472,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "full_red_part": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026599
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026561
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026691
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026841
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026465
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027096
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026558
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026272
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000041364
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027205
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000054295
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000055333
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026717
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026477
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026431
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026586
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000042361
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000040153
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00002673
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027036
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026809
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027254
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027107
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027568
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027028
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026949
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026687
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027019
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026838
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027619
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026755
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026765
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026902
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026765
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026742
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027431
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026614
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026883
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026499
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026612
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026925
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027305
+              }
+            },
+            "no_cars_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026715
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026578
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026641
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026643
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027415
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00004296
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026473
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000040519
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000055217
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027262
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027123
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000046986
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026986
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026711
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026915
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026917
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027134
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000027458
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026777
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000026772
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000055857
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000054322
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000055057
+              },
+              "raw_spatial": {
+                "load_time_seconds": 4.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000061083
+              }
+            }
+          }
+        }
+      }
+    ],
+    "n18p25": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 18,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 12,
+          "point_hierarchy": 25,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 33667824,
+            "directory_info": {
+              "num_nodes": 81718,
+              "num_nodes_per_level": [
+                677,
+                2487,
+                10141,
+                40775,
+                26950,
+                688,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 82835472,
+              "color_b": 82835472,
+              "color_g": 82835472,
+              "color_r": 82835472,
+              "intensity": 82835472,
+              "number_of_returns": 82835472,
+              "point_source_id": 82835472,
+              "return_number": 82835472,
+              "scan_angle_rank": 82835472,
+              "user_data": 82835472
+            },
+            "root_cell_size": [
+              8.191,
+              8.191,
+              8.191
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 1.035941374,
+            "duration_seconds": 72.044579648,
+            "insertion_rate_points_per_sec": 1133482.2308541478,
+            "nr_points": 82835472,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "full_red_part": {
+              "only_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098189
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098191
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098474
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000130153
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098138
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000100145
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098543
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098863
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098093
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000112224
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000101538
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000114051
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098916
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00009902
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098209
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000099371
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098796
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000127344
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000099065
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098107
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000099183
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098321
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098372
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000099608
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000129296
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000116276
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000097702
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000112115
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000100671
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000116427
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098461
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00009838
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000111442
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000113841
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098816
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098368
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000100782
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00010144
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 3.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000100566
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00010155
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000114093
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000139875
+              }
+            },
+            "no_cars_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098306
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098965
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000099294
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000111338
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000125217
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000125711
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000125043
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000125062
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000125275
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000125067
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000124783
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000110437
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098616
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098261
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098683
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000099048
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098723
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000098852
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 2.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.0001251
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000125632
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000124485
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000124901
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000183778
+              },
+              "raw_spatial": {
+                "load_time_seconds": 4.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00016072
+              }
+            }
+          }
+        }
+      }
+    ],
+    "n19p26": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 12,
+          "point_hierarchy": 26,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 35153908,
+            "directory_info": {
+              "num_nodes": 85325,
+              "num_nodes_per_level": [
+                2490,
+                10182,
+                42228,
+                29645,
+                780,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 82835472,
+              "color_b": 82835472,
+              "color_g": 82835472,
+              "color_r": 82835472,
+              "intensity": 82835472,
+              "number_of_returns": 82835472,
+              "point_source_id": 82835472,
+              "return_number": 82835472,
+              "scan_angle_rank": 82835472,
+              "user_data": 82835472
+            },
+            "root_cell_size": [
+              4.095,
+              4.095,
+              4.095
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.841472783,
+            "duration_seconds": 73.725309599,
+            "insertion_rate_points_per_sec": 1110889.719977994,
+            "nr_points": 82835472,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "full_red_part": {
+              "only_full_acc": {
+                "load_time_seconds": 2.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000415472
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000486019
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000434424
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000439152
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 3.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000436409
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000658696
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000418556
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.0004273
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000389568
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000391178
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00039178
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000422799
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000391474
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000393357
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000389894
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000389571
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000392342
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000390485
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 3.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000462914
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000381085
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000382114
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00042245
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000427312
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000471193
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000463032
+              },
+              "only_node_acc": {
+                "load_time_seconds": 3.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000431149
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 3.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000469193
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000435208
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 3.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000449151
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000710242
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 3.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00046271
+              },
+              "only_node_acc": {
+                "load_time_seconds": 3.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000431621
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 3.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000436544
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000465737
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000491409
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000682485
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000435517
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000433429
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 3.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000468223
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 3.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00057331
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 3.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000464661
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000655346
+              }
+            },
+            "no_cars_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000422721
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000391579
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000391769
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000428916
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000389984
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000393223
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000390012
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00039122
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000392168
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000391103
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000391371
+              },
+              "raw_spatial": {
+                "load_time_seconds": 1.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000419588
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000464455
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000433911
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000436989
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 3.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000483336
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 3.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000512012
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000678329
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 1.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000391846
+              },
+              "only_node_acc": {
+                "load_time_seconds": 1.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000420262
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000392024
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000391224
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.000394034
+              },
+              "raw_spatial": {
+                "load_time_seconds": 4.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00046585
+              }
+            }
+          }
+        }
+      }
+    ],
+    "n20p27": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 20,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 12,
+          "point_hierarchy": 27,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 43229520,
+            "directory_info": {
+              "num_nodes": 104926,
+              "num_nodes_per_level": [
+                10252,
+                45097,
+                47976,
+                1601,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 82835472,
+              "color_b": 82835472,
+              "color_g": 82835472,
+              "color_r": 82835472,
+              "intensity": 82835472,
+              "number_of_returns": 82835472,
+              "point_source_id": 82835472,
+              "return_number": 82835472,
+              "scan_angle_rank": 82835472,
+              "user_data": 82835472
+            },
+            "root_cell_size": [
+              2.047,
+              2.047,
+              2.047
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.816639453,
+            "duration_seconds": 99.14896411,
+            "insertion_rate_points_per_sec": 828639.7425470022,
+            "nr_points": 82835472,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "full_red_part": {
+              "only_full_acc": {
+                "load_time_seconds": 3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001532078
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001565942
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00152728
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001526997
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001596636
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001534459
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 2.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001629582
+              },
+              "only_node_acc": {
+                "load_time_seconds": 3.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00165059
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 3.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001651678
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 3.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001664384
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001662616
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001822442
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 2.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001621713
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001699507
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001530838
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001530123
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001595261
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001531092
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001593809
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001533742
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001562647
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001556756
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001531024
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001565514
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001528701
+              },
+              "only_node_acc": {
+                "load_time_seconds": 3.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001623756
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 3.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001634252
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001592681
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00153543
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001530824
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001571501
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001527061
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001560343
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001561505
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001558896
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001599581
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001587561
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001530207
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001568867
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001534834
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001598463
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001534913
+              }
+            },
+            "no_cars_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001571652
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001528201
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.4e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001527919
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001601146
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00152928
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001575778
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001604632
+              },
+              "only_node_acc": {
+                "load_time_seconds": 2.9e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001614887
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001601961
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 3.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001653474
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.8e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001613124
+              },
+              "raw_spatial": {
+                "load_time_seconds": 3.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001873303
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001566268
+              },
+              "only_node_acc": {
+                "load_time_seconds": 3.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001562584
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 2.6e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001528325
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 1.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001557666
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001557025
+              },
+              "raw_spatial": {
+                "load_time_seconds": 2.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001525399
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001635373
+              },
+              "only_node_acc": {
+                "load_time_seconds": 3.7e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00174317
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 3.3e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001678029
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 3.5e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.00154532
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 4.2e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001624876
+              },
+              "raw_spatial": {
+                "load_time_seconds": 4.1e-8,
+                "nr_nodes": 0,
+                "nr_non_empty_nodes": 0,
+                "nr_points": 0,
+                "query_time_seconds": 0.001843452
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

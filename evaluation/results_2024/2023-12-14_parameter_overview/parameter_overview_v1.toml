@@ -48,15 +48,3 @@ point_hierarchy = [23]
 [runs.n17p24]
 node_hierarchy = [17]
 point_hierarchy = [24]
-
-[runs.n18p25]
-node_hierarchy = [18]
-point_hierarchy = [25]
-
-[runs.n19p26]
-node_hierarchy = [19]
-point_hierarchy = [26]
-
-[runs.n20p27]
-node_hierarchy = [20]
-point_hierarchy = [27]

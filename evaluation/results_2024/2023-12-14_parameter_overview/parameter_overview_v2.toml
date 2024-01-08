@@ -1,6 +1,6 @@
 data_folder = "data/evaluation"
-output_file = "evaluation/test_%d_%i.json"
-points_file = "data/C_25GN1_0_0_0_0.laz"
+output_file = "evaluation/results_2024/2023-12-14_parameter_overview/parameter_overview_v2_%d_%i.json"
+points_file = "data/AHN4_66M.laz"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
@@ -11,14 +11,14 @@ indexing_timeout_seconds = 86400 # one day
 [defaults]
 type = "Octree"
 priority_function = "TaskAge" #best = TaskAge
-num_threads = 10
-cache_size = 10000
-node_hierarchy = 16
-point_hierarchy = 23
+num_threads = 12
+cache_size = 5000
 compression = true
 nr_bogus_points = [0, 0]
+node_hierarchy = 17
+point_hierarchy = 24
 insertion_rate.target_point_pressure = 1_000_000
-query_perf.enable = true
+query_perf.enable = false
 latency.enable = false
 enable_attribute_index = true
 enable_histogram_acceleration = true
@@ -30,4 +30,13 @@ bin_count_user_data = 25
 bin_count_point_source_id = 256
 bin_count_color = 25
 
-[runs.example]
+[runs.threads]
+num_threads = [1,2,4,8,12,16,24,32]
+
+[runs.cache_size]
+cache_size = [0, 1000, 2000, 4000, 8000, 16000, 32000]
+
+[runs.insertionspeed]
+compression = [true, false]
+enable_attribute_index = [true, false]
+enable_histogram_acceleration = [true, false]
