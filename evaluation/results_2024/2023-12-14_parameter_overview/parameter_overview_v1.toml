@@ -1,18 +1,18 @@
 data_folder = "data/evaluation"
 output_file = "evaluation/results_2024/2023-12-14_parameter_overview/parameter_overview_v1_%d_%i.json"
-points_file = "data/AHN4_66M.laz"
+points_file = "data/AHN4_15M.las"
 trajectory_file = ""
 offset = [0,0,0]
 las_point_record_format = 3
 enable_cooldown = false
 use_existing_index = false
-indexing_timeout_seconds = 86400 # one day
+indexing_timeout_seconds = 300
 
 [defaults]
 type = "Octree"
 priority_function = "TaskAge" #best = TaskAge
-num_threads = 12
-cache_size = 5000
+num_threads = 24
+cache_size = 0
 compression = true
 nr_bogus_points = [0, 0]
 insertion_rate.target_point_pressure = 1_000_000
@@ -48,3 +48,7 @@ point_hierarchy = [23]
 [runs.n17p24]
 node_hierarchy = [17]
 point_hierarchy = [24]
+
+[runs.n18p25]
+node_hierarchy = [18]
+point_hierarchy = [25]
