@@ -13,7 +13,11 @@ from matplotlib.gridspec import SubplotSpec
 
 PROJECT_ROOT = join(dirname(__file__), "..")
 
-INPUT_FILES_NODE_HIERARCHY_COMPARISON = [
+INPUT_FILES_PARAMETER_OVERVIEW_V1 = [
+    "2023-12-14_parameter_overview/parameter_overview_v1_2024-01-08_1.json",
+]
+
+INPUT_FILES_PARAMETER_OVERVIEW_V2 = [
     "2023-12-14_parameter_overview/parameter_overview_v2_2024-01-08_1.json",
 ]
 def main():
@@ -25,7 +29,7 @@ def main():
     # regularly crashes the viewer...
     mpl.rcParams['pdf.fonttype'] = 42
 
-    for input_file in INPUT_FILES_NODE_HIERARCHY_COMPARISON:
+    for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V1:
         # read file
         with open(input_file) as f:
             print("Reading file: ", input_file)
@@ -35,10 +39,23 @@ def main():
         output_folder = f"{input_file}.diagrams"
         os.makedirs(output_folder, exist_ok=True)
 
-        plot_query_lod_nodes_by_runs(
+        plot_overall_performance_by_sizes(
             test_runs=data["runs"],
-            filename=join(output_folder, "query-by-lod-nodes.pdf"),
+            filename=join(output_folder, "overall-performance-by-sizes.pdf"),
+            nr_points=data["env"]["input_file_nr_points"],
         )
+
+
+
+    for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
 
         plot_insertion_rate_by_nr_threads(
             test_runs=data["runs"]["threads"],
@@ -1091,13 +1108,16 @@ def calculate_average_query_time_single_run(run):
             'ground_classification',
             # 'no_cars_classification',
             'normal_x_vertical',
+            'building_classification',
             'high_intensity',
             'low_intensity',
-            'full_red_part',
+            'one_return',
             # 'one_return',
             # 'mixed_ground_and_one_return',
             'mixed_ground_and_time',
+            'mixed_ground_and_one_return',
             # 'mixed_ground_normal_one_return'
+            'mixed_ground_normal_one_return'
         ]
 
     speedup_sum = 0
@@ -1119,13 +1139,16 @@ def calculate_average_point_reduction_single_run(run, query_run="only_node_acc")
             'ground_classification',
             # 'no_cars_classification',
             'normal_x_vertical',
+            'building_classification',
             'high_intensity',
             'low_intensity',
-            'full_red_part',
+            'one_return',
             # 'one_return',
             # 'mixed_ground_and_one_return',
             'mixed_ground_and_time',
+            'mixed_ground_and_one_return',
             # 'mixed_ground_normal_one_return'
+            'mixed_ground_normal_one_return'
         ]
 
     nr_points = run["results"]["insertion_rate"]["nr_points"]
