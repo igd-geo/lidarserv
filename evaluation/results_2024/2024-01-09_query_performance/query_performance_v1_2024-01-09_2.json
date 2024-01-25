@@ -1,0 +1,530 @@
+{
+  "env": {
+    "duration:": 6622,
+    "finished_at": "2024-01-09T12:46:45.347804931Z",
+    "hostname": "pc2681",
+    "input_file": "evaluation/results_2024/2024-01-09_query_performance/query_performance_v1.toml",
+    "input_file_nr_points": 66972653,
+    "started_at": "2024-01-09T10:56:22.945719061Z",
+    "version": "git:cb5e818-modified"
+  },
+  "runs": {
+    "test": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 10000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 17,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 24,
+          "point_hierarchy": 24,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 34151512,
+            "directory_info": {
+              "num_nodes": 82892,
+              "num_nodes_per_level": [
+                18961,
+                62352,
+                1579,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 66972653,
+              "color_b": 66972653,
+              "color_g": 66972653,
+              "color_r": 66972653,
+              "intensity": 66972653,
+              "number_of_returns": 66972653,
+              "point_source_id": 66972653,
+              "return_number": 66972653,
+              "scan_angle_rank": 66972653,
+              "user_data": 66972653
+            },
+            "root_cell_size": [
+              16.383,
+              16.383,
+              16.383
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.923845599,
+            "duration_seconds": 39.549594113,
+            "insertion_rate_points_per_sec": 1654730.9414905803,
+            "nr_points": 66972653,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": {
+            "building_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 0.005280267,
+                "nr_nodes": 41589,
+                "nr_non_empty_nodes": 41589,
+                "nr_points": 43566419,
+                "query_time_seconds": 58.385780193
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.005324287,
+                "nr_nodes": 43145,
+                "nr_non_empty_nodes": 43145,
+                "nr_points": 45487478,
+                "query_time_seconds": 61.347355853
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.00468248,
+                "nr_nodes": 41589,
+                "nr_non_empty_nodes": 41589,
+                "nr_points": 22202209,
+                "query_time_seconds": 57.551266688
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.005128002,
+                "nr_nodes": 43145,
+                "nr_non_empty_nodes": 41589,
+                "nr_points": 22202209,
+                "query_time_seconds": 60.129621968
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.00533483,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 41589,
+                "nr_points": 22202209,
+                "query_time_seconds": 127.223931314
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.010285273,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 129.412394119
+              }
+            },
+            "ground_classification": {
+              "only_full_acc": {
+                "load_time_seconds": 0.004781506,
+                "nr_nodes": 36418,
+                "nr_non_empty_nodes": 36418,
+                "nr_points": 53975588,
+                "query_time_seconds": 59.403192806
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.005159119,
+                "nr_nodes": 41203,
+                "nr_non_empty_nodes": 41203,
+                "nr_points": 56766659,
+                "query_time_seconds": 66.031351761
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.004192004,
+                "nr_nodes": 36418,
+                "nr_non_empty_nodes": 36417,
+                "nr_points": 26551812,
+                "query_time_seconds": 58.360720599
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.004474073,
+                "nr_nodes": 41203,
+                "nr_non_empty_nodes": 36417,
+                "nr_points": 26551812,
+                "query_time_seconds": 64.839787967
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.004778875,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 36417,
+                "nr_points": 26551812,
+                "query_time_seconds": 127.174843682
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.010289048,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 129.170945597
+              }
+            },
+            "high_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 0.004392844,
+                "nr_nodes": 34345,
+                "nr_non_empty_nodes": 34345,
+                "nr_points": 59109332,
+                "query_time_seconds": 60.387848028
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.004614935,
+                "nr_nodes": 34345,
+                "nr_non_empty_nodes": 34345,
+                "nr_points": 59109332,
+                "query_time_seconds": 60.40275073
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.003560767,
+                "nr_nodes": 34345,
+                "nr_non_empty_nodes": 34309,
+                "nr_points": 3947076,
+                "query_time_seconds": 58.80004369
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.003625404,
+                "nr_nodes": 34345,
+                "nr_non_empty_nodes": 34309,
+                "nr_points": 3947076,
+                "query_time_seconds": 58.91324432
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.00420735,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 34309,
+                "nr_points": 3947076,
+                "query_time_seconds": 127.299038371
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.01037192,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 129.626874371
+              }
+            },
+            "low_intensity": {
+              "only_full_acc": {
+                "load_time_seconds": 0.007458151,
+                "nr_nodes": 60686,
+                "nr_non_empty_nodes": 60686,
+                "nr_points": 65398728,
+                "query_time_seconds": 94.333581706
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.007298458,
+                "nr_nodes": 60686,
+                "nr_non_empty_nodes": 60686,
+                "nr_points": 65398728,
+                "query_time_seconds": 94.350966785
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.005944158,
+                "nr_nodes": 60686,
+                "nr_non_empty_nodes": 60683,
+                "nr_points": 8786196,
+                "query_time_seconds": 92.497395372
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.006092385,
+                "nr_nodes": 60686,
+                "nr_non_empty_nodes": 60683,
+                "nr_points": 8786196,
+                "query_time_seconds": 92.948228691
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.00658816,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 60683,
+                "nr_points": 8786196,
+                "query_time_seconds": 127.231505524
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.010110511,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 129.618851696
+              }
+            },
+            "mixed_ground_and_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 0.00390885,
+                "nr_nodes": 31305,
+                "nr_non_empty_nodes": 31305,
+                "nr_points": 53315280,
+                "query_time_seconds": 54.137244313
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.004489262,
+                "nr_nodes": 35850,
+                "nr_non_empty_nodes": 35850,
+                "nr_points": 56080660,
+                "query_time_seconds": 59.762832576
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.003107167,
+                "nr_nodes": 31305,
+                "nr_non_empty_nodes": 29353,
+                "nr_points": 6032360,
+                "query_time_seconds": 53.058582621
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.003442198,
+                "nr_nodes": 35850,
+                "nr_non_empty_nodes": 29353,
+                "nr_points": 6032360,
+                "query_time_seconds": 59.533127718
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.003811874,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 29353,
+                "nr_points": 6032360,
+                "query_time_seconds": 126.506265462
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.010074074,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 128.578381474
+              }
+            },
+            "mixed_ground_and_time": {
+              "only_full_acc": {
+                "load_time_seconds": 0.001914316,
+                "nr_nodes": 14826,
+                "nr_non_empty_nodes": 14826,
+                "nr_points": 22648020,
+                "query_time_seconds": 22.962947441
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.002021495,
+                "nr_nodes": 16463,
+                "nr_non_empty_nodes": 16463,
+                "nr_points": 23484869,
+                "query_time_seconds": 24.614079974
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.001687539,
+                "nr_nodes": 14826,
+                "nr_non_empty_nodes": 14722,
+                "nr_points": 8467637,
+                "query_time_seconds": 22.736822239
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.00174194,
+                "nr_nodes": 16463,
+                "nr_non_empty_nodes": 14722,
+                "nr_points": 8467637,
+                "query_time_seconds": 24.261585335
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.00235656,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 14722,
+                "nr_points": 8467637,
+                "query_time_seconds": 126.905523072
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.010104364,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 128.89680677
+              }
+            },
+            "mixed_ground_normal_one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 0.003918589,
+                "nr_nodes": 31131,
+                "nr_non_empty_nodes": 31131,
+                "nr_points": 53314188,
+                "query_time_seconds": 54.23268477
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.004482972,
+                "nr_nodes": 35668,
+                "nr_non_empty_nodes": 35668,
+                "nr_points": 56079601,
+                "query_time_seconds": 59.409389026
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.003028379,
+                "nr_nodes": 31131,
+                "nr_non_empty_nodes": 28490,
+                "nr_points": 5506193,
+                "query_time_seconds": 52.768157875
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.003206392,
+                "nr_nodes": 35668,
+                "nr_non_empty_nodes": 28490,
+                "nr_points": 5506193,
+                "query_time_seconds": 58.321593966
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.003782436,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 28490,
+                "nr_points": 5506193,
+                "query_time_seconds": 126.089198039
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.009989788,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 128.649791313
+              }
+            },
+            "normal_x_vertical": {
+              "only_full_acc": {
+                "load_time_seconds": 0.009474274,
+                "nr_nodes": 77329,
+                "nr_non_empty_nodes": 77329,
+                "nr_points": 66953331,
+                "query_time_seconds": 120.488603246
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.009544259,
+                "nr_nodes": 78572,
+                "nr_non_empty_nodes": 78572,
+                "nr_points": 66960833,
+                "query_time_seconds": 122.509959062
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.008630896,
+                "nr_nodes": 77329,
+                "nr_non_empty_nodes": 76876,
+                "nr_points": 44954499,
+                "query_time_seconds": 118.764018288
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.008444066,
+                "nr_nodes": 78572,
+                "nr_non_empty_nodes": 76876,
+                "nr_points": 44954499,
+                "query_time_seconds": 120.781372995
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.00895363,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 76876,
+                "nr_points": 44954499,
+                "query_time_seconds": 127.400534933
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.010253521,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 129.718877876
+              }
+            },
+            "one_return": {
+              "only_full_acc": {
+                "load_time_seconds": 0.008486079,
+                "nr_nodes": 69363,
+                "nr_non_empty_nodes": 69363,
+                "nr_points": 65650773,
+                "query_time_seconds": 107.407201356
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.008549882,
+                "nr_nodes": 69363,
+                "nr_non_empty_nodes": 69363,
+                "nr_points": 65650773,
+                "query_time_seconds": 108.492567799
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.007236169,
+                "nr_nodes": 69363,
+                "nr_non_empty_nodes": 69358,
+                "nr_points": 21735658,
+                "query_time_seconds": 105.676191879
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.007579315,
+                "nr_nodes": 69363,
+                "nr_non_empty_nodes": 69358,
+                "nr_points": 21735658,
+                "query_time_seconds": 105.88267063
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.007723373,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 69358,
+                "nr_points": 21735658,
+                "query_time_seconds": 126.677908972
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.010177745,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 128.430909865
+              }
+            },
+            "time_range": {
+              "only_full_acc": {
+                "load_time_seconds": 0.004152049,
+                "nr_nodes": 32353,
+                "nr_non_empty_nodes": 32353,
+                "nr_points": 27377018,
+                "query_time_seconds": 39.618189915
+              },
+              "only_node_acc": {
+                "load_time_seconds": 0.003973773,
+                "nr_nodes": 32353,
+                "nr_non_empty_nodes": 32353,
+                "nr_points": 27377018,
+                "query_time_seconds": 39.640272946
+              },
+              "point_filtering_with_full_acc": {
+                "load_time_seconds": 0.003511787,
+                "nr_nodes": 32353,
+                "nr_non_empty_nodes": 32353,
+                "nr_points": 20336946,
+                "query_time_seconds": 39.188933895
+              },
+              "point_filtering_with_node_acc": {
+                "load_time_seconds": 0.003499035,
+                "nr_nodes": 32353,
+                "nr_non_empty_nodes": 32353,
+                "nr_points": 20336946,
+                "query_time_seconds": 39.24855106
+              },
+              "raw_point_filtering": {
+                "load_time_seconds": 0.004467581,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 32353,
+                "nr_points": 20336946,
+                "query_time_seconds": 127.944903851
+              },
+              "raw_spatial": {
+                "load_time_seconds": 0.010278994,
+                "nr_nodes": 82892,
+                "nr_non_empty_nodes": 82892,
+                "nr_points": 66972653,
+                "query_time_seconds": 127.935736714
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

@@ -13,7 +13,7 @@ type = "Octree"
 priority_function = "TaskAge" #best = TaskAge
 num_threads = 24
 cache_size = 10000
-compression = false
+compression = true
 nr_bogus_points = [0, 0]
 node_hierarchy = 17
 point_hierarchy = 24
