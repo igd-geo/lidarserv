@@ -20,6 +20,10 @@ INPUT_FILES_PARAMETER_OVERVIEW_V1 = [
 INPUT_FILES_PARAMETER_OVERVIEW_V2 = [
     "2023-12-14_parameter_overview/parameter_overview_v2_2024-01-08_1.json",
 ]
+
+INPUT_FILES_QUERY_PERFORMANCE = [
+    "2024-01-09_query_performance/query_performance_v1_2024-01-09_1.json",
+]
 def main():
     # plot style
     # plt.style.use("seaborn-notebook")
@@ -65,6 +69,46 @@ def main():
         plot_insertion_rate_by_cache_size(
             test_runs=data["runs"]["cache_size"],
             filename=join(output_folder, "insertion-rate-by-cache-size.pdf"),
+        )
+
+    for input_file in INPUT_FILES_QUERY_PERFORMANCE:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_query_by_num_points(
+            test_runs=data["runs"]["test"],
+            nr_points=data["env"]["input_file_nr_points"],
+            filename=join(output_folder, "query-by-num-points.pdf"),
+        )
+
+        plot_query_by_num_nodes(
+            test_runs=data["runs"]["test"],
+            nr_nodes=data["runs"]["test"][0]["results"]["index_info"]["directory_info"]["num_nodes"],
+            filename=join(output_folder, "query-by-num-nodes.pdf"),
+        )
+
+        plot_query_by_num_points_stacked(
+            test_runs=data["runs"]["test"],
+            nr_points=data["env"]["input_file_nr_points"],
+            filename=join(output_folder, "query-by-num-points-stacked.pdf"),
+        )
+
+        plot_false_positive_rates(
+            test_runs=data["runs"]["test"],
+            filename=join(output_folder, "false-positive-rates.pdf"),
+            queries=query_names(),
+            labels=query_pretty_names(),
+        )
+
+        plot_query_by_time(
+            test_runs=data["runs"]["test"],
+            filename=join(output_folder, "query-by-time.pdf"),
         )
 
 def make_y_insertion_rate(ax, test_runs):
@@ -426,26 +470,28 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
             [
                 'time_range',
                 'ground_classification',
-                'no_cars_classification',
+                'building_classification',
+                'normal_x_vertical',
                 'high_intensity',
                 'low_intensity',
-                'full_red_part',
                 'one_return',
-                'mixed_ground_and_one_return',
                 'mixed_ground_and_time',
+                'mixed_ground_and_one_return',
+                'mixed_ground_normal_one_return'
             ]
     if labels is None:
         labels = \
             [
                 'Time\nSmall Range',
                 'Classification\nGround',
-                'Classification\nNo Cars',
+                'Classification\nBuilding',
+                'Normal\nVertical',
                 'Intensity\nHigh Value',
                 'Intensity\nLow Value',
-                'Color\nHigh Red Value',
-                'Number of Returns\nOne or More Returns',
-                'Mixed\nGround and One Return',
+                'Number of Returns\nOne Return',
                 'Mixed\nGround and Time Range',
+                'Mixed\nGround and One Return',
+                'Mixed\nGround and Normal and One Return',
             ]
     subqueries = ["only_node_acc", "only_full_acc", "raw_point_filtering"]
 
@@ -495,27 +541,30 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
             [
                 'time_range',
                 'ground_classification',
-                'no_cars_classification',
+                'building_classification',
+                'normal_x_vertical',
                 'high_intensity',
                 'low_intensity',
-                'full_red_part',
                 'one_return',
-                'mixed_ground_and_one_return',
                 'mixed_ground_and_time',
+                'mixed_ground_and_one_return',
+                'mixed_ground_normal_one_return'
             ]
     if labels is None:
         labels = \
             [
                 'Time\nSmall Range',
                 'Classification\nGround',
-                'Classification\nNo Cars',
+                'Classification\nBuilding',
+                'Normal\nVertical',
                 'Intensity\nHigh Value',
                 'Intensity\nLow Value',
-                'Color\nHigh Red Value',
-                'Number of Returns\nOne or More Returns',
-                'Mixed\nGround and One Return',
+                'Number of Returns\nOne Return',
                 'Mixed\nGround and Time Range',
+                'Mixed\nGround and One Return',
+                'Mixed\nGround and Normal and One Return',
             ]
+
     subqueries = ["only_node_acc", "only_full_acc"]
 
     bar_width = 0.15
@@ -884,6 +933,7 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
     ax2 = ax1.twinx()  # Create a twin Axes sharing the xaxis
 
     names = []
+    node_values = []
     sizes_of_roots = []
     insertion_speeds = []
     query_speeds = []
@@ -897,6 +947,7 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
             point_hierarchy = multi_run["index"]["point_hierarchy"]
             run_name = "N" + str(node_hierarchy) + "P" + str(point_hierarchy)
             names.append(run_name)
+            node_values.append(node_hierarchy)
 
             # data calculation
             sizes_of_roots.append(multi_run["results"]["index_info"]["root_cell_size"][0])
@@ -915,7 +966,7 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
         # names[i] = names[i] + "\n" + str(sizes_of_roots[i]) + "m"
         size = sizes_of_roots[i]
         size = "{:.2f}".format(size)
-        names[i] = size + "m"
+        names[i] = size + "m" + "\n" + str(node_values[i])
 
     # Convert timeouted to color list
     # Also check if insertion speed is below threshold and color it orange
@@ -1241,30 +1292,32 @@ def rename_tpf(tpf):
 
 
 def query_names():
-    return [
+    return\
+        [
         'time_range',
         'ground_classification',
-        'no_cars_classification',
+        'building_classification',
+        'normal_x_vertical',
         'high_intensity',
         'low_intensity',
-        'full_red_part',
         'one_return',
-        'mixed_ground_and_one_return',
         'mixed_ground_and_time',
+        'mixed_ground_and_one_return',
+        'mixed_ground_normal_one_return'
     ]
-
 
 def query_pretty_names():
     return [
         'Time\nSmall Range',
         'Classification\nGround',
-        'Classification\nNo Cars',
+        'Classification\nBuilding',
+        'Normal\nVertical',
         'Intensity\nHigh Value',
         'Intensity\nLow Value',
-        'Color\nHigh Red Value',
-        'Number of Returns\nOne or More Returns',
-        'Mixed\nGround and One Return',
+        'Number of Returns\nOne Return',
         'Mixed\nGround and Time Range',
+        'Mixed\nGround and One Return',
+        'Mixed\nGround and Normal and One Return',
     ]
 
 
