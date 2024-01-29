@@ -23,6 +23,7 @@ INPUT_FILES_PARAMETER_OVERVIEW_V2 = [
 
 INPUT_FILES_QUERY_PERFORMANCE = [
     "2024-01-09_query_performance/query_performance_v1_2024-01-09_1.json",
+    "2024-01-09_query_performance/query_performance_v1_2024-01-09_2.json",
 ]
 def main():
     # plot style
@@ -33,43 +34,43 @@ def main():
     # regularly crashes the viewer...
     mpl.rcParams['pdf.fonttype'] = 42
 
-    for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V1:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        plot_overall_performance_by_sizes(
-            test_runs=data["runs"],
-            filename=join(output_folder, "overall-performance-by-sizes.pdf"),
-            nr_points=data["env"]["input_file_nr_points"],
-        )
-
-
-
-    for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        plot_insertion_rate_by_nr_threads(
-            test_runs=data["runs"]["threads"],
-            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf"),
-        )
-
-        plot_insertion_rate_by_cache_size(
-            test_runs=data["runs"]["cache_size"],
-            filename=join(output_folder, "insertion-rate-by-cache-size.pdf"),
-        )
+    # for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V1:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     plot_overall_performance_by_sizes(
+    #         test_runs=data["runs"],
+    #         filename=join(output_folder, "overall-performance-by-sizes.pdf"),
+    #         nr_points=data["env"]["input_file_nr_points"],
+    #     )
+    #
+    #
+    #
+    # for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     plot_insertion_rate_by_nr_threads(
+    #         test_runs=data["runs"]["threads"],
+    #         filename=join(output_folder, "insertion-rate-by-nr-threads.pdf"),
+    #     )
+    #
+    #     plot_insertion_rate_by_cache_size(
+    #         test_runs=data["runs"]["cache_size"],
+    #         filename=join(output_folder, "insertion-rate-by-cache-size.pdf"),
+    #     )
 
     for input_file in INPUT_FILES_QUERY_PERFORMANCE:
         # read file
