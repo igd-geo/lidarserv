@@ -493,17 +493,17 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
                 nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
                 plt.bar([p + (i + 1) * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i + 1])
 
-        plt.xlabel('Queries')
+        # plt.xlabel('Queries')
         plt.ylabel('Number of Points')
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['All Points', 'Bounds Filter', 'Histogram Filter',
+        custom_legend_labels = ['All Points', 'Range Filter', 'Range Filter + Histogram Filter',
                                 'Point Filter']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
 
         plt.tight_layout()
 
@@ -540,17 +540,17 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
                 plt.bar([p + 3 * bar_width], nr_non_empty_nodes, bar_width, label="nr_non_empty_nodes",
                         color=colors[i + 2])
 
-        plt.xlabel('Queries')
+        # plt.xlabel('Queries')
         plt.ylabel('Number of Nodes')
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['All Nodes', 'Bounds Filter', 'Histogram Filter',
-                                'Nodes Containing\nSearched Points']  # Custom legend labels
+        custom_legend_labels = ['All Nodes', 'Range Filter', 'Range Filter + Histogram Filter',
+                                'Nodes Containing Searched Points']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
 
         plt.tight_layout()
 
@@ -678,17 +678,17 @@ def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, ti
             plt.bar([p + 2.5 * bar_width], false_nodes_node_percentage, bar_width, color=colors[2])
             plt.bar([p + 3.5 * bar_width], false_nodes_full_percentage, bar_width, color=colors[3])
 
-        plt.xlabel('Queries')
+        # plt.xlabel('Queries')
         plt.ylabel('False Positive Rate | Percentage')
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['False Positive Points\nRange Filtering', 'False Positive Points\nHistogram Filtering', 'False Positive Nodes\nNode Filtering',
-                                'False Positive Nodes\nHistogram Filtering']  # Custom legend labels
+        custom_legend_labels = ['False Positive Points - Range Filtering', 'False Positive Points - Histogram Filtering', 'False Positive Nodes - Range Filtering',
+                                'False Positive Nodes - Histogram Filtering']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, 1), title='Subqueries')
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
 
         plt.tight_layout()
 
@@ -728,23 +728,23 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
                 except:
                     pass
 
-        plt.xlabel('Queries')
+        # plt.xlabel('Queries')
         plt.ylabel('Execution Time | Seconds')
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90)
 
         custom_legend_labels = [
             'Spatial Query',
-            'Spatial Query\nPoint Filter',
-            'Spatial Query\nBounds Filter\nPoint Filter',
-            'Spatial Query\nBounds Filter\nHistogram Filter\nPoint Filter',
+            'Spatial Query + Point Filter',
+            'Spatial Query + Range Filter + Point Filter',
+            'Spatial Query + Range Filter + Histogram Filter + Point Filter',
             # 'Bounds Filter',
             # 'Bounds Filter\nHistogram Filter',
         ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
 
         plt.tight_layout()
 
