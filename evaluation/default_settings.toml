@@ -11,11 +11,11 @@ indexing_timeout_seconds = 86400 # one day
 [defaults]
 type = "Octree"
 priority_function = "TaskAge"
-num_threads = 10
-cache_size = 5000
-node_hierarchy = 16
-point_hierarchy = 23
-compression = true
+num_threads = 24
+cache_size = 10000
+node_hierarchy = 17
+point_hierarchy = 24
+compression = false
 nr_bogus_points = [0, 0]
 insertion_rate.target_point_pressure = 1_000_000
 query_perf.enable = true

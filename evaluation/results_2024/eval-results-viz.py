@@ -14,16 +14,18 @@ from matplotlib.gridspec import SubplotSpec
 PROJECT_ROOT = join(dirname(__file__), "..")
 
 INPUT_FILES_PARAMETER_OVERVIEW_V1 = [
-    "2023-12-14_parameter_overview/parameter_overview_v1_2024-01-08_1.json",
+    # "2023-12-14_parameter_overview/parameter_overview_v1_2024-01-08_1.json",
 ]
 
 INPUT_FILES_PARAMETER_OVERVIEW_V2 = [
-    "2023-12-14_parameter_overview/parameter_overview_v2_2024-01-08_1.json",
+    # "2023-12-14_parameter_overview/parameter_overview_v2_2024-01-08_1.json",
+    "2023-12-14_parameter_overview/parameter_overview_v2_2024-01-29_1.json",
 ]
 
 INPUT_FILES_QUERY_PERFORMANCE = [
-    "2024-01-09_query_performance/query_performance_v1_2024-01-09_1.json",
-    "2024-01-09_query_performance/query_performance_v1_2024-01-09_2.json",
+    # "2024-01-09_query_performance/query_performance_v1_2024-01-09_1.json",
+    # "2024-01-09_query_performance/query_performance_v1_2024-01-09_2.json",
+    "2024-01-09_query_performance/query_performance_v1_2024-01-25_2.json",
 ]
 def main():
     # plot style
@@ -52,25 +54,25 @@ def main():
     #
     #
     #
-    # for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
-    #     # read file
-    #     with open(input_file) as f:
-    #         print("Reading file: ", input_file)
-    #         data = json.load(f)
-    #
-    #     # ensure output folder exists
-    #     output_folder = f"{input_file}.diagrams"
-    #     os.makedirs(output_folder, exist_ok=True)
-    #
-    #     plot_insertion_rate_by_nr_threads(
-    #         test_runs=data["runs"]["threads"],
-    #         filename=join(output_folder, "insertion-rate-by-nr-threads.pdf"),
-    #     )
-    #
-    #     plot_insertion_rate_by_cache_size(
-    #         test_runs=data["runs"]["cache_size"],
-    #         filename=join(output_folder, "insertion-rate-by-cache-size.pdf"),
-    #     )
+    for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_rate_by_nr_threads(
+            test_runs=data["runs"]["threads"],
+            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf"),
+        )
+
+        plot_insertion_rate_by_cache_size(
+            test_runs=data["runs"]["cache_size"],
+            filename=join(output_folder, "insertion-rate-by-cache-size.pdf"),
+        )
 
     for input_file in INPUT_FILES_QUERY_PERFORMANCE:
         # read file
@@ -86,12 +88,16 @@ def main():
             test_runs=data["runs"]["test"],
             nr_points=data["env"]["input_file_nr_points"],
             filename=join(output_folder, "query-by-num-points.pdf"),
+            queries=query_names(),
+            labels=query_pretty_names(),
         )
 
         plot_query_by_num_nodes(
             test_runs=data["runs"]["test"],
             nr_nodes=data["runs"]["test"][0]["results"]["index_info"]["directory_info"]["num_nodes"],
             filename=join(output_folder, "query-by-num-nodes.pdf"),
+            queries=query_names(),
+            labels=query_pretty_names(),
         )
 
         plot_query_by_num_points_stacked(
@@ -110,6 +116,8 @@ def main():
         plot_query_by_time(
             test_runs=data["runs"]["test"],
             filename=join(output_folder, "query-by-time.pdf"),
+            queries=query_names(),
+            labels=query_pretty_names(),
         )
 
 def make_y_insertion_rate(ax, test_runs):
@@ -465,35 +473,6 @@ def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename
 
 def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, labels=None, title=None):
     fig, ax = plt.subplots(figsize=[10, 6])
-
-    if queries is None:
-        queries = \
-            [
-                'time_range',
-                'ground_classification',
-                'building_classification',
-                'normal_x_vertical',
-                'high_intensity',
-                'low_intensity',
-                'one_return',
-                'mixed_ground_and_time',
-                'mixed_ground_and_one_return',
-                'mixed_ground_normal_one_return'
-            ]
-    if labels is None:
-        labels = \
-            [
-                'Time\nSmall Range',
-                'Classification\nGround',
-                'Classification\nBuilding',
-                'Normal\nVertical',
-                'Intensity\nHigh Value',
-                'Intensity\nLow Value',
-                'Number of Returns\nOne Return',
-                'Mixed\nGround and Time Range',
-                'Mixed\nGround and One Return',
-                'Mixed\nGround and Normal and One Return',
-            ]
     subqueries = ["only_node_acc", "only_full_acc", "raw_point_filtering"]
 
     bar_width = 0.15
@@ -536,36 +515,6 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
 
 def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=None, title=None):
     fig, ax = plt.subplots(figsize=[10, 6])
-
-    if queries is None:
-        queries = \
-            [
-                'time_range',
-                'ground_classification',
-                'building_classification',
-                'normal_x_vertical',
-                'high_intensity',
-                'low_intensity',
-                'one_return',
-                'mixed_ground_and_time',
-                'mixed_ground_and_one_return',
-                'mixed_ground_normal_one_return'
-            ]
-    if labels is None:
-        labels = \
-            [
-                'Time\nSmall Range',
-                'Classification\nGround',
-                'Classification\nBuilding',
-                'Normal\nVertical',
-                'Intensity\nHigh Value',
-                'Intensity\nLow Value',
-                'Number of Returns\nOne Return',
-                'Mixed\nGround and Time Range',
-                'Mixed\nGround and One Return',
-                'Mixed\nGround and Normal and One Return',
-            ]
-
     subqueries = ["only_node_acc", "only_full_acc"]
 
     bar_width = 0.15
@@ -734,12 +683,12 @@ def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, ti
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
 
-        custom_legend_labels = ['False Positive Points\nNode Acceleration', 'False Positive Points\nFull Acceleration', 'False Positive Nodes\nNode Acceleration',
-                                'False Positive Nodes\nFull Acceleration']  # Custom legend labels
+        custom_legend_labels = ['False Positive Points\nRange Filtering', 'False Positive Points\nHistogram Filtering', 'False Positive Nodes\nNode Filtering',
+                                'False Positive Nodes\nHistogram Filtering']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, 1), title='Subqueries')
 
         plt.tight_layout()
 
@@ -1189,18 +1138,14 @@ def calculate_average_point_reduction_single_run(run, query_run="only_node_acc")
         [
             'time_range',
             'ground_classification',
-            # 'no_cars_classification',
-            'normal_x_vertical',
             'building_classification',
+            'powerline_classification',
+            'vegetation_classification',
+            'normal_x_vertical',
             'high_intensity',
             'low_intensity',
             'one_return',
-            # 'one_return',
-            # 'mixed_ground_and_one_return',
             'mixed_ground_and_time',
-            'mixed_ground_and_one_return',
-            # 'mixed_ground_normal_one_return'
-            'mixed_ground_normal_one_return'
         ]
 
     nr_points = run["results"]["insertion_rate"]["nr_points"]
@@ -1298,13 +1243,13 @@ def query_names():
         'time_range',
         'ground_classification',
         'building_classification',
+        'powerline_classification',
+        'vegetation_classification',
         'normal_x_vertical',
         'high_intensity',
         'low_intensity',
         'one_return',
         'mixed_ground_and_time',
-        'mixed_ground_and_one_return',
-        'mixed_ground_normal_one_return'
     ]
 
 def query_pretty_names():
@@ -1312,13 +1257,13 @@ def query_pretty_names():
         'Time\nSmall Range',
         'Classification\nGround',
         'Classification\nBuilding',
+        'Classification\nPowerline',
+        'Classification\nVegetation',
         'Normal\nVertical',
         'Intensity\nHigh Value',
         'Intensity\nLow Value',
         'Number of Returns\nOne Return',
         'Mixed\nGround and Time Range',
-        'Mixed\nGround and One Return',
-        'Mixed\nGround and Normal and One Return',
     ]
 
 
