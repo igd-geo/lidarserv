@@ -27,6 +27,10 @@ INPUT_FILES_QUERY_PERFORMANCE = [
     # "2024-01-09_query_performance/query_performance_v1_2024-01-09_2.json",
     "2024-01-09_query_performance/query_performance_v1_2024-01-25_2.json",
 ]
+
+INPUT_FILES_INSERTION_SPEED = [
+    "2024-02-01_insertion_speed/insertion_speed_v1_2024-02-01_1.json",
+]
 def main():
     # plot style
     # plt.style.use("seaborn-notebook")
@@ -118,6 +122,20 @@ def main():
             filename=join(output_folder, "query-by-time.pdf"),
             queries=query_names(),
             labels=query_pretty_names(),
+        )
+
+    for input_file in INPUT_FILES_INSERTION_SPEED:
+        # read file
+        with open(input_file) as f:
+            print("Reading file: ", input_file)
+            data = json.load(f)
+        # ensure output folder exists
+        output_folder = f"{input_file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_speed_comparison(
+            test_runs=data["runs"],
+            filename=join(output_folder, f"insertion-speed-comparison.pdf"),
         )
 
 def make_y_insertion_rate(ax, test_runs):
@@ -472,7 +490,7 @@ def plot_latency_by_insertion_rate_foreach_priority_function(test_runs, filename
 
 
 def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, labels=None, title=None):
-    fig, ax = plt.subplots(figsize=[10, 6])
+    fig, ax = plt.subplots(figsize=[8, 4.8])
     subqueries = ["only_node_acc", "only_full_acc", "raw_point_filtering"]
 
     bar_width = 0.15
@@ -503,7 +521,7 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.8), title='Subqueries')
 
         plt.tight_layout()
 
