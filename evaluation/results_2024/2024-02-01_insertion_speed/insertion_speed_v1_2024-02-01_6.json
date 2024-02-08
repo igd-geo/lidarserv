@@ -1,0 +1,425 @@
+{
+  "env": {
+    "duration:": 7880,
+    "finished_at": "2024-02-01T19:10:23.761069036Z",
+    "hostname": "lidarserv-evaluation",
+    "input_file": "evaluation/results_2024/2024-02-01_insertion_speed/insertion_speed_v1.toml",
+    "input_file_nr_points": 319290418,
+    "started_at": "2024-02-01T16:59:02.997979357Z",
+    "version": "git:49ff2d0-modified"
+  },
+  "runs": {
+    "compressed_attribute_index": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 10000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": false,
+          "node_hierarchy": 16,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 23,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 135965776,
+            "directory_info": {
+              "num_nodes": 330014,
+              "num_nodes_per_level": [
+                19282,
+                78857,
+                231353,
+                522,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {},
+            "root_cell_size": [
+              32.767,
+              32.767,
+              32.767
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.840295251,
+            "duration_seconds": 803.96403945,
+            "insertion_rate_points_per_sec": 395747.0284518592,
+            "nr_points": 319290418,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ],
+    "compressed_histogram_index": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 10000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 16,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 23,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 135965776,
+            "directory_info": {
+              "num_nodes": 330014,
+              "num_nodes_per_level": [
+                19282,
+                78857,
+                231353,
+                522,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 319290418,
+              "color_b": 319290418,
+              "color_g": 319290418,
+              "color_r": 319290418,
+              "intensity": 319290418,
+              "number_of_returns": 319290418,
+              "point_source_id": 319290418,
+              "return_number": 319290418,
+              "scan_angle_rank": 319290418,
+              "user_data": 319290418
+            },
+            "root_cell_size": [
+              32.767,
+              32.767,
+              32.767
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 48.552069755,
+            "duration_seconds": 539.558940383,
+            "insertion_rate_points_per_sec": 542908.4177918701,
+            "nr_points": 319290418,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ],
+    "compressed_no_attribute_index": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 10000,
+          "compression": true,
+          "enable_attribute_index": false,
+          "enable_histogram_acceleration": false,
+          "node_hierarchy": 16,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 23,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 0,
+            "directory_info": {
+              "num_nodes": 330014,
+              "num_nodes_per_level": [
+                19282,
+                78857,
+                231353,
+                522,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": "N/A",
+            "root_cell_size": [
+              32.767,
+              32.767,
+              32.767
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 3.208955609,
+            "duration_seconds": 609.432811772,
+            "insertion_rate_points_per_sec": 521169.84998418216,
+            "nr_points": 319290418,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ],
+    "uncompressed_attribute_index": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 10000,
+          "compression": false,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": false,
+          "node_hierarchy": 16,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 23,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 135965776,
+            "directory_info": {
+              "num_nodes": 330014,
+              "num_nodes_per_level": [
+                19282,
+                78857,
+                231353,
+                522,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {},
+            "root_cell_size": [
+              32.767,
+              32.767,
+              32.767
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 3.604462299,
+            "duration_seconds": 746.905906078,
+            "insertion_rate_points_per_sec": 425431.05525707075,
+            "nr_points": 319290418,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ],
+    "uncompressed_histogram_index": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 10000,
+          "compression": false,
+          "enable_attribute_index": true,
+          "enable_histogram_acceleration": true,
+          "node_hierarchy": 16,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 23,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 135965776,
+            "directory_info": {
+              "num_nodes": 330014,
+              "num_nodes_per_level": [
+                19282,
+                78857,
+                231353,
+                522,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": {
+              "classification": 319290418,
+              "color_b": 319290418,
+              "color_g": 319290418,
+              "color_r": 319290418,
+              "intensity": 319290418,
+              "number_of_returns": 319290418,
+              "point_source_id": 319290418,
+              "return_number": 319290418,
+              "scan_angle_rank": 319290418,
+              "user_data": 319290418
+            },
+            "root_cell_size": [
+              32.767,
+              32.767,
+              32.767
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 3.6818364260000003,
+            "duration_seconds": 688.761873386,
+            "insertion_rate_points_per_sec": 461106.676940842,
+            "nr_points": 319290418,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ],
+    "uncompressed_no_attribute_index": [
+      {
+        "index": {
+          "bin_count_classification": 256,
+          "bin_count_color": 25,
+          "bin_count_intensity": 25,
+          "bin_count_point_source_id": 256,
+          "bin_count_return_number": 8,
+          "bin_count_scan_angle_rank": 25,
+          "bin_count_user_data": 25,
+          "cache_size": 10000,
+          "compression": false,
+          "enable_attribute_index": false,
+          "enable_histogram_acceleration": false,
+          "node_hierarchy": 16,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 23,
+          "priority_function": "TaskAge",
+          "type": "Octree"
+        },
+        "results": {
+          "index_info": {
+            "attribute_index": 0,
+            "directory_info": {
+              "num_nodes": 330014,
+              "num_nodes_per_level": [
+                19282,
+                78857,
+                231353,
+                522,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "histogram_points": "N/A",
+            "root_cell_size": [
+              32.767,
+              32.767,
+              32.767
+            ]
+          },
+          "insertion_rate": {
+            "duration_cleanup_seconds": 3.90344731,
+            "duration_seconds": 604.125734488,
+            "insertion_rate_points_per_sec": 525123.509789165,
+            "nr_points": 319290418,
+            "nr_times_to_slow": 0,
+            "settings": {
+              "target_point_pressure": 1000000
+            }
+          },
+          "latency": [],
+          "query_performance": null
+        }
+      }
+    ]
+  }
+}
