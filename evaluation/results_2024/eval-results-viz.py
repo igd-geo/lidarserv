@@ -30,6 +30,8 @@ INPUT_FILES_QUERY_PERFORMANCE = [
 
 INPUT_FILES_INSERTION_SPEED = [
     "2024-02-01_insertion_speed/insertion_speed_v1_2024-02-01_1.json",
+    "2024-02-01_insertion_speed/insertion_speed_v1_2024-02-01_2.json",
+    "2024-02-01_insertion_speed/insertion_speed_v1_2024-02-01_6.json",
 ]
 def main():
     # plot style
