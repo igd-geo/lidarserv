@@ -119,6 +119,13 @@ def main():
             labels=query_pretty_names(),
         )
 
+        plot_true_negative_rates(
+            test_runs=data["runs"]["test"],
+            filename=join(output_folder, "true-negative-rates.pdf"),
+            queries=query_names(),
+            labels=query_pretty_names(),
+        )
+
         plot_query_by_time(
             test_runs=data["runs"]["test"],
             filename=join(output_folder, "query-by-time.pdf"),
@@ -705,6 +712,68 @@ def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, ti
 
         custom_legend_labels = ['False Positive Points - Range Filtering', 'False Positive Points - Histogram Filtering', 'False Positive Nodes - Range Filtering',
                                 'False Positive Nodes - Histogram Filtering']  # Custom legend labels
+        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title)
+        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
+
+def plot_true_negative_rates(test_runs, filename, queries=None, labels=None, title=None):
+    fig, ax = plt.subplots(figsize=[10, 6])
+    subqueries = ["raw_spatial", "only_node_acc", "only_full_acc", "point_filtering_with_full_acc"]
+
+    bar_width = 0.15
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+
+    for run in test_runs:
+        for p in range(len(queries)):
+            # total number of points
+            points_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_points"]
+            nodes_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_nodes"]
+
+            # number of points for node acceleration
+            points_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_points"]
+            nodes_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_nodes"]
+
+            # number of points for hist acceleration
+            points_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_points"]
+            nodes_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_nodes"]
+
+            # ground truth (minimum)
+            points_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
+                "nr_points"]
+            nodes_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
+                "nr_non_empty_nodes"]
+
+            # true negative percentage node acceleration
+            true_points_node_percentage = (points_total - points_node_acc) / points_total * 100
+            true_nodes_node_percentage = (nodes_total - nodes_node_acc) / nodes_total * 100
+
+            # true negative percentage hist acceleration
+            true_points_full_percentage = (points_total - points_full_acc) / points_total * 100
+            true_nodes_full_percentage = (nodes_total - nodes_full_acc) / nodes_total * 100
+
+            # plot it
+            plt.bar([p + 0 * bar_width], true_points_node_percentage, bar_width, color=colors[0])
+            plt.bar([p + 1 * bar_width], true_points_full_percentage, bar_width, color=colors[1])
+            plt.bar([p + 2.5 * bar_width], true_nodes_node_percentage, bar_width, color=colors[2])
+            plt.bar([p + 3.5 * bar_width], true_nodes_full_percentage, bar_width, color=colors[3])
+
+        # plt.xlabel('Queries')
+        plt.ylabel('True Negative Rate | Percentage')
+        # plt.title(title)
+        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
+
+        custom_legend_labels = ['True Negative Points - Range Filtering', 'True Negative Points - Histogram Filtering', 'True Negative Nodes - Range Filtering',
+                                'True Negative Nodes - Histogram Filtering']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
