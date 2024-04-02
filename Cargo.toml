@@ -11,3 +11,4 @@ members = [
     "evaluation",
     "default-functions-derive"
 ]
+resolver = "2"

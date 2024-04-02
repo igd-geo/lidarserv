@@ -8,7 +8,7 @@ use lidarserv_common::index::octree::grid_cell_directory::GridCellDirectory;
 use lidarserv_common::index::octree::page_manager::OctreePageLoader;
 use lidarserv_common::index::octree::{Octree, OctreeParams};
 use lidarserv_common::las::I32LasReadWrite;
-use log::{debug, info};
+use log::info;
 use std::path::PathBuf;
 
 pub type I32Octree = Octree<Point, GridCenterSampling<Point>, GridCenterSamplingFactory<Point>>;

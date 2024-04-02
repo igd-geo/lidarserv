@@ -3,7 +3,7 @@ use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
 use crate::las::LasPointAttributes;
 use csv::Writer;
-use log::{debug, info, trace};
+use log::{debug, trace};
 use serde_json::{json, Value};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;

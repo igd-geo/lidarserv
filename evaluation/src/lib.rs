@@ -25,7 +25,7 @@ pub fn read_points(
 ) -> Vec<Point> {
     info!("Reading points...");
 
-    let mut points: Vec<Point> = Vec::new();
+    let points: Vec<Point>;
 
     // check file format
     if settings.points_file.extension().unwrap() == "txt" {

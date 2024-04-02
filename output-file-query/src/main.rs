@@ -20,7 +20,7 @@ mod cli;
 fn main(args: Args) {
     simple_logger::init_with_level(args.log_level).unwrap();
     info!("Starting client.");
-    network_thread(args);
+    network_thread(args).unwrap();
 }
 
 #[tokio::main]
