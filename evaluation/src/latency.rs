@@ -1,6 +1,7 @@
 use crate::settings::SingleLatencyMeasurement;
 use crate::{Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_common::index::{Index, NodeId, Reader, Writer};
 use lidarserv_common::query::Query;
 use serde_json::json;
@@ -9,7 +10,6 @@ use std::collections::HashMap;
 use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub fn measure_latency<I, Q>(
     index: I,
@@ -164,7 +164,7 @@ where
 pub fn read_thread<I>(
     mut reader: I::Reader,
     mut queries: crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-    mut filters: crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>
+    mut filters: crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
 ) -> Vec<HashMap<usize, Instant>>
 where
     I: Index<Point>,

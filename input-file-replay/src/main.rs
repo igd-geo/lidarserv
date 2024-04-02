@@ -1,7 +1,7 @@
 mod cli;
 mod commands;
-pub mod iter_points;
 pub mod file_reader;
+pub mod iter_points;
 
 use crate::cli::{Args, Command};
 use crate::commands::csvreplay::replay_csv;

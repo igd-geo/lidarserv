@@ -1,18 +1,18 @@
-use std::option::Option;
-use std::path::PathBuf;
-use log::{debug, info, warn};
-use las::{Builder, Color, Point, Write, Writer};
+use crate::cli::Args;
 use las::point::{Classification, Format, ScanDirection};
-use lidarserv_server::common::geometry::bounding_box::{AABB, BaseAABB};
+use las::{Builder, Color, Point, Write, Writer};
+use lidarserv_common::geometry::points::PointType;
+use lidarserv_common::geometry::position::Position;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
+use lidarserv_server::common::geometry::bounding_box::{BaseAABB, AABB};
 use lidarserv_server::common::geometry::grid::LodLevel;
 use lidarserv_server::common::nalgebra::Point3;
+use lidarserv_server::index::point::GlobalPoint;
 use lidarserv_server::net::client::viewer::ViewerClient;
 use lidarserv_server::net::LidarServerError;
-use lidarserv_common::geometry::points::PointType;
-use lidarserv_common::geometry::position::{Position};
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
-use lidarserv_server::index::point::{GlobalPoint};
-use crate::cli::Args;
+use log::{debug, info, warn};
+use std::option::Option;
+use std::path::PathBuf;
 
 mod cli;
 
@@ -49,13 +49,26 @@ async fn network_thread(args: Args) -> Result<(), LidarServerError> {
 
     // send query
     debug!("Sending query.");
-    client_write.query_aabb(&aabb, &lod, Some(bounds), args.enable_attribute_acceleration, args.enable_histogram_acceleration, args.enable_point_filtering).await.unwrap();
+    client_write
+        .query_aabb(
+            &aabb,
+            &lod,
+            Some(bounds),
+            args.enable_attribute_acceleration,
+            args.enable_histogram_acceleration,
+            args.enable_point_filtering,
+        )
+        .await
+        .unwrap();
 
     // receive result
-    let mut points : Vec<GlobalPoint> = Vec::new();
+    let mut points: Vec<GlobalPoint> = Vec::new();
     debug!("Receiving result.");
     loop {
-        let result = client_read.receive_update(&mut exit_receiver).await.unwrap();
+        let result = client_read
+            .receive_update(&mut exit_receiver)
+            .await
+            .unwrap();
         client_write.ack().await.unwrap();
         debug!("Result: {:?}", result);
 
@@ -86,7 +99,7 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
     let mut writer = Writer::from_path(&path, header).unwrap();
     let mut errors = 0;
     for point in points.iter() {
-        let direction : ScanDirection = match point.attribute().scan_direction {
+        let direction: ScanDirection = match point.attribute().scan_direction {
             true => ScanDirection::LeftToRight,
             false => ScanDirection::RightToLeft,
         };
@@ -104,13 +117,18 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
             number_of_returns: point.attribute().number_of_returns,
             scan_direction: direction,
             is_edge_of_flight_line: point.attribute().edge_of_flight_line,
-            classification: Classification::new(classification).unwrap_or(Classification::new(0).unwrap()),
+            classification: Classification::new(classification)
+                .unwrap_or(Classification::new(0).unwrap()),
             scan_angle: point.attribute().scan_angle_rank as f32,
             user_data: point.attribute().user_data,
             point_source_id: point.attribute().point_source_id,
             gps_time: Option::from(point.attribute().gps_time),
-            color: Option::from(Color::new(point.attribute().color.0, point.attribute().color.1, point.attribute().color.2)),
-            .. Default::default()
+            color: Option::from(Color::new(
+                point.attribute().color.0,
+                point.attribute().color.1,
+                point.attribute().color.2,
+            )),
+            ..Default::default()
         };
         let result = writer.write(point);
         if result.is_err() {
@@ -126,19 +144,58 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
 
 fn parse_attribute_bounds(args: &Args) -> LasPointAttributeBounds {
     let mut attribute_bounds = LasPointAttributeBounds::new();
-    attribute_bounds.intensity = Some((args.min_intensity.unwrap_or(0), args.max_intensity.unwrap_or(u16::MAX)));
-    attribute_bounds.return_number = Some((args.min_return_number.unwrap_or(0), args.max_return_number.unwrap_or(u8::MAX)));
-    attribute_bounds.number_of_returns = Some((args.min_number_of_returns.unwrap_or(0), args.max_number_of_returns.unwrap_or(u8::MAX)));
-    attribute_bounds.scan_direction = Some((args.min_scan_direction.unwrap_or(0) != 0, args.max_scan_direction.unwrap_or(1) != 0));
-    attribute_bounds.edge_of_flight_line = Some((args.min_edge_of_flight_line.unwrap_or(0) != 0, args.max_edge_of_flight_line.unwrap_or(1) != 0));
-    attribute_bounds.classification = Some((args.min_classification.unwrap_or(0), args.max_classification.unwrap_or(u8::MAX)));
-    attribute_bounds.scan_angle_rank = Some((args.min_scan_angle.unwrap_or(i8::MIN), args.max_scan_angle.unwrap_or(i8::MAX)));
-    attribute_bounds.user_data = Some((args.min_user_data.unwrap_or(0), args.max_user_data.unwrap_or(u8::MAX)));
-    attribute_bounds.point_source_id = Some((args.min_point_source_id.unwrap_or(0), args.max_point_source_id.unwrap_or(u16::MAX)));
-    attribute_bounds.gps_time = Some((args.min_gps_time.unwrap_or(f64::MIN), args.max_gps_time.unwrap_or(f64::MAX)));
-    attribute_bounds.color_r = Some((args.min_color_r.unwrap_or(0), args.max_color_r.unwrap_or(u16::MAX)));
-    attribute_bounds.color_g = Some((args.min_color_g.unwrap_or(0), args.max_color_g.unwrap_or(u16::MAX)));
-    attribute_bounds.color_b = Some((args.min_color_b.unwrap_or(0), args.max_color_b.unwrap_or(u16::MAX)));
+    attribute_bounds.intensity = Some((
+        args.min_intensity.unwrap_or(0),
+        args.max_intensity.unwrap_or(u16::MAX),
+    ));
+    attribute_bounds.return_number = Some((
+        args.min_return_number.unwrap_or(0),
+        args.max_return_number.unwrap_or(u8::MAX),
+    ));
+    attribute_bounds.number_of_returns = Some((
+        args.min_number_of_returns.unwrap_or(0),
+        args.max_number_of_returns.unwrap_or(u8::MAX),
+    ));
+    attribute_bounds.scan_direction = Some((
+        args.min_scan_direction.unwrap_or(0) != 0,
+        args.max_scan_direction.unwrap_or(1) != 0,
+    ));
+    attribute_bounds.edge_of_flight_line = Some((
+        args.min_edge_of_flight_line.unwrap_or(0) != 0,
+        args.max_edge_of_flight_line.unwrap_or(1) != 0,
+    ));
+    attribute_bounds.classification = Some((
+        args.min_classification.unwrap_or(0),
+        args.max_classification.unwrap_or(u8::MAX),
+    ));
+    attribute_bounds.scan_angle_rank = Some((
+        args.min_scan_angle.unwrap_or(i8::MIN),
+        args.max_scan_angle.unwrap_or(i8::MAX),
+    ));
+    attribute_bounds.user_data = Some((
+        args.min_user_data.unwrap_or(0),
+        args.max_user_data.unwrap_or(u8::MAX),
+    ));
+    attribute_bounds.point_source_id = Some((
+        args.min_point_source_id.unwrap_or(0),
+        args.max_point_source_id.unwrap_or(u16::MAX),
+    ));
+    attribute_bounds.gps_time = Some((
+        args.min_gps_time.unwrap_or(f64::MIN),
+        args.max_gps_time.unwrap_or(f64::MAX),
+    ));
+    attribute_bounds.color_r = Some((
+        args.min_color_r.unwrap_or(0),
+        args.max_color_r.unwrap_or(u16::MAX),
+    ));
+    attribute_bounds.color_g = Some((
+        args.min_color_g.unwrap_or(0),
+        args.max_color_g.unwrap_or(u16::MAX),
+    ));
+    attribute_bounds.color_b = Some((
+        args.min_color_b.unwrap_or(0),
+        args.max_color_b.unwrap_or(u16::MAX),
+    ));
     debug!("Parsed Attribute bounds: {:?}", attribute_bounds);
     attribute_bounds
 }

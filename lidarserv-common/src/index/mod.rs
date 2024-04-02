@@ -1,10 +1,10 @@
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
+use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::query::Query;
 use std::error::Error;
 use std::sync::Arc;
-use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub mod octree;
 
@@ -57,13 +57,23 @@ where
     fn fetch_query_filter(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>
+        filters: &mut crossbeam_channel::Receiver<(
+            Option<LasPointAttributeBounds>,
+            bool,
+            bool,
+            bool,
+        )>,
     );
 
     fn updates_available(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>
+        filters: &mut crossbeam_channel::Receiver<(
+            Option<LasPointAttributeBounds>,
+            bool,
+            bool,
+            bool,
+        )>,
     ) -> bool;
 
     fn update(&mut self);
@@ -71,7 +81,12 @@ where
     fn blocking_update(
         &mut self,
         queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>
+        filters: &mut crossbeam_channel::Receiver<(
+            Option<LasPointAttributeBounds>,
+            bool,
+            bool,
+            bool,
+        )>,
     ) -> bool;
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Vec<Point>, I32CoordinateSystem)>;
@@ -81,7 +96,8 @@ where
     fn update_one(&mut self) -> Option<Update<Self::NodeId, I32CoordinateSystem, Vec<Point>>>;
 }
 
-pub type Update<NodeId, CoordinateSystem, NodeData> = (NodeId, CoordinateSystem, Vec<(NodeId, NodeData)>);
+pub type Update<NodeId, CoordinateSystem, NodeData> =
+    (NodeId, CoordinateSystem, Vec<(NodeId, NodeData)>);
 
 /// Currently only implemented for [OctreePage].
 pub trait Node<Point> {

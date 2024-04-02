@@ -5,7 +5,7 @@ use lidarserv_server::common::geometry::points::PointType;
 use lidarserv_server::common::geometry::position::F64Position;
 use lidarserv_server::common::las::LasPointAttributes;
 use lidarserv_server::common::nalgebra::{Matrix4, Vector3, Vector4};
-use lidarserv_server::index::point::{GlobalPoint};
+use lidarserv_server::index::point::GlobalPoint;
 use log::error;
 use std::f64::consts::PI;
 use std::fs::File;

@@ -5,8 +5,9 @@ use crate::index::point::LasPoint;
 use crate::net::protocol::messages::NodeId;
 use crossbeam_channel::Receiver;
 use lidarserv_common::geometry::grid::LeveledGridCell;
-use lidarserv_common::geometry::position::{I32CoordinateSystem};
+use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_common::index::octree::reader::OctreeReader;
 use lidarserv_common::index::octree::Octree;
 use lidarserv_common::index::{Reader, Writer as CommonWriter};
@@ -15,7 +16,6 @@ use lidarserv_common::query::Query;
 use std::error::Error;
 use std::sync::Arc;
 use thiserror::Error;
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub mod builder;
 pub mod point;
@@ -28,12 +28,11 @@ pub struct CoordinateSystemMismatchError;
 pub struct IndexInfo<'a> {
     pub coordinate_system: &'a I32CoordinateSystem,
     pub sampling_factory: &'a GridCenterSamplingFactory<LasPoint>,
-    pub point_record_format: u8
+    pub point_record_format: u8,
 }
 
 /// object safe wrapper for a point cloud index, otherwise very similar to [Index].
-pub trait DynIndex: Send + Sync
-{
+pub trait DynIndex: Send + Sync {
     fn index_info(&self) -> IndexInfo;
     fn writer(&self) -> Box<dyn DynWriter>;
     fn reader(&self) -> Box<dyn DynReader>;
@@ -52,8 +51,7 @@ pub trait DynWriter: Send + Sync {
 pub type NodeData = Vec<Arc<Vec<u8>>>;
 pub type Node<Point> = (NodeId, Vec<Point>, I32CoordinateSystem);
 
-pub trait DynReader: Send + Sync
-{
+pub trait DynReader: Send + Sync {
     /// Blocks until an update is available.
     /// New queries, filters or points trigger an update.
     fn blocking_update(
@@ -112,7 +110,7 @@ impl DynIndex
         IndexInfo {
             coordinate_system: self.coordinate_system(),
             sampling_factory: self.sampling_factory(),
-            point_record_format: self.point_record_format()
+            point_record_format: self.point_record_format(),
         }
     }
 
@@ -149,12 +147,19 @@ impl DynWriter for (I32CoordinateSystem, OctreeWriter<LasPoint>) {
 impl DynReader
     for OctreeReader<LasPoint, GridCenterSampling<LasPoint>, GridCenterSamplingFactory<LasPoint>>
 {
-
-    fn blocking_update(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>) -> bool {
+    fn blocking_update(
+        &mut self,
+        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
+    ) -> bool {
         Reader::blocking_update(self, queries, filters)
     }
 
-    fn updates_available(&mut self, queries: &mut Receiver<Box<dyn Query + Send + Sync>>, filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>) -> bool {
+    fn updates_available(
+        &mut self,
+        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
+        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
+    ) -> bool {
         Reader::updates_available(self, queries, filters)
     }
 
@@ -171,8 +176,7 @@ impl DynReader
             .map(leveled_grid_cell_to_proto_node_id)
     }
 
-    fn update_one(&mut self) -> Option<(NodeId, Vec<Node<LasPoint>>)>
-    {
+    fn update_one(&mut self) -> Option<(NodeId, Vec<Node<LasPoint>>)> {
         Reader::update_one(self).map(|(node_id, coordinate_system, replace)| {
             (
                 leveled_grid_cell_to_proto_node_id(&node_id),

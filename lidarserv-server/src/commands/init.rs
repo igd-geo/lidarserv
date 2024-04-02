@@ -1,8 +1,6 @@
-use crate::cli::{InitOptions};
+use crate::cli::InitOptions;
 use crate::common::geometry::grid::LodLevel;
-use crate::index::settings::{
-    GeneralSettings, IndexSettings, OctreeSettings,
-};
+use crate::index::settings::{GeneralSettings, IndexSettings, OctreeSettings};
 use anyhow::Result;
 
 pub fn run(init_options: InitOptions) -> Result<()> {
@@ -11,7 +9,10 @@ pub fn run(init_options: InitOptions) -> Result<()> {
 
     // check point record format
     if !(init_options.las_point_record_format <= 3) {
-        anyhow::bail!("Invalid point record format: {}, only 0-3 are supported", init_options.las_point_record_format);
+        anyhow::bail!(
+            "Invalid point record format: {}, only 0-3 are supported",
+            init_options.las_point_record_format
+        );
     }
 
     // write settings
@@ -38,12 +39,12 @@ pub fn run(init_options: InitOptions) -> Result<()> {
             use_metrics: init_options.mno_use_metrics,
             point_grid_shift: 31
                 - (init_options.point_grid_size / init_options.las_scale.0.x)
-                .log2()
-                .round() as u16,
+                    .log2()
+                    .round() as u16,
             node_grid_shift: 31
                 - (init_options.mno_node_grid_size / init_options.las_scale.0.x)
-                .log2()
-                .round() as u16,
+                    .log2()
+                    .round() as u16,
         },
         histogram_settings: Default::default(),
     };

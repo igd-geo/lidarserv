@@ -94,8 +94,16 @@ where
             flags: Flags::TwoByte(
                 (attributes.return_number & 0b00000111)
                     | ((attributes.number_of_returns & 0b00000111) << 3)
-                    | if attributes.scan_direction { 0b1000000 } else { 0 }
-                    | if attributes.edge_of_flight_line { 0b10000000 } else { 0 },
+                    | if attributes.scan_direction {
+                        0b1000000
+                    } else {
+                        0
+                    }
+                    | if attributes.edge_of_flight_line {
+                        0b10000000
+                    } else {
+                        0
+                    },
                 attributes.classification,
             ),
             scan_angle: ScanAngle::Rank(attributes.scan_angle_rank),
@@ -110,7 +118,11 @@ where
             } else {
                 None
             },
-            gps_time: if format.has_gps_time { Some(attributes.gps_time) } else { None },
+            gps_time: if format.has_gps_time {
+                Some(attributes.gps_time)
+            } else {
+                None
+            },
             ..Default::default()
         };
         // write into given stream

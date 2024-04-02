@@ -69,7 +69,7 @@ impl CaptureDeviceClient {
         let (coordinate_system, point_record_format) = match pc_info {
             Message::PointCloudInfo {
                 coordinate_system,
-                point_record_format
+                point_record_format,
             } => (coordinate_system, point_record_format),
             _ => {
                 return Err(LidarServerError::Protocol(
@@ -82,7 +82,7 @@ impl CaptureDeviceClient {
             use_compression,
             connection,
             coordinate_system,
-            point_record_format
+            point_record_format,
         })
     }
 

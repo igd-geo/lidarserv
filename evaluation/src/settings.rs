@@ -204,7 +204,6 @@ pub struct MultiIndex {
 
     #[serde(default)]
     pub bin_count_color: Option<Vec<usize>>,
-
 }
 
 macro_rules! apply_default {
@@ -258,13 +257,27 @@ impl MultiIndex {
                             for &compression in expect(&self.compression) {
                                 for &num_threads in expect(&self.num_threads) {
                                     for &nr_bogus_points in expect(&self.nr_bogus_points) {
-                                        for &enable_attribute_index in expect(&self.enable_attribute_index) {
-                                            for &enable_histogram_acceleration in expect(&self.enable_histogram_acceleration) {
-                                                for &bin_count_intensity in expect(&self.bin_count_intensity) {
-                                                    for &bin_count_return_number in expect(&self.bin_count_return_number) {
-                                                        for &bin_count_classification in expect(&self.bin_count_classification) {
-                                                            for &bin_count_scan_angle_rank in expect(&self.bin_count_scan_angle_rank) {
-                                                                for &bin_count_user_data in expect(&self.bin_count_user_data) {
+                                        for &enable_attribute_index in
+                                            expect(&self.enable_attribute_index)
+                                        {
+                                            for &enable_histogram_acceleration in
+                                                expect(&self.enable_histogram_acceleration)
+                                            {
+                                                for &bin_count_intensity in
+                                                    expect(&self.bin_count_intensity)
+                                                {
+                                                    for &bin_count_return_number in
+                                                        expect(&self.bin_count_return_number)
+                                                    {
+                                                        for &bin_count_classification in
+                                                            expect(&self.bin_count_classification)
+                                                        {
+                                                            for &bin_count_scan_angle_rank in expect(
+                                                                &self.bin_count_scan_angle_rank,
+                                                            ) {
+                                                                for &bin_count_user_data in expect(
+                                                                    &self.bin_count_user_data,
+                                                                ) {
                                                                     for &bin_count_point_source_id in expect(&self.bin_count_point_source_id) {
                                                                         for &bin_count_color in expect(&self.bin_count_color) {
                                                                             results.push(SingleIndex {

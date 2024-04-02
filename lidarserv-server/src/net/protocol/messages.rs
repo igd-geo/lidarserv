@@ -1,10 +1,10 @@
+use crate::index::point::LasPoint;
+use lidarserv_common::geometry::position::I32CoordinateSystem;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_common::nalgebra::{Matrix4, Vector3};
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-use lidarserv_common::geometry::position::I32CoordinateSystem;
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
-use crate::index::point::LasPoint;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Message {
@@ -33,7 +33,7 @@ pub enum Message {
     InsertPoints { data: LasPointData },
 
     /// Sent from the client to server in Viewer mode, to set or update the query.
-    Query{
+    Query {
         query: Box<Query>,
         filter: Option<LasPointAttributeBounds>,
         enable_attribute_acceleration: bool,

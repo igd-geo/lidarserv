@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
 use lidarserv_common::geometry::points::{PointType, WithAttr};
 use lidarserv_common::geometry::position::{
     CoordinateSystemError, F64CoordinateSystem, F64Position, I32CoordinateSystem, I32Position,
     Position,
 };
-use lidarserv_common::las::{LasPointAttributes};
+use lidarserv_common::las::LasPointAttributes;
+use serde::{Deserialize, Serialize};
 
 /// Point type for the lidar server.
 #[derive(Debug, Clone, Serialize, Deserialize)]

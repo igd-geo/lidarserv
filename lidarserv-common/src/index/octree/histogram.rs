@@ -1,7 +1,7 @@
-use std::fmt::Debug;
 use log::debug;
 use num_traits::{FromPrimitive, Num, ToPrimitive};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 // Define a generic histogram struct
 
@@ -20,7 +20,10 @@ impl std::fmt::Display for Histogram<u8> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
-        s.push_str(&format!("\"min: {}, max: {}, bin_width: {},", self.min_value, self.max_value, self.bin_width));
+        s.push_str(&format!(
+            "\"min: {}, max: {}, bin_width: {},",
+            self.min_value, self.max_value, self.bin_width
+        ));
 
         for i in 0..self.bins.len() {
             s.push_str(&format!("{}: {}, ", i, self.bins[i]));
@@ -34,9 +37,15 @@ impl std::fmt::Display for Histogram<u8> {
 
 impl Histogram<u8> {
     pub fn new(min_value: u8, max_value: u8, num_bins: usize) -> Self {
-        assert!(min_value < max_value, "min_value must be less than max_value");
+        assert!(
+            min_value < max_value,
+            "min_value must be less than max_value"
+        );
         assert!(num_bins > 0, "num_bins must be greater than 0");
-        assert!(num_bins <= (max_value as u16 - min_value as u16) as usize + 1, "num_bins must be less than or equal than the number of possible values");
+        assert!(
+            num_bins <= (max_value as u16 - min_value as u16) as usize + 1,
+            "num_bins must be less than or equal than the number of possible values"
+        );
 
         // calculate the bin width
         // has to be casted to u16 to avoid overflow (e.g. 255 - 0 + 1 = 256)
@@ -55,8 +64,20 @@ impl Histogram<u8> {
 
     // Increment the appropriate bin for the given value
     pub fn add(&mut self, mut value: u8) {
-        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
-        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
+        if value < self.min_value {
+            debug!(
+                "value {} is smaller than min_value {}",
+                value, self.min_value
+            );
+            value = self.min_value;
+        }
+        if value > self.max_value {
+            debug!(
+                "value {} is larger than max_value {}",
+                value, self.max_value
+            );
+            value = self.max_value;
+        }
 
         let bin_index = self.get_bin_index(value);
         self.bins[bin_index] += 1;
@@ -64,19 +85,34 @@ impl Histogram<u8> {
 
     // calculate bin index from value
     pub fn get_bin_index(&self, mut value: u8) -> usize {
-        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
-        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
+        if value < self.min_value {
+            debug!(
+                "value {} is smaller than min_value {}",
+                value, self.min_value
+            );
+            value = self.min_value;
+        }
+        if value > self.max_value {
+            debug!(
+                "value {} is larger than max_value {}",
+                value, self.max_value
+            );
+            value = self.max_value;
+        }
 
-        let bin_index = ((value as u16 - self.min_value as u16) / self.bin_width as u16).to_usize().unwrap().min(self.bins.len() - 1);
+        let bin_index = ((value as u16 - self.min_value as u16) / self.bin_width as u16)
+            .to_usize()
+            .unwrap()
+            .min(self.bins.len() - 1);
         bin_index
     }
 
     // Check if a given range contains values in the histogram
-    pub fn range_contains_values(&self, range: (u8,u8)) -> bool {
+    pub fn range_contains_values(&self, range: (u8, u8)) -> bool {
         assert!(range.0 <= self.max_value && range.1 >= self.min_value);
         let min_bin_index = self.get_bin_index(range.0);
         let max_bin_index = self.get_bin_index(range.1);
-        for i in min_bin_index..max_bin_index+1 {
+        for i in min_bin_index..max_bin_index + 1 {
             if self.bins[i] > 0 {
                 return true;
             }
@@ -94,7 +130,10 @@ impl std::fmt::Display for Histogram<u16> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
-        s.push_str(&format!("min: {}, max: {}, bin_width: {}\n", self.min_value, self.max_value, self.bin_width));
+        s.push_str(&format!(
+            "min: {}, max: {}, bin_width: {}\n",
+            self.min_value, self.max_value, self.bin_width
+        ));
 
         for i in 0..self.bins.len() {
             s.push_str(&format!("{}: {}\n", i, self.bins[i]));
@@ -106,9 +145,15 @@ impl std::fmt::Display for Histogram<u16> {
 
 impl Histogram<u16> {
     pub fn new(min_value: u16, max_value: u16, num_bins: usize) -> Self {
-        assert!(min_value < max_value, "min_value must be less than max_value");
+        assert!(
+            min_value < max_value,
+            "min_value must be less than max_value"
+        );
         assert!(num_bins > 0, "num_bins must be greater than 0");
-        assert!(num_bins <= (max_value as u32 - min_value as u32) as usize + 1, "num_bins must be less than or equal than the number of possible values");
+        assert!(
+            num_bins <= (max_value as u32 - min_value as u32) as usize + 1,
+            "num_bins must be less than or equal than the number of possible values"
+        );
 
         let bin_width = (((max_value as u32 - min_value as u32) + 1) / num_bins as u32) as u16;
         assert!(bin_width > 0, "bin_width must be greater than 0");
@@ -125,8 +170,20 @@ impl Histogram<u16> {
 
     // Increment the appropriate bin for the given value
     pub fn add(&mut self, mut value: u16) {
-        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
-        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
+        if value < self.min_value {
+            debug!(
+                "value {} is smaller than min_value {}",
+                value, self.min_value
+            );
+            value = self.min_value;
+        }
+        if value > self.max_value {
+            debug!(
+                "value {} is larger than max_value {}",
+                value, self.max_value
+            );
+            value = self.max_value;
+        }
 
         let bin_index = self.get_bin_index(value);
         self.bins[bin_index] += 1;
@@ -134,19 +191,34 @@ impl Histogram<u16> {
 
     // calculate bin index from value
     pub fn get_bin_index(&self, mut value: u16) -> usize {
-        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
-        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
+        if value < self.min_value {
+            debug!(
+                "value {} is smaller than min_value {}",
+                value, self.min_value
+            );
+            value = self.min_value;
+        }
+        if value > self.max_value {
+            debug!(
+                "value {} is larger than max_value {}",
+                value, self.max_value
+            );
+            value = self.max_value;
+        }
 
-        let bin_index = ((value as u32 - self.min_value as u32) / self.bin_width as u32).to_usize().unwrap().min(self.bins.len() - 1);
+        let bin_index = ((value as u32 - self.min_value as u32) / self.bin_width as u32)
+            .to_usize()
+            .unwrap()
+            .min(self.bins.len() - 1);
         bin_index
     }
 
     // Check if a given range contains values in the histogram
-    pub fn range_contains_values(&self, range: (u16,u16)) -> bool {
+    pub fn range_contains_values(&self, range: (u16, u16)) -> bool {
         assert!(range.0 <= self.max_value && range.1 >= self.min_value);
         let min_bin_index = self.get_bin_index(range.0);
         let max_bin_index = self.get_bin_index(range.1);
-        for i in min_bin_index..max_bin_index+1 {
+        for i in min_bin_index..max_bin_index + 1 {
             if self.bins[i] > 0 {
                 return true;
             }
@@ -164,7 +236,10 @@ impl std::fmt::Display for Histogram<i8> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
-        s.push_str(&format!("min: {}, max: {}, bin_width: {}\n", self.min_value, self.max_value, self.bin_width));
+        s.push_str(&format!(
+            "min: {}, max: {}, bin_width: {}\n",
+            self.min_value, self.max_value, self.bin_width
+        ));
 
         for i in 0..self.bins.len() {
             s.push_str(&format!("{}: {}\n", i, self.bins[i]));
@@ -176,9 +251,15 @@ impl std::fmt::Display for Histogram<i8> {
 
 impl Histogram<i8> {
     pub fn new(min_value: i8, max_value: i8, num_bins: usize) -> Self {
-        assert!(min_value < max_value, "min_value must be less than max_value");
+        assert!(
+            min_value < max_value,
+            "min_value must be less than max_value"
+        );
         assert!(num_bins > 0, "num_bins must be greater than 0");
-        assert!(num_bins <= (max_value as i16 - min_value as i16) as usize + 1, "num_bins must be less than or equal than the number of possible values");
+        assert!(
+            num_bins <= (max_value as i16 - min_value as i16) as usize + 1,
+            "num_bins must be less than or equal than the number of possible values"
+        );
 
         let bin_width = (((max_value as i16 - min_value as i16) + 1) / num_bins as i16) as i8;
         assert!(bin_width > 0, "bin_width must be greater than 0");
@@ -195,8 +276,20 @@ impl Histogram<i8> {
 
     // Increment the appropriate bin for the given value
     pub fn add(&mut self, mut value: i8) {
-        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
-        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
+        if value < self.min_value {
+            debug!(
+                "value {} is smaller than min_value {}",
+                value, self.min_value
+            );
+            value = self.min_value;
+        }
+        if value > self.max_value {
+            debug!(
+                "value {} is larger than max_value {}",
+                value, self.max_value
+            );
+            value = self.max_value;
+        }
 
         let bin_index = self.get_bin_index(value);
         self.bins[bin_index] += 1;
@@ -204,19 +297,34 @@ impl Histogram<i8> {
 
     // calculate bin index from value
     pub fn get_bin_index(&self, mut value: i8) -> usize {
-        if value < self.min_value {debug!("value {} is smaller than min_value {}", value, self.min_value); value = self.min_value;}
-        if value > self.max_value {debug!("value {} is larger than max_value {}", value, self.max_value); value = self.max_value;}
+        if value < self.min_value {
+            debug!(
+                "value {} is smaller than min_value {}",
+                value, self.min_value
+            );
+            value = self.min_value;
+        }
+        if value > self.max_value {
+            debug!(
+                "value {} is larger than max_value {}",
+                value, self.max_value
+            );
+            value = self.max_value;
+        }
 
-        let bin_index = ((value as i16 - self.min_value as i16) / self.bin_width as i16).to_usize().unwrap().min(self.bins.len() - 1);
+        let bin_index = ((value as i16 - self.min_value as i16) / self.bin_width as i16)
+            .to_usize()
+            .unwrap()
+            .min(self.bins.len() - 1);
         bin_index
     }
 
     // Check if a given range contains values in the histogram
-    pub fn range_contains_values(&self, range: (i8,i8)) -> bool {
+    pub fn range_contains_values(&self, range: (i8, i8)) -> bool {
         assert!(range.0 <= self.max_value && range.1 >= self.min_value);
         let min_bin_index = self.get_bin_index(range.0);
         let max_bin_index = self.get_bin_index(range.1);
-        for i in min_bin_index..max_bin_index+1 {
+        for i in min_bin_index..max_bin_index + 1 {
             if self.bins[i] > 0 {
                 return true;
             }
@@ -231,7 +339,6 @@ impl Histogram<i8> {
 }
 
 impl<T: Num + Copy + PartialOrd + ToPrimitive + FromPrimitive> Histogram<T> {
-
     // Get the number of values in the specified bin
     pub fn get_bin_count(&self, bin_index: usize) -> Option<u64> {
         self.bins.get(bin_index).copied()
@@ -254,16 +361,25 @@ impl<T: Num + Copy + PartialOrd + ToPrimitive + FromPrimitive> Histogram<T> {
 
     // Add two histograms together
     pub fn add_histogram(&mut self, other: &Histogram<T>) {
-        assert!(self.min_value == other.min_value, "Histograms must have the same minimum value");
-        assert!(self.max_value == other.max_value, "Histograms must have the same maximum value");
-        assert_eq!(self.num_bins(), other.num_bins(), "Histograms must have the same number of bins");
+        assert!(
+            self.min_value == other.min_value,
+            "Histograms must have the same minimum value"
+        );
+        assert!(
+            self.max_value == other.max_value,
+            "Histograms must have the same maximum value"
+        );
+        assert_eq!(
+            self.num_bins(),
+            other.num_bins(),
+            "Histograms must have the same number of bins"
+        );
 
         for i in 0..self.num_bins() {
             self.bins[i] += other.bins[i];
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -280,11 +396,11 @@ mod tests {
         assert_eq!(histogram.max_value(), max);
         assert_eq!(histogram.num_bins(), num_bins);
 
-        for i in min .. max {
+        for i in min..max {
             histogram.add(i);
         }
 
-        for i in 0 .. num_bins {
+        for i in 0..num_bins {
             assert_eq!(histogram.get_bin_count(i), Some(2));
         }
 
@@ -333,7 +449,7 @@ mod tests {
 
         assert!(histogram.range_contains_values((-90, 90)));
 
-        for i in 0 .. num_bins {
+        for i in 0..num_bins {
             println!("{:?}", histogram.get_bin_count(i));
         }
     }
@@ -346,14 +462,14 @@ mod tests {
         let mut histogram1 = Histogram::<u8>::new(min, max, num_bins);
         let mut histogram2 = Histogram::<u8>::new(min, max, num_bins);
 
-        for i in min .. max {
+        for i in min..max {
             histogram1.add(i);
             histogram2.add(i);
         }
 
         histogram1.add_histogram(&histogram2);
 
-        for i in 0 .. num_bins {
+        for i in 0..num_bins {
             assert_eq!(histogram1.get_bin_count(i), Some(4));
         }
     }
@@ -377,7 +493,7 @@ mod tests {
         let num_bins = 5;
         let mut histogram = Histogram::<u8>::new(min, max, num_bins);
 
-        for i in min .. max {
+        for i in min..max {
             histogram.add(i);
         }
 

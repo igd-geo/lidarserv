@@ -1,20 +1,22 @@
 use crate::cli::PreConvertArgs;
 use crate::{iter_points, Vector3};
 use anyhow::{bail, Result};
+use lidarserv_server::common::geometry::points::{PointType, WithAttr};
 use lidarserv_server::common::geometry::position::{I32CoordinateSystem, Position};
-use lidarserv_server::common::las::{async_write_compressed_las_with_variable_chunk_size, I32LasReadWrite, Las, LasPointAttributes};
+use lidarserv_server::common::las::{
+    async_write_compressed_las_with_variable_chunk_size, I32LasReadWrite, Las, LasPointAttributes,
+};
 use lidarserv_server::index::point::LasPoint;
 use lidarserv_server::net::protocol::connection::Connection;
 use lidarserv_server::net::protocol::messages::{CoordinateSystem, Message};
+use log::info;
+use rayon::prelude::ParallelSliceMut;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::mem::take;
 use std::path::PathBuf;
 use std::thread;
 use tokio::net::TcpStream;
-use log::{info};
-use rayon::prelude::ParallelSliceMut;
-use lidarserv_server::common::geometry::points::{PointType, WithAttr};
 
 pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
     // get coordinate system from server
@@ -44,19 +46,39 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
         match extension.unwrap().to_str() {
             Some("txt") => {
                 // read points from input files (csv)
-                thread::spawn(move || read_points_from_csv(&args, chunks_sender, &coordinate_system))
+                thread::spawn(move || {
+                    read_points_from_csv(&args, chunks_sender, &coordinate_system)
+                })
             }
             Some("csv") => {
                 // read points from input files (csv)
-                thread::spawn(move || read_points_from_csv(&args, chunks_sender, &coordinate_system))
+                thread::spawn(move || {
+                    read_points_from_csv(&args, chunks_sender, &coordinate_system)
+                })
             }
             Some("las") => {
                 // read points from input files (las)
-                thread::spawn(move || read_points_from_las(&args, chunks_sender, &coordinate_system, point_record_format, false))
+                thread::spawn(move || {
+                    read_points_from_las(
+                        &args,
+                        chunks_sender,
+                        &coordinate_system,
+                        point_record_format,
+                        false,
+                    )
+                })
             }
             Some("laz") => {
                 // read points from input files (laz)
-                thread::spawn(move || read_points_from_las(&args, chunks_sender, &coordinate_system, point_record_format, true))
+                thread::spawn(move || {
+                    read_points_from_las(
+                        &args,
+                        chunks_sender,
+                        &coordinate_system,
+                        point_record_format,
+                        true,
+                    )
+                })
             }
             _ => bail!("Unknown file extension"),
         }
@@ -65,7 +87,14 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
     // write points to output file (laz)
     let t2 = {
         let args = args.clone();
-        thread::spawn(move || write_points(&args, chunks_receiver, &coordinate_system, point_record_format))
+        thread::spawn(move || {
+            write_points(
+                &args,
+                chunks_receiver,
+                &coordinate_system,
+                point_record_format,
+            )
+        })
     };
 
     // wait for read / write threads to finish
@@ -134,7 +163,11 @@ fn read_points_from_csv(
         let t0 = *t0.get_or_insert(t);
         let frame_number = ((t - t0) / args.speed_factor * args.fps as f64) as i32;
         while current_frame < frame_number {
-            info!("Sending frame {} with {} points", current_frame, current_frame_points.len());
+            info!(
+                "Sending frame {} with {} points",
+                current_frame,
+                current_frame_points.len()
+            );
             sender.send(take(&mut current_frame_points))?;
             current_frame += 1;
         }
@@ -150,7 +183,10 @@ fn read_points_from_csv(
         current_frame_points.push(point);
     }
     if !current_frame_points.is_empty() {
-        info!("Sending last frame with {} points", current_frame_points.len());
+        info!(
+            "Sending last frame with {} points",
+            current_frame_points.len()
+        );
         sender.send(current_frame_points)?;
     }
     Ok(())
@@ -163,7 +199,6 @@ fn read_points_from_las(
     point_record_format: u8,
     compression: bool,
 ) -> Result<()> {
-
     // read args
     let points_file = PathBuf::from(&args.points_file);
     let offset = Vector3::new(args.offset_x, args.offset_y, args.offset_z);
@@ -172,18 +207,28 @@ fn read_points_from_las(
     info!("Reading points from {:?}", points_file);
     let f = File::open(points_file)?;
     let mut reader = BufReader::new(f);
-    let las_reader : I32LasReadWrite = I32LasReadWrite::new(compression, point_record_format);
-    let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader)?;
+    let las_reader: I32LasReadWrite = I32LasReadWrite::new(compression, point_record_format);
+    let mut result: Las<Vec<LasPoint>> = las_reader.read_las(&mut reader)?;
     info!("LAS File Coordinate System: {:?}", result.coordinate_system);
 
     // offset coordinate system
     let mut offset_coordinate_system = result.coordinate_system.clone();
     offset_coordinate_system.add_offset(offset);
-    info!("Offsetting coordinate system by {:?} from {:?} to {:?}", offset, result.coordinate_system.offset(), offset_coordinate_system.offset());
+    info!(
+        "Offsetting coordinate system by {:?} from {:?} to {:?}",
+        offset,
+        result.coordinate_system.offset(),
+        offset_coordinate_system.offset()
+    );
 
     //sort points by time
     info!("Sorting points by time");
-    result.points.par_sort_unstable_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
+    result.points.par_sort_unstable_by(|a, b| {
+        a.attribute()
+            .gps_time
+            .partial_cmp(&b.attribute().gps_time)
+            .unwrap()
+    });
 
     let t0 = result.points[0].attribute().gps_time;
     let mut current_frame = 0;
@@ -200,24 +245,34 @@ fn read_points_from_las(
                 current_frame += 1;
                 continue;
             }
-            info!("Sending frame {} with {} points", current_frame, current_frame_points.len());
+            info!(
+                "Sending frame {} with {} points",
+                current_frame,
+                current_frame_points.len()
+            );
             sender.send(take(&mut current_frame_points))?;
             current_frame += 1;
         }
 
         // convert from las file coordinate system to server coordinate system
-        let pos = point.position().transcode(&offset_coordinate_system, coordinate_system).unwrap();
+        let pos = point
+            .position()
+            .transcode(&offset_coordinate_system, coordinate_system)
+            .unwrap();
         //TODO handle better
 
         // create new point with new position and same attributes
         let attr = point.attribute::<LasPointAttributes>();
-        let mut point:LasPoint = LasPoint::new(pos);
+        let mut point: LasPoint = LasPoint::new(pos);
         point.set_value(attr.clone());
 
         current_frame_points.push(point);
     }
     if !current_frame_points.is_empty() {
-        info!("Sending last frame with {} points", current_frame_points.len());
+        info!(
+            "Sending last frame with {} points",
+            current_frame_points.len()
+        );
         sender.send(current_frame_points)?;
     }
 
@@ -232,6 +287,11 @@ fn write_points(
 ) -> Result<()> {
     let write = File::create(&args.output_file)?;
     let write = BufWriter::new(write);
-    async_write_compressed_las_with_variable_chunk_size(receiver, coordinate_system, write, point_record_format)?;
+    async_write_compressed_las_with_variable_chunk_size(
+        receiver,
+        coordinate_system,
+        write,
+        point_record_format,
+    )?;
     Ok(())
 }

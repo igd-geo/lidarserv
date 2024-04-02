@@ -1,22 +1,23 @@
+use crate::geometry::grid::{GridCell, LodLevel};
+use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
+use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
+use crate::las::LasPointAttributes;
+use csv::Writer;
+use log::{debug, info, trace};
+use serde_json::{json, Value};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use log::{debug, info, trace};
-use csv::Writer;
-use serde_json::{json, Value};
 use tracy_client::span;
-use crate::geometry::grid::{GridCell, LodLevel};
-use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
-use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
-use crate::las::LasPointAttributes;
 
 /// Vec for LOD levels
 /// RwLock for concurrent access
 /// HashMap holds grid cells
 /// (LasPointAttributeBounds, Option<LasPointAttributeHistograms>) holds attribute bounds and histograms for each cell
-type Index = Vec<RwLock<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>>>;
+type Index =
+    Vec<RwLock<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>>>;
 
 /// Holds attribute bounds for grid cells.
 /// Elements of vector correspond to LOD levels.
@@ -39,20 +40,20 @@ impl AttributeIndex {
                 index,
                 enable_histograms: false,
                 file_name,
-                dirty: Arc::new(RwLock::new(false))
+                dirty: Arc::new(RwLock::new(false)),
             };
         } else {
             // index does not exist, create new one
             debug!("Created new attribute index at {:?}", file_name);
             let mut index = Vec::with_capacity(num_lods + 1);
-            for _ in 0..num_lods+1 {
+            for _ in 0..num_lods + 1 {
                 index.push(RwLock::new(HashMap::new()));
             }
             AttributeIndex {
                 index: Arc::new(index),
                 enable_histograms: false,
                 file_name,
-                dirty: Arc::new(RwLock::new(true))
+                dirty: Arc::new(RwLock::new(true)),
             }
         }
     }
@@ -79,8 +80,8 @@ impl AttributeIndex {
         lod: LodLevel,
         grid_cell: &GridCell,
         new_bounds: &LasPointAttributeBounds,
-        new_histogram: &Option<LasPointAttributeHistograms>)
-    {
+        new_histogram: &Option<LasPointAttributeHistograms>,
+    ) {
         span!("AttributeIndex::update_bounds_and_histograms");
         // aquire write lock for lod level
         let mut index_write = self.index[lod.level() as usize].write().unwrap();
@@ -99,7 +100,10 @@ impl AttributeIndex {
                         debug!("Updating histogram for cell {:?}", grid_cell);
                         debug!("Old histogram: {:?}", histogram);
                         debug!("Adding: {:?}", &new_histogram);
-                        histogram.as_mut().unwrap().add_histograms(&new_histogram.as_ref().unwrap());
+                        histogram
+                            .as_mut()
+                            .unwrap()
+                            .add_histograms(&new_histogram.as_ref().unwrap());
                         debug!("New histogram: {:?}", histogram);
                     }
                 } else {
@@ -109,20 +113,34 @@ impl AttributeIndex {
             }
             Entry::Vacant(_) => {
                 debug!("Creating new entry for cell {:?}", grid_cell);
-                index_write.insert(grid_cell.clone(), (new_bounds.clone(), new_histogram.clone()));
+                index_write.insert(
+                    grid_cell.clone(),
+                    (new_bounds.clone(), new_histogram.clone()),
+                );
             }
         }
     }
 
     /// Updates attribute bounds for a grid cell by attributes
-    pub fn update_by_attributes(&mut self, lod: LodLevel, grid_cell: &GridCell, attributes: &LasPointAttributes) {
+    pub fn update_by_attributes(
+        &mut self,
+        lod: LodLevel,
+        grid_cell: &GridCell,
+        attributes: &LasPointAttributes,
+    ) {
         let bounds = LasPointAttributeBounds::from_attributes(attributes);
         self.update_bounds_and_histograms(lod, grid_cell, &bounds, &None);
     }
 
     /// Checks if a grid cell OVERLAPS with the given attribute bounds
     /// Also checks the histogram, if enabled
-    pub fn cell_overlaps_with_bounds(&self, lod: LodLevel, grid_cell: &GridCell, bounds: &LasPointAttributeBounds, check_histogram: bool) -> bool {
+    pub fn cell_overlaps_with_bounds(
+        &self,
+        lod: LodLevel,
+        grid_cell: &GridCell,
+        bounds: &LasPointAttributeBounds,
+        check_histogram: bool,
+    ) -> bool {
         span!("AttributeIndex::cell_overlaps_with_bounds");
         // aquire read lock for lod level
         let index_read = self.index[lod.level() as usize].read().unwrap();
@@ -133,24 +151,36 @@ impl AttributeIndex {
             Some((_, (cell_bounds, histograms))) => {
                 // check bounds
                 let is_in_bounds = bounds.is_bounds_overlapping_bounds(&cell_bounds);
-                trace!("Cell {:?} overlaps with bounds: {}", grid_cell, is_in_bounds);
+                trace!(
+                    "Cell {:?} overlaps with bounds: {}",
+                    grid_cell,
+                    is_in_bounds
+                );
 
                 // also check histograms if enabled
                 return if is_in_bounds && check_histogram && histograms.is_some() {
-                    let histogram_check = histograms.as_ref().unwrap().is_attribute_range_in_histograms(bounds);
-                    trace!("Cell {:?} overlaps with histogram: {}", grid_cell, histogram_check);
+                    let histogram_check = histograms
+                        .as_ref()
+                        .unwrap()
+                        .is_attribute_range_in_histograms(bounds);
+                    trace!(
+                        "Cell {:?} overlaps with histogram: {}",
+                        grid_cell,
+                        histogram_check
+                    );
                     if !histogram_check {
-                        trace!("Cell {:?} overlaps with bounds, but not with histogram", grid_cell);
+                        trace!(
+                            "Cell {:?} overlaps with bounds, but not with histogram",
+                            grid_cell
+                        );
                     }
                     histogram_check
                 } else {
                     trace!("Returning: {}", is_in_bounds);
                     is_in_bounds
-                }
-            },
-            None => {
-                true
-            },
+                };
+            }
+            None => true,
         };
         false
     }
@@ -161,19 +191,23 @@ impl AttributeIndex {
 
         // check existence of file and open it
         if !file_name.exists() {
-            return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "File does not exist",
+            ));
         }
         debug!("Loading attribute index from file {:?}", file_name);
         let f = File::open(file_name)?;
 
         // read from file using bincode
         debug!("Decoding attribute index file");
-        let decoded: Vec<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>> =
-            bincode::deserialize_from(&f).expect("Error while reading attribute index");
+        let decoded: Vec<
+            HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>,
+        > = bincode::deserialize_from(&f).expect("Error while reading attribute index");
 
         // convert to Vec<RwLock<HashMap<GridCell, (LasPointAttributeBounds, LasPointAttributeHistograms)>>> and return
         debug!("Converting attribute index to vector");
-        let mut vector : Index = Vec::with_capacity(num_lods);
+        let mut vector: Index = Vec::with_capacity(num_lods);
         for i in 0..num_lods {
             vector.push(RwLock::new(decoded[i].clone()));
         }
@@ -194,8 +228,9 @@ impl AttributeIndex {
 
         // convert into vector without mutex and arc
         debug!("Converting attribute index to vector");
-        let mut vector : Vec<HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>>
-            = Vec::with_capacity(self.index.len());
+        let mut vector: Vec<
+            HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>,
+        > = Vec::with_capacity(self.index.len());
         for lock in self.index.iter() {
             let index = lock.read().unwrap();
             vector.push(index.clone());
@@ -236,22 +271,21 @@ impl AttributeIndex {
     }
 
     /// Return bounds of a grid cell
-    pub fn get_cell_bounds(&self, lod: LodLevel, grid_cell: &GridCell) -> Option<LasPointAttributeBounds> {
+    pub fn get_cell_bounds(
+        &self,
+        lod: LodLevel,
+        grid_cell: &GridCell,
+    ) -> Option<LasPointAttributeBounds> {
         let index_read = self.index[lod.level() as usize].read().unwrap();
         let entry = index_read.get_key_value(&grid_cell);
         match entry {
-            Some(bounds) => {
-                Some(bounds.1.0.clone())
-            },
-            None => {
-                None
-            },
+            Some(bounds) => Some(bounds.1 .0.clone()),
+            None => None,
         }
     }
 
     /// Writes attribute index to human readable file (for debugging)
-    pub fn write_to_csv(&self, path : PathBuf) -> Result<(), std::io::Error> {
-
+    pub fn write_to_csv(&self, path: PathBuf) -> Result<(), std::io::Error> {
         // delete file
         if path.exists() {
             std::fs::remove_file(&path)?;
@@ -399,10 +433,10 @@ impl AttributeIndex {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, thread};
-    use std::time::Duration;
-    use crate::index::octree::attribute_histograms::HistogramSettings;
     use super::*;
+    use crate::index::octree::attribute_histograms::HistogramSettings;
+    use std::time::Duration;
+    use std::{fs, thread};
 
     fn create_attribute_1() -> LasPointAttributes {
         LasPointAttributes {
@@ -527,14 +561,13 @@ mod tests {
 
     #[test]
     fn test_attribute_index_update() {
-
         // delete file if exists
         delete_file(&PathBuf::from("test.bin"));
 
         // create attribute index
         let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
-        let grid_cell = GridCell{ x: 0, y: 0, z: 0};
+        let grid_cell = GridCell { x: 0, y: 0, z: 0 };
 
         // update with values
         attribute_index.update_by_attributes(lod, &grid_cell, &create_attribute_1());
@@ -572,7 +605,7 @@ mod tests {
         println!("Creating attribute index");
         let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
-        let grid_cell = GridCell{ x: 0, y: 0, z: 0};
+        let grid_cell = GridCell { x: 0, y: 0, z: 0 };
 
         // creating bounds and histograms
         println!("Creating bounds and histograms");
@@ -633,15 +666,29 @@ mod tests {
 
         let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
         let lod = LodLevel::base();
-        let grid_cell = GridCell{ x: 0, y: 0, z: 0};
+        let grid_cell = GridCell { x: 0, y: 0, z: 0 };
 
         // update with values
         attribute_index.update_bounds_and_histograms(lod, &grid_cell, &smaller_bounds(), &None);
 
         // check if values are correct
-        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &smaller_bounds(), false), true);
-        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &max_bounds(), false), true);
-        assert_eq!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &not_overlapping_bounds(), false), false);
+        assert_eq!(
+            attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &smaller_bounds(), false),
+            true
+        );
+        assert_eq!(
+            attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &max_bounds(), false),
+            true
+        );
+        assert_eq!(
+            attribute_index.cell_overlaps_with_bounds(
+                lod,
+                &grid_cell,
+                &not_overlapping_bounds(),
+                false
+            ),
+            false
+        );
 
         // delete file if exists
         delete_file(&PathBuf::from("test.bin"));
@@ -656,36 +703,76 @@ mod tests {
         attribute_index.set_histogram_acceleration(true);
         assert!(attribute_index.is_dirty());
         let lod = LodLevel::base();
-        let grid_cell = GridCell{ x: 0, y: 0, z: 0};
+        let grid_cell = GridCell { x: 0, y: 0, z: 0 };
 
         // update some values
         let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-        let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
+        let mut histogram: LasPointAttributeHistograms =
+            LasPointAttributeHistograms::new(&HistogramSettings::default());
         bounds.update_by_attributes(&create_attribute_1());
         histogram.fill_with(&create_attribute_1());
         bounds.update_by_attributes(&create_attribute_2());
         histogram.fill_with(&create_attribute_2());
 
         // insert new values into index
-        attribute_index.update_bounds_and_histograms(lod, &grid_cell, &bounds, &Some(histogram.clone()));
+        attribute_index.update_bounds_and_histograms(
+            lod,
+            &grid_cell,
+            &bounds,
+            &Some(histogram.clone()),
+        );
 
         // check if values are correct
-        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_1(), true));
-        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_2(), false));
-        assert!(!attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_2(), true));
+        assert!(attribute_index.cell_overlaps_with_bounds(
+            lod,
+            &grid_cell,
+            &search_bounds_1(),
+            true
+        ));
+        assert!(attribute_index.cell_overlaps_with_bounds(
+            lod,
+            &grid_cell,
+            &search_bounds_2(),
+            false
+        ));
+        assert!(!attribute_index.cell_overlaps_with_bounds(
+            lod,
+            &grid_cell,
+            &search_bounds_2(),
+            true
+        ));
 
         // insert new values into index
         let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-        let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new(&HistogramSettings::default());
+        let mut histogram: LasPointAttributeHistograms =
+            LasPointAttributeHistograms::new(&HistogramSettings::default());
         bounds.update_by_attributes(&create_attribute_3());
         histogram.fill_with(&create_attribute_3());
-        attribute_index.update_bounds_and_histograms(lod, &grid_cell, &bounds, &Some(histogram.clone()));
+        attribute_index.update_bounds_and_histograms(
+            lod,
+            &grid_cell,
+            &bounds,
+            &Some(histogram.clone()),
+        );
 
         // check if values are correct
-        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_1(), true));
-        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_2(), false));
-        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &search_bounds_2(), true));
+        assert!(attribute_index.cell_overlaps_with_bounds(
+            lod,
+            &grid_cell,
+            &search_bounds_1(),
+            true
+        ));
+        assert!(attribute_index.cell_overlaps_with_bounds(
+            lod,
+            &grid_cell,
+            &search_bounds_2(),
+            false
+        ));
+        assert!(attribute_index.cell_overlaps_with_bounds(
+            lod,
+            &grid_cell,
+            &search_bounds_2(),
+            true
+        ));
     }
-
-
 }

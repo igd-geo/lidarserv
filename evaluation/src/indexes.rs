@@ -3,13 +3,13 @@ use crate::Point;
 use lidarserv_common::geometry::grid::{I32GridHierarchy, LodLevel};
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::{GridCenterSampling, GridCenterSamplingFactory};
+use lidarserv_common::index::octree::attribute_index::AttributeIndex;
 use lidarserv_common::index::octree::grid_cell_directory::GridCellDirectory;
 use lidarserv_common::index::octree::page_manager::OctreePageLoader;
 use lidarserv_common::index::octree::{Octree, OctreeParams};
 use lidarserv_common::las::I32LasReadWrite;
-use std::path::PathBuf;
 use log::{debug, info};
-use lidarserv_common::index::octree::attribute_index::AttributeIndex;
+use std::path::PathBuf;
 
 pub type I32Octree = Octree<Point, GridCenterSampling<Point>, GridCenterSamplingFactory<Point>>;
 
@@ -34,22 +34,30 @@ pub fn create_octree_index(
     if settings.enable_attribute_index {
         let mut attribute_index_file_name = data_folder.clone();
         attribute_index_file_name.push("attribute_index.bin");
-        attribute_index = Some(AttributeIndex::new(max_lod.level() as usize, attribute_index_file_name));
+        attribute_index = Some(AttributeIndex::new(
+            max_lod.level() as usize,
+            attribute_index_file_name,
+        ));
         if settings.enable_histogram_acceleration {
-            attribute_index.as_mut().unwrap().set_histogram_acceleration(true);
+            attribute_index
+                .as_mut()
+                .unwrap()
+                .set_histogram_acceleration(true);
         }
     }
-    let mut histogram_settings = lidarserv_common::index::octree::attribute_histograms::HistogramSettings::default();
+    let mut histogram_settings =
+        lidarserv_common::index::octree::attribute_histograms::HistogramSettings::default();
     if settings.enable_histogram_acceleration {
-        histogram_settings = lidarserv_common::index::octree::attribute_histograms::HistogramSettings {
-            bin_count_intensity: settings.bin_count_intensity,
-            bin_count_return_number: settings.bin_count_return_number,
-            bin_count_classification: settings.bin_count_classification,
-            bin_count_scan_angle_rank: settings.bin_count_scan_angle_rank,
-            bin_count_user_data: settings.bin_count_user_data,
-            bin_count_point_source_id: settings.bin_count_point_source_id,
-            bin_count_color: settings.bin_count_color,
-        };
+        histogram_settings =
+            lidarserv_common::index::octree::attribute_histograms::HistogramSettings {
+                bin_count_intensity: settings.bin_count_intensity,
+                bin_count_return_number: settings.bin_count_return_number,
+                bin_count_classification: settings.bin_count_classification,
+                bin_count_scan_angle_rank: settings.bin_count_scan_angle_rank,
+                bin_count_user_data: settings.bin_count_user_data,
+                bin_count_point_source_id: settings.bin_count_point_source_id,
+                bin_count_color: settings.bin_count_color,
+            };
     }
 
     let octree = Octree::new(OctreeParams {

@@ -6,13 +6,13 @@ use crate::index::DynIndex;
 use lidarserv_common::geometry::grid::I32GridHierarchy;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
+use lidarserv_common::index::octree::attribute_index::AttributeIndex;
 use lidarserv_common::index::octree::live_metrics_collector::{LiveMetricsCollector, MetricsError};
 use lidarserv_common::index::octree::OctreeParams;
 use lidarserv_common::las::I32LasReadWrite;
-use std::path::{Path, PathBuf};
 use log::debug;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
-use lidarserv_common::index::octree::attribute_index::AttributeIndex;
 
 #[derive(Debug, Error)]
 pub enum BuilderError {
@@ -36,8 +36,10 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
     let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
 
     // page loading stuff
-    let las_loader =
-        I32LasReadWrite::new(general_settings.use_compression, general_settings.point_record_format);
+    let las_loader = I32LasReadWrite::new(
+        general_settings.use_compression,
+        general_settings.point_record_format,
+    );
     let page_loader = OctreePageLoader::new(las_loader.clone(), data_path.to_owned());
     let mut directory_file_name = data_path.to_owned();
     directory_file_name.push("directory.bin");
@@ -52,13 +54,18 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
     if octree_settings.enable_attribute_indexing {
         let mut attribute_index_file_name = data_path.to_owned();
         attribute_index_file_name.push("attribute_index.bin");
-        attribute_index = Option::from(AttributeIndex::new(octree_settings.max_lod.level() as usize, attribute_index_file_name));
+        attribute_index = Option::from(AttributeIndex::new(
+            octree_settings.max_lod.level() as usize,
+            attribute_index_file_name,
+        ));
         if attribute_index.is_some() {
             debug!("Attribute indexing enabled");
             if octree_settings.enable_histogram_acceleration {
                 debug!("Histogram acceleration enabled");
-                attribute_index.as_mut().unwrap().set_histogram_acceleration(true);
-
+                attribute_index
+                    .as_mut()
+                    .unwrap()
+                    .set_histogram_acceleration(true);
             }
         }
     }

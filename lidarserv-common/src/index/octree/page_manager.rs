@@ -274,16 +274,16 @@ where
         let _span = span!("PageFileHandle::store");
         let _span_1 = span!("PageFileHandle::store::get_binary");
         let data = page.get_binary(&self.loader);
-        drop (_span_1);
+        drop(_span_1);
         let _span_2 = span!("PageFileHandle::store::write_all");
         let mut file = File::create(&self.file_name)?;
-        drop (_span_2);
+        drop(_span_2);
         let _span_3 = span!("PageFileHandle::store::write_all");
         file.write_all(data.as_slice())?;
-        drop (_span_3);
+        drop(_span_3);
         let _span_4 = span!("PageFileHandle::store::sync_all");
         file.sync_all()?;
-        drop (_span_4);
+        drop(_span_4);
         Ok(())
     }
 }

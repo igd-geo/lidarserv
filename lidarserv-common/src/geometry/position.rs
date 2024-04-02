@@ -1,10 +1,10 @@
 use crate::nalgebra::{distance_squared, Scalar};
 use nalgebra::{Point3, Vector3};
 use num_traits::Bounded;
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::ops::{Add, Sub};
 use thiserror::Error;
-use serde::{Deserialize, Serialize};
 
 /// Error type for [CoordinateSystem::encode_position].
 #[derive(Debug, Error)]

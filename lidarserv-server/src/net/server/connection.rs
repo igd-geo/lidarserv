@@ -175,7 +175,9 @@ async fn viewer_mode(
             // send result complete message, when no more updates are currently available
             debug!("Checking for updates.");
             if !reader.updates_available(&mut queries_receiver, &mut filters_receiver) {
-                debug!("No Updates available, sending ResultComplete message and waiting for updates.");
+                debug!(
+                    "No Updates available, sending ResultComplete message and waiting for updates."
+                );
                 match updates_sender.blocking_send(ResultComplete) {
                     Err(_) => break 'update_loop,
                     _ => {}
@@ -215,7 +217,7 @@ async fn viewer_mode(
                 debug!("Replacing node {:?}.", node_id);
                 match updates_sender.blocking_send(IncrementalResult {
                     replaces: Some(node_id),
-                    nodes: replacements
+                    nodes: replacements,
                 }) {
                     Ok(_) => sent_updates += 1,
                     Err(_) => break 'update_loop,
@@ -238,9 +240,26 @@ async fn viewer_mode(
     // read incoming messages and send to queries to query thread
     let receive_queries = async move {
         while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
-            let (query, filter, enable_attribute_acceleration, enable_histogram_acceleration, enable_point_filtering,) = match msg {
-                Message::Query { query, filter, enable_attribute_acceleration, enable_histogram_acceleration, enable_point_filtering,}
-                => (*query, filter, enable_attribute_acceleration, enable_histogram_acceleration, enable_point_filtering),
+            let (
+                query,
+                filter,
+                enable_attribute_acceleration,
+                enable_histogram_acceleration,
+                enable_point_filtering,
+            ) = match msg {
+                Message::Query {
+                    query,
+                    filter,
+                    enable_attribute_acceleration,
+                    enable_histogram_acceleration,
+                    enable_point_filtering,
+                } => (
+                    *query,
+                    filter,
+                    enable_attribute_acceleration,
+                    enable_histogram_acceleration,
+                    enable_point_filtering,
+                ),
                 Message::ResultAck { update_number } => {
                     query_ack_sender.send(update_number).ok();
                     continue;
@@ -277,7 +296,14 @@ async fn viewer_mode(
                     let query = BoundingBoxQuery::new(aabb, lod);
                     debug!("{}: Query: {:?}", addr, &query);
                     queries_sender.send(Box::new(query)).unwrap();
-                    filters_sender.send((filter, enable_attribute_acceleration, enable_histogram_acceleration, enable_point_filtering)).unwrap();
+                    filters_sender
+                        .send((
+                            filter,
+                            enable_attribute_acceleration,
+                            enable_histogram_acceleration,
+                            enable_point_filtering,
+                        ))
+                        .unwrap();
                 }
                 Query::ViewFrustumQuery {
                     view_projection_matrix,
@@ -295,7 +321,14 @@ async fn viewer_mode(
                     );
                     debug!("{}: Query: {:?}", addr, &query);
                     queries_sender.send(Box::new(query)).unwrap();
-                    filters_sender.send((filter, enable_attribute_acceleration, enable_histogram_acceleration, enable_point_filtering)).unwrap();
+                    filters_sender
+                        .send((
+                            filter,
+                            enable_attribute_acceleration,
+                            enable_histogram_acceleration,
+                            enable_point_filtering,
+                        ))
+                        .unwrap();
                 }
             }
         }

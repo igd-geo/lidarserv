@@ -2,6 +2,8 @@ use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32Position, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
+use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
+use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
 use crate::index::octree::live_metrics_collector::{LiveMetricsCollector, MetricName};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
@@ -19,9 +21,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 use std::{mem, thread};
 use thiserror::Error;
-use tracy_client::{create_plot, Plot, span};
-use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
-use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
+use tracy_client::{create_plot, span, Plot};
 
 static TASKS_DEFAULT_PLOT: Plot = create_plot!("Task queue length");
 static POINTS_DEFAULT_PLOT: Plot = create_plot!("Task queue length in points");
@@ -403,17 +403,34 @@ where
             if self.inner.enable_histogram_acceleration {
                 // WITH HISTOGRAMS
                 let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-                let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new(&self.inner.histogram_settings);
+                let mut histogram: LasPointAttributeHistograms =
+                    LasPointAttributeHistograms::new(&self.inner.histogram_settings);
                 let _ = &task.points.iter().for_each(|p| {
                     bounds.update_by_attributes(p.attribute());
                     histogram.fill_with(p.attribute());
                 });
-                self.inner.attribute_index.as_ref().unwrap().update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &Some(histogram));
+                self.inner
+                    .attribute_index
+                    .as_ref()
+                    .unwrap()
+                    .update_bounds_and_histograms(
+                        node_id.lod,
+                        &node_id.pos,
+                        &bounds,
+                        &Some(histogram),
+                    );
             } else {
                 // NO HISTOGRAMS
                 let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-                let _ = &task.points.iter().for_each(|p| bounds.update_by_attributes(p.attribute()));
-                self.inner.attribute_index.as_ref().unwrap().update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &None);
+                let _ = &task
+                    .points
+                    .iter()
+                    .for_each(|p| bounds.update_by_attributes(p.attribute()));
+                self.inner
+                    .attribute_index
+                    .as_ref()
+                    .unwrap()
+                    .update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &None);
             }
         }
         drop(_span);

@@ -2,15 +2,14 @@ pub mod bounding_box;
 pub mod empty;
 pub mod view_frustum;
 
-use tracy_client::span;
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
+use tracy_client::span;
 
 /// Implemented for EmptyQuery, BoundingBoxQuery, and ViewFrustumQuery.
 pub trait Query {
-
     /// Returns either the maximum LOD level at the given position
     /// or None if the query does not match the position.
     fn max_lod_position(
@@ -30,7 +29,6 @@ pub trait Query {
 
 /// Extension trait for Query trait objects for some convenience methods.
 pub trait QueryExt {
-
     /// Returns true if the query matches the given area
     fn matches_node(
         &self,
@@ -40,11 +38,7 @@ pub trait QueryExt {
     ) -> bool;
 
     /// Returns true if the query matches the given position
-    fn matches_point<Point>(
-        &self,
-        point: &Point,
-        coordinate_system: &I32CoordinateSystem,
-    ) -> bool
+    fn matches_point<Point>(&self, point: &Point, coordinate_system: &I32CoordinateSystem) -> bool
     where
         Point: PointType<Position = I32Position>;
 }
@@ -67,11 +61,7 @@ where
         }
     }
 
-    fn matches_point<Point>(
-        &self,
-        point: &Point,
-        coordinate_system: &I32CoordinateSystem,
-    ) -> bool
+    fn matches_point<Point>(&self, point: &Point, coordinate_system: &I32CoordinateSystem) -> bool
     where
         Point: PointType<Position = I32Position>,
     {

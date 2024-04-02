@@ -7,12 +7,12 @@ use crate::las::helpers::{
     get_header_info_i32, init_las_header, read_las_string, read_point_data_i32,
     write_point_data_i32,
 };
-use serde::{Deserialize, Serialize};
 use las::point::Format;
 use las::Vlr;
 use laz::laszip::ChunkTable;
 use laz::{LasZipCompressor, LasZipDecompressor, LasZipError, LazVlr, LazVlrBuilder};
 use nalgebra::Point3;
+use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::io::SeekFrom::Start;
@@ -94,7 +94,7 @@ impl I32LasReadWrite {
     pub fn new(use_compression: bool, point_record_format: u8) -> Self {
         I32LasReadWrite {
             compression: use_compression,
-            point_record_format
+            point_record_format,
         }
     }
 
@@ -128,15 +128,14 @@ impl I32LasReadWrite {
             min,
             max,
             &coordinate_system,
-            self.point_record_format
+            self.point_record_format,
         );
 
         // encode (uncompressed) point data into buffer
         let number_of_point_records = points.len() as u32;
         let mut point_data = Vec::with_capacity(points.len() * format.len() as usize);
         let number_of_points_by_return =
-            write_point_data_i32(Cursor::new(&mut point_data), points, &format)
-                .unwrap(); // unwrap: cursor will not throw i/o errors
+            write_point_data_i32(Cursor::new(&mut point_data), points, &format).unwrap(); // unwrap: cursor will not throw i/o errors
         header.number_of_points_by_return = number_of_points_by_return;
         header.number_of_point_records = number_of_point_records;
 
@@ -254,7 +253,8 @@ impl I32LasReadWrite {
         let mut number_of_point_records: usize = header.number_of_point_records as usize;
         if number_of_point_records == 0 {
             if header.large_file.is_some() {
-                number_of_point_records = header.large_file.unwrap().number_of_point_records as usize;
+                number_of_point_records =
+                    header.large_file.unwrap().number_of_point_records as usize;
             };
         };
 
@@ -287,11 +287,7 @@ impl I32LasReadWrite {
             decompressor.decompress_many(data.as_mut_slice())?;
 
             // read decompressed point data
-            read_point_data_i32(
-                data.as_slice(),
-                &format,
-                number_of_point_records,
-            )?
+            read_point_data_i32(data.as_slice(), &format, number_of_point_records)?
         } else {
             read.seek(Start(header.offset_to_point_data as u64))?;
             read_point_data_i32(read, &format, number_of_point_records)?
@@ -394,7 +390,8 @@ where
     drop(_points_span);
 
     // update header
-    let _update_header_span = span!("async_write_compressed_las_with_variable_chunk_size::update_header");
+    let _update_header_span =
+        span!("async_write_compressed_las_with_variable_chunk_size::update_header");
     if let Some(aabb) = aabb.into_aabb() {
         let min = aabb.min::<I32Position>().decode(coordinate_system);
         let max = aabb.max::<I32Position>().decode(coordinate_system);
@@ -501,14 +498,14 @@ where
 /// Also shows how to use the different writers and readers.
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::geometry::points::{PointType, WithAttr};
+    use crate::geometry::position::{I32CoordinateSystem, I32Position, Position};
+    use las::{Builder, Color, Point, Read, Reader, Write as LasWrite, Writer};
+    use serde_json::{json, Value};
     use std::fs::File;
     use std::io::{BufReader, Write};
     use std::path::Path;
-    use las::{Builder, Color, Point, Read, Reader, Write as LasWrite, Writer};
-    use serde_json::{json, Value};
-    use crate::geometry::points::{PointType, WithAttr};
-    use crate::geometry::position::{I32CoordinateSystem, I32Position, Position};
-    use super::*;
 
     /// Some implementations and definitions from the server to be able to use it here
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -518,8 +515,8 @@ mod tests {
     }
     pub type LasPoint = GenericPoint<I32Position>;
     impl<Pos> PointType for GenericPoint<Pos>
-        where
-            Pos: Position + Default,
+    where
+        Pos: Position + Default,
     {
         type Position = Pos;
 
@@ -554,7 +551,10 @@ mod tests {
             points: pointcloud.iter(),
             bounds: OptionAABB::default(),
             non_bogus_points: Some(pointcloud.len() as u32),
-            coordinate_system: I32CoordinateSystem::new(Point3::new(0.0,0.0,0.0), Point3::new(3.0,3.0,3.0)),
+            coordinate_system: I32CoordinateSystem::new(
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(3.0, 3.0, 3.0),
+            ),
         });
         let mut file = File::create(&path).unwrap();
         file.write_all(data.as_slice()).unwrap();
@@ -568,7 +568,7 @@ mod tests {
         let mut reader = BufReader::new(File::open(&path).unwrap());
         println!("Point Record Format: {:?}", loader.point_record_format);
         println!("Compression: {:?}", loader.compression);
-        let result : Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
+        let result: Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
         println!("Coordinate System: {:?}", result.coordinate_system);
         println!("Bounds: {:?}", result.bounds);
         println!("Non Bogus Points: {:?}", result.non_bogus_points);
@@ -580,7 +580,6 @@ mod tests {
     /// Compare the self-written LAS reader/writer with the las crate reader/writer.
     /// Output a json file with the results.
     fn compare_writer_reader() {
-
         // tests of las crate
         let mut las_crate = json!({});
         for num_points in [1, 10, 100, 1000, 10000, 100000, 1000000].iter() {
@@ -609,9 +608,14 @@ mod tests {
     fn las_crate_pointcloud(num_points: usize) -> Vec<Point> {
         let mut pointcloud = Vec::new();
         for i in 0..num_points {
-            let mut point = Point { x: 1., y: 2., z: 3., ..Default::default() };
+            let mut point = Point {
+                x: 1.,
+                y: 2.,
+                z: 3.,
+                ..Default::default()
+            };
             point.gps_time = Some(i as f64);
-            point.color = Some(Color::new(0,0,0));
+            point.color = Some(Color::new(0, 0, 0));
             pointcloud.push(point);
         }
         pointcloud
@@ -630,7 +634,7 @@ mod tests {
             let las_attributes = Box::new(mod_attributes);
             pointcloud.push(LasPoint {
                 position,
-                las_attributes
+                las_attributes,
             });
         }
         pointcloud
@@ -638,7 +642,6 @@ mod tests {
 
     /// Write and read a pointcloud with the las crate.
     fn write_read_las_crate(num_points: usize) -> Value {
-
         // WRITING
         // Init
         println!("TESTING {:?} POINTS", num_points);
@@ -672,8 +675,15 @@ mod tests {
         let pps_write = pointcloud.len() as f64 / start_end_write.as_secs_f64();
 
         println!("WRITING");
-        println!("Number of points: {:?}, Number of errors {:?}", writer.header().number_of_points(), errors);
-        println!("Init time: {:?}, Write Time: {:?}, Close time: {:?}", init_start_write, start_end_write, end_close_write);
+        println!(
+            "Number of points: {:?}, Number of errors {:?}",
+            writer.header().number_of_points(),
+            errors
+        );
+        println!(
+            "Init time: {:?}, Write Time: {:?}, Close time: {:?}",
+            init_start_write, start_end_write, end_close_write
+        );
         println!("Total time: {:?}", total_write);
         println!("Points per second: {:?}", pps_write);
 
@@ -684,7 +694,7 @@ mod tests {
         let mut reader = Reader::new(read).unwrap();
 
         // Reading
-        let mut pointcloud : Vec<Point> = Vec::new();
+        let mut pointcloud: Vec<Point> = Vec::new();
         let start_time = std::time::Instant::now();
         for wrapped_point in reader.points() {
             let point = wrapped_point.unwrap();
@@ -699,7 +709,10 @@ mod tests {
 
         println!("READING");
         println!("Number of points: {:?}", pointcloud.len());
-        println!("Init time: {:?}, Write Time: {:?}", init_start_read, start_end_read);
+        println!(
+            "Init time: {:?}, Write Time: {:?}",
+            init_start_read, start_end_read
+        );
         println!("Total time: {:?}", total_read);
         println!("Points per second: {:?}", pps_read);
 
@@ -729,7 +742,10 @@ mod tests {
             points: pointcloud.iter(),
             bounds: OptionAABB::default(),
             non_bogus_points: Some(pointcloud.len() as u32),
-            coordinate_system: I32CoordinateSystem::new(Point3::new(0.0,0.0,0.0), Point3::new(3.0,3.0,3.0)),
+            coordinate_system: I32CoordinateSystem::new(
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(3.0, 3.0, 3.0),
+            ),
         });
         let mut file = File::create(&path).unwrap();
         file.write_all(data.as_slice()).unwrap();
@@ -741,7 +757,7 @@ mod tests {
         let init_time = std::time::Instant::now();
         let loader = I32LasReadWrite::new(false, 3);
         let mut reader = BufReader::new(File::open(&path).unwrap());
-        let result : Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
+        let result: Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
         let end_time = std::time::Instant::now();
         let total_read = end_time.duration_since(init_time);
 
@@ -770,7 +786,4 @@ mod tests {
             }
         )
     }
-
-
-
 }

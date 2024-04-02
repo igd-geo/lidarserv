@@ -173,10 +173,7 @@ where
         self.points.len()
     }
 
-    fn point_distance(
-        &self,
-    ) -> <<Self::Point as PointType>::Position as Position>::Component
-    {
+    fn point_distance(&self) -> <<Self::Point as PointType>::Position as Position>::Component {
         let example_cell = self.grid.cell_bounds(&GridCell { x: 0, y: 0, z: 0 });
         let min = example_cell.min::<I32Position>();
         let max = example_cell.max::<I32Position>();
@@ -188,9 +185,7 @@ where
     fn cell_aabb(
         &self,
         position: &<Self::Point as PointType>::Position,
-    ) -> AABB<
-        <<Self::Point as PointType>::Position as Position>::Component,
-    > {
+    ) -> AABB<<<Self::Point as PointType>::Position as Position>::Component> {
         let cell = self.grid.cell_at(position);
         self.grid.cell_bounds(&cell)
     }
@@ -208,9 +203,7 @@ where
 
     fn bounding_box(
         &self,
-    ) -> OptionAABB<
-        <<Self::Point as PointType>::Position as Position>::Component,
-    > {
+    ) -> OptionAABB<<<Self::Point as PointType>::Position as Position>::Component> {
         let mut bounds = OptionAABB::empty();
         for p in self.points.values() {
             bounds.extend(p.point.position());

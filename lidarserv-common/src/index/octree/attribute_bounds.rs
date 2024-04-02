@@ -1,6 +1,6 @@
-use std::fmt::Debug;
 use crate::las::LasPointAttributes;
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 /// Defines Min and Max of all attributes.
 /// Provides methods to check if a point is within the bounds and to update the bounds
@@ -21,9 +21,7 @@ pub struct LasPointAttributeBounds {
     pub color_b: Option<(u16, u16)>,
 }
 
-
 impl LasPointAttributeBounds {
-
     /// Creates a new attribute bounds
     pub fn new() -> Self {
         LasPointAttributeBounds {
@@ -50,7 +48,10 @@ impl LasPointAttributeBounds {
             return_number: Some((attributes.return_number, attributes.return_number)),
             number_of_returns: Some((attributes.number_of_returns, attributes.number_of_returns)),
             scan_direction: Some((attributes.scan_direction, attributes.scan_direction)),
-            edge_of_flight_line: Some((attributes.edge_of_flight_line, attributes.edge_of_flight_line)),
+            edge_of_flight_line: Some((
+                attributes.edge_of_flight_line,
+                attributes.edge_of_flight_line,
+            )),
             classification: Some((attributes.classification, attributes.classification)),
             scan_angle_rank: Some((attributes.scan_angle_rank, attributes.scan_angle_rank)),
             user_data: Some((attributes.user_data, attributes.user_data)),
@@ -63,7 +64,11 @@ impl LasPointAttributeBounds {
     }
 
     /// Updates bounds with a single value
-    fn update_bound_by_value<T: PartialOrd + Copy>(&mut self, current_bound: Option<(T, T)>, value: T) -> Option<(T, T)> {
+    fn update_bound_by_value<T: PartialOrd + Copy>(
+        &mut self,
+        current_bound: Option<(T, T)>,
+        value: T,
+    ) -> Option<(T, T)> {
         match current_bound {
             Some((min_val, max_val)) => {
                 let new_min = if value < min_val { value } else { min_val };
@@ -75,7 +80,11 @@ impl LasPointAttributeBounds {
     }
 
     /// Updates bounds with a single bound
-    fn update_bound_by_bound<T: PartialOrd + Copy>(&mut self, current_bound: Option<(T, T)>, new_bound: Option<(T, T)>) -> Option<(T, T)> {
+    fn update_bound_by_bound<T: PartialOrd + Copy>(
+        &mut self,
+        current_bound: Option<(T, T)>,
+        new_bound: Option<(T, T)>,
+    ) -> Option<(T, T)> {
         match (current_bound, new_bound) {
             (Some((min_val, max_val)), Some((new_min, new_max))) => {
                 let new_min = if new_min < min_val { new_min } else { min_val };
@@ -91,14 +100,21 @@ impl LasPointAttributeBounds {
     /// Updates bounds with attributes of a point
     pub fn update_by_attributes(&mut self, attributes: &LasPointAttributes) {
         self.intensity = self.update_bound_by_value(self.intensity, attributes.intensity);
-        self.return_number = self.update_bound_by_value(self.return_number, attributes.return_number);
-        self.number_of_returns = self.update_bound_by_value(self.number_of_returns, attributes.number_of_returns);
-        self.scan_direction = self.update_bound_by_value(self.scan_direction, attributes.scan_direction);
-        self.edge_of_flight_line = self.update_bound_by_value(self.edge_of_flight_line, attributes.edge_of_flight_line);
-        self.classification = self.update_bound_by_value(self.classification, attributes.classification);
-        self.scan_angle_rank = self.update_bound_by_value(self.scan_angle_rank, attributes.scan_angle_rank);
+        self.return_number =
+            self.update_bound_by_value(self.return_number, attributes.return_number);
+        self.number_of_returns =
+            self.update_bound_by_value(self.number_of_returns, attributes.number_of_returns);
+        self.scan_direction =
+            self.update_bound_by_value(self.scan_direction, attributes.scan_direction);
+        self.edge_of_flight_line =
+            self.update_bound_by_value(self.edge_of_flight_line, attributes.edge_of_flight_line);
+        self.classification =
+            self.update_bound_by_value(self.classification, attributes.classification);
+        self.scan_angle_rank =
+            self.update_bound_by_value(self.scan_angle_rank, attributes.scan_angle_rank);
         self.user_data = self.update_bound_by_value(self.user_data, attributes.user_data);
-        self.point_source_id = self.update_bound_by_value(self.point_source_id, attributes.point_source_id);
+        self.point_source_id =
+            self.update_bound_by_value(self.point_source_id, attributes.point_source_id);
         self.gps_time = self.update_bound_by_value(self.gps_time, attributes.gps_time);
         self.color_r = self.update_bound_by_value(self.color_r, attributes.color.0);
         self.color_g = self.update_bound_by_value(self.color_g, attributes.color.1);
@@ -109,13 +125,19 @@ impl LasPointAttributeBounds {
     pub fn update_by_bounds(&mut self, bounds: &LasPointAttributeBounds) {
         self.intensity = self.update_bound_by_bound(self.intensity, bounds.intensity);
         self.return_number = self.update_bound_by_bound(self.return_number, bounds.return_number);
-        self.number_of_returns = self.update_bound_by_bound(self.number_of_returns, bounds.number_of_returns);
-        self.scan_direction = self.update_bound_by_bound(self.scan_direction, bounds.scan_direction);
-        self.edge_of_flight_line = self.update_bound_by_bound(self.edge_of_flight_line, bounds.edge_of_flight_line);
-        self.classification = self.update_bound_by_bound(self.classification, bounds.classification);
-        self.scan_angle_rank = self.update_bound_by_bound(self.scan_angle_rank, bounds.scan_angle_rank);
+        self.number_of_returns =
+            self.update_bound_by_bound(self.number_of_returns, bounds.number_of_returns);
+        self.scan_direction =
+            self.update_bound_by_bound(self.scan_direction, bounds.scan_direction);
+        self.edge_of_flight_line =
+            self.update_bound_by_bound(self.edge_of_flight_line, bounds.edge_of_flight_line);
+        self.classification =
+            self.update_bound_by_bound(self.classification, bounds.classification);
+        self.scan_angle_rank =
+            self.update_bound_by_bound(self.scan_angle_rank, bounds.scan_angle_rank);
         self.user_data = self.update_bound_by_bound(self.user_data, bounds.user_data);
-        self.point_source_id = self.update_bound_by_bound(self.point_source_id, bounds.point_source_id);
+        self.point_source_id =
+            self.update_bound_by_bound(self.point_source_id, bounds.point_source_id);
         self.gps_time = self.update_bound_by_bound(self.gps_time, bounds.gps_time);
         self.color_r = self.update_bound_by_bound(self.color_r, bounds.color_r);
         self.color_g = self.update_bound_by_bound(self.color_g, bounds.color_g);
@@ -123,18 +145,24 @@ impl LasPointAttributeBounds {
     }
 
     /// Check, if a value is contained in the bound
-    fn is_value_in_bound<T: PartialOrd + Copy>(&self, current_bound: Option<(T, T)>, value: T) -> bool {
+    fn is_value_in_bound<T: PartialOrd + Copy>(
+        &self,
+        current_bound: Option<(T, T)>,
+        value: T,
+    ) -> bool {
         match current_bound {
-            Some((min_val, max_val)) => {
-                value >= min_val && value <= max_val
-            }
+            Some((min_val, max_val)) => value >= min_val && value <= max_val,
             None => true,
         }
     }
 
     /// Check, if a bound is contained in the bound
     /// If one of the bounds is None, it is considered to be contained
-    fn is_bound_in_bound<T: PartialOrd + Copy>(&self, current_bound: Option<(T, T)>, new_bound: Option<(T, T)>) -> bool {
+    fn is_bound_in_bound<T: PartialOrd + Copy>(
+        &self,
+        current_bound: Option<(T, T)>,
+        new_bound: Option<(T, T)>,
+    ) -> bool {
         match (current_bound, new_bound) {
             (Some((min_val, max_val)), Some((new_min, new_max))) => {
                 new_min >= min_val && new_max <= max_val
@@ -147,7 +175,11 @@ impl LasPointAttributeBounds {
 
     /// Check if a bound is overlapping with another bound
     /// If one of the bounds is None, it is considered to be overlapping
-    fn is_bound_overlapping_bound<T: PartialOrd + Copy + Debug>(&self, current_bound: Option<(T, T)>, new_bound: Option<(T, T)>) -> bool {
+    fn is_bound_overlapping_bound<T: PartialOrd + Copy + Debug>(
+        &self,
+        current_bound: Option<(T, T)>,
+        new_bound: Option<(T, T)>,
+    ) -> bool {
         match (current_bound, new_bound) {
             (Some((min_val, max_val)), Some((new_min, new_max))) => {
                 new_min <= max_val && min_val <= new_max
@@ -160,61 +192,60 @@ impl LasPointAttributeBounds {
 
     /// Checks, if ALL OF the given attributes are contained in the bounds of this object
     pub fn is_attributes_in_bounds(&self, attributes: &LasPointAttributes) -> bool {
-        self.is_value_in_bound(self.intensity, attributes.intensity) &&
-            self.is_value_in_bound(self.return_number, attributes.return_number) &&
-            self.is_value_in_bound(self.number_of_returns, attributes.number_of_returns) &&
-            self.is_value_in_bound(self.scan_direction, attributes.scan_direction) &&
-            self.is_value_in_bound(self.edge_of_flight_line, attributes.edge_of_flight_line) &&
-            self.is_value_in_bound(self.classification, attributes.classification) &&
-            self.is_value_in_bound(self.scan_angle_rank, attributes.scan_angle_rank) &&
-            self.is_value_in_bound(self.user_data, attributes.user_data) &&
-            self.is_value_in_bound(self.point_source_id, attributes.point_source_id) &&
-            self.is_value_in_bound(self.gps_time, attributes.gps_time) &&
-            self.is_value_in_bound(self.color_r, attributes.color.0) &&
-            self.is_value_in_bound(self.color_g, attributes.color.1) &&
-            self.is_value_in_bound(self.color_b, attributes.color.2)
+        self.is_value_in_bound(self.intensity, attributes.intensity)
+            && self.is_value_in_bound(self.return_number, attributes.return_number)
+            && self.is_value_in_bound(self.number_of_returns, attributes.number_of_returns)
+            && self.is_value_in_bound(self.scan_direction, attributes.scan_direction)
+            && self.is_value_in_bound(self.edge_of_flight_line, attributes.edge_of_flight_line)
+            && self.is_value_in_bound(self.classification, attributes.classification)
+            && self.is_value_in_bound(self.scan_angle_rank, attributes.scan_angle_rank)
+            && self.is_value_in_bound(self.user_data, attributes.user_data)
+            && self.is_value_in_bound(self.point_source_id, attributes.point_source_id)
+            && self.is_value_in_bound(self.gps_time, attributes.gps_time)
+            && self.is_value_in_bound(self.color_r, attributes.color.0)
+            && self.is_value_in_bound(self.color_g, attributes.color.1)
+            && self.is_value_in_bound(self.color_b, attributes.color.2)
     }
 
     /// Checks, if ALL OF the given bounds are FULLY CONTAINED in the bounds of this object
     pub fn is_bounds_in_bounds(&self, bounds: &LasPointAttributeBounds) -> bool {
-        self.is_bound_in_bound(self.intensity, bounds.intensity) &&
-            self.is_bound_in_bound(self.return_number, bounds.return_number) &&
-            self.is_bound_in_bound(self.number_of_returns, bounds.number_of_returns) &&
-            self.is_bound_in_bound(self.scan_direction, bounds.scan_direction) &&
-            self.is_bound_in_bound(self.edge_of_flight_line, bounds.edge_of_flight_line) &&
-            self.is_bound_in_bound(self.classification, bounds.classification) &&
-            self.is_bound_in_bound(self.scan_angle_rank, bounds.scan_angle_rank) &&
-            self.is_bound_in_bound(self.user_data, bounds.user_data) &&
-            self.is_bound_in_bound(self.point_source_id, bounds.point_source_id) &&
-            self.is_bound_in_bound(self.gps_time, bounds.gps_time) &&
-            self.is_bound_in_bound(self.color_r, bounds.color_r) &&
-            self.is_bound_in_bound(self.color_g, bounds.color_g) &&
-            self.is_bound_in_bound(self.color_b, bounds.color_b)
+        self.is_bound_in_bound(self.intensity, bounds.intensity)
+            && self.is_bound_in_bound(self.return_number, bounds.return_number)
+            && self.is_bound_in_bound(self.number_of_returns, bounds.number_of_returns)
+            && self.is_bound_in_bound(self.scan_direction, bounds.scan_direction)
+            && self.is_bound_in_bound(self.edge_of_flight_line, bounds.edge_of_flight_line)
+            && self.is_bound_in_bound(self.classification, bounds.classification)
+            && self.is_bound_in_bound(self.scan_angle_rank, bounds.scan_angle_rank)
+            && self.is_bound_in_bound(self.user_data, bounds.user_data)
+            && self.is_bound_in_bound(self.point_source_id, bounds.point_source_id)
+            && self.is_bound_in_bound(self.gps_time, bounds.gps_time)
+            && self.is_bound_in_bound(self.color_r, bounds.color_r)
+            && self.is_bound_in_bound(self.color_g, bounds.color_g)
+            && self.is_bound_in_bound(self.color_b, bounds.color_b)
     }
 
     /// Checks, if AT LEAST ONE of the given bounds OVERLAPS with the bounds of this object
     pub fn is_bounds_overlapping_bounds(&self, bounds: &LasPointAttributeBounds) -> bool {
-        self.is_bound_overlapping_bound(self.intensity, bounds.intensity) &&
-            self.is_bound_overlapping_bound(self.return_number, bounds.return_number) &&
-            self.is_bound_overlapping_bound(self.number_of_returns, bounds.number_of_returns) &&
-            self.is_bound_overlapping_bound(self.scan_direction, bounds.scan_direction) &&
-            self.is_bound_overlapping_bound(self.edge_of_flight_line, bounds.edge_of_flight_line) &&
-            self.is_bound_overlapping_bound(self.classification, bounds.classification) &&
-            self.is_bound_overlapping_bound(self.scan_angle_rank, bounds.scan_angle_rank) &&
-            self.is_bound_overlapping_bound(self.user_data, bounds.user_data) &&
-            self.is_bound_overlapping_bound(self.point_source_id, bounds.point_source_id) &&
-            self.is_bound_overlapping_bound(self.gps_time, bounds.gps_time) &&
-            self.is_bound_overlapping_bound(self.color_r, bounds.color_r) &&
-            self.is_bound_overlapping_bound(self.color_g, bounds.color_g) &&
-            self.is_bound_overlapping_bound(self.color_b, bounds.color_b)
+        self.is_bound_overlapping_bound(self.intensity, bounds.intensity)
+            && self.is_bound_overlapping_bound(self.return_number, bounds.return_number)
+            && self.is_bound_overlapping_bound(self.number_of_returns, bounds.number_of_returns)
+            && self.is_bound_overlapping_bound(self.scan_direction, bounds.scan_direction)
+            && self.is_bound_overlapping_bound(self.edge_of_flight_line, bounds.edge_of_flight_line)
+            && self.is_bound_overlapping_bound(self.classification, bounds.classification)
+            && self.is_bound_overlapping_bound(self.scan_angle_rank, bounds.scan_angle_rank)
+            && self.is_bound_overlapping_bound(self.user_data, bounds.user_data)
+            && self.is_bound_overlapping_bound(self.point_source_id, bounds.point_source_id)
+            && self.is_bound_overlapping_bound(self.gps_time, bounds.gps_time)
+            && self.is_bound_overlapping_bound(self.color_r, bounds.color_r)
+            && self.is_bound_overlapping_bound(self.color_g, bounds.color_g)
+            && self.is_bound_overlapping_bound(self.color_b, bounds.color_b)
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::las::LasPointAttributes;
     use super::*;
+    use crate::las::LasPointAttributes;
 
     fn attributes_1() -> LasPointAttributes {
         LasPointAttributes {
@@ -265,7 +296,7 @@ mod tests {
         bounds.color_b = Some((0, 65535));
         bounds
     }
-    
+
     fn smaller_bounds() -> LasPointAttributeBounds {
         let mut bounds = LasPointAttributeBounds::new();
         bounds.intensity = Some((3, 19));
@@ -347,12 +378,11 @@ mod tests {
 
     #[test]
     fn test_overlap_single_bound() {
-
         let bounds = LasPointAttributeBounds::new();
 
-        let bound1 : Option<(u16, u16)> = Some((0, 10));
-        let bound2 : Option<(u16, u16)> = Some((5, 15));
-        let bound3 : Option<(u16, u16)> = Some((11, 20));
+        let bound1: Option<(u16, u16)> = Some((0, 10));
+        let bound2: Option<(u16, u16)> = Some((5, 15));
+        let bound3: Option<(u16, u16)> = Some((11, 20));
 
         assert_eq!(bounds.is_bound_overlapping_bound(bound1, bound2), true);
         assert_eq!(bounds.is_bound_overlapping_bound(bound1, bound3), false);
@@ -360,7 +390,13 @@ mod tests {
 
     #[test]
     fn test_overlap_bounds() {
-        assert_eq!(max_bounds().is_bounds_overlapping_bounds(&smaller_bounds()), true);
-        assert_eq!(smaller_bounds().is_bounds_overlapping_bounds(&not_overlapping_bounds()), false);
+        assert_eq!(
+            max_bounds().is_bounds_overlapping_bounds(&smaller_bounds()),
+            true
+        );
+        assert_eq!(
+            smaller_bounds().is_bounds_overlapping_bounds(&not_overlapping_bounds()),
+            false
+        );
     }
 }

@@ -1,6 +1,6 @@
 use lidarserv_common::geometry::points::{PointType, WithAttr};
 use lidarserv_common::geometry::position::I32Position;
-use lidarserv_common::las::{LasPointAttributes};
+use lidarserv_common::las::LasPointAttributes;
 
 #[derive(Default, Clone, Debug)]
 pub struct PointIdAttribute(pub usize);

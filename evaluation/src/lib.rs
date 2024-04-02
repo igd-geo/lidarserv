@@ -1,14 +1,14 @@
-use std::fs::File;
-use std::io::BufReader;
 use crate::point::{Point, PointIdAttribute};
+use input_file_replay::iter_points::iter_points;
 use lidarserv_common::geometry::points::PointType;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
-use log::{info};
-use std::path::PathBuf;
-use rayon::prelude::ParallelSliceMut;
-use input_file_replay::iter_points::iter_points;
 use lidarserv_common::las::{I32LasReadWrite, Las};
 use lidarserv_server::index::point::LasPoint;
+use log::info;
+use rayon::prelude::ParallelSliceMut;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::PathBuf;
 
 pub mod indexes;
 pub mod insertion_rate;
@@ -46,26 +46,36 @@ pub fn read_points(
             }
         })
         .collect();
-    } else if settings.points_file.extension().unwrap() == "las" || settings.points_file.extension().unwrap() == "laz" {
+    } else if settings.points_file.extension().unwrap() == "las"
+        || settings.points_file.extension().unwrap() == "laz"
+    {
         // LAS / LAZ Format
         let f = File::open(&settings.points_file).unwrap();
         let mut reader = BufReader::new(f);
         let compression = settings.points_file.extension().unwrap() == "laz";
-        let las_reader : I32LasReadWrite = I32LasReadWrite::new(compression, settings.las_point_record_format);
-        let mut result : Las<Vec<LasPoint>> = las_reader.read_las(&mut reader).unwrap();
+        let las_reader: I32LasReadWrite =
+            I32LasReadWrite::new(compression, settings.las_point_record_format);
+        let mut result: Las<Vec<LasPoint>> = las_reader.read_las(&mut reader).unwrap();
 
         //convert Vec<LasPoint> to Vec<Point>
-        points = result.points.drain(..).map(|las_point| {
-            Point {
+        points = result
+            .points
+            .drain(..)
+            .map(|las_point| Point {
                 position: las_point.position().clone(),
                 point_id: PointIdAttribute::default(),
                 las_attributes: las_point.attribute().clone(),
-            }
-        }).collect();
+            })
+            .collect();
 
         //sort points by gps_time
         info!("Sorting LAS points by time");
-        result.points.par_sort_unstable_by(|a, b| a.attribute().gps_time.partial_cmp(&b.attribute().gps_time).unwrap());
+        result.points.par_sort_unstable_by(|a, b| {
+            a.attribute()
+                .gps_time
+                .partial_cmp(&b.attribute().gps_time)
+                .unwrap()
+        });
     } else {
         panic!("Unknown file format");
     }

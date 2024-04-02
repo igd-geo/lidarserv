@@ -1,6 +1,5 @@
 use structopt::StructOpt;
 
-
 #[derive(StructOpt, Debug)]
 pub struct Args {
     /// Verbosity of the command line output.
@@ -165,5 +164,4 @@ pub struct Args {
     /// Maximum blue color attribute filter.
     #[structopt(long)]
     pub max_color_b: Option<u16>,
-
 }

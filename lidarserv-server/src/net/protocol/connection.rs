@@ -71,7 +71,7 @@ where
                 }
             },
             _ = shutdown.recv() => return Err(LidarServerError::ServerShutdown),
-        }// check received bytes
+        } // check received bytes
         if MAGIC_NUMBER != read_buffer {
             return Err(LidarServerError::WireProtocol(Box::new(
                 ProtocolMismatchError,

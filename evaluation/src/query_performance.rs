@@ -1,16 +1,14 @@
-use std::fmt::Debug;
+use crate::queries::*;
 use crate::Point;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_common::index::{Index, Reader};
 use lidarserv_common::query::Query;
-use serde_json::json;
-use std::time::Instant;
 use log::{debug, info};
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
-use crate::queries::*;
+use serde_json::json;
+use std::fmt::Debug;
+use std::time::Instant;
 
-pub fn measure_query_performance<I>(
-    mut index: I,
-) -> serde_json::value::Value
+pub fn measure_query_performance<I>(mut index: I) -> serde_json::value::Value
 where
     I: Index<Point>,
 {
@@ -33,11 +31,14 @@ fn measure_one_query<I, Q>(
     query: Q,
     filter: LasPointAttributeBounds,
 ) -> serde_json::value::Value
-    where
-        I: Index<Point>,
-        Q: Query + Send + Sync + 'static + Clone + Debug,
+where
+    I: Index<Point>,
+    Q: Query + Send + Sync + 'static + Clone + Debug,
 {
-    info!("Measuring query performance for query: {:?} and filter {:?}", query, filter);
+    info!(
+        "Measuring query performance for query: {:?} and filter {:?}",
+        query, filter
+    );
 
     // measure only spatial query
     info!("measure only spatial query");
@@ -45,15 +46,18 @@ fn measure_one_query<I, Q>(
 
     // measure point filtering without acceleration
     info!("measure point filtering without acceleration");
-    let raw_point_filtering = measure_one_query_part(index, query.clone(), filter, false, false, true);
+    let raw_point_filtering =
+        measure_one_query_part(index, query.clone(), filter, false, false, true);
 
     // measure point filtering with node acceleration
     info!("measure point filtering with node acceleration");
-    let point_filtering_with_node_acc = measure_one_query_part(index, query.clone(), filter, true, false, true);
+    let point_filtering_with_node_acc =
+        measure_one_query_part(index, query.clone(), filter, true, false, true);
 
     // measure point filtering with node acceleration and histogram acceleration
     info!("measure point filtering with node acceleration and histogram acceleration");
-    let point_filtering_with_full_acc = measure_one_query_part(index, query.clone(), filter, true, true, true);
+    let point_filtering_with_full_acc =
+        measure_one_query_part(index, query.clone(), filter, true, true, true);
 
     // measure only node filtering
     info!("measure only node filtering");
@@ -73,7 +77,6 @@ fn measure_one_query<I, Q>(
     })
 }
 
-
 fn measure_one_query_part<I, Q>(
     index: &mut I,
     query: Q,
@@ -91,7 +94,12 @@ where
 
     let time_start = Instant::now();
     let mut r = index.reader(query);
-    r.set_filter((Some(filter), enable_node_acceleration, enable_histogram_acceleration, enable_point_filtering));
+    r.set_filter((
+        Some(filter),
+        enable_node_acceleration,
+        enable_histogram_acceleration,
+        enable_point_filtering,
+    ));
     let mut nodes = Vec::new();
     while let Some((_node_id, node, _coordinate_system)) = r.load_one() {
         nodes.push(node);

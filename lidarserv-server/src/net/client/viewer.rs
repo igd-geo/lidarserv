@@ -1,10 +1,11 @@
-use crate::index::point::{GlobalPoint};
+use crate::index::point::GlobalPoint;
 use crate::net::protocol::connection::Connection;
 use crate::net::protocol::messages::{DeviceType, Message, NodeId, Query};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::AABB;
 use lidarserv_common::geometry::grid::LodLevel;
 use lidarserv_common::geometry::position::{F64CoordinateSystem, F64Position, Position};
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_common::nalgebra::Matrix4;
 use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
@@ -12,7 +13,6 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio::sync::broadcast::Receiver;
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 pub struct ViewerClient<Stream> {
     connection: Connection<Stream>,
@@ -137,7 +137,7 @@ where
         let min = global_aabb.min::<F64Position>().decode(&csys);
         let max = global_aabb.max::<F64Position>().decode(&csys);
         self.connection
-            .write_message(&Message::Query{
+            .write_message(&Message::Query {
                 query: Box::new(Query::AabbQuery {
                     min_bounds: min.coords,
                     max_bounds: max.coords,
@@ -147,7 +147,8 @@ where
                 enable_attribute_acceleration,
                 enable_histogram_acceleration,
                 enable_point_filtering,
-            }).await
+            })
+            .await
     }
 
     pub async fn query_view_frustum(
@@ -162,7 +163,7 @@ where
         enable_point_filtering: bool,
     ) -> Result<(), LidarServerError> {
         self.connection
-            .write_message(&Message::Query{
+            .write_message(&Message::Query {
                 query: Box::new(Query::ViewFrustumQuery {
                     view_projection_matrix,
                     view_projection_matrix_inv,
@@ -173,7 +174,8 @@ where
                 enable_attribute_acceleration,
                 enable_histogram_acceleration,
                 enable_point_filtering,
-            }).await
+            })
+            .await
     }
 }
 
@@ -186,15 +188,16 @@ where
         shutdown: &mut Receiver<()>,
     ) -> Result<IncrementalUpdate, LidarServerError> {
         match self.connection.read_message(shutdown).await? {
-            Message::IncrementalResult { replaces, nodes} => {
+            Message::IncrementalResult { replaces, nodes } => {
                 // read points
                 *self.received_updates.lock().unwrap() += 1;
                 let mut insert_nodes = Vec::new();
                 for (insert_node_id, points, coordinate_system) in nodes {
                     // convert all points to global points
-                    let las_points = points.into_iter().map(|point| {
-                        GlobalPoint::from_las_point(point, &coordinate_system)
-                    }).collect();
+                    let las_points = points
+                        .into_iter()
+                        .map(|point| GlobalPoint::from_las_point(point, &coordinate_system))
+                        .collect();
                     // add the node to the list of nodes to insert
                     insert_nodes.push(ParsedNode {
                         node_id: insert_node_id,

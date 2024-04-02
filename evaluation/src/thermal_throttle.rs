@@ -1,7 +1,7 @@
 use log::{info, warn};
+use std::error::Error;
 use std::thread::sleep;
 use std::time::Duration;
-use std::error::Error;
 
 fn processor_cooldown_generic() {
     info!("Sleeping for 1 minute to avoid thermal throttling.");

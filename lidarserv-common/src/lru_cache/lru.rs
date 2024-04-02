@@ -34,7 +34,6 @@ impl<K, V> Lru<K, V> {
     pub fn len(&self) -> usize {
         self.entries.len()
     }
-
 }
 
 impl<K, V> Lru<K, V>

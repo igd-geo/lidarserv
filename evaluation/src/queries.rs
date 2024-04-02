@@ -1,9 +1,9 @@
 use lidarserv_common::geometry::bounding_box::{BaseAABB, AABB};
 use lidarserv_common::geometry::grid::LodLevel;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
 use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use nalgebra::{Matrix4, Point3};
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 
 /// A query that "looks down at an overwiew of the full point cloud".
 /// It mostly covers shallow lod levels.
@@ -83,21 +83,60 @@ pub fn aabb_full() -> BoundingBoxQuery {
     )
 }
 
-pub fn filter_apply_defaults(bounds : LasPointAttributeBounds) -> LasPointAttributeBounds {
+pub fn filter_apply_defaults(bounds: LasPointAttributeBounds) -> LasPointAttributeBounds {
     let mut attribute_bounds = LasPointAttributeBounds::new();
-    attribute_bounds.intensity = Some((bounds.intensity.unwrap_or((0, u16::MAX)).0, bounds.intensity.unwrap_or((0, u16::MAX)).1));
-    attribute_bounds.return_number = Some((bounds.return_number.unwrap_or((0, u8::MAX)).0, bounds.return_number.unwrap_or((0, u8::MAX)).1));
-    attribute_bounds.number_of_returns = Some((bounds.number_of_returns.unwrap_or((0, u8::MAX)).0, bounds.number_of_returns.unwrap_or((0, u8::MAX)).1));
-    attribute_bounds.scan_direction = Some((bounds.scan_direction.unwrap_or((false, true)).0, bounds.scan_direction.unwrap_or((false, true)).1));
-    attribute_bounds.edge_of_flight_line = Some((bounds.edge_of_flight_line.unwrap_or((false, true)).0, bounds.edge_of_flight_line.unwrap_or((false, true)).1));
-    attribute_bounds.classification = Some((bounds.classification.unwrap_or((0, u8::MAX)).0, bounds.classification.unwrap_or((0, u8::MAX)).1));
-    attribute_bounds.scan_angle_rank = Some((bounds.scan_angle_rank.unwrap_or((-128, 127)).0, bounds.scan_angle_rank.unwrap_or((-128, 127)).1));
-    attribute_bounds.user_data = Some((bounds.user_data.unwrap_or((0, u8::MAX)).0, bounds.user_data.unwrap_or((0, u8::MAX)).1));
-    attribute_bounds.point_source_id = Some((bounds.point_source_id.unwrap_or((0, u16::MAX)).0, bounds.point_source_id.unwrap_or((0, u16::MAX)).1));
-    attribute_bounds.gps_time = Some((bounds.gps_time.unwrap_or((f64::MIN, f64::MAX)).0, bounds.gps_time.unwrap_or((f64::MIN, f64::MAX)).1));
-    attribute_bounds.color_r = Some((bounds.color_r.unwrap_or((0, u16::MAX)).0, bounds.color_r.unwrap_or((0, u16::MAX)).1));
-    attribute_bounds.color_g = Some((bounds.color_g.unwrap_or((0, u16::MAX)).0, bounds.color_g.unwrap_or((0, u16::MAX)).1));
-    attribute_bounds.color_b = Some((bounds.color_b.unwrap_or((0, u16::MAX)).0, bounds.color_b.unwrap_or((0, u16::MAX)).1));
+    attribute_bounds.intensity = Some((
+        bounds.intensity.unwrap_or((0, u16::MAX)).0,
+        bounds.intensity.unwrap_or((0, u16::MAX)).1,
+    ));
+    attribute_bounds.return_number = Some((
+        bounds.return_number.unwrap_or((0, u8::MAX)).0,
+        bounds.return_number.unwrap_or((0, u8::MAX)).1,
+    ));
+    attribute_bounds.number_of_returns = Some((
+        bounds.number_of_returns.unwrap_or((0, u8::MAX)).0,
+        bounds.number_of_returns.unwrap_or((0, u8::MAX)).1,
+    ));
+    attribute_bounds.scan_direction = Some((
+        bounds.scan_direction.unwrap_or((false, true)).0,
+        bounds.scan_direction.unwrap_or((false, true)).1,
+    ));
+    attribute_bounds.edge_of_flight_line = Some((
+        bounds.edge_of_flight_line.unwrap_or((false, true)).0,
+        bounds.edge_of_flight_line.unwrap_or((false, true)).1,
+    ));
+    attribute_bounds.classification = Some((
+        bounds.classification.unwrap_or((0, u8::MAX)).0,
+        bounds.classification.unwrap_or((0, u8::MAX)).1,
+    ));
+    attribute_bounds.scan_angle_rank = Some((
+        bounds.scan_angle_rank.unwrap_or((-128, 127)).0,
+        bounds.scan_angle_rank.unwrap_or((-128, 127)).1,
+    ));
+    attribute_bounds.user_data = Some((
+        bounds.user_data.unwrap_or((0, u8::MAX)).0,
+        bounds.user_data.unwrap_or((0, u8::MAX)).1,
+    ));
+    attribute_bounds.point_source_id = Some((
+        bounds.point_source_id.unwrap_or((0, u16::MAX)).0,
+        bounds.point_source_id.unwrap_or((0, u16::MAX)).1,
+    ));
+    attribute_bounds.gps_time = Some((
+        bounds.gps_time.unwrap_or((f64::MIN, f64::MAX)).0,
+        bounds.gps_time.unwrap_or((f64::MIN, f64::MAX)).1,
+    ));
+    attribute_bounds.color_r = Some((
+        bounds.color_r.unwrap_or((0, u16::MAX)).0,
+        bounds.color_r.unwrap_or((0, u16::MAX)).1,
+    ));
+    attribute_bounds.color_g = Some((
+        bounds.color_g.unwrap_or((0, u16::MAX)).0,
+        bounds.color_g.unwrap_or((0, u16::MAX)).1,
+    ));
+    attribute_bounds.color_b = Some((
+        bounds.color_b.unwrap_or((0, u16::MAX)).0,
+        bounds.color_b.unwrap_or((0, u16::MAX)).1,
+    ));
     attribute_bounds
 }
 
@@ -109,7 +148,7 @@ pub fn ground_classification() -> LasPointAttributeBounds {
         number_of_returns: None,
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((2,2)),
+        classification: Some((2, 2)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
@@ -128,7 +167,7 @@ pub fn building_classification() -> LasPointAttributeBounds {
         number_of_returns: None,
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((6,6)),
+        classification: Some((6, 6)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
@@ -245,7 +284,7 @@ pub fn mixed_ground_and_time() -> LasPointAttributeBounds {
         number_of_returns: None,
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((2,2)),
+        classification: Some((2, 2)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
@@ -264,7 +303,7 @@ pub fn mixed_ground_and_one_return() -> LasPointAttributeBounds {
         number_of_returns: Some((2, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((2,2)),
+        classification: Some((2, 2)),
         scan_angle_rank: None,
         user_data: None,
         point_source_id: None,
@@ -283,7 +322,7 @@ pub fn mixed_ground_normal_one_return() -> LasPointAttributeBounds {
         number_of_returns: Some((2, 10)),
         scan_direction: None,
         edge_of_flight_line: None,
-        classification: Some((2,2)),
+        classification: Some((2, 2)),
         scan_angle_rank: None,
         user_data: Some((107, 147)),
         point_source_id: None,

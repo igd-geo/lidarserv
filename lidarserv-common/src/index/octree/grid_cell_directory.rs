@@ -1,9 +1,9 @@
 use crate::geometry::grid::{GridCell, LeveledGridCell, LodLevel};
 use crate::lru_cache::pager::PageDirectory;
+use serde_json::json;
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
-use serde_json::json;
 use thiserror::Error;
 
 /// Directory of all existing grid cells.
@@ -119,12 +119,12 @@ impl GridCellDirectory {
             let num_nodes_at_level = self.cells[level].len();
             num_nodes += num_nodes_at_level;
             num_nodes_per_level.push(num_nodes_at_level);
-        };
+        }
         json!(
-            {
-                "num_nodes": num_nodes,
-                "num_nodes_per_level": num_nodes_per_level,
-            })
+        {
+            "num_nodes": num_nodes,
+            "num_nodes_per_level": num_nodes_per_level,
+        })
     }
 }
 
