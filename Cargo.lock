@@ -513,14 +513,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "default-functions-derive"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn 1.0.89",
-]
-
-[[package]]
 name = "derivative"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -617,7 +609,6 @@ name = "evaluation"
 version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
- "default-functions-derive",
  "dotenv",
  "gethostname",
  "git-version",
@@ -1657,7 +1648,6 @@ name = "output-file-query"
 version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
- "default-functions-derive",
  "futures",
  "las",
  "lidarserv-common",

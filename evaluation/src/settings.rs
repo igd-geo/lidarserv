@@ -1,4 +1,3 @@
-use default_functions_derive::DefaultFunctions;
 use lidarserv_common::index::octree::writer::TaskPriorityFunction;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
@@ -74,57 +73,25 @@ impl MultiRun {
     }
 }
 
-#[derive(Debug, Clone, DefaultFunctions, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SingleIndex {
-    #[serde(default = "SingleIndex::default_typ", rename = "type")]
     pub typ: SystemUnderTest,
-
-    #[serde(default = "SingleIndex::default_node_hierarchy")]
     pub node_hierarchy: u16,
-
-    #[serde(default = "SingleIndex::default_point_hierarchy")]
     pub point_hierarchy: u16,
-
-    #[serde(default = "SingleIndex::default_priority_function")]
     pub priority_function: TaskPriorityFunction,
-
-    #[serde(default = "SingleIndex::default_num_threads")]
     pub num_threads: u16,
-
-    #[serde(default = "SingleIndex::default_cache_size")]
     pub cache_size: usize,
-
-    #[serde(default = "SingleIndex::default_compression")]
     pub compression: bool,
-
-    #[serde(default = "SingleIndex::default_nr_bogus_points")]
     pub nr_bogus_points: (usize, usize),
-
-    #[serde(default = "SingleIndex::default_enable_attribute_index")]
     pub enable_attribute_index: bool,
-
-    #[serde(default = "SingleIndex::default_enable_histogram_acceleration")]
     pub enable_histogram_acceleration: bool,
-
-    #[serde(default = "SingleIndex::default_bin_count_intensity")]
     pub bin_count_intensity: usize,
-
-    #[serde(default = "SingleIndex::default_bin_count_return_number")]
     pub bin_count_return_number: usize,
-
-    #[serde(default = "SingleIndex::default_bin_count_classification")]
     pub bin_count_classification: usize,
-
-    #[serde(default = "SingleIndex::default_bin_count_scan_angle_rank")]
     pub bin_count_scan_angle_rank: usize,
-
-    #[serde(default = "SingleIndex::default_bin_count_user_data")]
     pub bin_count_user_data: usize,
-
-    #[serde(default = "SingleIndex::default_bin_count_point_source_id")]
     pub bin_count_point_source_id: usize,
-
-    #[serde(default = "SingleIndex::default_bin_count_color")]
     pub bin_count_color: usize,
 }
 
@@ -329,9 +296,9 @@ impl IntoIterator for &MultiIndex {
     }
 }
 
-#[derive(Debug, Clone, DefaultFunctions, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SingleInsertionRateMeasurement {
-    #[serde(default = "SingleLatencyMeasurement::default_points_per_sec")]
     pub target_point_pressure: usize,
 }
 
@@ -362,15 +329,11 @@ impl MultiInsertionRateMeasurement {
     }
 }
 
-#[derive(Debug, Clone, DefaultFunctions, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SingleLatencyMeasurement {
-    #[serde(default = "SingleLatencyMeasurement::default_enable")]
     pub enable: bool,
-
-    #[serde(default = "SingleLatencyMeasurement::default_points_per_sec")]
     pub points_per_sec: usize,
-
-    #[serde(default = "SingleLatencyMeasurement::default_frames_per_sec")]
     pub frames_per_sec: usize,
 }
 
@@ -429,9 +392,9 @@ impl IntoIterator for &MultiLatencyMeasurement {
     }
 }
 
-#[derive(Debug, Clone, DefaultFunctions, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SingleQueryPerfMeasurement {
-    #[serde(default = "SingleQueryPerfMeasurement::default_enable")]
     enable: bool,
 }
 

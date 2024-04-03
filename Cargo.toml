@@ -8,7 +8,6 @@ members = [
     "output-file-query",
     "point-cloud-viewer",
     "experiments",
-    "evaluation",
-    "default-functions-derive"
+    "evaluation"
 ]
 resolver = "2"

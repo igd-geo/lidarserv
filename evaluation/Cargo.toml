@@ -18,7 +18,6 @@ serde = { version = "1.0.130", features=["derive"]}
 serde_json = "1.0.72"
 toml = "0.5.8"
 crossbeam-channel = "0.5.1"
-default-functions-derive = { path = "../default-functions-derive" }
 time = "0.3.9"
 git-version = "0.3.5"
 gethostname = "0.2.3"
