@@ -630,18 +630,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "experiments"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "input-file-replay",
- "las",
- "laz 0.6.0",
- "lidarserv-common",
- "lidarserv-server",
-]
-
-[[package]]
 name = "float-ord"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

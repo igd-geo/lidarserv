@@ -7,7 +7,6 @@ members = [
     "input-file-replay",
     "output-file-query",
     "point-cloud-viewer",
-    "experiments",
     "evaluation"
 ]
 resolver = "2"
