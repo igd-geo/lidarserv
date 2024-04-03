@@ -42,7 +42,6 @@ pub async fn preconvert(args: PreConvertArgs) -> Result<()> {
     // choose read thread based on file extension
     let t1 = {
         let args = args.clone();
-        let coordinate_system = coordinate_system.clone();
         match extension.unwrap().to_str() {
             Some("txt") => {
                 // read points from input files (csv)
@@ -177,8 +176,10 @@ fn read_points_from_csv(
         };
 
         // add time attribute to point
-        let mut attr = LasPointAttributes::default();
-        attr.gps_time = t;
+        let attr = LasPointAttributes {
+            gps_time: t,
+            ..Default::default()
+        };
         point.set_value(attr);
         current_frame_points.push(point);
     }
@@ -212,7 +213,7 @@ fn read_points_from_las(
     info!("LAS File Coordinate System: {:?}", result.coordinate_system);
 
     // offset coordinate system
-    let mut offset_coordinate_system = result.coordinate_system.clone();
+    let mut offset_coordinate_system = result.coordinate_system;
     offset_coordinate_system.add_offset(offset);
     info!(
         "Offsetting coordinate system by {:?} from {:?} to {:?}",

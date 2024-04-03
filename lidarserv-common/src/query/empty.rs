@@ -1,7 +1,7 @@
 use crate::geometry::bounding_box::AABB;
 use crate::geometry::grid::LodLevel;
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
-use crate::query::Query;
+use crate::query::SpatialQuery;
 
 /// A trivial query type, that will always have an empty query result.
 #[derive(Debug, Clone, Default)]
@@ -13,7 +13,7 @@ impl EmptyQuery {
     }
 }
 
-impl Query for EmptyQuery {
+impl SpatialQuery for EmptyQuery {
     fn max_lod_position(
         &self,
         _position: &I32Position,

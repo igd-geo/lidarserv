@@ -2,7 +2,7 @@ use crate::common::las::Las;
 use crate::index::DynIndex;
 use crate::net::protocol::connection::Connection;
 use crate::net::protocol::messages::Message::{IncrementalResult, ResultComplete};
-use crate::net::protocol::messages::{CoordinateSystem, DeviceType, Message, Query};
+use crate::net::protocol::messages::{CoordinateSystem, DeviceType, Message, SpatialQuery};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::{BaseAABB, OptionAABB};
 use lidarserv_common::geometry::grid::LodLevel;
@@ -141,10 +141,9 @@ async fn viewer_mode(
     addr: SocketAddr,
 ) -> Result<(), LidarServerError> {
     let (mut con_read, mut con_write) = con.into_split();
-    let coordinate_system = index.index_info().coordinate_system.clone();
+    let coordinate_system = *index.index_info().coordinate_system;
     let sampling_factory = index.index_info().sampling_factory.clone();
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded();
-    let (filters_sender, filters_receiver) = crossbeam_channel::unbounded();
     let (updates_sender, mut updates_receiver) = tokio::sync::mpsc::channel(1);
     let (query_ack_sender, query_ack_receiver) = crossbeam_channel::unbounded();
 
@@ -166,7 +165,6 @@ async fn viewer_mode(
         debug!("Creating reader and channels.");
         let mut reader = index.reader();
         let mut queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
-        let mut filters_receiver = filters_receiver;
 
         debug!("Calling update_one() once.");
         reader.update_one();
@@ -174,15 +172,14 @@ async fn viewer_mode(
         'update_loop: loop {
             // send result complete message, when no more updates are currently available
             debug!("Checking for updates.");
-            if !reader.updates_available(&mut queries_receiver, &mut filters_receiver) {
+            if !reader.updates_available(&mut queries_receiver) {
                 debug!(
                     "No Updates available, sending ResultComplete message and waiting for updates."
                 );
-                match updates_sender.blocking_send(ResultComplete) {
-                    Err(_) => break 'update_loop,
-                    _ => {}
+                if updates_sender.blocking_send(ResultComplete).is_err() {
+                    break 'update_loop;
                 }
-                reader.blocking_update(&mut queries_receiver, &mut filters_receiver);
+                reader.blocking_update(&mut queries_receiver);
             } else {
                 debug!("Updates available, sending NO ResultComplete message.");
             }
@@ -240,26 +237,12 @@ async fn viewer_mode(
     // read incoming messages and send to queries to query thread
     let receive_queries = async move {
         while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
-            let (
-                query,
-                filter,
-                enable_attribute_acceleration,
-                enable_histogram_acceleration,
-                enable_point_filtering,
-            ) = match msg {
+            let (spatial_query, attributes_query, query_config) = match msg {
                 Message::Query {
-                    query,
-                    filter,
-                    enable_attribute_acceleration,
-                    enable_histogram_acceleration,
-                    enable_point_filtering,
-                } => (
-                    *query,
-                    filter,
-                    enable_attribute_acceleration,
-                    enable_histogram_acceleration,
-                    enable_point_filtering,
-                ),
+                    spatial_query,
+                    attributes_query,
+                    config,
+                } => (*spatial_query, attributes_query, config),
                 Message::ResultAck { update_number } => {
                     query_ack_sender.send(update_number).ok();
                     continue;
@@ -270,67 +253,64 @@ async fn viewer_mode(
                     ));
                 }
             };
-            debug!("Received Query: {:?} and Filter {:?}", query, filter);
-            debug!("enable_attribute_acceleration: {:?}, enable_histogram_acceleration: {:?}, enable_point_filtering: {:?}", enable_attribute_acceleration, enable_histogram_acceleration, enable_point_filtering);
-            match query {
-                Query::AabbQuery {
-                    lod_level,
-                    min_bounds,
-                    max_bounds,
-                } => {
-                    let mut aabb = OptionAABB::empty();
-                    for p in [min_bounds, max_bounds] {
-                        let pos = match I32Position::encode(&coordinate_system, &Point3::from(p)) {
-                            Ok(pos) => pos,
-                            Err(e) => {
-                                return Err(LidarServerError::Protocol(format!(
-                                    "Received invalid query: {}",
-                                    e
-                                )));
-                            }
-                        };
-                        aabb.extend(&pos);
+            debug!(
+                "Received Query: {:?} and Filter {:?}",
+                spatial_query, attributes_query
+            );
+            debug!("{:?}", query_config);
+            let spatial_query: Box<dyn lidarserv_common::query::SpatialQuery + Send + Sync> =
+                match spatial_query {
+                    SpatialQuery::AabbQuery {
+                        lod_level,
+                        min_bounds,
+                        max_bounds,
+                    } => {
+                        let mut aabb = OptionAABB::empty();
+                        for p in [min_bounds, max_bounds] {
+                            let pos =
+                                match I32Position::encode(&coordinate_system, &Point3::from(p)) {
+                                    Ok(pos) => pos,
+                                    Err(e) => {
+                                        return Err(LidarServerError::Protocol(format!(
+                                            "Received invalid query: {}",
+                                            e
+                                        )));
+                                    }
+                                };
+                            aabb.extend(&pos);
+                        }
+                        let aabb = aabb.into_aabb().unwrap(); // unwrap: we just added two points, so it cannot be empty
+                        let lod = LodLevel::from_level(lod_level);
+                        let query = BoundingBoxQuery::new(aabb, lod);
+                        Box::new(query)
                     }
-                    let aabb = aabb.into_aabb().unwrap(); // unwrap: we just added two points, so it cannot be empty
-                    let lod = LodLevel::from_level(lod_level);
-                    let query = BoundingBoxQuery::new(aabb, lod);
-                    debug!("{}: Query: {:?}", addr, &query);
-                    queries_sender.send(Box::new(query)).unwrap();
-                    filters_sender
-                        .send((
-                            filter,
-                            enable_attribute_acceleration,
-                            enable_histogram_acceleration,
-                            enable_point_filtering,
-                        ))
-                        .unwrap();
-                }
-                Query::ViewFrustumQuery {
-                    view_projection_matrix,
-                    view_projection_matrix_inv,
-                    window_width_pixels,
-                    min_distance_pixels,
-                } => {
-                    let query = ViewFrustumQuery::new(
+                    SpatialQuery::ViewFrustumQuery {
                         view_projection_matrix,
                         view_projection_matrix_inv,
                         window_width_pixels,
                         min_distance_pixels,
-                        &sampling_factory,
-                        &coordinate_system,
-                    );
-                    debug!("{}: Query: {:?}", addr, &query);
-                    queries_sender.send(Box::new(query)).unwrap();
-                    filters_sender
-                        .send((
-                            filter,
-                            enable_attribute_acceleration,
-                            enable_histogram_acceleration,
-                            enable_point_filtering,
-                        ))
-                        .unwrap();
-                }
-            }
+                    } => {
+                        let query = ViewFrustumQuery::new(
+                            view_projection_matrix,
+                            view_projection_matrix_inv,
+                            window_width_pixels,
+                            min_distance_pixels,
+                            &sampling_factory,
+                            &coordinate_system,
+                        );
+                        Box::new(query)
+                    }
+                };
+
+            let query = lidarserv_common::index::Query {
+                spatial: spatial_query,
+                attributes: attributes_query,
+                enable_attribute_acceleration: query_config.enable_attribute_acceleration,
+                enable_histogram_acceleration: query_config.enable_histogram_acceleration,
+                enable_point_filtering: query_config.enable_point_filtering,
+            };
+            debug!("{}: Query: {:?}", addr, &query);
+            queries_sender.send(query).unwrap();
         }
         Ok(())
     };

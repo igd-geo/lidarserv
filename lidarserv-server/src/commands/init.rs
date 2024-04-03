@@ -8,7 +8,7 @@ pub fn run(init_options: InitOptions) -> Result<()> {
     std::fs::create_dir_all(&init_options.path)?;
 
     // check point record format
-    if !(init_options.las_point_record_format <= 3) {
+    if init_options.las_point_record_format > 3 {
         anyhow::bail!(
             "Invalid point record format: {}, only 0-3 are supported",
             init_options.las_point_record_format

@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 /// Defines Min and Max of all attributes.
 /// Provides methods to check if a point is within the bounds and to update the bounds
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct LasPointAttributeBounds {
     pub intensity: Option<(u16, u16)>,
     pub return_number: Option<(u8, u8)>,
@@ -24,21 +24,7 @@ pub struct LasPointAttributeBounds {
 impl LasPointAttributeBounds {
     /// Creates a new attribute bounds
     pub fn new() -> Self {
-        LasPointAttributeBounds {
-            intensity: None,
-            return_number: None,
-            number_of_returns: None,
-            scan_direction: None,
-            edge_of_flight_line: None,
-            classification: None,
-            scan_angle_rank: None,
-            user_data: None,
-            point_source_id: None,
-            gps_time: None,
-            color_r: None,
-            color_g: None,
-            color_b: None,
-        }
+        LasPointAttributeBounds::default()
     }
 
     /// Creates a new attribute bounds from attributes
@@ -367,8 +353,8 @@ mod tests {
         assert_eq!(bounds.color_b, Some((0, 0)));
 
         let bounds2 = LasPointAttributeBounds::from_attributes(&attributes_2());
-        assert_eq!(bounds.is_bounds_in_bounds(&bounds2), true);
-        assert_eq!(bounds.is_attributes_in_bounds(&attributes_2()), true);
+        assert!(bounds.is_bounds_in_bounds(&bounds2));
+        assert!(bounds.is_attributes_in_bounds(&attributes_2()));
     }
 
     #[test]
@@ -384,19 +370,13 @@ mod tests {
         let bound2: Option<(u16, u16)> = Some((5, 15));
         let bound3: Option<(u16, u16)> = Some((11, 20));
 
-        assert_eq!(bounds.is_bound_overlapping_bound(bound1, bound2), true);
-        assert_eq!(bounds.is_bound_overlapping_bound(bound1, bound3), false);
+        assert!(bounds.is_bound_overlapping_bound(bound1, bound2));
+        assert!(!bounds.is_bound_overlapping_bound(bound1, bound3));
     }
 
     #[test]
     fn test_overlap_bounds() {
-        assert_eq!(
-            max_bounds().is_bounds_overlapping_bounds(&smaller_bounds()),
-            true
-        );
-        assert_eq!(
-            smaller_bounds().is_bounds_overlapping_bounds(&not_overlapping_bounds()),
-            false
-        );
+        assert!(max_bounds().is_bounds_overlapping_bounds(&smaller_bounds()));
+        assert!(!smaller_bounds().is_bounds_overlapping_bounds(&not_overlapping_bounds()));
     }
 }

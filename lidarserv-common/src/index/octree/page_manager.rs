@@ -98,7 +98,7 @@ where
             points: points.iter(),
             bounds: node.bounding_box.clone(),
             non_bogus_points: Some(node.sampling.len() as u32),
-            coordinate_system: node.coordinate_system.clone(),
+            coordinate_system: node.coordinate_system,
         });
         let arc = Arc::new(data);
         *write_lock = Some(Arc::clone(&arc));
@@ -170,7 +170,7 @@ where
                 sampling: make_sampling(),
                 bogus_points: vec![],
                 bounding_box: OptionAABB::empty(),
-                coordinate_system: coordinate_system.clone(),
+                coordinate_system: *coordinate_system,
             }));
         }
         let mut write_lock = self.node.write().unwrap();

@@ -334,7 +334,7 @@ mod mini_mno {
             let view_projection_matrix = self.camera.projection_matrix * self.camera.view_matrix;
             let view_projection_matrix_inv =
                 self.camera.view_matrix_inv * self.camera.projection_matrix_inv;
-            let cube = vec![
+            let cube = [
                 Vector3::new(0.0, 0.0, 0.0),
                 Vector3::new(0.0, 0.0, 1.0),
                 Vector3::new(0.0, 1.0, 0.0),
@@ -574,7 +574,7 @@ fn main() {
     let laz_file_path = std::env::var("INPUT_FILE").expect(
         "Please specify the las/laz file to load by setting the INPUT_FILE environment variable.",
     );
-    let mut reader = Reader::from_path(&laz_file_path).unwrap();
+    let mut reader = Reader::from_path(laz_file_path).unwrap();
 
     GliumRenderOptions::default().run(move |render_thread| {
         // open viewer window

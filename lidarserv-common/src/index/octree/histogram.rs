@@ -29,7 +29,7 @@ impl std::fmt::Display for Histogram<u8> {
             s.push_str(&format!("{}: {}, ", i, self.bins[i]));
         }
 
-        s.push_str("\"");
+        s.push('"');
 
         write!(f, "{}", s)
     }
@@ -100,11 +100,10 @@ impl Histogram<u8> {
             value = self.max_value;
         }
 
-        let bin_index = ((value as u16 - self.min_value as u16) / self.bin_width as u16)
+        ((value as u16 - self.min_value as u16) / self.bin_width as u16)
             .to_usize()
             .unwrap()
-            .min(self.bins.len() - 1);
-        bin_index
+            .min(self.bins.len() - 1)
     }
 
     // Check if a given range contains values in the histogram
@@ -206,11 +205,10 @@ impl Histogram<u16> {
             value = self.max_value;
         }
 
-        let bin_index = ((value as u32 - self.min_value as u32) / self.bin_width as u32)
+        ((value as u32 - self.min_value as u32) / self.bin_width as u32)
             .to_usize()
             .unwrap()
-            .min(self.bins.len() - 1);
-        bin_index
+            .min(self.bins.len() - 1)
     }
 
     // Check if a given range contains values in the histogram
@@ -312,11 +310,10 @@ impl Histogram<i8> {
             value = self.max_value;
         }
 
-        let bin_index = ((value as i16 - self.min_value as i16) / self.bin_width as i16)
+        ((value as i16 - self.min_value as i16) / self.bin_width as i16)
             .to_usize()
             .unwrap()
-            .min(self.bins.len() - 1);
-        bin_index
+            .min(self.bins.len() - 1)
     }
 
     // Check if a given range contains values in the histogram
@@ -507,7 +504,7 @@ mod tests {
         let num_bins = 256;
         let mut histogram = Histogram::<u8>::new(min, max, num_bins);
 
-        for i in 0..100_000_000 {
+        for _ in 0..100_000_000 {
             histogram.add(42);
         }
 

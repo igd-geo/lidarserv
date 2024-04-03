@@ -9,6 +9,7 @@ use lidarserv_server::common::geometry::grid::LodLevel;
 use lidarserv_server::common::nalgebra::Point3;
 use lidarserv_server::index::point::GlobalPoint;
 use lidarserv_server::net::client::viewer::ViewerClient;
+use lidarserv_server::net::protocol::messages::QueryConfig;
 use lidarserv_server::net::LidarServerError;
 use log::{debug, info, warn};
 use std::option::Option;
@@ -53,10 +54,12 @@ async fn network_thread(args: Args) -> Result<(), LidarServerError> {
         .query_aabb(
             &aabb,
             &lod,
-            Some(bounds),
-            args.enable_attribute_acceleration,
-            args.enable_histogram_acceleration,
-            args.enable_point_filtering,
+            bounds,
+            QueryConfig {
+                enable_attribute_acceleration: false,
+                enable_histogram_acceleration: false,
+                enable_point_filtering: false,
+            },
         )
         .await
         .unwrap();
@@ -88,15 +91,15 @@ async fn network_thread(args: Args) -> Result<(), LidarServerError> {
     }
 }
 
-fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
+fn write_points_to_las_file(path: &PathBuf, points: &[GlobalPoint]) {
     info!("Writing {:?} points to file: {:?}", points.len(), path);
-    if points.len() == 0 {
+    if points.is_empty() {
         warn!("No points to write.");
     }
     let mut builder = Builder::from((1, 4));
     builder.point_format = Format::new(3).unwrap();
     let header = builder.into_header().unwrap();
-    let mut writer = Writer::from_path(&path, header).unwrap();
+    let mut writer = Writer::from_path(path, header).unwrap();
     let mut errors = 0;
     for point in points.iter() {
         let direction: ScanDirection = match point.attribute().scan_direction {
@@ -139,7 +142,6 @@ fn write_points_to_las_file(path: &PathBuf, points: &Vec<GlobalPoint>) {
     info!("Number of errors: {}", errors);
     debug!("Header: {:?}", writer.header());
     writer.close().unwrap();
-    ()
 }
 
 fn parse_attribute_bounds(args: &Args) -> LasPointAttributeBounds {

@@ -2,10 +2,12 @@ use crate::cli::{Args, PointColorArg};
 use anyhow::Result;
 use lidarserv_server::common::geometry::points::PointType;
 use lidarserv_server::common::geometry::position::Position;
+use lidarserv_server::common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_server::common::las::LasPointAttributes;
 use lidarserv_server::common::nalgebra::{Matrix4, Point3};
 use lidarserv_server::index::point::GlobalPoint;
 use lidarserv_server::net::client::viewer::{IncrementalUpdate, ViewerClient};
+use lidarserv_server::net::protocol::messages::QueryConfig;
 use log::{debug, trace};
 use pasture_core::containers::{PerAttributeVecPointStorage, PointBuffer};
 use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY};
@@ -220,10 +222,8 @@ async fn network_thread(
                             view_projection_matrix_inv,
                             camera_matrix.window_size.x,
                             args.point_distance,
-                            None,
-                            false,
-                            false,
-                            false
+                            LasPointAttributeBounds::default(),
+                            QueryConfig { enable_attribute_acceleration: false, enable_histogram_acceleration: false, enable_point_filtering: false },
                         )
                         .await
                         .unwrap()

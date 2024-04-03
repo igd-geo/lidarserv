@@ -9,7 +9,8 @@ use evaluation::thermal_throttle::processor_cooldown;
 use evaluation::{read_points, reset_data_folder};
 use git_version::git_version;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
-use lidarserv_common::index::Index;
+use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
+use lidarserv_common::index::{Index, Query};
 use log::{error, info, warn};
 use nalgebra::Vector3;
 use serde_json::json;
@@ -101,7 +102,7 @@ fn main() {
                 &points,
                 &run,
                 &config.base,
-                || create_octree_index(coordinate_system.clone(), &config.base, &index),
+                || create_octree_index(coordinate_system, &config.base, &index),
                 config.base.enable_cooldown,
             );
             run_results.push(json!({
@@ -350,7 +351,14 @@ where
         );
         let result_latency = {
             let index = make_index();
-            let query = aabb_full();
+            let spatial_query = aabb_full();
+            let query = Query {
+                spatial: Box::new(spatial_query),
+                attributes: LasPointAttributeBounds::new(),
+                enable_attribute_acceleration: false,
+                enable_histogram_acceleration: false,
+                enable_point_filtering: false,
+            };
             measure_latency(index, points, query, &measurement_settings)
         };
         results_latency.push(result_latency);

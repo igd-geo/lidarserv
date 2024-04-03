@@ -1,6 +1,6 @@
 use crate::index::point::GlobalPoint;
 use crate::net::protocol::connection::Connection;
-use crate::net::protocol::messages::{DeviceType, Message, NodeId, Query};
+use crate::net::protocol::messages::{DeviceType, Message, NodeId, QueryConfig, SpatialQuery};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::AABB;
 use lidarserv_common::geometry::grid::LodLevel;
@@ -128,25 +128,21 @@ where
         &mut self,
         global_aabb: &AABB<f64>,
         lod: &LodLevel,
-        filter: Option<LasPointAttributeBounds>,
-        enable_attribute_acceleration: bool,
-        enable_histogram_acceleration: bool,
-        enable_point_filtering: bool,
+        attribute_filter: LasPointAttributeBounds,
+        config: QueryConfig,
     ) -> Result<(), LidarServerError> {
         let csys = F64CoordinateSystem::new();
         let min = global_aabb.min::<F64Position>().decode(&csys);
         let max = global_aabb.max::<F64Position>().decode(&csys);
         self.connection
             .write_message(&Message::Query {
-                query: Box::new(Query::AabbQuery {
+                spatial_query: Box::new(SpatialQuery::AabbQuery {
                     min_bounds: min.coords,
                     max_bounds: max.coords,
                     lod_level: lod.level(),
                 }),
-                filter,
-                enable_attribute_acceleration,
-                enable_histogram_acceleration,
-                enable_point_filtering,
+                attributes_query: attribute_filter,
+                config,
             })
             .await
     }
@@ -157,23 +153,19 @@ where
         view_projection_matrix_inv: Matrix4<f64>,
         window_width_pixels: f64,
         min_distance_pixels: f64,
-        filter: Option<LasPointAttributeBounds>,
-        enable_attribute_acceleration: bool,
-        enable_histogram_acceleration: bool,
-        enable_point_filtering: bool,
+        attribute_filter: LasPointAttributeBounds,
+        config: QueryConfig,
     ) -> Result<(), LidarServerError> {
         self.connection
             .write_message(&Message::Query {
-                query: Box::new(Query::ViewFrustumQuery {
+                spatial_query: Box::new(SpatialQuery::ViewFrustumQuery {
                     view_projection_matrix,
                     view_projection_matrix_inv,
                     window_width_pixels,
                     min_distance_pixels,
                 }),
-                filter,
-                enable_attribute_acceleration,
-                enable_histogram_acceleration,
-                enable_point_filtering,
+                attributes_query: attribute_filter,
+                config,
             })
             .await
     }

@@ -21,7 +21,6 @@ use crate::index::octree::reader::OctreeReader;
 use crate::index::octree::writer::{OctreeWriter, TaskPriorityFunction};
 use crate::index::Index;
 use crate::las::{I32LasReadWrite, LasPointAttributes};
-use crate::query::Query;
 use log::debug;
 use serde_json::{json, Value};
 use std::error::Error;
@@ -29,6 +28,8 @@ use std::fmt::Formatter;
 use std::option::Option;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
+
+use super::Query;
 
 struct Inner<Point, Sampl, SamplF> {
     num_threads: u16,
@@ -213,11 +214,8 @@ where
         OctreeWriter::new(Arc::clone(&self.inner))
     }
 
-    fn reader<Q>(&self, query: Q) -> Self::Reader
-    where
-        Q: Query + 'static + Send + Sync,
-    {
-        OctreeReader::new(query, Arc::clone(&self.inner))
+    fn reader(&self, query: Query) -> Self::Reader {
+        OctreeReader::new(Arc::clone(&self.inner), query)
     }
 
     fn flush(&mut self) -> Result<(), Box<dyn Error>> {

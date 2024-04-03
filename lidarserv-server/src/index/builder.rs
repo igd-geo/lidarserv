@@ -6,7 +6,7 @@ use crate::index::DynIndex;
 use lidarserv_common::geometry::grid::I32GridHierarchy;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
-use lidarserv_common::index::octree::attribute_index::AttributeIndex;
+use lidarserv_common::index::octree::attribute_index::{AttributeIndex, AttributeIndexLoadError};
 use lidarserv_common::index::octree::live_metrics_collector::{LiveMetricsCollector, MetricsError};
 use lidarserv_common::index::octree::OctreeParams;
 use lidarserv_common::las::I32LasReadWrite;
@@ -21,6 +21,9 @@ pub enum BuilderError {
 
     #[error("Could not open metric file: {0}")]
     MetricsIo(#[from] MetricsError),
+
+    #[error("Could not open attribute index: {0}")]
+    AttributeIndexIo(#[from] AttributeIndexLoadError),
 }
 
 pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynIndex>, BuilderError> {
@@ -54,19 +57,14 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynInd
     if octree_settings.enable_attribute_indexing {
         let mut attribute_index_file_name = data_path.to_owned();
         attribute_index_file_name.push("attribute_index.bin");
-        attribute_index = Option::from(AttributeIndex::new(
+        let attribute_index = attribute_index.insert(AttributeIndex::new(
             octree_settings.max_lod.level() as usize,
             attribute_index_file_name,
-        ));
-        if attribute_index.is_some() {
-            debug!("Attribute indexing enabled");
-            if octree_settings.enable_histogram_acceleration {
-                debug!("Histogram acceleration enabled");
-                attribute_index
-                    .as_mut()
-                    .unwrap()
-                    .set_histogram_acceleration(true);
-            }
+        )?);
+        debug!("Attribute indexing enabled");
+        if octree_settings.enable_histogram_acceleration {
+            debug!("Histogram acceleration enabled");
+            attribute_index.set_histogram_acceleration(true);
         }
     }
 

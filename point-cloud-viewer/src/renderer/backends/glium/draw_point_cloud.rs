@@ -477,16 +477,16 @@ impl PointCloudDrawCall {
     {
         // uniforms
         let mut uniforms = DynamicUniforms::new();
-        for (&ref name, value) in &self.uniforms_vec3f {
+        for (name, value) in &self.uniforms_vec3f {
             uniforms.add(name, value);
         }
-        for (&ref name, value) in &self.uniforms_f {
+        for (name, value) in &self.uniforms_f {
             uniforms.add(name, value);
         }
-        for (&ref name, value) in &self.uniforms_i {
+        for (name, value) in &self.uniforms_i {
             uniforms.add(name, value);
         }
-        for (&ref name, texture) in &self.uniforms_texture_1d {
+        for (name, texture) in &self.uniforms_texture_1d {
             uniforms.add_uniform_value(name, UniformValue::Texture1d(texture, None));
         }
 
@@ -536,7 +536,7 @@ impl PointCloudDrawCall {
         frame
             .draw(
                 multi_vertex_source,
-                &DRAW_POINTS,
+                DRAW_POINTS,
                 &self.program,
                 &uniforms,
                 &draw_parameters,
@@ -689,8 +689,7 @@ impl PointCloudsRenderer {
         let gpu_positions = transfer_vertex_data_to_gpu(display, positions)?;
 
         // upload point attributes to GPU
-        let mut gpu_attributes = Vec::new();
-        gpu_attributes.reserve(attributes.len());
+        let mut gpu_attributes = Vec::with_capacity(attributes.len());
         for attribute in attributes {
             let gpu_attribute = transfer_vertex_data_to_gpu(display, &attribute.data)?;
             gpu_attributes.push(GpuAttribute {
@@ -1040,13 +1039,9 @@ impl PointCloudsRenderer {
         {
             frame_buffer.clear_color_and_depth((0.0, 0.0, 0.0, 0.0), 1.0);
             for cloud in point_clouds.values() {
-                let result =
-                    cloud
-                        .draw_call
-                        .draw(frame_buffer, scale_factor, view_projection_matrix);
-                if let Err(e) = result {
-                    return Err(e);
-                }
+                cloud
+                    .draw_call
+                    .draw(frame_buffer, scale_factor, view_projection_matrix)?;
             }
             Ok(())
         }
@@ -1144,7 +1139,7 @@ impl PointCloudsRenderer {
             frame
                 .draw(
                     &deferred_data_unsized.quad_vertex_buffer,
-                    &TRIANGLE_LIST,
+                    TRIANGLE_LIST,
                     &deferred_data_unsized.quad_program,
                     &uniforms,
                     &draw_parameteers,

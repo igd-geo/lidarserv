@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::io::SeekFrom::Start;
-use std::io::{Cursor, Error, Read, Seek, SeekFrom, Write};
+use std::io::{Cursor, Error, Read, Seek, Write};
 use std::sync::Arc;
 use thiserror::Error;
 use tracy_client::span;
@@ -251,11 +251,8 @@ impl I32LasReadWrite {
         // header.number_of_point_records is legacy and may be 0
         // in this case, we need to use the large file header
         let mut number_of_point_records: usize = header.number_of_point_records as usize;
-        if number_of_point_records == 0 {
-            if header.large_file.is_some() {
-                number_of_point_records =
-                    header.large_file.unwrap().number_of_point_records as usize;
-            };
+        if number_of_point_records == 0 && header.large_file.is_some() {
+            number_of_point_records = header.large_file.unwrap().number_of_point_records as usize;
         };
 
         // read points - either compressed, or raw
@@ -324,7 +321,7 @@ where
         coordinate_system,
         point_record_format,
     );
-    let header_pos = write.seek(SeekFrom::Current(0))?;
+    let header_pos = write.stream_position()?;
     match header.write_to(&mut write) {
         Ok(_) => {}
         Err(las::Error::Io(e)) => return Err(e),
@@ -543,9 +540,9 @@ mod tests {
     }
 
     #[test]
-    fn test_write_las() {
+    fn test_write_read_las() {
+        // write
         let pointcloud = custom_pointcloud(1);
-        let path = Path::new("test.las");
         let loader = I32LasReadWrite::new(false, 3);
         let data = loader.write_las::<LasPoint, _>(Las {
             points: pointcloud.iter(),
@@ -556,24 +553,18 @@ mod tests {
                 Point3::new(3.0, 3.0, 3.0),
             ),
         });
-        let mut file = File::create(&path).unwrap();
-        file.write_all(data.as_slice()).unwrap();
-        file.sync_all().unwrap();
-    }
 
-    #[test]
-    fn test_read_las() {
-        let path = Path::new("test.las");
+        // read
         let loader = I32LasReadWrite::new(false, 3);
-        let mut reader = BufReader::new(File::open(&path).unwrap());
+        let reader = Cursor::new(data);
         println!("Point Record Format: {:?}", loader.point_record_format);
         println!("Compression: {:?}", loader.compression);
-        let result: Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
+        let result: Las<Vec<LasPoint>> = loader.read_las(reader).unwrap();
         println!("Coordinate System: {:?}", result.coordinate_system);
         println!("Bounds: {:?}", result.bounds);
         println!("Non Bogus Points: {:?}", result.non_bogus_points);
         println!("Points: {:?}", result.points.len());
-        println!("{:?}", result.points.get(0).unwrap());
+        println!("{:?}", result.points.first().unwrap());
     }
 
     #[test]
@@ -626,11 +617,13 @@ mod tests {
         let mut pointcloud = Vec::new();
         for i in 0..num_points {
             let position = I32Position::from_components(i as i32, i as i32, i as i32);
-            let mut mod_attributes = LasPointAttributes::default();
-            mod_attributes.return_number = 3;
-            mod_attributes.number_of_returns = 6;
-            mod_attributes.edge_of_flight_line = true;
-            mod_attributes.scan_direction = true;
+            let mod_attributes = LasPointAttributes {
+                return_number: 3,
+                number_of_returns: 6,
+                edge_of_flight_line: true,
+                scan_direction: true,
+                ..Default::default()
+            };
             let las_attributes = Box::new(mod_attributes);
             pointcloud.push(LasPoint {
                 position,
@@ -653,7 +646,7 @@ mod tests {
         let mut builder = Builder::from((1, 4));
         builder.point_format = Format::new(3).unwrap();
         let header = builder.into_header().unwrap();
-        let mut writer = Writer::from_path(&path, header).unwrap();
+        let mut writer = Writer::from_path(path, header).unwrap();
         let mut errors = 0;
 
         // Writing
@@ -690,7 +683,7 @@ mod tests {
         // READING
         // Init
         let init_time = std::time::Instant::now();
-        let read = BufReader::new(File::open(&path).unwrap());
+        let read = BufReader::new(File::open(path).unwrap());
         let mut reader = Reader::new(read).unwrap();
 
         // Reading
@@ -747,7 +740,7 @@ mod tests {
                 Point3::new(3.0, 3.0, 3.0),
             ),
         });
-        let mut file = File::create(&path).unwrap();
+        let mut file = File::create(path).unwrap();
         file.write_all(data.as_slice()).unwrap();
         file.sync_all().unwrap();
         let end_time = std::time::Instant::now();
@@ -756,7 +749,7 @@ mod tests {
         // Reading
         let init_time = std::time::Instant::now();
         let loader = I32LasReadWrite::new(false, 3);
-        let mut reader = BufReader::new(File::open(&path).unwrap());
+        let mut reader = BufReader::new(File::open(path).unwrap());
         let result: Las<Vec<LasPoint>> = loader.read_las(&mut reader).unwrap();
         let end_time = std::time::Instant::now();
         let total_read = end_time.duration_since(init_time);

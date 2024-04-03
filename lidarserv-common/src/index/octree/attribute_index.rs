@@ -29,32 +29,51 @@ pub struct AttributeIndex {
     dirty: Arc<RwLock<bool>>,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum AttributeIndexLoadError {
+    #[error("The file does not exist.")]
+    FileNotFound,
+
+    #[error("Error while reading file: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Could not load attribute index file: {0}")]
+    FileFormat(#[from] bincode::ErrorKind),
+
+    #[error("Number of LODs does not match. Expected {expected} LODs, but read {actual}.")]
+    WrongNumberOfLods { expected: usize, actual: usize },
+}
+
 impl AttributeIndex {
     /// Creates a new attribute index
     /// If an index file (file_name) exists, it is loaded, otherwise a new one is created
-    pub fn new(num_lods: usize, file_name: PathBuf) -> Self {
-        if let Ok(index) = Self::load_from_file(num_lods + 1, &file_name) {
-            // index exists, load it
-            debug!("Loaded attribute index from file {:?}", file_name);
-            return AttributeIndex {
-                index,
-                enable_histograms: false,
-                file_name,
-                dirty: Arc::new(RwLock::new(false)),
-            };
-        } else {
-            // index does not exist, create new one
-            debug!("Created new attribute index at {:?}", file_name);
-            let mut index = Vec::with_capacity(num_lods + 1);
-            for _ in 0..num_lods + 1 {
-                index.push(RwLock::new(HashMap::new()));
+    pub fn new(num_lods: usize, file_name: PathBuf) -> Result<Self, AttributeIndexLoadError> {
+        match Self::load_from_file(num_lods + 1, &file_name) {
+            Ok(index) => {
+                // index exists, load it
+                debug!("Loaded attribute index from file {:?}", file_name);
+                Ok(AttributeIndex {
+                    index,
+                    enable_histograms: false,
+                    file_name,
+                    dirty: Arc::new(RwLock::new(false)),
+                })
             }
-            AttributeIndex {
-                index: Arc::new(index),
-                enable_histograms: false,
-                file_name,
-                dirty: Arc::new(RwLock::new(true)),
+            Err(AttributeIndexLoadError::FileNotFound) => {
+                // index does not exist, create new one
+                debug!("Created new attribute index at {:?}", file_name);
+                let mut index = Vec::with_capacity(num_lods + 1);
+                for _ in 0..num_lods + 1 {
+                    index.push(RwLock::new(HashMap::new()));
+                }
+                Ok(AttributeIndex {
+                    index: Arc::new(index),
+                    enable_histograms: false,
+                    file_name,
+                    dirty: Arc::new(RwLock::new(true)),
+                })
             }
+            Err(e) => Err(e),
         }
     }
 
@@ -86,11 +105,11 @@ impl AttributeIndex {
         // aquire write lock for lod level
         let mut index_write = self.index[lod.level() as usize].write().unwrap();
 
-        match index_write.entry(grid_cell.clone()) {
+        match index_write.entry(*grid_cell) {
             Entry::Occupied(_) => {
                 debug!("Updating entry for cell {:?}", grid_cell);
-                let (bounds, ref mut histogram) = index_write.get_mut(&grid_cell).unwrap();
-                bounds.update_by_bounds(&new_bounds);
+                let (bounds, ref mut histogram) = index_write.get_mut(grid_cell).unwrap();
+                bounds.update_by_bounds(new_bounds);
                 if new_histogram.is_some() && self.enable_histograms {
                     if histogram.is_none() {
                         debug!("Creating new histogram for cell {:?}", grid_cell);
@@ -103,7 +122,7 @@ impl AttributeIndex {
                         histogram
                             .as_mut()
                             .unwrap()
-                            .add_histograms(&new_histogram.as_ref().unwrap());
+                            .add_histograms(new_histogram.as_ref().unwrap());
                         debug!("New histogram: {:?}", histogram);
                     }
                 } else {
@@ -113,10 +132,7 @@ impl AttributeIndex {
             }
             Entry::Vacant(_) => {
                 debug!("Creating new entry for cell {:?}", grid_cell);
-                index_write.insert(
-                    grid_cell.clone(),
-                    (new_bounds.clone(), new_histogram.clone()),
-                );
+                index_write.insert(*grid_cell, (*new_bounds, new_histogram.clone()));
             }
         }
     }
@@ -144,13 +160,13 @@ impl AttributeIndex {
         span!("AttributeIndex::cell_overlaps_with_bounds");
         // aquire read lock for lod level
         let index_read = self.index[lod.level() as usize].read().unwrap();
-        let entry = index_read.get_key_value(&grid_cell);
+        let entry = index_read.get_key_value(grid_cell);
 
         // check if cell is in bounds
         let _ = match entry {
             Some((_, (cell_bounds, histograms))) => {
                 // check bounds
-                let is_in_bounds = bounds.is_bounds_overlapping_bounds(&cell_bounds);
+                let is_in_bounds = bounds.is_bounds_overlapping_bounds(cell_bounds);
                 trace!(
                     "Cell {:?} overlaps with bounds: {}",
                     grid_cell,
@@ -186,15 +202,15 @@ impl AttributeIndex {
     }
 
     /// Loads attribute index from file
-    fn load_from_file(num_lods: usize, file_name: &Path) -> Result<Arc<Index>, std::io::Error> {
+    fn load_from_file(
+        num_lods: usize,
+        file_name: &Path,
+    ) -> Result<Arc<Index>, AttributeIndexLoadError> {
         span!("AttributeIndex::load_from_file");
 
         // check existence of file and open it
         if !file_name.exists() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "File does not exist",
-            ));
+            return Err(AttributeIndexLoadError::FileNotFound);
         }
         debug!("Loading attribute index from file {:?}", file_name);
         let f = File::open(file_name)?;
@@ -203,14 +219,20 @@ impl AttributeIndex {
         debug!("Decoding attribute index file");
         let decoded: Vec<
             HashMap<GridCell, (LasPointAttributeBounds, Option<LasPointAttributeHistograms>)>,
-        > = bincode::deserialize_from(&f).expect("Error while reading attribute index");
+        > = bincode::deserialize_from(&f).map_err(|e| match *e {
+            bincode::ErrorKind::Io(io) => AttributeIndexLoadError::Io(io),
+            err => AttributeIndexLoadError::FileFormat(err),
+        })?;
+        if decoded.len() != num_lods {
+            return Err(AttributeIndexLoadError::WrongNumberOfLods {
+                expected: num_lods,
+                actual: decoded.len(),
+            });
+        }
 
         // convert to Vec<RwLock<HashMap<GridCell, (LasPointAttributeBounds, LasPointAttributeHistograms)>>> and return
         debug!("Converting attribute index to vector");
-        let mut vector: Index = Vec::with_capacity(num_lods);
-        for i in 0..num_lods {
-            vector.push(RwLock::new(decoded[i].clone()));
-        }
+        let vector = decoded.into_iter().map(RwLock::new).collect();
         Ok(Arc::new(vector))
     }
 
@@ -277,11 +299,8 @@ impl AttributeIndex {
         grid_cell: &GridCell,
     ) -> Option<LasPointAttributeBounds> {
         let index_read = self.index[lod.level() as usize].read().unwrap();
-        let entry = index_read.get_key_value(&grid_cell);
-        match entry {
-            Some(bounds) => Some(bounds.1 .0.clone()),
-            None => None,
-        }
+        let entry = index_read.get_key_value(grid_cell);
+        entry.map(|bounds| bounds.1 .0)
     }
 
     /// Writes attribute index to human readable file (for debugging)
@@ -293,7 +312,7 @@ impl AttributeIndex {
 
         // create writer
         let mut wtr = Writer::from_path(path)?;
-        wtr.write_record(&[
+        wtr.write_record([
             "lod",
             "x",
             "y",
@@ -562,10 +581,11 @@ mod tests {
     #[test]
     fn test_attribute_index_update() {
         // delete file if exists
-        delete_file(&PathBuf::from("test.bin"));
+        let file = PathBuf::from("test_attribute_index_update.bin");
+        delete_file(&file);
 
         // create attribute index
-        let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let mut attribute_index = AttributeIndex::new(1, file.clone()).unwrap();
         let lod = LodLevel::base();
         let grid_cell = GridCell { x: 0, y: 0, z: 0 };
 
@@ -593,17 +613,18 @@ mod tests {
         attribute_index.size();
 
         // delete file if exists
-        delete_file(&PathBuf::from("test.bin"));
+        delete_file(&file);
     }
 
     #[test]
     fn load_and_save() {
         // delete file if exists
-        delete_file(&PathBuf::from("test.bin"));
+        let file = PathBuf::from("test_load_and_save.bin");
+        delete_file(&file);
 
         // create attribute index
         println!("Creating attribute index");
-        let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let attribute_index = AttributeIndex::new(1, PathBuf::from(&file)).unwrap();
         let lod = LodLevel::base();
         let grid_cell = GridCell { x: 0, y: 0, z: 0 };
 
@@ -623,12 +644,11 @@ mod tests {
 
         // write to file
         println!("Writing attribute index to file");
-        let write_result = attribute_index.write_to_file();
-        assert!(write_result.is_ok());
+        attribute_index.write_to_file().unwrap();
 
         // read from file
         println!("Reading attribute index from file");
-        let attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let attribute_index = AttributeIndex::new(1, PathBuf::from(&file)).unwrap();
 
         // extract bounds and histograms
         println!("Checking attribute index values");
@@ -653,18 +673,19 @@ mod tests {
         // check if histograms are correct
         assert!(histograms.is_some());
         let histograms = histograms.as_ref().unwrap();
-        assert!(histograms.is_attribute_range_in_histograms(&bounds));
+        assert!(histograms.is_attribute_range_in_histograms(bounds));
 
         // delete file if exists
-        delete_file(&PathBuf::from("test.bin"));
+        delete_file(&PathBuf::from(&file));
     }
 
     #[test]
     fn overlap() {
         // delete file if exists
-        delete_file(&PathBuf::from("test.bin"));
+        let file = PathBuf::from("test_overlap.bin");
+        delete_file(&file);
 
-        let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let attribute_index = AttributeIndex::new(1, file.clone()).unwrap();
         let lod = LodLevel::base();
         let grid_cell = GridCell { x: 0, y: 0, z: 0 };
 
@@ -672,34 +693,31 @@ mod tests {
         attribute_index.update_bounds_and_histograms(lod, &grid_cell, &smaller_bounds(), &None);
 
         // check if values are correct
-        assert_eq!(
-            attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &smaller_bounds(), false),
-            true
-        );
-        assert_eq!(
-            attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &max_bounds(), false),
-            true
-        );
-        assert_eq!(
-            attribute_index.cell_overlaps_with_bounds(
-                lod,
-                &grid_cell,
-                &not_overlapping_bounds(),
-                false
-            ),
+        assert!(attribute_index.cell_overlaps_with_bounds(
+            lod,
+            &grid_cell,
+            &smaller_bounds(),
             false
-        );
+        ));
+        assert!(attribute_index.cell_overlaps_with_bounds(lod, &grid_cell, &max_bounds(), false));
+        assert!(!attribute_index.cell_overlaps_with_bounds(
+            lod,
+            &grid_cell,
+            &not_overlapping_bounds(),
+            false
+        ));
 
         // delete file if exists
-        delete_file(&PathBuf::from("test.bin"));
+        delete_file(&file);
     }
 
     #[test]
     fn histogram_acceleration() {
         // delete file if exists
-        delete_file(&PathBuf::from("test.bin"));
+        let file = PathBuf::from("test_histogram_acceleration.bin");
+        delete_file(&file);
 
-        let mut attribute_index = AttributeIndex::new(1, PathBuf::from("test.bin"));
+        let mut attribute_index = AttributeIndex::new(1, file.clone()).unwrap();
         attribute_index.set_histogram_acceleration(true);
         assert!(attribute_index.is_dirty());
         let lod = LodLevel::base();

@@ -1,7 +1,7 @@
 use crate::geometry::bounding_box::{BaseAABB, AABB};
 use crate::geometry::grid::LodLevel;
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
-use crate::query::Query;
+use crate::query::SpatialQuery;
 
 #[derive(Debug, Clone)]
 pub struct BoundingBoxQuery {
@@ -15,7 +15,7 @@ impl BoundingBoxQuery {
     }
 }
 
-impl Query for BoundingBoxQuery {
+impl SpatialQuery for BoundingBoxQuery {
     fn max_lod_position(
         &self,
         position: &I32Position,

@@ -2,7 +2,8 @@ use crate::geometry::grid::LodLevel;
 use crate::geometry::points::PointType;
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
-use crate::query::Query;
+use crate::query::empty::EmptyQuery;
+use crate::query::SpatialQuery;
 use std::error::Error;
 use std::sync::Arc;
 
@@ -19,9 +20,7 @@ where
 
     /// Return a point writer, that can insert points into this index.
     fn writer(&self) -> Self::Writer;
-    fn reader<Q>(&self, query: Q) -> Self::Reader
-    where
-        Q: Query + 'static + Send + Sync;
+    fn reader(&self, query: Query) -> Self::Reader;
     fn flush(&mut self) -> Result<(), Box<dyn Error>>;
     fn index_info(&self) -> serde_json::Value;
 }
@@ -50,44 +49,9 @@ where
     type NodeId: NodeId;
     type Node: Node<Point>;
 
-    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q);
+    fn try_update(&mut self, queries: &mut crossbeam_channel::Receiver<Query>) -> bool;
 
-    fn set_filter(&mut self, filter: (Option<LasPointAttributeBounds>, bool, bool, bool));
-
-    fn fetch_query_filter(
-        &mut self,
-        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<(
-            Option<LasPointAttributeBounds>,
-            bool,
-            bool,
-            bool,
-        )>,
-    );
-
-    fn updates_available(
-        &mut self,
-        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<(
-            Option<LasPointAttributeBounds>,
-            bool,
-            bool,
-            bool,
-        )>,
-    ) -> bool;
-
-    fn update(&mut self);
-
-    fn blocking_update(
-        &mut self,
-        queries: &mut crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut crossbeam_channel::Receiver<(
-            Option<LasPointAttributeBounds>,
-            bool,
-            bool,
-            bool,
-        )>,
-    ) -> bool;
+    fn blocking_update(&mut self, queries: &mut crossbeam_channel::Receiver<Query>) -> bool;
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Vec<Point>, I32CoordinateSystem)>;
 
@@ -108,4 +72,25 @@ pub trait Node<Point> {
 /// Currently only implemented for [LeveledGridCell].
 pub trait NodeId {
     fn lod(&self) -> LodLevel;
+}
+
+#[derive(Debug)]
+pub struct Query {
+    pub spatial: Box<dyn SpatialQuery + Send + Sync>,
+    pub attributes: LasPointAttributeBounds,
+    pub enable_attribute_acceleration: bool,
+    pub enable_histogram_acceleration: bool,
+    pub enable_point_filtering: bool,
+}
+
+impl Default for Query {
+    fn default() -> Self {
+        Self {
+            spatial: Box::new(EmptyQuery),
+            attributes: LasPointAttributeBounds::default(),
+            enable_point_filtering: false,
+            enable_attribute_acceleration: false,
+            enable_histogram_acceleration: false,
+        }
+    }
 }

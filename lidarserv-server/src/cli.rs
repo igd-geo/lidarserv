@@ -18,6 +18,7 @@ pub struct Args {
 }
 
 #[derive(StructOpt, Debug)]
+#[allow(clippy::large_enum_variant)] // this is ok, because the struct is only ever instantiated once at the beginning of the program.
 pub enum Command {
     /// Initializes a new point cloud.
     Init(InitOptions),

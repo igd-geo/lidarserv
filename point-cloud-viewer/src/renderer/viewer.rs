@@ -182,8 +182,7 @@ impl<'a> Window<'a> {
             point_attribute_to_vertex_data(points, &attributes::POSITION_3D, self.renderer)?;
 
         // vertex data for attributes
-        let mut attributes_vertex_data = Vec::new();
-        attributes_vertex_data.reserve(attributes.len());
+        let mut attributes_vertex_data = Vec::with_capacity(attributes.len());
         for &attr in attributes {
             attributes_vertex_data.push(PointAttribute {
                 attribute: attr.to_owned(),
@@ -277,8 +276,7 @@ impl<'a> Window<'a> {
             point_attribute_to_vertex_data(points, &attributes::POSITION_3D, self.renderer)?;
 
         // vertex data for attributes
-        let mut attributes_vertex_data = Vec::new();
-        attributes_vertex_data.reserve(attributes.len());
+        let mut attributes_vertex_data = Vec::with_capacity(attributes.len());
         for &attr in attributes {
             attributes_vertex_data.push(PointAttribute {
                 attribute: attr.to_owned(),

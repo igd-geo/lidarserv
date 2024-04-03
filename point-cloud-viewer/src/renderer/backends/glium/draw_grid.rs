@@ -165,7 +165,7 @@ impl GridRenderer {
         frame
             .draw(
                 &self.vertex_buffer,
-                &NoIndices(PrimitiveType::LinesList),
+                NoIndices(PrimitiveType::LinesList),
                 &self.shader_program,
                 &uniforms,
                 &draw_parameters,
@@ -194,7 +194,7 @@ impl GridRenderer {
         frame
             .draw(
                 &self.vertex_buffer,
-                &NoIndices(PrimitiveType::LinesList),
+                NoIndices(PrimitiveType::LinesList),
                 &self.shader_program,
                 &uniforms,
                 &draw_parameters,

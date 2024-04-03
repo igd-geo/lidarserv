@@ -1,9 +1,7 @@
 use crate::settings::SingleLatencyMeasurement;
 use crate::{Point, PointIdAttribute};
 use lidarserv_common::geometry::points::PointType;
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
-use lidarserv_common::index::{Index, NodeId, Reader, Writer};
-use lidarserv_common::query::Query;
+use lidarserv_common::index::{Index, NodeId, Query, Reader, Writer};
 use serde_json::json;
 use std::cmp::{min, Ordering};
 use std::collections::HashMap;
@@ -11,22 +9,20 @@ use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-pub fn measure_latency<I, Q>(
+pub fn measure_latency<I>(
     index: I,
     points: &[Point],
-    query: Q,
+    query: Query,
     config: &SingleLatencyMeasurement,
 ) -> serde_json::value::Value
 where
     I: Index<Point>,
     I::Reader: Send + 'static,
-    Q: Query + Send + Sync + 'static,
 {
     // query thread
     let reader = index.reader(query);
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded(); // we will never actually push a new query. but the channel is still used to tell the queryer when to stop.
-    let (_filters_sender, filters_receiver) = crossbeam_channel::unbounded();
-    let rt = thread::spawn(move || read_thread::<I>(reader, queries_receiver, filters_receiver));
+    let rt = thread::spawn(move || read_thread::<I>(reader, queries_receiver));
 
     // do the insertions in the current thread
     let insertion_times = insertion_thread::<I>(index.writer(), points, config);
@@ -163,8 +159,7 @@ where
 
 pub fn read_thread<I>(
     mut reader: I::Reader,
-    mut queries: crossbeam_channel::Receiver<Box<dyn Query + Send + Sync>>,
-    mut filters: crossbeam_channel::Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
+    mut queries: crossbeam_channel::Receiver<Query>,
 ) -> Vec<HashMap<usize, Instant>>
 where
     I: Index<Point>,
@@ -176,7 +171,7 @@ where
         receive_times.push(points);
     }
 
-    while reader.blocking_update(&mut queries, &mut filters) {
+    while reader.blocking_update(&mut queries) {
         reader.remove_one();
         if let Some((node_id, points, _coordinate_system)) = reader.load_one() {
             let now = Instant::now();

@@ -93,7 +93,6 @@ fn write(points: Vec<Point3<i32>>) -> Result<Vec<u8>, Box<dyn Error>> {
         raw_point.write_to(&mut write, &format)?;
     }
 
-    drop(write);
     Ok(data)
 }
 

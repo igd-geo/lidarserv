@@ -5,7 +5,7 @@ use crate::geometry::position::{
     CoordinateSystem, F64Position, I32CoordinateSystem, I32Position, Position,
 };
 use crate::geometry::sampling::{Sampling, SamplingFactory};
-use crate::query::Query;
+use crate::query::SpatialQuery;
 use nalgebra::{Matrix4, Point3, Vector3, Vector4};
 
 #[derive(Debug)]
@@ -59,7 +59,7 @@ impl ViewFrustumQuery {
     }
 }
 
-impl Query for ViewFrustumQuery {
+impl SpatialQuery for ViewFrustumQuery {
     fn max_lod_position(
         &self,
         position: &I32Position,

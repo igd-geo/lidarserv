@@ -1,8 +1,9 @@
 use crate::queries::*;
 use crate::Point;
 use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
+use lidarserv_common::index::Query;
 use lidarserv_common::index::{Index, Reader};
-use lidarserv_common::query::Query;
+use lidarserv_common::query::SpatialQuery;
 use log::{debug, info};
 use serde_json::json;
 use std::fmt::Debug;
@@ -33,7 +34,7 @@ fn measure_one_query<I, Q>(
 ) -> serde_json::value::Value
 where
     I: Index<Point>,
-    Q: Query + Send + Sync + 'static + Clone + Debug,
+    Q: SpatialQuery + Send + Sync + 'static + Clone + Debug,
 {
     info!(
         "Measuring query performance for query: {:?} and filter {:?}",
@@ -87,19 +88,19 @@ fn measure_one_query_part<I, Q>(
 ) -> serde_json::value::Value
 where
     I: Index<Point>,
-    Q: Query + Send + Sync + 'static,
+    Q: SpatialQuery + Send + Sync + 'static,
 {
     debug!("Flushing index");
     index.flush().unwrap();
 
     let time_start = Instant::now();
-    let mut r = index.reader(query);
-    r.set_filter((
-        Some(filter),
-        enable_node_acceleration,
+    let mut r = index.reader(Query {
+        spatial: Box::new(query),
+        attributes: filter,
+        enable_attribute_acceleration: enable_node_acceleration,
         enable_histogram_acceleration,
         enable_point_filtering,
-    ));
+    });
     let mut nodes = Vec::new();
     while let Some((_node_id, node, _coordinate_system)) = r.load_one() {
         nodes.push(node);
@@ -110,7 +111,7 @@ where
     let mut nr_non_empty_nodes = 0;
     for points in nodes {
         nr_points += points.len();
-        if points.len() > 0 {
+        if !points.is_empty() {
             nr_non_empty_nodes += 1;
         }
     }

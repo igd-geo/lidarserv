@@ -34,11 +34,9 @@ pub enum Message {
 
     /// Sent from the client to server in Viewer mode, to set or update the query.
     Query {
-        query: Box<Query>,
-        filter: Option<LasPointAttributeBounds>,
-        enable_attribute_acceleration: bool,
-        enable_histogram_acceleration: bool,
-        enable_point_filtering: bool,
+        spatial_query: Box<SpatialQuery>,
+        attributes_query: LasPointAttributeBounds,
+        config: QueryConfig,
     },
 
     /// Sent from the server to the client with some update to the current query result.
@@ -75,7 +73,7 @@ pub enum CoordinateSystem {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
-pub enum Query {
+pub enum SpatialQuery {
     AabbQuery {
         min_bounds: Vector3<f64>,
         max_bounds: Vector3<f64>,
@@ -87,6 +85,13 @@ pub enum Query {
         window_width_pixels: f64,
         min_distance_pixels: f64,
     },
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+pub struct QueryConfig {
+    pub enable_attribute_acceleration: bool,
+    pub enable_histogram_acceleration: bool,
+    pub enable_point_filtering: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]

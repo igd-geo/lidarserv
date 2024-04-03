@@ -7,12 +7,9 @@ use crossbeam_channel::Receiver;
 use lidarserv_common::geometry::grid::LeveledGridCell;
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_common::index::octree::reader::OctreeReader;
 use lidarserv_common::index::octree::Octree;
-use lidarserv_common::index::{Reader, Writer as CommonWriter};
-use lidarserv_common::query::empty::EmptyQuery;
-use lidarserv_common::query::Query;
+use lidarserv_common::index::{Query, Reader, Writer as CommonWriter};
 use std::error::Error;
 use std::sync::Arc;
 use thiserror::Error;
@@ -54,19 +51,11 @@ pub type Node<Point> = (NodeId, Vec<Point>, I32CoordinateSystem);
 pub trait DynReader: Send + Sync {
     /// Blocks until an update is available.
     /// New queries, filters or points trigger an update.
-    fn blocking_update(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
-    ) -> bool;
+    fn blocking_update(&mut self, queries: &mut Receiver<Query>) -> bool;
 
     /// Checks if there are updates available.
     /// (This is a non-blocking version of [DynReader::blocking_update])
-    fn updates_available(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
-    ) -> bool;
+    fn updates_available(&mut self, queries: &mut Receiver<Query>) -> bool;
 
     /// Returns a node from the loading queue.
     /// Returns None if the loading queue is empty.
@@ -115,11 +104,11 @@ impl DynIndex
     }
 
     fn writer(&self) -> Box<dyn DynWriter> {
-        Box::new((self.coordinate_system().clone(), Index::writer(self)))
+        Box::new((*self.coordinate_system(), Index::writer(self)))
     }
 
     fn reader(&self) -> Box<dyn DynReader> {
-        Box::new(Index::reader(self, EmptyQuery::new()))
+        Box::new(Index::reader(self, Query::default()))
     }
 
     fn flush(&mut self) -> Result<(), Box<dyn Error>> {
@@ -147,20 +136,12 @@ impl DynWriter for (I32CoordinateSystem, OctreeWriter<LasPoint>) {
 impl DynReader
     for OctreeReader<LasPoint, GridCenterSampling<LasPoint>, GridCenterSamplingFactory<LasPoint>>
 {
-    fn blocking_update(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
-    ) -> bool {
-        Reader::blocking_update(self, queries, filters)
+    fn blocking_update(&mut self, queries: &mut Receiver<Query>) -> bool {
+        Reader::blocking_update(self, queries)
     }
 
-    fn updates_available(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
-    ) -> bool {
-        Reader::updates_available(self, queries, filters)
+    fn updates_available(&mut self, queries: &mut Receiver<Query>) -> bool {
+        Reader::try_update(self, queries)
     }
 
     fn load_one(&mut self) -> Option<Node<LasPoint>> {

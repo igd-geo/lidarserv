@@ -529,7 +529,6 @@ where
             Arc::clone(&inner.metrics),
         )));
         let threads = (0..inner.num_threads)
-            .into_iter()
             .map(|thread_id| {
                 let thread = OctreeWorkerThread {
                     inner: Arc::clone(&inner),

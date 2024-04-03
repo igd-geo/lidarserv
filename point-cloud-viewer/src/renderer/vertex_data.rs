@@ -107,8 +107,7 @@ fn point_attribute_to_vertex_data_type(
             };
 
             // apply offset/scale, convert to f32
-            let mut values = Vec::new();
-            values.reserve(points.len());
+            let mut values = Vec::with_capacity(points.len());
             for attr in points.iter_attribute::<Vector3<f64>>(attribute) {
                 let value = (attr - offset).component_div(&scale);
                 values.push(Vec3F32Attribute::new(value.x as f32, value.y as f32, value.z as f32));
@@ -249,8 +248,7 @@ where
     F: Fn(T) -> U,
     T: PrimitiveType,
 {
-    let mut attr_data = Vec::new();
-    attr_data.reserve(points.len());
+    let mut attr_data = Vec::with_capacity(points.len());
     for attr in points.iter_attribute::<T>(attribute) {
         attr_data.push(map_fn(attr));
     }

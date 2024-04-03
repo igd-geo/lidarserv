@@ -3,14 +3,13 @@ use crate::geometry::points::PointType;
 use crate::geometry::points::WithAttr;
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
-use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
-use crate::index::{Node, NodeId, Reader, Update};
+use crate::index::{Node, NodeId, Query, Reader, Update};
 use crate::las::I32LasReadWrite;
 use crate::las::LasPointAttributes;
 use crate::lru_cache::pager::PageDirectory;
-use crate::query::{Query, QueryExt};
+use crate::query::SpatialQueryExt;
 use crossbeam_channel::Receiver;
 use log::debug;
 use std::collections::{HashMap, HashSet};
@@ -20,11 +19,7 @@ use tracy_client::span;
 pub struct OctreeReader<Point, Sampl, SamplF> {
     pub(super) inner: Arc<Inner<Point, Sampl, SamplF>>,
     update_cnt: u64,
-    query: Box<dyn Query + Send + Sync>,
-    filter: Option<LasPointAttributeBounds>,
-    enable_attribute_acceleration: bool,
-    enable_histogram_acceleration: bool,
-    enable_point_filtering: bool,
+    query: Query,
     changed_nodes_receiver: Receiver<LeveledGridCell>,
     loaded: HashSet<LeveledGridCell>,
     frontier: HashMap<LeveledGridCell, FrontierElement>,
@@ -53,10 +48,7 @@ where
 {
     /// Creates a new reader for the given octree and query.
     /// All root nodes of the octree are added to the reader.
-    pub(super) fn new<Q>(query: Q, inner: Arc<Inner<Point, Sampl, SamplF>>) -> Self
-    where
-        Q: Query + Send + Sync + 'static,
-    {
+    pub(super) fn new(inner: Arc<Inner<Point, Sampl, SamplF>>, query: Query) -> Self {
         // add subscription to changes
         let changed_nodes_receiver = {
             let (changed_nodes_sender, changed_nodes_receiver) = crossbeam_channel::unbounded();
@@ -68,11 +60,7 @@ where
         let mut reader = OctreeReader {
             inner,
             update_cnt: 0,
-            query: Box::new(query),
-            filter: None,
-            enable_attribute_acceleration: false,
-            enable_histogram_acceleration: false,
-            enable_point_filtering: false,
+            query,
             changed_nodes_receiver,
             loaded: HashSet::new(),
             frontier: HashMap::default(),
@@ -105,52 +93,43 @@ where
     }
 
     fn cell_matches_query(&self, cell: &LeveledGridCell) -> bool {
-        Self::cell_matches_query_impl(
-            cell,
-            self.query.as_ref(),
-            &self.filter,
-            self.inner.as_ref(),
-            self.enable_attribute_acceleration,
-            self.enable_histogram_acceleration,
-        )
+        Self::cell_matches_query_impl(cell, &self.query, self.inner.as_ref())
     }
 
     /// Checks, if the given cell matches the query and filter.
     fn cell_matches_query_impl(
         cell: &LeveledGridCell,
-        query: &(dyn Query + Send + Sync),
-        filter: &Option<LasPointAttributeBounds>,
+        query: &Query,
         inner: &Inner<Point, Sampl, SamplF>,
-        enable_attribute_acceleration: bool,
-        enable_histogram_acceleration: bool,
     ) -> bool {
         span!("cell_matches_query_impl");
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
         let lod = cell.lod;
 
         // check spatial query for cell
-        if !query.matches_node(&bounds, &inner.coordinate_system, &lod) {
+        if !query
+            .spatial
+            .matches_node(&bounds, &inner.coordinate_system, &lod)
+        {
             debug!("Cell {:?} does not match query", cell);
             return false;
         }
 
         // check attributes for cell
-        if enable_attribute_acceleration {
+        if query.enable_attribute_acceleration {
             span!("cell_matches_query_impl::attribute_acceleration");
-            if let Some(filter) = filter {
-                let attribute_index = inner.attribute_index.as_ref().unwrap();
-                if !attribute_index.cell_overlaps_with_bounds(
-                    lod,
-                    &cell.pos,
-                    filter,
-                    enable_histogram_acceleration,
-                ) {
-                    debug!(
-                        "Cell {:?} does not match attribute filter {:?}",
-                        cell, filter
-                    );
-                    return false;
-                }
+            let attribute_index = inner.attribute_index.as_ref().unwrap();
+            if !attribute_index.cell_overlaps_with_bounds(
+                lod,
+                &cell.pos,
+                &query.attributes,
+                query.enable_histogram_acceleration,
+            ) {
+                debug!(
+                    "Cell {:?} does not match attribute filter {:?}",
+                    cell, query.attributes
+                );
+                return false;
             }
         }
         debug!("Cell {:?} matches query and filter", cell);
@@ -165,13 +144,13 @@ where
         for point in points {
             if self
                 .query
+                .spatial
                 .matches_point(point, &self.inner.coordinate_system)
+                && self
+                    .query
+                    .attributes
+                    .is_attributes_in_bounds(point.attribute())
             {
-                if let Some(filter) = &self.filter {
-                    if !filter.is_attributes_in_bounds(&point.attribute()) {
-                        continue;
-                    }
-                }
                 filtered_points.push(point.clone());
             }
         }
@@ -226,6 +205,13 @@ where
         }
     }
 
+    fn fetch_query(&mut self, queries: &mut Receiver<Query>) {
+        if let Some(q) = queries.try_iter().last() {
+            self.set_query(q);
+            debug!("Updating query");
+        }
+    }
+
     pub fn update(&mut self) {
         let changes = HashSet::new();
         self.process_changes(changes);
@@ -243,35 +229,23 @@ where
         &mut self,
         other: &Receiver<T>,
     ) -> Option<Result<T, crossbeam_channel::RecvError>> {
-        loop {
-            crossbeam_channel::select! {
-                recv(other) -> result => return Some(result),
-                recv(self.changed_nodes_receiver) -> u => {
-                    let mut changes = HashSet::new();
-                    if let Ok(update) = u {
-                        changes.insert(update);
-                    }
-                    self.process_changes(changes);
-                    return None
+        crossbeam_channel::select! {
+            recv(other) -> result => Some(result),
+            recv(self.changed_nodes_receiver) -> u => {
+                let mut changes = HashSet::new();
+                if let Ok(update) = u {
+                    changes.insert(update);
                 }
+                self.process_changes(changes);
+                None
             }
         }
     }
 
     /// Sets the query
-    pub fn set_query(&mut self, q: Box<dyn Query + Send + Sync + 'static>) {
+    pub fn set_query(&mut self, q: Query) {
         debug!("Setting new query");
         self.query = q;
-        self.update_new_query();
-    }
-
-    /// Sets the filter
-    pub fn set_filter(&mut self, f: (Option<LasPointAttributeBounds>, bool, bool, bool)) {
-        debug!("Setting new filter");
-        self.filter = f.0;
-        self.enable_attribute_acceleration = f.1;
-        self.enable_histogram_acceleration = f.2;
-        self.enable_point_filtering = f.3;
         self.update_new_query();
     }
 
@@ -284,14 +258,8 @@ where
                 frontier, query, ..
             } = self;
             for (cell, elem) in frontier {
-                elem.matches_query = Self::cell_matches_query_impl(
-                    cell,
-                    query.as_ref(),
-                    &self.filter,
-                    self.inner.as_ref(),
-                    self.enable_attribute_acceleration,
-                    self.enable_histogram_acceleration,
-                );
+                elem.matches_query =
+                    Self::cell_matches_query_impl(cell, query, self.inner.as_ref());
             }
         }
 
@@ -345,10 +313,10 @@ where
         let node = self.inner.page_cache.load_or_default(&reload).unwrap();
         let loader = &self.inner.loader;
         let mut points = node.get_points(loader).unwrap();
-        if self.enable_point_filtering {
+        if self.query.enable_point_filtering {
             points = self.filter_points(&points);
         }
-        Some((reload, points, self.inner.coordinate_system.clone()))
+        Some((reload, points, self.inner.coordinate_system))
     }
 
     /// Loads a node from the load queue.
@@ -390,10 +358,10 @@ where
         let node = self.inner.page_cache.load_or_default(&load).unwrap();
         let loader = &self.inner.loader;
         let mut points = node.get_points(loader).unwrap();
-        if self.enable_point_filtering {
+        if self.query.enable_point_filtering {
             points = self.filter_points(&points);
         }
-        Some((load, points, self.inner.coordinate_system.clone()))
+        Some((load, points, self.inner.coordinate_system))
     }
 
     /// Removes a node from the remove queue.
@@ -447,61 +415,16 @@ where
             || !self.reload_queue.is_empty()
             || !self.remove_queue.is_empty()
     }
-}
 
-impl<Point, Sampl, SamplF> Reader<Point> for OctreeReader<Point, Sampl, SamplF>
-where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
-    Sampl: Sampling<Point = Point>,
-    SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
-{
-    type NodeId = LeveledGridCell;
-    type Node = OctreePage<Sampl, Point>;
-
-    fn set_query<Q: Query + 'static + Send + Sync>(&mut self, query: Q) {
-        OctreeReader::set_query(self, Box::new(query))
-    }
-
-    fn set_filter(&mut self, filter: (Option<LasPointAttributeBounds>, bool, bool, bool)) {
-        OctreeReader::set_filter(self, filter)
-    }
-
-    fn fetch_query_filter(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
-    ) {
-        if let Some(q) = queries.try_iter().last() {
-            self.set_query(q);
-            debug!("Updating query");
-        }
-        if let Some(f) = filters.try_iter().last() {
-            self.set_filter(f);
-            debug!("Updating filter");
-        }
-    }
-
-    fn updates_available(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
-    ) -> bool {
-        self.fetch_query_filter(queries, filters);
+    fn try_update(&mut self, queries: &mut Receiver<Query>) -> bool {
+        self.fetch_query(queries);
         self.update();
         self.is_dirty()
     }
 
-    fn update(&mut self) {
-        OctreeReader::update(self)
-    }
-
-    fn blocking_update(
-        &mut self,
-        queries: &mut Receiver<Box<dyn Query + Send + Sync>>,
-        filters: &mut Receiver<(Option<LasPointAttributeBounds>, bool, bool, bool)>,
-    ) -> bool {
+    fn blocking_update(&mut self, queries: &mut Receiver<Query>) -> bool {
         // make sure we've go the most recent query
-        self.fetch_query_filter(queries, filters);
+        self.fetch_query(queries);
 
         // make sure we have the most recent updates from the writer
         self.update();
@@ -518,11 +441,29 @@ where
                 None => (),
                 Some(Ok(query)) => {
                     self.set_query(query);
-                    self.fetch_query_filter(queries, filters);
+                    self.fetch_query(queries);
                 }
                 Some(Err(_)) => return false,
             }
         }
+    }
+}
+
+impl<Point, Sampl, SamplF> Reader<Point> for OctreeReader<Point, Sampl, SamplF>
+where
+    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
+    Sampl: Sampling<Point = Point>,
+    SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
+{
+    type NodeId = LeveledGridCell;
+    type Node = OctreePage<Sampl, Point>;
+
+    fn try_update(&mut self, queries: &mut Receiver<Query>) -> bool {
+        OctreeReader::try_update(self, queries)
+    }
+
+    fn blocking_update(&mut self, queries: &mut Receiver<Query>) -> bool {
+        OctreeReader::blocking_update(self, queries)
     }
 
     fn load_one(&mut self) -> Option<(Self::NodeId, Vec<Point>, I32CoordinateSystem)> {
@@ -561,7 +502,7 @@ where
     }
 
     fn points(&self) -> Vec<Point> {
-        self.page.get_points(&self.loader).unwrap_or(vec![])
+        self.page.get_points(&self.loader).unwrap_or_default()
     }
 }
 

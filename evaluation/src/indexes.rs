@@ -34,10 +34,8 @@ pub fn create_octree_index(
     if settings.enable_attribute_index {
         let mut attribute_index_file_name = data_folder.clone();
         attribute_index_file_name.push("attribute_index.bin");
-        attribute_index = Some(AttributeIndex::new(
-            max_lod.level() as usize,
-            attribute_index_file_name,
-        ));
+        attribute_index =
+            Some(AttributeIndex::new(max_lod.level() as usize, attribute_index_file_name).unwrap());
         if settings.enable_histogram_acceleration {
             attribute_index
                 .as_mut()

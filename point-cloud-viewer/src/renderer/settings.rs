@@ -174,7 +174,7 @@ pub struct AnimationSettings {
 }
 
 /// Defines, if the animation starts or stops smoothly.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub enum AnimationEasing {
     /// The animation will run at constant speed. No smooth starting or stopping.
     Linear,
@@ -186,6 +186,7 @@ pub enum AnimationEasing {
     EaseOut,
 
     /// The animation will both start and stop smoothly.
+    #[default]
     EaseInOut,
 }
 
@@ -195,12 +196,6 @@ impl Default for AnimationSettings {
             duration: Duration::from_secs_f64(0.75),
             easing: Default::default(),
         }
-    }
-}
-
-impl Default for AnimationEasing {
-    fn default() -> Self {
-        AnimationEasing::EaseInOut
     }
 }
 
