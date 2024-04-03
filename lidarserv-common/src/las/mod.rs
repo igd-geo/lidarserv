@@ -639,7 +639,7 @@ mod tests {
         // Init
         println!("TESTING {:?} POINTS", num_points);
         let pointcloud = las_crate_pointcloud(num_points);
-        let path = Path::new("test.las");
+        let path = Path::new("test_write_read_las_crate.las");
 
         // Init Writing
         let init_time = std::time::Instant::now();
@@ -726,7 +726,7 @@ mod tests {
     fn write_read_custom(num_points: usize) -> Value {
         // Init
         let pointcloud = custom_pointcloud(num_points);
-        let path = Path::new("test.las");
+        let path = Path::new("test_write_read_custom.las");
 
         // Writing
         let init_time = std::time::Instant::now();

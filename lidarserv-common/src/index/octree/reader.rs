@@ -3,10 +3,8 @@ use crate::geometry::points::PointType;
 use crate::geometry::points::WithAttr;
 use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
-use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
-use crate::index::{Node, NodeId, Query, Reader, Update};
-use crate::las::I32LasReadWrite;
+use crate::index::{NodeId, Query, Reader, Update};
 use crate::las::LasPointAttributes;
 use crate::lru_cache::pager::PageDirectory;
 use crate::query::SpatialQueryExt;
@@ -33,11 +31,6 @@ pub struct OctreeReader<Point, Sampl, SamplF> {
 struct FrontierElement {
     matches_query: bool,
     exists: bool,
-}
-
-pub struct OctreePage<Sampl, Point> {
-    page: Arc<Page<Sampl, Point>>,
-    loader: I32LasReadWrite,
 }
 
 impl<Point, Sampl, SamplF> OctreeReader<Point, Sampl, SamplF>
@@ -456,7 +449,6 @@ where
     SamplF: SamplingFactory<Point = Point, Sampling = Sampl>,
 {
     type NodeId = LeveledGridCell;
-    type Node = OctreePage<Sampl, Point>;
 
     fn try_update(&mut self, queries: &mut Receiver<Query>) -> bool {
         OctreeReader::try_update(self, queries)
@@ -476,33 +468,6 @@ where
 
     fn update_one(&mut self) -> Option<Update<Self::NodeId, I32CoordinateSystem, Vec<Point>>> {
         OctreeReader::reload_one(self).map(|(n, d, c)| (n, c, vec![(n, d)]))
-    }
-}
-
-impl<Sampl, Point> OctreePage<Sampl, Point>
-where
-    Point: PointType<Position = I32Position> + Clone,
-    Sampl: Sampling<Point = Point>,
-{
-    pub fn from_page(page: Arc<Page<Sampl, Point>>, loader: &I32LasReadWrite) -> Self {
-        OctreePage {
-            page,
-            loader: loader.clone(),
-        }
-    }
-}
-
-impl<Sampl, Point> Node<Point> for OctreePage<Sampl, Point>
-where
-    Point: PointType<Position = I32Position> + WithAttr<LasPointAttributes> + Clone,
-    Sampl: Sampling<Point = Point>,
-{
-    fn las_files(&self) -> Vec<Arc<Vec<u8>>> {
-        vec![self.page.get_binary(&self.loader)]
-    }
-
-    fn points(&self) -> Vec<Point> {
-        self.page.get_points(&self.loader).unwrap_or_default()
     }
 }
 

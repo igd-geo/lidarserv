@@ -5,7 +5,6 @@ use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::query::empty::EmptyQuery;
 use crate::query::SpatialQuery;
 use std::error::Error;
-use std::sync::Arc;
 
 pub mod octree;
 
@@ -47,7 +46,6 @@ where
     Point: PointType,
 {
     type NodeId: NodeId;
-    type Node: Node<Point>;
 
     fn try_update(&mut self, queries: &mut crossbeam_channel::Receiver<Query>) -> bool;
 
@@ -62,12 +60,6 @@ where
 
 pub type Update<NodeId, CoordinateSystem, NodeData> =
     (NodeId, CoordinateSystem, Vec<(NodeId, NodeData)>);
-
-/// Currently only implemented for [OctreePage].
-pub trait Node<Point> {
-    fn las_files(&self) -> Vec<Arc<Vec<u8>>>;
-    fn points(&self) -> Vec<Point>;
-}
 
 /// Currently only implemented for [LeveledGridCell].
 pub trait NodeId {
