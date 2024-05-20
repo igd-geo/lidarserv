@@ -27,6 +27,7 @@ pub struct Base {
     pub enable_cooldown: bool,
     pub indexing_timeout_seconds: u64,
     pub use_existing_index: bool,
+    pub output_queries: bool,
 
     #[serde(rename = "output_file")]
     pub output_file_pattern: String,

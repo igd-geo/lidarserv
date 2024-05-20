@@ -101,6 +101,26 @@ pub fn filter_apply_defaults(bounds : LasPointAttributeBounds) -> LasPointAttrib
     attribute_bounds
 }
 
+/// Time Filter which only accepts specific time range (around 20M points) (AHN4 dataset)
+pub fn time_range() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: None,
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: Some((270109229.0, 270109237.0)),// shifted by 270109201.59 in CloudCompare --> (27,41; 35,41)
+        // new shift 138m by: 270100000.00 --> 9229 bis 9237
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
 /// Classification Filter, that only accepts Ground Points (AHN4 Dataset)
 pub fn ground_classification() -> LasPointAttributeBounds {
     LasPointAttributeBounds {
@@ -131,6 +151,48 @@ pub fn building_classification() -> LasPointAttributeBounds {
         classification: Some((6,6)),
         scan_angle_rank: None,
         user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+/// Classification Filter, that only accepts Points, NOT classified as cars (AHN4 dataset)
+pub fn vegetation_classification() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: Some((1,1)),
+        scan_angle_rank: None,
+        user_data: None,
+        point_source_id: None,
+        gps_time: None,
+        color_r: None,
+        color_g: None,
+        color_b: None,
+    }
+}
+
+
+/// Normal Filter on UserData
+/// (Modified AHN4 dataset)
+/// Assumes, that NormalX is stored in UserData
+/// Filters for upwards pointing x axis
+pub fn normal_x_vertical() -> LasPointAttributeBounds {
+    LasPointAttributeBounds {
+        intensity: None,
+        return_number: None,
+        number_of_returns: None,
+        scan_direction: None,
+        edge_of_flight_line: None,
+        classification: None,
+        scan_angle_rank: None,
+        user_data: Some((107, 147)),
         point_source_id: None,
         gps_time: None,
         color_r: None,
@@ -188,47 +250,6 @@ pub fn one_return() -> LasPointAttributeBounds {
         classification: None,
         scan_angle_rank: None,
         user_data: None,
-        point_source_id: None,
-        gps_time: None,
-        color_r: None,
-        color_g: None,
-        color_b: None,
-    }
-}
-
-/// Time Filter which only accepts specific time range (around 20M points) (AHN4 dataset)
-pub fn time_range() -> LasPointAttributeBounds {
-    LasPointAttributeBounds {
-        intensity: None,
-        return_number: None,
-        number_of_returns: None,
-        scan_direction: None,
-        edge_of_flight_line: None,
-        classification: None,
-        scan_angle_rank: None,
-        user_data: None,
-        point_source_id: None,
-        gps_time: Some((270109229.0, 270109237.0)),
-        color_r: None,
-        color_g: None,
-        color_b: None,
-    }
-}
-
-/// Normal Filter on UserData
-/// (Modified AHN4 dataset)
-/// Assumes, that NormalX is stored in UserData
-/// Filters for upwards pointing x axis
-pub fn normal_x_vertical() -> LasPointAttributeBounds {
-    LasPointAttributeBounds {
-        intensity: None,
-        return_number: None,
-        number_of_returns: None,
-        scan_direction: None,
-        edge_of_flight_line: None,
-        classification: None,
-        scan_angle_rank: None,
-        user_data: Some((107, 147)),
         point_source_id: None,
         gps_time: None,
         color_r: None,

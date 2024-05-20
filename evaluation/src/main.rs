@@ -310,7 +310,7 @@ where
     let result_query_perf = if run.query_perf.single().is_some() {
         if enable_cooldown {processor_cooldown()};
         info!("Measuring query perf...");
-        let sensorpos_query_perf = measure_query_performance(index);
+        let sensorpos_query_perf = measure_query_performance(index, base_config.output_queries);
         info!("Results: {}", &sensorpos_query_perf);
         sensorpos_query_perf
     } else {
