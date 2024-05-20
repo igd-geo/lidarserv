@@ -109,22 +109,9 @@ def main():
             labels=query_pretty_names(),
         )
 
-        plot_query_by_num_points_stacked(
-            test_runs=data["runs"]["test"],
-            nr_points=data["env"]["input_file_nr_points"],
-            filename=join(output_folder, "query-by-num-points-stacked.pdf"),
-        )
-
         plot_false_positive_rates(
             test_runs=data["runs"]["test"],
             filename=join(output_folder, "false-positive-rates.pdf"),
-            queries=query_names(),
-            labels=query_pretty_names(),
-        )
-
-        plot_true_negative_rates(
-            test_runs=data["runs"]["test"],
-            filename=join(output_folder, "true-negative-rates.pdf"),
             queries=query_names(),
             labels=query_pretty_names(),
         )
@@ -513,12 +500,15 @@ font_prop = font_manager.FontProperties(family='Times New Roman', style='normal'
 
 def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, labels=None, title=None):
     fig, ax = plt.subplots(figsize=figsize)
-    subqueries = ["only_node_acc", "only_full_acc", "raw_point_filtering"]
+    subqueries = ["only_node_acc", "raw_point_filtering"]
 
-    bar_width = 0.5
+    bar_width = 0.3
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+    colors = ['#DB4437', '#F4B400', '#4285F4']
+
+    # plot horizontal line for total number of points
+    plt.axhline(y=nr_points/1e6, color=colors[0], linestyle='-')
 
     for run in test_runs:
         insertion_rate_block = run["results"]["insertion_rate"]
@@ -528,7 +518,7 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
         for p in range(len(queries)):
 
             # number of points per subquery
-            plt.bar(p, nr_points, bar_width, label="nr_points", color="#DB4437")
+            # plt.bar(p, nr_points, bar_width, label="nr_points", color="#DB4437")
             for i, subquery in enumerate(subqueries):
                 nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
 
@@ -536,17 +526,17 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
                 for j in range(len(nr_points_subquery)):
                     nr_points_subquery[j] = nr_points_subquery[j] / 1e6
 
-                plt.bar([p + (i + 1) * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i + 1])
+                plt.bar([p + (i + 0.75) * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i+1])
             
 
         ax.set_ylabel('Number of Points', fontname=font, fontsize=fontsize)  # Adjust fontsize as needed
         plt.ticklabel_format(style='plain')
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right', fontname=font, fontsize=fontsize)
+        plt.tick_params(bottom=False)
         plt.yticks(fontname=font, fontsize=fontsize)
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d M'))
 
-        custom_legend_labels = ['All Points', 'Range Filter', 'Range Filter + Histogram Filter',
-                                'Sequential Point Filter']  # Custom legend labels
+        custom_legend_labels = ['Total Number of Points', 'Range Filter', 'Sequential Point Filter']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
@@ -562,12 +552,15 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
 
 def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=None, title=None):
     fig, ax = plt.subplots(figsize=figsize)
-    subqueries = ["only_node_acc", "only_full_acc"]
+    subqueries = ["only_node_acc"]
 
-    bar_width = 0.15
+    bar_width = 0.3
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+    colors = ['#DB4437', '#F4B400', '#4285F4']
+
+    # plot horizontal line for total number of nodes
+    plt.axhline(y=nr_nodes/1e3, color=colors[0], linestyle='-')
 
     for run in test_runs:
         nr_nodes = run["results"]["index_info"]["directory_info"]["num_nodes"]/1e3
@@ -575,14 +568,14 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
         for p in range(len(queries)):
 
             # number of nodes per subquery
-            plt.bar(p, nr_nodes, bar_width, label="nr_nodes", color="#DB4437")
+            # plt.bar(p, nr_nodes, bar_width, label="nr_nodes", color="#DB4437")
             for i, subquery in enumerate(subqueries):
                 nr_nodes_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_nodes"]]
 
                 for j in range(len(nr_nodes_subquery)):
                     nr_nodes_subquery[j] = nr_nodes_subquery[j] / 1e3
 
-                plt.bar([p + (i + 1) * bar_width], nr_nodes_subquery, bar_width, label=subquery, color=colors[i + 1])
+                plt.bar([p + (i + 0.75) * bar_width], nr_nodes_subquery, bar_width, label=subquery, color=colors[i + 1])
 
             # check if nr_non_empty_nodes exist in json
             if "nr_non_empty_nodes" in run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"]:
@@ -590,18 +583,18 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
                                           "nr_non_empty_nodes"]]
                 for j in range(len(nr_non_empty_nodes)):
                     nr_non_empty_nodes[j] = nr_non_empty_nodes[j] / 1e3
-                plt.bar([p + 3 * bar_width], nr_non_empty_nodes, bar_width, label="nr_non_empty_nodes",
+                plt.bar([p + 1.75 * bar_width], nr_non_empty_nodes, bar_width, label="nr_non_empty_nodes",
                         color=colors[i + 2])
 
         # plt.xlabel('Queries')
         plt.ylabel('Number of Nodes', fontname=font, fontsize=fontsize)
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right', fontname=font, fontsize=fontsize)
+        plt.tick_params(bottom=False)
         plt.yticks(fontname=font, fontsize=fontsize)
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d K'))
 
-        custom_legend_labels = ['All Nodes', 'Range Filter', 'Range Filter + Histogram Filter',
-                                'Nodes Containing Searched Points']  # Custom legend labels
+        custom_legend_labels = ['Total Number of Nodes', 'Range Filter', 'Nodes Containing Searched Points']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
@@ -614,78 +607,14 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
         fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
         plt.close(fig)
 
-
-def plot_query_by_num_points_stacked(test_runs, nr_points, filename, title=None):
-    fig, ax = plt.subplots(figsize=figsize)
-
-    queries = query_names()
-    subqueries = ["raw_point_filtering", "only_full_acc", "only_node_acc"]
-
-    bar_width = 0.6
-    index = range(len(queries))
-
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
-    colors = colors[::-1]
-
-    for run in test_runs:
-        # plt.axhline(y=nr_points, color='#DB4437', linestyle='-')
-        insertion_rate_block = run["results"]["insertion_rate"]
-        if insertion_rate_block is not None:
-            nr_points = insertion_rate_block["nr_points"]
-        for p in range(len(queries)):
-            bottom = 0
-            for i, subquery in enumerate(subqueries):
-                nr_points_subquery = run["results"]["query_performance"][queries[p]][subquery]["nr_points"]
-
-                plt.bar(
-                    p,
-                    nr_points_subquery - bottom,
-                    bar_width,
-                    bottom=bottom,
-                    label=subquery if i == 0 else "",
-                    color=colors[i],
-                )
-                bottom += nr_points_subquery - bottom
-            plt.bar(
-                p,
-                nr_points - bottom,
-                bar_width,
-                bottom=bottom,
-                label=subquery if i == 0 else "",
-                color=colors[i + 1],
-            )
-
-        plt.xlabel('Queries')
-        plt.ylabel('Number of Points')
-        # plt.title(title)
-        labels = query_pretty_names()
-        plt.xticks([p for p in index], labels, rotation=90, ha='right')
-
-        custom_legend_labels = ['Sequential Point Filter', 'Histogram Filter', 'Bounds Filter',
-                                'All Points']  # Custom legend labels
-        custom_legend_labels = custom_legend_labels[::-1]
-        colors = colors[::-1]
-        custom_legend_colors = colors[0:4]  # Use the same colors for custom legend
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                                 zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor, prop=font_prop)
-
-        plt.tight_layout()
-
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
-
-
 def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, title=None):
     fig, ax = plt.subplots(figsize=figsize)
-    subqueries = ["raw_spatial", "only_node_acc", "only_full_acc", "point_filtering_with_full_acc"]
+    subqueries = ["raw_spatial", "only_node_acc", "only_full_acc"]
 
-    bar_width = 0.15
+    bar_width = 0.4
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+    colors = ['#DB4437', '#0F9D58']
 
     for run in test_runs:
         for p in range(len(queries)):
@@ -728,20 +657,20 @@ def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, ti
             false_nodes_full_percentage = false_nodes_full / false_nodes * 100
 
             # plot it
-            plt.bar([p + 0 * bar_width], false_points_node_percentage, bar_width, color=colors[0])
-            plt.bar([p + 1 * bar_width], false_points_full_percentage, bar_width, color=colors[1])
-            plt.bar([p + 2.5 * bar_width], false_nodes_node_percentage, bar_width, color=colors[2])
-            plt.bar([p + 3.5 * bar_width], false_nodes_full_percentage, bar_width, color=colors[3])
+            plt.bar([p + 1*bar_width + 0 * bar_width], false_points_node_percentage, bar_width, color=colors[0])
+            # plt.bar([p + 1 * bar_width], false_points_full_percentage, bar_width, color=colors[1])
+            plt.bar([p + 1*bar_width + 1 * bar_width], false_nodes_node_percentage, bar_width, color=colors[1])
+            # plt.bar([p + 3.5 * bar_width], false_nodes_full_percentage, bar_width, color=colors[3])
 
         # plt.xlabel('Queries')
         plt.ylabel('False Positive Rate', fontname=font, fontsize=fontsize)
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right', fontname=font, fontsize=fontsize)
+        plt.tick_params(bottom=False)
         plt.yticks(fontname=font, fontsize=fontsize)
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d%%'))
 
-        custom_legend_labels = ['False Positive Points - Range Filtering', 'False Positive Points - Histogram Filtering', 'False Positive Nodes - Range Filtering',
-                                'False Positive Nodes - Histogram Filtering']  # Custom legend labels
+        custom_legend_labels = ['False Positive Points - Range Filtering', 'False Positive Nodes - Range Filtering']  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
@@ -753,69 +682,6 @@ def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, ti
             ax.set_title(title)
         fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
         plt.close(fig)
-
-def plot_true_negative_rates(test_runs, filename, queries=None, labels=None, title=None):
-    fig, ax = plt.subplots(figsize=figsize)
-    subqueries = ["raw_spatial", "only_node_acc", "only_full_acc", "point_filtering_with_full_acc"]
-
-    bar_width = 0.15
-    index = range(len(queries))
-
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
-
-    for run in test_runs:
-        for p in range(len(queries)):
-            # total number of points
-            points_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_points"]
-            nodes_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_nodes"]
-
-            # number of points for node acceleration
-            points_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_points"]
-            nodes_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_nodes"]
-
-            # number of points for hist acceleration
-            points_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_points"]
-            nodes_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_nodes"]
-
-            # ground truth (minimum)
-            points_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
-                "nr_points"]
-            nodes_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
-                "nr_non_empty_nodes"]
-
-            # true negative percentage node acceleration
-            true_points_node_percentage = (points_total - points_node_acc) / points_total * 100
-            true_nodes_node_percentage = (nodes_total - nodes_node_acc) / nodes_total * 100
-
-            # true negative percentage hist acceleration
-            true_points_full_percentage = (points_total - points_full_acc) / points_total * 100
-            true_nodes_full_percentage = (nodes_total - nodes_full_acc) / nodes_total * 100
-
-            # plot it
-            plt.bar([p + 0 * bar_width], true_points_node_percentage, bar_width, color=colors[0])
-            plt.bar([p + 1 * bar_width], true_points_full_percentage, bar_width, color=colors[1])
-            plt.bar([p + 2.5 * bar_width], true_nodes_node_percentage, bar_width, color=colors[2])
-            plt.bar([p + 3.5 * bar_width], true_nodes_full_percentage, bar_width, color=colors[3])
-
-        # plt.xlabel('Queries')
-        plt.ylabel('True Negative Rate | Percentage')
-        # plt.title(title)
-        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
-
-        custom_legend_labels = ['True Negative Points - Range Filter', 'True Negative Points - Histogram Filter', 'True Negative Nodes - Range Filter',
-                                'True Negative Nodes - Histogram Filter']  # Custom legend labels
-        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                                 zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor, prop=font_prop)
-
-        plt.tight_layout()
-
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
-
 
 def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=None):
     fig, ax = plt.subplots(figsize=figsize)
@@ -826,13 +692,12 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
         labels = query_pretty_names()
     # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
     #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
-    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
-                  "point_filtering_with_full_acc"]
+    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc"]
 
     bar_width = 1 / (len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#9637DB', '#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
+    colors = ['#DB4437', '#4285F4', '#F4B400']
 
     for run in test_runs:
         for p in range(len(queries)):
@@ -851,6 +716,7 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
         plt.ylabel('Execution Time', fontname=font, fontsize=fontsize)
         # plt.title(title)
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, fontname=font, fontsize=fontsize, ha='right')
+        plt.tick_params(bottom=False)
         plt.yticks(fontname=font, fontsize=fontsize)
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%ds'))
 
@@ -858,7 +724,7 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
             'Spatial Query',
             'Spatial Query + Sequential Point Filter',
             'Spatial Query + Range Filter + Sequential Point Filter',
-            'Spatial Query + Range Filter + Histogram Filter + Sequential Point Filter',
+            # 'Spatial Query + Range Filter + Histogram Filter + Sequential Point Filter',
             # 'Bounds Filter',
             # 'Bounds Filter\nHistogram Filter',
         ]  # Custom legend labels
@@ -1368,7 +1234,7 @@ def query_names():
         'time_range',
         'ground_classification',
         'building_classification',
-        'powerline_classification',
+        # 'powerline_classification',
         'vegetation_classification',
         'normal_x_vertical',
         'high_intensity',
@@ -1382,7 +1248,7 @@ def query_pretty_names():
         'Time\nSmall Range',
         'Classification\nGround',
         'Classification\nBuilding',
-        'Classification\nPowerline',
+        # 'Classification\nPowerline',
         'Classification\nVegetation',
         'Normal\nVertical',
         'Intensity\nHigh Value',
