@@ -35,6 +35,7 @@ INPUT_FILES_INSERTION_SPEED = [
     "2024-02-01_insertion_speed/insertion_speed_v1_2024-02-01_2.json",
     "2024-02-01_insertion_speed/insertion_speed_v1_2024-02-01_6.json",
 ]
+
 def main():
     # plot style
     # plt.style.use("seaborn-notebook")
@@ -136,6 +137,39 @@ def main():
             test_runs=data["runs"],
             filename=join(output_folder, f"insertion-speed-comparison.pdf"),
         )
+
+
+    # comparison lidarserv vs pgPointCloud
+    input_file_lidarserv = "2024-23-05_pgPointCloud-query-comparison/query_performance_v1_2024-01-25_2.json"
+    input_file_pg = "2024-23-05_pgPointCloud-query-comparison/results_ahn4_200t_2024-05-23T16:12:08.716977+00:00.json"
+
+    with open(input_file_lidarserv) as l:
+        print("Reading file: ", input_file_lidarserv)
+        lidarserv_data = json.load(l)
+
+    with open(input_file_pg) as p:
+        print("Reading file: ", input_file_pg)
+        pg_data = json.load(p)
+
+    output_folder = f"{input_file_lidarserv}.diagrams"
+    os.makedirs(output_folder, exist_ok=True)
+
+    plot_query_by_time_pg(
+        lidarserv_data=lidarserv_data["runs"]["test"],
+        pg_data=pg_data["results"],
+        outputfile=join(output_folder, "query-by-time-pg.pdf"),
+        queries=query_names(),
+        labels=query_pretty_names(),
+    )
+
+    plot_query_by_num_points_pg(
+        lidarserv_data=lidarserv_data["runs"]["test"],
+        pg_data=pg_data["results"],
+        nr_points=lidarserv_data["env"]["input_file_nr_points"],
+        filename=join(output_folder, "query-by-num-points-pg.pdf"),
+        queries=query_names(),
+        labels=query_pretty_names(),
+    )
 
 def make_y_insertion_rate(ax, test_runs):
     ys = [i["results"]["insertion_rate"]["insertion_rate_points_per_sec"] for i in test_runs]
@@ -550,6 +584,72 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
         plt.close(fig)
 
 
+def plot_query_by_num_points_pg(lidarserv_data, pg_data, nr_points, filename, queries=None, labels=None, title=None):
+    fig, ax = plt.subplots(figsize=figsize)
+    subqueries = ["only_node_acc", "raw_point_filtering"]
+
+    bar_width = 0.15
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#F4B400', '#4285F4', '#0F9D58']
+
+    # plot horizontal line for total number of points
+    plt.axhline(y=nr_points / 1e6, color=colors[0], linestyle='-')
+
+    for run in lidarserv_data:
+        insertion_rate_block = run["results"]["insertion_rate"]
+        if insertion_rate_block is not None:
+            nr_points = insertion_rate_block["nr_points"] / 1e6
+
+        for p in range(len(queries)):
+
+            # number of points per subquery
+            # plt.bar(p, nr_points, bar_width, label="nr_points", color="#DB4437")
+            for i, subquery in enumerate(subqueries):
+
+                # lidarserv
+                nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
+                # divide all points by 1e6 to get M/sec
+                for j in range(len(nr_points_subquery)):
+                    nr_points_subquery[j] = nr_points_subquery[j] / 1e6
+
+                plt.bar([p + (i) * bar_width], nr_points_subquery, bar_width, label=subquery,
+                        color=colors[i + 1])
+
+                # pgPointCloud
+                nr_points_subquery_pg = pg_data[queries[p]][subquery]["num_rows"]
+                nr_points_subquery_pg = nr_points_subquery_pg / 1e6 * 1000 # TODO REMOVE
+                print(nr_points_subquery_pg)
+                plt.bar([p + (i + 1) * bar_width], nr_points_subquery_pg, bar_width, label=subquery,
+                        color=colors[i + 2])
+
+        ax.set_ylabel('Number of Points', fontname=font, fontsize=fontsize)  # Adjust fontsize as needed
+        plt.ticklabel_format(style='plain')
+        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right', fontname=font,
+                   fontsize=fontsize)
+        plt.tick_params(bottom=False)
+        plt.yticks(fontname=font, fontsize=fontsize)
+        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d M'))
+
+        custom_legend_labels = [
+            'Total Number of Points',
+            'Lidarserv: Range Filter',
+            'pgPointCloud: Patch Filter',
+            'Sequential Point Filter',
+            ]  # Custom legend labels
+        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor, prop=font_prop)
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title, fontname=font, fontsize=fontsize)
+        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
+
+
 def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=None, title=None):
     fig, ax = plt.subplots(figsize=figsize)
     subqueries = ["only_node_acc"]
@@ -631,9 +731,9 @@ def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, ti
             nodes_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_nodes"]
 
             # ground truth (minimum)
-            points_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
+            points_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_node_acc"][
                 "nr_points"]
-            nodes_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
+            nodes_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_node_acc"][
                 "nr_non_empty_nodes"]
 
             # all not searched points (all negatives)
@@ -655,6 +755,71 @@ def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, ti
             # false positive percentage hist acceleration
             false_points_full_percentage = false_points_full / false_points * 100
             false_nodes_full_percentage = false_nodes_full / false_nodes * 100
+
+            # plot it
+            plt.bar([p + 1*bar_width + 0 * bar_width], false_points_node_percentage, bar_width, color=colors[0])
+            # plt.bar([p + 1 * bar_width], false_points_full_percentage, bar_width, color=colors[1])
+            plt.bar([p + 1*bar_width + 1 * bar_width], false_nodes_node_percentage, bar_width, color=colors[1])
+            # plt.bar([p + 3.5 * bar_width], false_nodes_full_percentage, bar_width, color=colors[3])
+
+        # plt.xlabel('Queries')
+        plt.ylabel('False Positive Rate', fontname=font, fontsize=fontsize)
+        # plt.title(title)
+        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right', fontname=font, fontsize=fontsize)
+        plt.tick_params(bottom=False)
+        plt.yticks(fontname=font, fontsize=fontsize)
+        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d%%'))
+
+        custom_legend_labels = ['False Positive Points - Range Filtering', 'False Positive Nodes - Range Filtering']  # Custom legend labels
+        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor, prop=font_prop)
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title)
+        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
+
+def plot_false_positive_rates_pg(lidarserv_data, pg_data, filename, queries=None, labels=None, title=None):
+    fig, ax = plt.subplots(figsize=figsize)
+    subqueries = ["raw_spatial", "only_node_acc", "only_full_acc"]
+
+    bar_width = 0.2
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#0F9D58', '#4285F4', '#F4B400']
+
+    for run in lidarserv_data:
+        for p in range(len(queries)):
+            # total number of points
+            lidarserv_points_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_points"]
+            lidarserv_nodes_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_nodes"]
+            pg_points_total = pg_data[queries[p]]["raw_spatial"]["num_rows"]
+
+            # number of points for node acceleration
+            lidarserv_points_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_points"]
+            lidarserv_nodes_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_nodes"]
+
+            # ground truth (minimum)
+            lidarserv_points_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_node_acc"][
+                "nr_points"]
+            lidarserv_nodes_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_node_acc"][
+                "nr_non_empty_nodes"]
+
+            # all not searched points (all negatives)
+            false_points = lidarserv_points_total - lidarserv_points_point_filtering
+            false_nodes = lidarserv_nodes_total - lidarserv_nodes_point_filtering
+
+            # all not searches points after node acceleration (false positives)
+            false_points_node = lidarserv_points_node_acc - lidarserv_points_point_filtering
+            false_nodes_node = lidarserv_nodes_node_acc - lidarserv_nodes_point_filtering
+
+            # false positive percentage node acceleration
+            false_points_node_percentage = false_points_node / false_points * 100
+            false_nodes_node_percentage = false_nodes_node / false_nodes * 100
 
             # plot it
             plt.bar([p + 1*bar_width + 0 * bar_width], false_points_node_percentage, bar_width, color=colors[0])
@@ -738,6 +903,69 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
         if title is not None:
             ax.set_title(title)
         fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
+
+
+def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queries=None, labels=None):
+    fig, ax = plt.subplots(figsize=figsize)
+
+    if queries is None:
+        queries = query_names()
+    if labels is None:
+        labels = query_pretty_names()
+    # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
+    #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
+    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc"]
+
+    bar_width = 1 / (2*len(subqueries) + 1)
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#4285F4', '#F4B400', '#0F9D58', '#FF6D00', '#7B1FA2']
+
+    for run in lidarserv_data:
+        for p in range(len(queries)):
+
+            # get number of points per subquery
+            for i, subquery in enumerate(subqueries):
+                # LIDARSERV
+                try:
+                    nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
+                    plt.bar([p + i * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
+                except:
+                    pass
+
+                # PGPOINTCLOUD
+                nr_points_subquery = pg_data[queries[p]][subquery]["mean"]
+                plt.bar([p + (i + len(subqueries)) * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i+3])
+
+
+
+        # plt.xlabel('Queries')
+        plt.ylabel('Execution Time', fontname=font, fontsize=fontsize)
+        # plt.title(title)
+        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, fontname=font, fontsize=fontsize, ha='right')
+        plt.tick_params(bottom=False)
+        plt.yticks(fontname=font, fontsize=fontsize)
+        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%ds'))
+
+        custom_legend_labels = [
+            'Lidarserv: Spatial Query',
+            'Lidarserv: Spatial Query + Sequential Point Filter',
+            'Lidarserv: Spatial Query + Range Filter + Sequential Point Filter',
+            'pgPointCloud: Spatial Query',
+            'pgPointCloud: Spatial Query + Sequential Point Filter',
+            'pgPointCloud: Spatial Query + Range Filter + Sequential Point Filter',
+        ]  # Custom legend labels
+        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor, prop=font_prop)
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title)
+        fig.savefig(outputfile, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
         plt.close(fig)
 
 

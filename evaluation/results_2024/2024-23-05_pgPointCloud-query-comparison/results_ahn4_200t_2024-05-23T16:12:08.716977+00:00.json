@@ -1,0 +1,284 @@
+{
+  "env": {
+    "duration:": 173,
+    "finished_at": "2024-05-23T16:15:02.212502+00:00",
+    "hostname": "eduroam463.igd.fraunhofer.de",
+    "iterations": 1,
+    "num_patches": 448,
+    "num_points": 178939,
+    "started_at": "2024-05-23T16:12:08.716977+00:00",
+    "table": "ahn4_200t"
+  },
+  "results": {
+    "vegetation_classification": {
+      "only_node_acc": {
+        "mean": 0.030627666,
+        "median": 0.030627666,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 0.026032,
+        "median": 0.026032,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 0.018726209,
+        "median": 0.018726209,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 8.927651834,
+        "median": 8.927651834,
+        "num_rows": 178939,
+        "pps": 20043.232344537686,
+        "stddev": null
+      }
+    },
+    "building_classification": {
+      "only_node_acc": {
+        "mean": 3.098829084,
+        "median": 3.098829084,
+        "num_rows": 62311,
+        "pps": 20107.917639513158,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 2.487838958,
+        "median": 2.487838958,
+        "num_rows": 35928,
+        "pps": 14441.449228242207,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 2.498388333,
+        "median": 2.498388333,
+        "num_rows": 35928,
+        "pps": 14380.470611971914,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 8.823211833,
+        "median": 8.823211833,
+        "num_rows": 178939,
+        "pps": 20280.48327376025,
+        "stddev": null
+      }
+    },
+    "ground_classification": {
+      "only_node_acc": {
+        "mean": 8.529319209,
+        "median": 8.529319209,
+        "num_rows": 168951,
+        "pps": 19808.26322242995,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 5.586194625,
+        "median": 5.586194625,
+        "num_rows": 76380,
+        "pps": 13672.992999236936,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 5.479917167,
+        "median": 5.479917167,
+        "num_rows": 76380,
+        "pps": 13938.166886893749,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 8.746638375,
+        "median": 8.746638375,
+        "num_rows": 178939,
+        "pps": 20458.03111186702,
+        "stddev": null
+      }
+    },
+    "high_intensity": {
+      "only_node_acc": {
+        "mean": 6.100009375,
+        "median": 6.100009375,
+        "num_rows": 119826,
+        "pps": 19643.576367454352,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 1.8345794579999999,
+        "median": 1.8345794579999999,
+        "num_rows": 13998,
+        "pps": 7630.086524167328,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 1.9174940839999999,
+        "median": 1.9174940839999999,
+        "num_rows": 13998,
+        "pps": 7300.152901019329,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 9.154773125,
+        "median": 9.154773125,
+        "num_rows": 178939,
+        "pps": 19545.97864488313,
+        "stddev": null
+      }
+    },
+    "low_intensity": {
+      "only_node_acc": {
+        "mean": 8.904406917,
+        "median": 8.904406917,
+        "num_rows": 172550,
+        "pps": 19378.045231802385,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 3.297410292,
+        "median": 3.297410292,
+        "num_rows": 31627,
+        "pps": 9591.466393106048,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 3.37310625,
+        "median": 3.37310625,
+        "num_rows": 31627,
+        "pps": 9376.224066466924,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 8.870639,
+        "median": 8.870639,
+        "num_rows": 178939,
+        "pps": 20172.052994152957,
+        "stddev": null
+      }
+    },
+    "mixed_ground_and_time": {
+      "only_node_acc": {
+        "mean": 0.0322335,
+        "median": 0.0322335,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 0.030174959,
+        "median": 0.030174959,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 0.016629292,
+        "median": 0.016629292,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 8.75244325,
+        "median": 8.75244325,
+        "num_rows": 178939,
+        "pps": 20444.462750443996,
+        "stddev": null
+      }
+    },
+    "normal_x_vertical": {
+      "only_node_acc": {
+        "mean": 8.925210916,
+        "median": 8.925210916,
+        "num_rows": 178939,
+        "pps": 20048.713882965007,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 7.472363083,
+        "median": 7.472363083,
+        "num_rows": 105718,
+        "pps": 14147.867123924121,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 7.345366708,
+        "median": 7.345366708,
+        "num_rows": 105718,
+        "pps": 14392.474086400644,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 9.173402458,
+        "median": 9.173402458,
+        "num_rows": 178939,
+        "pps": 19506.284698536227,
+        "stddev": null
+      }
+    },
+    "one_return": {
+      "only_node_acc": {
+        "mean": 8.442781,
+        "median": 8.442781,
+        "num_rows": 171352,
+        "pps": 20295.682192869863,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 3.47455225,
+        "median": 3.47455225,
+        "num_rows": 40044,
+        "pps": 11524.938213261867,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 3.481645166,
+        "median": 3.481645166,
+        "num_rows": 40044,
+        "pps": 11501.45925008373,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 8.957224166,
+        "median": 8.957224166,
+        "num_rows": 178939,
+        "pps": 19977.059486712416,
+        "stddev": null
+      }
+    },
+    "time_range": {
+      "only_node_acc": {
+        "mean": 0.038052833,
+        "median": 0.038052833,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 0.036807125,
+        "median": 0.036807125,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 0.019809125,
+        "median": 0.019809125,
+        "num_rows": 0,
+        "pps": 0.0,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 8.879093917,
+        "median": 8.879093917,
+        "num_rows": 178939,
+        "pps": 20152.844611475684,
+        "stddev": null
+      }
+    }
+  }
+}
