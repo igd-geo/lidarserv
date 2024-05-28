@@ -20,3 +20,5 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = "1.0.64"
 ciborium = "0.2.1"
 crossbeam-channel = "0.5.1"
+pasture-core = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d", features = ["serde"]}
+pasture-io = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d"}

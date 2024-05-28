@@ -1,7 +1,7 @@
 use crate::renderer::error::{RendererError, RendererResult};
 use crate::renderer::viewer::private::RenderThreadHandle;
 use derivative::Derivative;
-use pasture_core::containers::{PointBuffer, PointBufferExt};
+use pasture_core::containers::BorrowedBuffer;
 use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PrimitiveType};
 use pasture_core::nalgebra::Vector3;
 use std::fmt::Formatter;
@@ -9,13 +9,14 @@ use std::fmt::Formatter;
 /// Extracts the data for one point attribute from the point buffer
 /// and converts it to the vertex data of an appropriate type for the attribute type, that is
 /// supported by the given graphics backend.
-pub fn point_attribute_to_vertex_data<B>(
-    points: &dyn PointBuffer,
+pub fn point_attribute_to_vertex_data<'a, B, P>(
+    points: &'a P,
     attribute: &PointAttributeDefinition,
     backend: &B,
 ) -> RendererResult<VertexData>
 where
     B: RenderThreadHandle + ?Sized,
+    P: BorrowedBuffer<'a>,
 {
     let vertex_data_type_candidates: &[VertexDataType] = match attribute.datatype() {
         PointAttributeDataType::U8 => &[VertexDataType::U8],
@@ -28,7 +29,6 @@ where
         PointAttributeDataType::I64 => &[],
         PointAttributeDataType::F32 => &[VertexDataType::F32],
         PointAttributeDataType::F64 => &[VertexDataType::F32],
-        PointAttributeDataType::Bool => &[],
         PointAttributeDataType::Vec3u8 => &[],
         PointAttributeDataType::Vec3u16 => &[VertexDataType::Vec3F32],
         PointAttributeDataType::Vec3f32 => &[VertexDataType::Vec3F32],
@@ -36,6 +36,9 @@ where
             &[VertexDataType::Vec3F32Transform, VertexDataType::Vec3F32]
         }
         PointAttributeDataType::Vec4u8 => &[],
+        PointAttributeDataType::Vec3i32 => &[],
+        PointAttributeDataType::ByteArray(_) => &[],
+        PointAttributeDataType::Custom { .. } => &[],
     };
 
     let vertex_data_type = vertex_data_type_candidates
@@ -61,8 +64,8 @@ where
 /// Extracts the values for some point attribute from a point buffer and converts them to the
 /// vertex buffer data of the given type.
 /// Panicks, of the conversion of the point attribute data type to the vertex data type is not supported.
-fn point_attribute_to_vertex_data_type(
-    points: &dyn PointBuffer,
+fn point_attribute_to_vertex_data_type<'a>(
+    points: &'a impl BorrowedBuffer<'a>,
     attribute: &PointAttributeDefinition,
     vertex_buffer_data_type: VertexDataType,
 ) -> VertexData {
@@ -83,7 +86,7 @@ fn point_attribute_to_vertex_data_type(
             // calculate the bounds of the values
             let mut min = Vector3::new(f64::MAX, f64::MAX, f64::MAX);
             let mut max = Vector3::new(f64::MIN, f64::MIN, f64::MIN);
-            for attr in points.iter_attribute::<Vector3<f64>>(attribute) {
+            for attr in points.view_attribute::<Vector3<f64>>(attribute) {
                 if attr.x < min.x {min.x = attr.x}
                 if attr.y < min.y {min.y = attr.y}
                 if attr.z < min.z {min.z = attr.z}
@@ -108,7 +111,7 @@ fn point_attribute_to_vertex_data_type(
 
             // apply offset/scale, convert to f32
             let mut values = Vec::with_capacity(points.len());
-            for attr in points.iter_attribute::<Vector3<f64>>(attribute) {
+            for attr in points.view_attribute::<Vector3<f64>>(attribute) {
                 let value = (attr - offset).component_div(&scale);
                 values.push(Vec3F32Attribute::new(value.x as f32, value.y as f32, value.z as f32));
             }
@@ -239,17 +242,18 @@ pub type U8Attribute = Attribute<u8>;
 pub type Vec3F32Attribute = Vec3<f32>;
 
 /// Helper for copying one point attribute into a vector, while applying a conversion function to each element.
-fn get_point_attribute_vertex_data<T, U, F>(
-    points: &dyn PointBuffer,
+fn get_point_attribute_vertex_data<'a, T, U, F, P>(
+    points: &'a P,
     attribute: &PointAttributeDefinition,
     map_fn: F,
 ) -> Vec<U>
 where
     F: Fn(T) -> U,
     T: PrimitiveType,
+    P: BorrowedBuffer<'a>,
 {
     let mut attr_data = Vec::with_capacity(points.len());
-    for attr in points.iter_attribute::<T>(attribute) {
+    for attr in points.view_attribute::<T>(attribute) {
         attr_data.push(map_fn(attr));
     }
     attr_data

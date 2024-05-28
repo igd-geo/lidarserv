@@ -1,8 +1,7 @@
 use crate::mini_mno::GridCell;
 use las::{Read, Reader};
-use pasture_core::containers::InterleavedVecPointStorage;
+use pasture_core::containers::VectorBuffer;
 use pasture_core::layout::attributes;
-use pasture_core::layout::PointType;
 use pasture_core::math::AABB;
 use pasture_core::nalgebra::{Point3, Vector3};
 use pasture_io::las::LasPointFormat0;
@@ -535,8 +534,8 @@ fn update_query(
     // add new nodes
     for cell in nodes_add {
         let node = octree.get(&cell);
-        let mut point_buffer = InterleavedVecPointStorage::new(LasPointFormat0::layout());
-        point_buffer.push_points(&node.points());
+
+        let point_buffer: VectorBuffer = node.points().into_iter().collect();
         let point_cloud_id = window
             .add_point_cloud_with_attributes(&point_buffer, &[&attributes::CLASSIFICATION])
             .unwrap();
@@ -546,8 +545,8 @@ fn update_query(
     // refresh existing nodes
     for cell in nodes_reload {
         let node = octree.get(&cell);
-        let mut point_buffer = InterleavedVecPointStorage::new(LasPointFormat0::layout());
-        point_buffer.push_points(&node.points());
+
+        let point_buffer: VectorBuffer = node.points().into_iter().collect();
         let point_cloud_id = *point_clouds.get(&cell).unwrap();
         window
             .update_point_cloud(

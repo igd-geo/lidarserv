@@ -1,5 +1,5 @@
 use crate::navigation::Matrices;
-use pasture_core::nalgebra::{Matrix4, Rotation3, UnitQuaternion, Vector4, U3};
+use pasture_core::nalgebra::{Matrix4, Rotation3, UnitQuaternion, Vector4};
 use std::time::Duration;
 
 /// Helper for creating smooth transitions between two sets of view/projection matrices.
@@ -118,7 +118,7 @@ impl AnimationHelper {
         let translation_vec_hom = cam_2_to_1 * Vector4::new(0.0, 0.0, 0.0, 1.0);
         let translation_vec = translation_vec_hom.xyz() / translation_vec_hom.w;
         let mut rotation_mat =
-            Rotation3::from_matrix_unchecked(cam_2_to_1.fixed_slice::<U3, U3>(0, 0).into());
+            Rotation3::from_matrix_unchecked(cam_2_to_1.fixed_view::<3, 3>(0, 0).into());
         rotation_mat.renormalize();
         let rotation_quaternion: UnitQuaternion<f64> =
             UnitQuaternion::from_rotation_matrix(&rotation_mat);

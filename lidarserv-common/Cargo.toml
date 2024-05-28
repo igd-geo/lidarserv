@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nalgebra = { version = "0.23.2", features = ["serde-serialize"] }
+nalgebra = { version = "0.32.5", features = ["serde-serialize"] }
 las = { version = "0.7.5", features = ["laz"] }
 laz = "0.6.0"
 num-traits = "0.2.14"
@@ -23,6 +23,14 @@ core_affinity = "0.5.10"
 csv = "1.2"
 serde_json = "1.0.72"
 bincode = "1.3.3"
+pasture-core = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d", features = ["serde"]}
+anyhow = "1.0.83"
+byteorder = "1.5.0"
+lz4 = "1.24.0"
 
 [features]
 trace = ["tracy-client/enable"]
+
+[dev-dependencies]
+pasture-derive = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d"}
+bytemuck = "1.16.0"

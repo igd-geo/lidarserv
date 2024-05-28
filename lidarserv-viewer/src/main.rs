@@ -1,5 +1,6 @@
 use crate::cli::{Args, PointColorArg};
 use anyhow::Result;
+use bytemuck::{Pod, Zeroable};
 use lidarserv_server::common::geometry::points::PointType;
 use lidarserv_server::common::geometry::position::Position;
 use lidarserv_server::common::index::octree::attribute_bounds::LasPointAttributeBounds;
@@ -9,9 +10,8 @@ use lidarserv_server::index::point::GlobalPoint;
 use lidarserv_server::net::client::viewer::{IncrementalUpdate, ViewerClient};
 use lidarserv_server::net::protocol::messages::QueryConfig;
 use log::{debug, trace};
-use pasture_core::containers::{PerAttributeVecPointStorage, PointBuffer};
+use pasture_core::containers::VectorBuffer;
 use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY};
-use pasture_core::layout::PointType as PasturePointType;
 use pasture_core::math::AABB as PastureAABB;
 use pasture_core::nalgebra::Vector3;
 use pasture_derive::PointType;
@@ -251,7 +251,7 @@ async fn network_thread(
 }
 
 #[repr(C, packed)]
-#[derive(Clone, Copy, Debug, PartialEq, Default, PointType)]
+#[derive(Clone, Copy, Debug, PartialEq, Default, PointType, Pod, Zeroable)]
 pub struct PasturePointt {
     #[pasture(BUILTIN_POSITION_3D)]
     pub position: Vector3<f64>,
@@ -261,10 +261,10 @@ pub struct PasturePointt {
     pub color: Vector3<u16>,
 }
 
-fn node_to_pasture(points: Vec<GlobalPoint>, offset: Vector3<f64>) -> impl PointBuffer {
-    let mut point_buf = PerAttributeVecPointStorage::new(PasturePointt::layout());
-    for point in points {
-        let pasture_point = PasturePointt {
+fn node_to_pasture(points: Vec<GlobalPoint>, offset: Vector3<f64>) -> VectorBuffer {
+    points
+        .into_iter()
+        .map(|point| PasturePointt {
             position: Vector3::new(
                 point.position().x(),
                 point.position().y(),
@@ -276,8 +276,6 @@ fn node_to_pasture(points: Vec<GlobalPoint>, offset: Vector3<f64>) -> impl Point
                 point.attribute::<LasPointAttributes>().color.1,
                 point.attribute::<LasPointAttributes>().color.2,
             ),
-        };
-        point_buf.push_point(pasture_point);
-    }
-    point_buf
+        })
+        .collect()
 }

@@ -7,7 +7,7 @@ pub use crate::renderer::renderer_command::PointCloudId;
 use crate::renderer::renderer_command::{FocusTarget, PointAttribute, RendererCommand, WindowId};
 use crate::renderer::settings::{AnimationSettings, BaseRenderSettings, PointCloudRenderSettings};
 use crate::renderer::vertex_data::point_attribute_to_vertex_data;
-use pasture_core::containers::PointBuffer;
+use pasture_core::containers::BorrowedBuffer;
 use pasture_core::layout::{attributes, PointAttributeDefinition};
 use pasture_core::math::AABB;
 use std::thread;
@@ -171,9 +171,9 @@ impl<'a> Window<'a> {
         result_receiver.recv().unwrap()
     }
 
-    fn add_point_cloud_impl(
+    fn add_point_cloud_impl<'b>(
         &self,
-        points: &dyn PointBuffer,
+        points: &'b impl BorrowedBuffer<'b>,
         attributes: &[&PointAttributeDefinition],
         settings: Option<PointCloudRenderSettings>,
     ) -> RendererResult<PointCloudId> {
@@ -206,7 +206,10 @@ impl<'a> Window<'a> {
     /// Adds the given points to the renderer.
     /// Only the POSITION_3D will be uploaded to the GPU by default.
     /// If you need to visualize additional attributes (color, intensity, ...), use [Window::add_point_cloud_with_attributes] instead.
-    pub fn add_point_cloud(&self, points: &dyn PointBuffer) -> RendererResult<PointCloudId> {
+    pub fn add_point_cloud<'b>(
+        &self,
+        points: &'b impl BorrowedBuffer<'b>,
+    ) -> RendererResult<PointCloudId> {
         self.add_point_cloud_impl(points, &[], None)
     }
 
@@ -215,18 +218,18 @@ impl<'a> Window<'a> {
     ///
     /// The settings that have been set using [Window::set_default_point_cloud_settings] will be used for rendering this point cloud.
     /// You can use [Window::add_point_cloud_with_attributes_and_settings] to create a point cloud with customized render settings.
-    pub fn add_point_cloud_with_attributes(
+    pub fn add_point_cloud_with_attributes<'b>(
         &self,
-        points: &dyn PointBuffer,
+        points: &'b impl BorrowedBuffer<'b>,
         attributes: &[&PointAttributeDefinition],
     ) -> RendererResult<PointCloudId> {
         self.add_point_cloud_impl(points, attributes, None)
     }
 
     /// Adds the given points to the renderer, with custom render settings.
-    pub fn add_point_cloud_with_attributes_and_settings(
+    pub fn add_point_cloud_with_attributes_and_settings<'b>(
         &self,
-        points: &dyn PointBuffer,
+        points: &'b impl BorrowedBuffer<'b>,
         attributes: &[&PointAttributeDefinition],
         settings: PointCloudRenderSettings,
     ) -> RendererResult<PointCloudId> {
@@ -265,10 +268,10 @@ impl<'a> Window<'a> {
     }
 
     /// Replaces the points of an existing point cloud with new point data.
-    pub fn update_point_cloud(
+    pub fn update_point_cloud<'b>(
         &self,
         id: PointCloudId,
-        points: &dyn PointBuffer,
+        points: &'b impl BorrowedBuffer<'b>,
         attributes: &[&PointAttributeDefinition],
     ) -> RendererResult<()> {
         // position vertex data
