@@ -141,7 +141,7 @@ def main():
 
     # comparison lidarserv vs pgPointCloud
     input_file_lidarserv = "2024-23-05_pgPointCloud-query-comparison/query_performance_v1_2024-01-25_2.json"
-    input_file_pg = "2024-23-05_pgPointCloud-query-comparison/results_ahn4_200t_2024-05-23T16:12:08.716977+00:00.json"
+    input_file_pg = "2024-23-05_pgPointCloud-query-comparison/results_ahn4_138m_final.json"
 
     with open(input_file_lidarserv) as l:
         print("Reading file: ", input_file_lidarserv)
@@ -167,6 +167,16 @@ def main():
         pg_data=pg_data["results"],
         nr_points=lidarserv_data["env"]["input_file_nr_points"],
         filename=join(output_folder, "query-by-num-points-pg.pdf"),
+        queries=query_names(),
+        labels=query_pretty_names(),
+    )
+
+    plot_query_by_num_nodes_pg(
+        lidarserv_data=lidarserv_data["runs"]["test"],
+        pg_data=pg_data["results"],
+        lidarserv_nr_nodes=lidarserv_data["runs"]["test"][0]["results"]["index_info"]["directory_info"]["num_nodes"],
+        pg_nr_nodes=pg_data["env"]["num_patches"],
+        filename=join(output_folder, "query-by-num-nodes-pg.pdf"),
         queries=query_names(),
         labels=query_pretty_names(),
     )
@@ -617,9 +627,8 @@ def plot_query_by_num_points_pg(lidarserv_data, pg_data, nr_points, filename, qu
                         color=colors[i + 1])
 
                 # pgPointCloud
-                nr_points_subquery_pg = pg_data[queries[p]][subquery]["num_rows"]
-                nr_points_subquery_pg = nr_points_subquery_pg / 1e6 * 1000 # TODO REMOVE
-                print(nr_points_subquery_pg)
+                nr_points_subquery_pg = pg_data[queries[p]][subquery]["num_points"]
+                nr_points_subquery_pg = nr_points_subquery_pg / 1e6
                 plt.bar([p + (i + 1) * bar_width], nr_points_subquery_pg, bar_width, label=subquery,
                         color=colors[i + 2])
 
@@ -695,6 +704,66 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d K'))
 
         custom_legend_labels = ['Total Number of Nodes', 'Range Filter', 'Nodes Containing Searched Points']  # Custom legend labels
+        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                 zip(custom_legend_colors, custom_legend_labels)]
+        ax.legend(handles=custom_legend_handles, loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor, prop=font_prop)
+
+        plt.tight_layout()
+
+        if title is not None:
+            ax.set_title(title, fontname=font, fontsize=fontsize)
+        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+        plt.close(fig)
+
+
+def plot_query_by_num_nodes_pg(lidarserv_data, pg_data, lidarserv_nr_nodes, pg_nr_nodes, filename, queries=None, labels=None, title=None):
+    fig, ax = plt.subplots(figsize=figsize)
+    subqueries = ["only_node_acc", "raw_point_filtering"]
+
+    bar_width = 0.15
+    index = range(len(queries))
+
+    colors = ['#DB4437', '#F4B400', '#4285F4', '#0F9D58']
+
+    # plot horizontal line for total number of nodes
+    plt.axhline(y=lidarserv_nr_nodes / 1e3, color=colors[0], linestyle='-')
+    plt.axhline(y=pg_nr_nodes / 1e3, color=colors[1], linestyle='-')
+
+    for run in lidarserv_data:
+        for p in range(len(queries)):
+
+            # number of points per subquery
+            for i, subquery in enumerate(subqueries):
+
+                # lidarserv
+                nr_nodes_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_nodes"]]
+                for j in range(len(nr_nodes_subquery)):
+                    nr_nodes_subquery[j] = nr_nodes_subquery[j] / 1e3
+
+                plt.bar([p + (i) * bar_width], nr_nodes_subquery, bar_width, label=subquery,
+                        color=colors[i + 1])
+
+                # pgPointCloud
+                nr_nodes_subquery_pg = pg_data[queries[p]][subquery]["num_patches"]
+                nr_nodes_subquery_pg = nr_nodes_subquery_pg / 1e3
+                plt.bar([p + (i + 2) * bar_width], nr_nodes_subquery_pg, bar_width, label=subquery,
+                        color=colors[i + 2])
+
+        ax.set_ylabel('Number of Nodes', fontname=font, fontsize=fontsize)  # Adjust fontsize as needed
+        plt.ticklabel_format(style='plain')
+        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right', fontname=font,
+                   fontsize=fontsize)
+        plt.tick_params(bottom=False)
+        plt.yticks(fontname=font, fontsize=fontsize)
+        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d M'))
+
+        custom_legend_labels = [
+            'Total Number of Nodes',
+            'Lidarserv: Range Filter',
+            'pgPointCloud: Patch Filter',
+            'Sequential Point Filter',
+            ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
@@ -909,18 +978,21 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
 def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queries=None, labels=None):
     fig, ax = plt.subplots(figsize=figsize)
 
+    sum_lidarserv = 0
+    sum_pg = 0
+
     if queries is None:
         queries = query_names()
     if labels is None:
         labels = query_pretty_names()
     # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
     #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
-    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc"]
+    subqueries = ["raw_spatial", "point_filtering_with_node_acc"]
 
     bar_width = 1 / (2*len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#DB4437', '#4285F4', '#F4B400', '#0F9D58', '#FF6D00', '#7B1FA2']
+    colors = ['#DB4437', '#F4B400', '#7B1FA2', '#4285F4', '#0F9D58', '#FF6D00']
 
     for run in lidarserv_data:
         for p in range(len(queries)):
@@ -929,14 +1001,21 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
             for i, subquery in enumerate(subqueries):
                 # LIDARSERV
                 try:
-                    nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
-                    plt.bar([p + i * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
+                    time_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
+                    num_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
+                    plt.bar([p + i * bar_width], time_subquery, bar_width, label=subquery, color=colors[i])
+                    if subquery == "point_filtering_with_node_acc":
+                        sum_lidarserv += num_points_subquery[0] / time_subquery[0]
                 except:
+                    print("LIDARSERV: ", subquery, " not available")
                     pass
 
                 # PGPOINTCLOUD
-                nr_points_subquery = pg_data[queries[p]][subquery]["mean"]
-                plt.bar([p + (i + len(subqueries)) * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i+3])
+                time_subquery = pg_data[queries[p]][subquery]["mean"]
+                num_points_subquery = pg_data[queries[p]][subquery]["num_points"]
+                plt.bar([p + (i + len(subqueries)) * bar_width], time_subquery, bar_width, label=subquery, color=colors[i+2])
+                if subquery == "point_filtering_with_node_acc":
+                    sum_pg += num_points_subquery / time_subquery
 
 
 
@@ -950,10 +1029,8 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
 
         custom_legend_labels = [
             'Lidarserv: Spatial Query',
-            'Lidarserv: Spatial Query + Sequential Point Filter',
             'Lidarserv: Spatial Query + Range Filter + Sequential Point Filter',
             'pgPointCloud: Spatial Query',
-            'pgPointCloud: Spatial Query + Sequential Point Filter',
             'pgPointCloud: Spatial Query + Range Filter + Sequential Point Filter',
         ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
@@ -965,6 +1042,13 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
 
         if title is not None:
             ax.set_title(title)
+
+        avg_lidarserv = sum_lidarserv / len(queries)
+        avg_pg = sum_pg / len(queries)
+
+        print("Lidarserv: ", avg_lidarserv)
+        print("pgPointCloud: ", avg_pg)
+
         fig.savefig(outputfile, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
         plt.close(fig)
 
