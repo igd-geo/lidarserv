@@ -1,0 +1,320 @@
+{
+  "env": {
+    "duration:": 7564,
+    "finished_at": "2024-05-23T19:51:08.344597790+00:00",
+    "hostname": "pc2681",
+    "iterations": 1,
+    "num_patches": 346637,
+    "num_points": 138654677,
+    "started_at": "2024-05-23T17:45:03.718025132+00:00",
+    "table": "ahn4_138m"
+  },
+  "results": {
+    "building_classification": {
+      "only_node_acc": {
+        "mean": 172.926261951,
+        "median": 172.926261951,
+        "num_patches": 174471,
+        "num_points": 69788333,
+        "pps": 403572.78421813727,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 188.203621546,
+        "median": 188.203621546,
+        "num_patches": 174471,
+        "num_points": 52136401,
+        "pps": 277021.242055414,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 190.635461509,
+        "median": 190.635461509,
+        "num_patches": 174471,
+        "num_points": 52136401,
+        "pps": 273487.42247275234,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 335.346283558,
+        "median": 335.346283558,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 413467.16453477234,
+        "stddev": null
+      }
+    },
+    "ground_classification": {
+      "only_node_acc": {
+        "mean": 252.590376493,
+        "median": 252.590376493,
+        "num_patches": 264457,
+        "num_points": 105782704,
+        "pps": 418791.50531663874,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 194.095233153,
+        "median": 194.095233153,
+        "num_patches": 264457,
+        "num_points": 51695037,
+        "pps": 266338.51929403236,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 193.707986126,
+        "median": 193.707986126,
+        "num_patches": 264457,
+        "num_points": 51695037,
+        "pps": 266870.9640415871,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 342.458980096,
+        "median": 342.458980096,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 404879.6645984624,
+        "stddev": null
+      }
+    },
+    "high_intensity": {
+      "only_node_acc": {
+        "mean": 183.299192943,
+        "median": 183.299192943,
+        "num_patches": 189255,
+        "num_points": 75701941,
+        "pps": 412996.586534567,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 55.105928033,
+        "median": 55.105928033,
+        "num_patches": 189255,
+        "num_points": 7756981,
+        "pps": 140764.90999942436,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 54.237925375,
+        "median": 54.237925375,
+        "num_patches": 189255,
+        "num_points": 7756981,
+        "pps": 143017.65685852434,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 344.971362338,
+        "median": 344.971362338,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 401930.9778651926,
+        "stddev": null
+      }
+    },
+    "low_intensity": {
+      "only_node_acc": {
+        "mean": 306.710714205,
+        "median": 306.710714205,
+        "num_patches": 309386,
+        "num_points": 123754287,
+        "pps": 403488.6336487249,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 106.272080733,
+        "median": 106.272080733,
+        "num_patches": 309386,
+        "num_points": 17568793,
+        "pps": 165318.98951089676,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 104.8305626,
+        "median": 104.8305626,
+        "num_patches": 309386,
+        "num_points": 17568793,
+        "pps": 167592.28000174827,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 332.398898163,
+        "median": 332.398898163,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 417133.3833122613,
+        "stddev": null
+      }
+    },
+    "mixed_ground_and_time": {
+      "only_node_acc": {
+        "mean": 57.478811454,
+        "median": 57.478811454,
+        "num_patches": 53393,
+        "num_points": 21357185,
+        "pps": 371566.2251835539,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 62.736769603,
+        "median": 62.736769603,
+        "num_patches": 53393,
+        "num_points": 8467637,
+        "pps": 134970.87997331453,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 56.668621156,
+        "median": 56.668621156,
+        "num_patches": 53393,
+        "num_points": 8467637,
+        "pps": 149423.7344630267,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 338.044731804,
+        "median": 338.044731804,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 410166.655341911,
+        "stddev": null
+      }
+    },
+    "normal_x_vertical": {
+      "only_node_acc": {
+        "mean": 338.86339831,
+        "median": 338.86339831,
+        "num_patches": 346243,
+        "num_points": 138497078,
+        "pps": 408710.6447338987,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 332.132666909,
+        "median": 332.132666909,
+        "num_patches": 346243,
+        "num_points": 89947954,
+        "pps": 270819.35311302746,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 329.002810406,
+        "median": 329.002810406,
+        "num_patches": 346243,
+        "num_points": 89947954,
+        "pps": 273395.7010549586,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 334.408470163,
+        "median": 334.408470163,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 414626.6897259386,
+        "stddev": null
+      }
+    },
+    "one_return": {
+      "only_node_acc": {
+        "mean": 307.253097713,
+        "median": 307.253097713,
+        "num_patches": 301682,
+        "num_points": 120672692,
+        "pps": 392746.86861812655,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 77.491313212,
+        "median": 77.491313212,
+        "num_patches": 301682,
+        "num_points": 14393684,
+        "pps": 185745.7746344019,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 76.84738949,
+        "median": 76.84738949,
+        "num_patches": 301682,
+        "num_points": 14393684,
+        "pps": 187302.18548117398,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 332.86031726,
+        "median": 332.86031726,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 416555.1428339704,
+        "stddev": null
+      }
+    },
+    "time_range": {
+      "only_node_acc": {
+        "mean": 71.998298548,
+        "median": 71.998298548,
+        "num_patches": 67015,
+        "num_points": 26805979,
+        "pps": 372314.0621459121,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 75.249055943,
+        "median": 75.249055943,
+        "num_patches": 67015,
+        "num_points": 20336946,
+        "pps": 270261.8092033596,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 74.777344484,
+        "median": 74.777344484,
+        "num_patches": 67015,
+        "num_points": 20336946,
+        "pps": 271966.678414897,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 343.283417537,
+        "median": 343.283417537,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 403907.29617767053,
+        "stddev": null
+      }
+    },
+    "vegetation_classification": {
+      "only_node_acc": {
+        "mean": 213.63519303,
+        "median": 213.63519303,
+        "num_patches": 219334,
+        "num_points": 87733520,
+        "pps": 410669.7906635631,
+        "stddev": null
+      },
+      "point_filtering_with_node_acc": {
+        "mean": 134.949693328,
+        "median": 134.949693328,
+        "num_patches": 219334,
+        "num_points": 32503014,
+        "pps": 240852.81854624356,
+        "stddev": null
+      },
+      "raw_point_filtering": {
+        "mean": 133.185030394,
+        "median": 133.185030394,
+        "num_patches": 219334,
+        "num_points": 32503014,
+        "pps": 244044.04837275366,
+        "stddev": null
+      },
+      "raw_spatial": {
+        "mean": 334.646125254,
+        "median": 334.646125254,
+        "num_patches": 346637,
+        "num_points": 138654677,
+        "pps": 414332.2349683852,
+        "stddev": null
+      }
+    }
+  }
+}

@@ -64,26 +64,26 @@ def main():
     #
     #
     #
-    for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        plot_insertion_rate_by_nr_threads(
-            test_runs=data["runs"]["threads"],
-            filename=join(output_folder, "insertion-rate-by-nr-threads.pdf"),
-        )
-
-        plot_insertion_rate_by_cache_size(
-            test_runs=data["runs"]["cache_size"],
-            filename=join(output_folder, "insertion-rate-by-cache-size.pdf"),
-        )
-
+    # for input_file in INPUT_FILES_PARAMETER_OVERVIEW_V2:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     plot_insertion_rate_by_nr_threads(
+    #         test_runs=data["runs"]["threads"],
+    #         filename=join(output_folder, "insertion-rate-by-nr-threads.pdf"),
+    #     )
+    #
+    #     plot_insertion_rate_by_cache_size(
+    #         test_runs=data["runs"]["cache_size"],
+    #         filename=join(output_folder, "insertion-rate-by-cache-size.pdf"),
+    #     )
+    #
     for input_file in INPUT_FILES_QUERY_PERFORMANCE:
         # read file
         with open(input_file) as f:
@@ -123,23 +123,23 @@ def main():
             queries=query_names(),
             labels=query_pretty_names(),
         )
+    #
+    # for input_file in INPUT_FILES_INSERTION_SPEED:
+    #     # read file
+    #     with open(input_file) as f:
+    #         print("Reading file: ", input_file)
+    #         data = json.load(f)
+    #     # ensure output folder exists
+    #     output_folder = f"{input_file}.diagrams"
+    #     os.makedirs(output_folder, exist_ok=True)
+    #
+    #     plot_insertion_speed_comparison(
+    #         test_runs=data["runs"],
+    #         filename=join(output_folder, f"insertion-speed-comparison.pdf"),
+    #     )
 
-    for input_file in INPUT_FILES_INSERTION_SPEED:
-        # read file
-        with open(input_file) as f:
-            print("Reading file: ", input_file)
-            data = json.load(f)
-        # ensure output folder exists
-        output_folder = f"{input_file}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
 
-        plot_insertion_speed_comparison(
-            test_runs=data["runs"],
-            filename=join(output_folder, f"insertion-speed-comparison.pdf"),
-        )
-
-
-    # comparison lidarserv vs pgPointCloud
+    # Query comparison lidarserv vs pgPointCloud
     input_file_lidarserv = "2024-23-05_pgPointCloud-query-comparison/query_performance_v1_2024-01-25_2.json"
     input_file_pg = "2024-23-05_pgPointCloud-query-comparison/results_ahn4_138m_final.json"
 
@@ -179,6 +179,28 @@ def main():
         filename=join(output_folder, "query-by-num-nodes-pg.pdf"),
         queries=query_names(),
         labels=query_pretty_names(),
+    )
+
+    # Insertion speed comparison lidarserv vs pgPointCloud
+    input_file_lidarserv = "2024_06_06_pgPointCloud-insertion-comparison/insertion_speed_v1_2024-02-01_1.json"
+    input_file_pg = "2024_06_06_pgPointCloud-insertion-comparison/insertion_results_ahn4_138m_2024-05-27T16:28:08.384389134+00:00.json"
+
+    with open(input_file_lidarserv) as l:
+        print("Reading file: ", input_file_lidarserv)
+        lidarserv_data = json.load(l)
+
+    with open(input_file_pg) as p:
+        print("Reading file: ", input_file_pg)
+        pg_data = json.load(p)
+
+    output_folder = f"{input_file_lidarserv}.diagrams"
+    os.makedirs(output_folder, exist_ok=True)
+
+    plot_insertion_speed_comparison_pg(
+        lidarserv_runs=lidarserv_data["runs"],
+        pg_runs=pg_data["ahn4_138m"],
+        filename=join(output_folder, f"insertion-speed-comparison-pg.pdf"),
+        num_points=lidarserv_data["env"]["input_file_nr_points"],
     )
 
 def make_y_insertion_rate(ax, test_runs):
@@ -719,16 +741,12 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
 
 def plot_query_by_num_nodes_pg(lidarserv_data, pg_data, lidarserv_nr_nodes, pg_nr_nodes, filename, queries=None, labels=None, title=None):
     fig, ax = plt.subplots(figsize=figsize)
-    subqueries = ["only_node_acc", "raw_point_filtering"]
+    subqueries = ["only_node_acc"]
 
-    bar_width = 0.15
+    bar_width = 0.3
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#4285F4', '#0F9D58']
-
-    # plot horizontal line for total number of nodes
-    plt.axhline(y=lidarserv_nr_nodes / 1e3, color=colors[0], linestyle='-')
-    plt.axhline(y=pg_nr_nodes / 1e3, color=colors[1], linestyle='-')
+    colors = ['#F4B400', '#4285F4']
 
     for run in lidarserv_data:
         for p in range(len(queries)):
@@ -738,31 +756,28 @@ def plot_query_by_num_nodes_pg(lidarserv_data, pg_data, lidarserv_nr_nodes, pg_n
 
                 # lidarserv
                 nr_nodes_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_nodes"]]
-                for j in range(len(nr_nodes_subquery)):
-                    nr_nodes_subquery[j] = nr_nodes_subquery[j] / 1e3
+                nr_nodes_subquery[0] = nr_nodes_subquery[0] / lidarserv_nr_nodes * 100
 
-                plt.bar([p + (i) * bar_width], nr_nodes_subquery, bar_width, label=subquery,
-                        color=colors[i + 1])
+                plt.bar([p + i * bar_width + 0.2], nr_nodes_subquery, bar_width, label=subquery,
+                        color=colors[i])
 
                 # pgPointCloud
                 nr_nodes_subquery_pg = pg_data[queries[p]][subquery]["num_patches"]
-                nr_nodes_subquery_pg = nr_nodes_subquery_pg / 1e3
-                plt.bar([p + (i + 2) * bar_width], nr_nodes_subquery_pg, bar_width, label=subquery,
-                        color=colors[i + 2])
+                nr_nodes_subquery_pg = nr_nodes_subquery_pg / pg_nr_nodes * 100
+                plt.bar([p + (i + 1) * bar_width + 0.2], nr_nodes_subquery_pg, bar_width, label=subquery,
+                        color=colors[i+1])
 
-        ax.set_ylabel('Number of Nodes', fontname=font, fontsize=fontsize)  # Adjust fontsize as needed
+        ax.set_ylabel('Returned Nodes', fontname=font, fontsize=fontsize)  # Adjust fontsize as needed
         plt.ticklabel_format(style='plain')
         plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right', fontname=font,
                    fontsize=fontsize)
         plt.tick_params(bottom=False)
         plt.yticks(fontname=font, fontsize=fontsize)
-        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d M'))
+        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d%%'))
 
         custom_legend_labels = [
-            'Total Number of Nodes',
-            'Lidarserv: Range Filter',
-            'pgPointCloud: Patch Filter',
-            'Sequential Point Filter',
+            'Lidarserv: Returned Nodes (Percentage of 148K)',
+            'pgPointCloud: Returned Patches (Percentage of 346K)',
             ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
@@ -926,12 +941,12 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
         labels = query_pretty_names()
     # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
     #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
-    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc"]
+    subqueries = ["raw_point_filtering", "point_filtering_with_node_acc"]
 
     bar_width = 1 / (len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#DB4437', '#4285F4', '#F4B400']
+    colors = ['#DB4437', '#F4B400']
 
     for run in test_runs:
         for p in range(len(queries)):
@@ -942,7 +957,7 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
                 try:
                     nr_points_subquery = [
                         run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
-                    plt.bar([p + i * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
+                    plt.bar([p + i * bar_width + 0.2], nr_points_subquery, bar_width, label=subquery, color=colors[i])
                 except:
                     pass
 
@@ -955,7 +970,6 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%ds'))
 
         custom_legend_labels = [
-            'Spatial Query',
             'Spatial Query + Sequential Point Filter',
             'Spatial Query + Range Filter + Sequential Point Filter',
             # 'Spatial Query + Range Filter + Histogram Filter + Sequential Point Filter',
@@ -987,12 +1001,12 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
         labels = query_pretty_names()
     # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
     #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
-    subqueries = ["raw_spatial", "point_filtering_with_node_acc"]
+    subqueries = ["point_filtering_with_node_acc"]
 
     bar_width = 1 / (2*len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#7B1FA2', '#4285F4', '#0F9D58', '#FF6D00']
+    colors = ['#F4B400', '#4285F4']
 
     for run in lidarserv_data:
         for p in range(len(queries)):
@@ -1003,7 +1017,7 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
                 try:
                     time_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
                     num_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
-                    plt.bar([p + i * bar_width], time_subquery, bar_width, label=subquery, color=colors[i])
+                    plt.bar([p + i * bar_width + 0.2], time_subquery, bar_width, label=subquery, color=colors[i])
                     if subquery == "point_filtering_with_node_acc":
                         sum_lidarserv += num_points_subquery[0] / time_subquery[0]
                 except:
@@ -1013,7 +1027,7 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
                 # PGPOINTCLOUD
                 time_subquery = pg_data[queries[p]][subquery]["mean"]
                 num_points_subquery = pg_data[queries[p]][subquery]["num_points"]
-                plt.bar([p + (i + len(subqueries)) * bar_width], time_subquery, bar_width, label=subquery, color=colors[i+2])
+                plt.bar([p + (i + len(subqueries)) * bar_width + 0.2], time_subquery, bar_width, label=subquery, color=colors[i+1])
                 if subquery == "point_filtering_with_node_acc":
                     sum_pg += num_points_subquery / time_subquery
 
@@ -1028,9 +1042,7 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%ds'))
 
         custom_legend_labels = [
-            'Lidarserv: Spatial Query',
             'Lidarserv: Spatial Query + Range Filter + Sequential Point Filter',
-            'pgPointCloud: Spatial Query',
             'pgPointCloud: Spatial Query + Range Filter + Sequential Point Filter',
         ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
@@ -1503,6 +1515,68 @@ def plot_insertion_speed_comparison(test_runs, filename):
 
         # Store the x-coordinate for later use in setting tick labels
         index.append(x_coord)
+
+    # Set labels, title, and tick labels
+    # plt.xlabel('Insertion Settings', fontsize=fontsize)
+    plt.ylabel('Insertion Rate | Points/s', fontsize=fontsize)
+    # plt.title("Insertion Speed Comparison")
+    plt.xticks([p for p in index], custom_legend_labels, rotation=90, fontsize=fontsize)
+    # only 3 ticks on y-axis
+    plt.yticks([0,1,2],fontsize=fontsize)
+    plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d M'))
+
+    # Create custom legend handles for the legend
+    custom_legend_colors = colors[:len(custom_legend_labels)]
+    custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                             zip(custom_legend_colors, custom_legend_labels)]
+
+    # Add the custom legend to the plot
+    # ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Attribute Index')
+
+    # Adjust layout and save the figure
+    plt.tight_layout()
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
+
+# Plot insertion speeds compared by attribute index states
+def plot_insertion_speed_comparison_pg(lidarserv_runs, pg_runs, num_points, filename):
+    (width, height) = figsize
+    fig, ax = plt.subplots(figsize=(width, height/1.5))
+    bar_width = 1 / 5
+    colors = ['#F4B400', '#4285F4', '#F4B400', '#4285F4']
+    runs = [
+        'uncompressed_attribute_index',
+        'compressed_attribute_index',
+    ]
+    custom_legend_labels = [
+        'Lidarserv\nNo Compression',
+        'pgPointCloud\nNo Compression',
+        'Lidarserv\nCompression',
+        'pgPointCloud\nCompression',
+    ]  # Custom legend labels
+    index = []
+
+    for i in range(len(runs)):
+        lidarserv_insertion_rate = lidarserv_runs[runs[i]][0]["results"]["insertion_rate"]["insertion_rate_points_per_sec"] / 1e6
+        pg_insertion_rate = num_points / pg_runs[runs[i]]["duration"] / 1e6
+
+        # Determine the x-coordinate for the bar
+        if i < 1:
+            x_coord = i * bar_width
+        else:
+            x_coord = i * bar_width + 1.5*bar_width
+
+        # Create a bar for the insertion rate
+        plt.bar([x_coord], lidarserv_insertion_rate, bar_width, label=custom_legend_labels[i], color=colors[0])
+        plt.bar([x_coord + bar_width], pg_insertion_rate, bar_width, label=custom_legend_labels[i], color=colors[1])
+
+        # Place the insertion speed value inside the bar
+        plt.text(x_coord, lidarserv_insertion_rate - 0.1, f"{lidarserv_insertion_rate:.2f} M", va='top', ha='center', color='black', fontsize=fontsize)
+        plt.text(x_coord + bar_width, pg_insertion_rate + 0.1, f"{pg_insertion_rate:.2f} M", va='top', ha='center', color='black', fontsize=fontsize)
+
+        # Store the x-coordinate for later use in setting tick labels
+        index.append(x_coord)
+        index.append(x_coord + bar_width)
 
     # Set labels, title, and tick labels
     # plt.xlabel('Insertion Settings', fontsize=fontsize)
