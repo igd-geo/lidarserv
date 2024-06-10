@@ -626,7 +626,7 @@ def plot_query_by_num_points_pg(lidarserv_data, pg_data, nr_points, filename, qu
     colors = ['#DB4437', '#F4B400', '#4285F4', '#0F9D58']
 
     # plot horizontal line for total number of points
-    plt.axhline(y=nr_points / 1e6, color=colors[0], linestyle='-')
+    plt.axhline(y=nr_points / 1e6, color=colors[0], linestyle=':', linewidth=2)
 
     for run in lidarserv_data:
         insertion_rate_block = run["results"]["insertion_rate"]
@@ -665,12 +665,14 @@ def plot_query_by_num_points_pg(lidarserv_data, pg_data, nr_points, filename, qu
         custom_legend_labels = [
             'Total Number of Points',
             'Lidarserv: Range Filter',
-            'pgPointCloud: Patch Filter',
+            'pgPointCloud: Range Filter',
             'Sequential Point Filter',
             ]  # Custom legend labels
         custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
+        custom_legend_handles[0] = Line2D([0], [0], color=colors[0], linestyle=':', linewidth=2,
+                                          label=custom_legend_labels[0])
         ax.legend(handles=custom_legend_handles, loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor, prop=font_prop)
 
         plt.tight_layout()
@@ -1555,6 +1557,13 @@ def plot_insertion_speed_comparison_pg(lidarserv_runs, pg_runs, num_points, file
         'pgPointCloud\nCompression',
     ]  # Custom legend labels
     index = []
+
+    # plot horizontal bar at 1,92 M
+    # Increase the linewidth to make the line thicker
+    plt.axhline(y=1.92, color='#DB4437', linestyle=':', linewidth=2, label='Insertion Rate Goal (1.92 M Points/s)')
+
+    # Add annotation
+    plt.annotate('Scanner Speed', xy=(0.8, 1.92), xytext=(0.75, 1.9), horizontalalignment='center', verticalalignment='top', color='#DB4437')
 
     for i in range(len(runs)):
         lidarserv_insertion_rate = lidarserv_runs[runs[i]][0]["results"]["insertion_rate"]["insertion_rate_points_per_sec"] / 1e6
