@@ -972,8 +972,8 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%ds'))
 
         custom_legend_labels = [
-            'Spatial Query + Sequential Point Filter',
-            'Spatial Query + Range Filter + Sequential Point Filter',
+            'Lidarserv: Spatial Query + Sequential Point Filter',
+            'Lidarserv: Spatial Query + Range Filter + Sequential Point Filter',
             # 'Spatial Query + Range Filter + Histogram Filter + Sequential Point Filter',
             # 'Bounds Filter',
             # 'Bounds Filter\nHistogram Filter',
@@ -1003,12 +1003,12 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
         labels = query_pretty_names()
     # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
     #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
-    subqueries = ["point_filtering_with_node_acc"]
+    subqueries = ["raw_point_filtering", "point_filtering_with_node_acc"]
 
     bar_width = 1 / (2*len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#F4B400', '#4285F4']
+    colors = ['#DB4437', '#F4B400', '#4285F4']
 
     for run in lidarserv_data:
         for p in range(len(queries)):
@@ -1019,7 +1019,7 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
                 try:
                     time_subquery = [run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
                     num_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
-                    plt.bar([p + i * bar_width + 0.2], time_subquery, bar_width, label=subquery, color=colors[i])
+                    plt.bar([p + i * bar_width - 0], time_subquery, bar_width, label=subquery, color=colors[i])
                     if subquery == "point_filtering_with_node_acc":
                         sum_lidarserv += num_points_subquery[0] / time_subquery[0]
                 except:
@@ -1027,9 +1027,11 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
                     pass
 
                 # PGPOINTCLOUD
+                if subquery == "raw_point_filtering":
+                    continue
                 time_subquery = pg_data[queries[p]][subquery]["mean"]
                 num_points_subquery = pg_data[queries[p]][subquery]["num_points"]
-                plt.bar([p + (i + len(subqueries)) * bar_width + 0.2], time_subquery, bar_width, label=subquery, color=colors[i+1])
+                plt.bar([p + (i + 1) * bar_width - 0], time_subquery, bar_width, label=subquery, color=colors[i+1])
                 if subquery == "point_filtering_with_node_acc":
                     sum_pg += num_points_subquery / time_subquery
 
@@ -1044,6 +1046,7 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
         plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%ds'))
 
         custom_legend_labels = [
+            'Lidarserv: Spatial Query + Sequential Point Filter',
             'Lidarserv: Spatial Query + Range Filter + Sequential Point Filter',
             'pgPointCloud: Spatial Query + Range Filter + Sequential Point Filter',
         ]  # Custom legend labels
