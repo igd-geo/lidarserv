@@ -10,7 +10,6 @@ edition = "2021"
 pasture-core = "0.2.0"
 log = "0.4.14"
 ouroboros = "0.9.3"
-derivative = "2.2.0"
 crossbeam-channel = "0.5.1"
 glium = "0.30.2"
 

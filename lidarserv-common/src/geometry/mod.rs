@@ -33,5 +33,9 @@ pub mod test {
         fn position(&self) -> &Self::Position {
             &self.position
         }
+
+        fn position_mut(&mut self) -> &mut Self::Position {
+            &mut self.position
+        }
     }
 }

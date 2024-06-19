@@ -1,0 +1,17 @@
+[package]
+name = "input-ros"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4.21"
+simple_logger = "4.3.3"
+clap = {version = "4.5.4", features = ["derive"]}
+lidarserv-server = { path = "../lidarserv-server" }
+rosrust = "0.9.11"
+rosrust_msg = "0.1.7"
+thiserror = "1.0.58"
+tokio = "1.37.0"
+anyhow = "1.0.81"

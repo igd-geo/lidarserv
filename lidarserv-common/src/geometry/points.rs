@@ -12,6 +12,9 @@ pub trait PointType {
     /// Position of the point.
     fn position(&self) -> &Self::Position;
 
+    /// Position of the point - mutable.
+    fn position_mut(&mut self) -> &mut Self::Position;
+
     /// Access the point attribute specified by the type parameter.
     #[inline]
     fn attribute<T>(&self) -> &T
@@ -19,6 +22,15 @@ pub trait PointType {
         Self: WithAttr<T>,
     {
         self.value()
+    }
+
+    /// Access the point attribute specified by the type parameter.
+    #[inline]
+    fn attribute_mut<T>(&mut self) -> &mut T
+    where
+        Self: WithAttr<T>,
+    {
+        self.value_mut()
     }
 
     /// Access the point attribute specified by the type parameter.
@@ -34,7 +46,11 @@ pub trait PointType {
 pub trait WithAttr<T> {
     fn value(&self) -> &T;
 
-    fn set_value(&mut self, new_value: T);
+    fn value_mut(&mut self) -> &mut T;
+
+    fn set_value(&mut self, new_value: T) {
+        *self.value_mut() = new_value;
+    }
 }
 
 #[cfg(test)]
@@ -66,6 +82,10 @@ mod tests {
         fn position(&self) -> &F64Position {
             &self.position
         }
+
+        fn position_mut(&mut self) -> &mut Self::Position {
+            &mut self.position
+        }
     }
 
     impl WithAttr<ExampleAttribute> for Point {
@@ -73,8 +93,8 @@ mod tests {
             &self.example
         }
 
-        fn set_value(&mut self, new_value: ExampleAttribute) {
-            self.example = new_value;
+        fn value_mut(&mut self) -> &mut ExampleAttribute {
+            &mut self.example
         }
     }
 
@@ -83,8 +103,8 @@ mod tests {
             &self.foo_bar
         }
 
-        fn set_value(&mut self, new_value: FooBarAttribute) {
-            self.foo_bar = new_value
+        fn value_mut(&mut self) -> &mut FooBarAttribute {
+            &mut self.foo_bar
         }
     }
 

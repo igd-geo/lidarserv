@@ -39,15 +39,19 @@ where
     fn position(&self) -> &Self::Position {
         &self.position
     }
+
+    fn position_mut(&mut self) -> &mut Self::Position {
+        &mut self.position
+    }
 }
 
 impl<Pos> WithAttr<LasPointAttributes> for GenericPoint<Pos> {
     fn value(&self) -> &LasPointAttributes {
-        self.las_attributes.as_ref()
+        &self.las_attributes
     }
 
-    fn set_value(&mut self, new_value: LasPointAttributes) {
-        *self.las_attributes = new_value
+    fn value_mut(&mut self) -> &mut LasPointAttributes {
+        &mut self.las_attributes
     }
 }
 

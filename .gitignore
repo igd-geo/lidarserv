@@ -1,6 +1,7 @@
 /target
 /data/
 /.idea/
+/.vscode/
 /.env
 /preconv.laz
 /lidarserv-common/test.json

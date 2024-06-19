@@ -25,6 +25,10 @@ impl PointType for Point {
     fn position(&self) -> &Self::Position {
         &self.position
     }
+
+    fn position_mut(&mut self) -> &mut Self::Position {
+        &mut self.position
+    }
 }
 
 impl WithAttr<LasPointAttributes> for Point {
@@ -32,8 +36,8 @@ impl WithAttr<LasPointAttributes> for Point {
         &self.las_attributes
     }
 
-    fn set_value(&mut self, new_value: LasPointAttributes) {
-        self.las_attributes = new_value
+    fn value_mut(&mut self) -> &mut LasPointAttributes {
+        &mut self.las_attributes
     }
 }
 
@@ -42,7 +46,7 @@ impl WithAttr<PointIdAttribute> for Point {
         &self.point_id
     }
 
-    fn set_value(&mut self, new_value: PointIdAttribute) {
-        self.point_id = new_value;
+    fn value_mut(&mut self) -> &mut PointIdAttribute {
+        &mut self.point_id
     }
 }

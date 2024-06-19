@@ -1,9 +1,9 @@
 use crate::renderer::error::{RendererError, RendererResult};
 use crate::renderer::viewer::private::RenderThreadHandle;
-use derivative::Derivative;
 use pasture_core::containers::{PointBuffer, PointBufferExt};
 use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PrimitiveType};
 use pasture_core::nalgebra::Vector3;
+use std::fmt::Debug;
 use std::fmt::Formatter;
 
 /// Extracts the data for one point attribute from the point buffer
@@ -159,16 +159,14 @@ pub enum VertexDataType {
 
 /// Contains the data for a vertex buffer.
 /// The enum variants correspond to the different values of [VertexDataType].
-#[derive(Clone, Derivative)]
-#[derivative(Debug)]
+#[derive(Clone)]
 pub enum VertexData {
-    F32(#[derivative(Debug = "ignore")] Vec<F32Attribute>),
-    U8(#[derivative(Debug = "ignore")] Vec<U8Attribute>),
-    Vec3F32(#[derivative(Debug = "ignore")] Vec<Vec3F32Attribute>),
+    F32(Vec<F32Attribute>),
+    U8(Vec<U8Attribute>),
+    Vec3F32(Vec<Vec3F32Attribute>),
     Vec3F32Transform {
         /// position = value * scale + offset
         /// value = (position - offset) / scale
-        #[derivative(Debug = "ignore")]
         values: Vec<Vec3F32Attribute>,
         offset: Vector3<f64>,
         scale: Vector3<f64>,
@@ -194,6 +192,34 @@ impl VertexData {
             VertexData::Vec3F32(_) => VertexDataType::Vec3F32,
             VertexData::U8(_) => VertexDataType::U8,
             VertexData::Vec3F32Transform { .. } => VertexDataType::Vec3F32Transform,
+        }
+    }
+}
+
+impl Debug for VertexData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        struct DebugEllipsis;
+
+        impl Debug for DebugEllipsis {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                write!(f, "[...]")
+            }
+        }
+
+        match self {
+            Self::F32(_) => f.debug_tuple("F32").field(&DebugEllipsis).finish(),
+            Self::U8(_) => f.debug_tuple("U8").field(&DebugEllipsis).finish(),
+            Self::Vec3F32(_) => f.debug_tuple("Vec3F32").field(&DebugEllipsis).finish(),
+            Self::Vec3F32Transform {
+                offset,
+                scale,
+                values: _,
+            } => f
+                .debug_struct("Vec3F32Transform")
+                .field("values", &DebugEllipsis)
+                .field("offset", offset)
+                .field("scale", scale)
+                .finish(),
         }
     }
 }
