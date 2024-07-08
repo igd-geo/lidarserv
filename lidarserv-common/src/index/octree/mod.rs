@@ -1,17 +1,19 @@
+pub mod attribute_bounds;
+pub mod attribute_histograms;
+pub mod attribute_index;
 pub mod grid_cell_directory;
+pub mod histogram;
 pub mod live_metrics_collector;
 pub mod page_manager;
 pub mod reader;
 pub mod writer;
-pub mod attribute_index;
-pub mod attribute_bounds;
-pub mod attribute_histograms;
-pub mod histogram;
 
 use crate::geometry::grid::{GridCell, I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{CoordinateSystem, I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
+use crate::index::octree::attribute_histograms::HistogramSettings;
+use crate::index::octree::attribute_index::AttributeIndex;
 use crate::index::octree::grid_cell_directory::GridCellDirectory;
 use crate::index::octree::live_metrics_collector::LiveMetricsCollector;
 use crate::index::octree::page_manager::{LasPageManager, OctreePageLoader, Page};
@@ -20,15 +22,14 @@ use crate::index::octree::writer::{OctreeWriter, TaskPriorityFunction};
 use crate::index::Index;
 use crate::las::{I32LasReadWrite, LasPointAttributes};
 use crate::query::Query;
+use log::{debug, info, warn};
+use serde::Serialize;
+use serde_json::{json, Value};
 use std::error::Error;
 use std::fmt::Formatter;
-use std::sync::{Arc, Mutex};
 use std::option::Option;
-use log::debug;
-use serde_json::{json, Value};
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
-use crate::index::octree::attribute_histograms::HistogramSettings;
-use crate::index::octree::attribute_index::AttributeIndex;
 
 struct Inner<Point, Sampl, SamplF> {
     num_threads: u16,
@@ -91,7 +92,10 @@ where
             .field("node_hierarchy", &self.inner.node_hierarchy)
             // .field("page_cache", &self.inner.page_cache)
             // .field("attribute_index", &self.inner.attribute_index)
-            .field("enable_histogram_acceleration", &self.inner.enable_histogram_acceleration)
+            .field(
+                "enable_histogram_acceleration",
+                &self.inner.enable_histogram_acceleration,
+            )
             .field("histogram_settings", &self.inner.histogram_settings)
             // .field("sample_factory", &self.inner.sample_factory)
             .field("loader", &self.inner.loader)
@@ -146,7 +150,7 @@ where
                 metrics: Arc::new(
                     metrics.unwrap_or_else(LiveMetricsCollector::new_discarding_collector),
                 ),
-                point_record_format
+                point_record_format,
             }),
         }
     }
@@ -165,7 +169,10 @@ where
 
     pub fn flush(&mut self) -> Result<(), FlushError> {
         let size = self.inner.page_cache.size();
-        debug!("Flushing all octree pages: max={:?}, curr={:?}", size.0, size.1);
+        debug!(
+            "Flushing all octree pages: max={:?}, curr={:?}",
+            size.0, size.1
+        );
         self.inner
             .page_cache
             .flush()
@@ -180,7 +187,9 @@ where
         debug!("Flushing attribute index");
         let attribute_index = &self.inner.attribute_index;
         match attribute_index {
-            Some(index) => index.write_to_file_if_dirty().map_err(|e| FlushError(format!("{}", e)))?,
+            Some(index) => index
+                .write_to_file_if_dirty()
+                .map_err(|e| FlushError(format!("{}", e)))?,
             None => {}
         }
         Ok(())
@@ -226,15 +235,86 @@ where
             None => json!("N/A"),
         };
         // Calculate the size of the root cell
-        let root_cell: LeveledGridCell = LeveledGridCell { lod: LodLevel::from_level(0), pos: GridCell { x: 0, y: 0, z: 0 } };
-        let root_cell_size : I32Position = self.inner.node_hierarchy.get_leveled_cell_bounds(&root_cell).max();
+        let root_cell: LeveledGridCell = LeveledGridCell {
+            lod: LodLevel::from_level(0),
+            pos: GridCell { x: 0, y: 0, z: 0 },
+        };
+        let root_cell_size: I32Position = self
+            .inner
+            .node_hierarchy
+            .get_leveled_cell_bounds(&root_cell)
+            .max();
         let root_cell_size_decoded = self.coordinate_system().decode_position(&root_cell_size);
+
+        // calculate the spacing in lod0
+        let root_point_spacing = self
+            .inner
+            .sample_factory
+            .build(&LodLevel::base())
+            .point_distance();
+        let root_point_spacing_decoded =
+            self.coordinate_system().decode_distance(root_point_spacing);
+
+        // calculate tthe number of points on each lod
+        info!("Calculating point statistics...");
+        #[derive(Debug, Default, Serialize)]
+        struct LodPointCounter {
+            nr_points: u64,
+            nr_bogus_points: u64,
+        }
+        let mut nr_counting_errors = 0;
+        let mut nr_points_by_lod = vec![];
+        for lod_level in 0..=self.inner.max_lod.level() {
+            debug!("Calculating point statistics for LOD {lod_level}...");
+            while nr_points_by_lod.len() <= lod_level as usize {
+                nr_points_by_lod.push(LodPointCounter::default())
+            }
+            let counter = &mut nr_points_by_lod[lod_level as usize];
+            let lod = LodLevel::from_level(lod_level);
+            let nodes = self.inner.page_cache.directory().get_cells_for_lod(&lod);
+            for node in nodes {
+                match self.inner.page_cache.load(&node) {
+                    Ok(Some(page)) => {
+                        let loaded = page.get_node(
+                            &self.inner.loader,
+                            || self.inner.sample_factory.build(&lod),
+                            &self.inner.coordinate_system,
+                        );
+                        match loaded {
+                            Ok(node) => {
+                                counter.nr_points += node.sampling.len() as u64;
+                                counter.nr_bogus_points += node.bogus_points.len() as u64;
+                            }
+                            Err(e) => {
+                                warn!("Error loading node {node:?}: {e}");
+                                nr_counting_errors += 1
+                            }
+                        }
+                    }
+                    Ok(None) => {
+                        warn!("Node {node:?} does not exist.");
+                        nr_counting_errors += 1
+                    }
+                    Err(e) => {
+                        warn!("Error loading node {node:?}: {e}");
+                        nr_counting_errors += 1
+                    }
+                }
+            }
+        }
+        let lod_point_statistics = if nr_counting_errors == 0 {
+            json!(nr_points_by_lod)
+        } else {
+            json!(null)
+        };
         json!(
             {
                 "attribute_index": attribute_index_size,
                 "histogram_points": histogram_points,
                 "root_cell_size": root_cell_size_decoded,
-                "directory_info": self.inner.page_cache.directory().info()
+                "root_point_distance": root_point_spacing_decoded,
+                "directory_info": self.inner.page_cache.directory().info(),
+                "num_points_per_level": lod_point_statistics,
             }
         )
     }

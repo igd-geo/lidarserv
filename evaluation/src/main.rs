@@ -2,7 +2,7 @@ use evaluation::indexes::create_octree_index;
 use evaluation::insertion_rate::measure_insertion_rate;
 use evaluation::latency::measure_latency;
 use evaluation::point::Point;
-use evaluation::queries::{aabb_full};
+use evaluation::queries::aabb_full;
 use evaluation::query_performance::measure_query_performance;
 use evaluation::settings::{Base, EvaluationScript, MultiRun};
 use evaluation::thermal_throttle::processor_cooldown;
@@ -92,14 +92,20 @@ fn main() {
     for (name, mut run) in config.runs.clone() {
         info!("=== {} ===", name);
         run.apply_defaults(&config.defaults);
-        info!("Applied defaults: {:?}", run);
         let mut run_results = Vec::new();
         let mut current_run = 1;
         for index in &run.index {
-            info!("Running index {}", current_run);
-            let result = evaluate(&points, &run, &config.base, || {
-                    create_octree_index(coordinate_system.clone(), &config.base, &index)
-            }, config.base.enable_cooldown);
+            info!("--- {name} index {current_run} ---");
+            info!("{index:#?}");
+            let result = evaluate(
+                &points,
+                &run,
+                &config.base,
+                || create_octree_index(coordinate_system.clone(), &config.base, &index),
+                config.base.enable_cooldown,
+            );
+            info!("Index {current_run} done.");
+            info!("{result:#?}");
             run_results.push(json!({
                 "index": index,
                 "results": result,
@@ -290,14 +296,19 @@ where
     let mut index = make_index();
 
     // measure insertion rate
-    let mut max_pps= 0.0;
+    let mut max_pps = 0.0;
     let mut result_insertion_rate = serde_json::Value::Null;
     if !base_config.use_existing_index {
-        if enable_cooldown { processor_cooldown() };
+        if enable_cooldown {
+            processor_cooldown()
+        };
         info!("Measuring insertion rate...");
-        let (inner_result_insertion_rate, inner_max_pps) =
-            measure_insertion_rate(&mut index, points, &run.insertion_rate.single(), base_config.indexing_timeout_seconds);
-        info!("Results: {}", &inner_result_insertion_rate);
+        let (inner_result_insertion_rate, inner_max_pps) = measure_insertion_rate(
+            &mut index,
+            points,
+            &run.insertion_rate.single(),
+            base_config.indexing_timeout_seconds,
+        );
         result_insertion_rate = inner_result_insertion_rate;
         max_pps = inner_max_pps;
     }
@@ -308,10 +319,11 @@ where
 
     // measure query performance
     let result_query_perf = if run.query_perf.single().is_some() {
-        if enable_cooldown {processor_cooldown()};
+        if enable_cooldown {
+            processor_cooldown()
+        };
         info!("Measuring query perf...");
         let sensorpos_query_perf = measure_query_performance(index, base_config.output_queries);
-        info!("Results: {}", &sensorpos_query_perf);
         sensorpos_query_perf
     } else {
         drop(index);
@@ -329,7 +341,9 @@ where
             continue;
         }
         reset_data_folder(base_config);
-        if enable_cooldown {processor_cooldown()};
+        if enable_cooldown {
+            processor_cooldown()
+        };
         info!(
             "Measuring latency at {} points/sec...",
             measurement_settings.points_per_sec
