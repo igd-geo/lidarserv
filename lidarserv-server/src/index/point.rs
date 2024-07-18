@@ -1,16 +1,16 @@
-use serde::{Deserialize, Serialize};
 use lidarserv_common::geometry::points::{PointType, WithAttr};
 use lidarserv_common::geometry::position::{
     CoordinateSystemError, F64CoordinateSystem, F64Position, I32CoordinateSystem, I32Position,
     Position,
 };
-use lidarserv_common::las::{LasPointAttributes};
+use lidarserv_common::las::LasPointAttributes;
+use serde::{Deserialize, Serialize};
 
 /// Point type for the lidar server.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenericPoint<Position> {
     position: Position,
-    las_attributes: Box<LasPointAttributes>,
+    las_attributes: LasPointAttributes,
 }
 
 /// Point type for the lidar server, with the positions being stored the same way as
@@ -43,11 +43,11 @@ where
 
 impl<Pos> WithAttr<LasPointAttributes> for GenericPoint<Pos> {
     fn value(&self) -> &LasPointAttributes {
-        self.las_attributes.as_ref()
+        &self.las_attributes
     }
 
     fn set_value(&mut self, new_value: LasPointAttributes) {
-        *self.las_attributes = new_value
+        self.las_attributes = new_value
     }
 }
 
