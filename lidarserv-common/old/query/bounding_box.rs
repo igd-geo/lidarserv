@@ -1,6 +1,4 @@
-use crate::geometry::bounding_box::{BaseAABB, AABB};
 use crate::geometry::grid::LodLevel;
-use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::query::SpatialQuery;
 
 #[derive(Debug, Clone)]

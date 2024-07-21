@@ -1,443 +1,355 @@
-use crate::nalgebra::{distance_squared, Scalar};
-use nalgebra::{Point3, Vector3};
-use num_traits::Bounded;
-use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
-use std::ops::{Add, Sub};
-use thiserror::Error;
+use nalgebra::{Point3, Scalar, Vector3};
+use pasture_core::layout::{
+    PointAttributeDataType, PointAttributeDefinition, PointLayout, PrimitiveType,
+};
+use std::{borrow::Cow, fmt::Debug};
 
-/// Error type for [CoordinateSystem::encode_position].
-#[derive(Debug, Error)]
-pub enum CoordinateSystemError {
-    #[error("The coordinate cannot be represented in this coordinate system, because it is out of its bounds.")]
-    OutOfBounds,
-}
+use super::grid::GridComponent;
 
-/// A frame of reference for points.
-pub trait CoordinateSystem: Debug {
-    type Position: Position;
+/// A position in the global coordinate system
+pub type PositionGlobal = Point3<f64>;
 
-    /// Constructs a point in this coordinate system, that represents the given global
-    /// position coordinates.
-    fn encode_position(
-        &self,
-        global: &Point3<f64>,
-    ) -> Result<Self::Position, CoordinateSystemError>;
-
-    /// Returns the global position coordinates, that the point in this coordinate system represents.
-    fn decode_position(&self, pos: &Self::Position) -> Point3<f64>;
-
-    fn decode_distance(&self, distance: <Self::Position as Position>::Component) -> f64;
-}
+/// Positions in the local coordinate system with some scale and offset.
+pub type Position<C> = Point3<C>;
 
 pub trait Component:
-    Copy + Scalar + PartialOrd + Bounded + Sub<Output = Self> + Add<Output = Self>
+    nalgebra::Scalar
+    + nalgebra::ClosedAdd
+    + nalgebra::ClosedSub
+    + nalgebra::ClosedMul
+    + nalgebra::ClosedDiv
+    + num_traits::One
+    + num_traits::Zero
+    + bytemuck::Pod
+    + bytemuck::Zeroable
+    + serde::ser::Serialize
+    + serde::de::DeserializeOwned
+    + Copy
+    + Debug
+    + Send
+    + Sync
+    + Sized
+    + PartialOrd
+    + PartialEq
+    + GridComponent
+    + PasturePrimitiveHelper
+    + 'static
 {
-    /// Center between two numbers ( result = (x1 + x2) / 2 )
-    fn center(x1: Self, x2: Self) -> Self;
-}
-
-/// A position in 3d space
-pub trait Position: Debug {
-    type Component: Component;
-
-    /// Returns the X component of the position in the coordinate system that it was created in.
-    /// (To get the global point in space that this position encodes, independently from the used
-    /// coordinate system, use [Position::decode].)
-    fn x(&self) -> Self::Component;
-
-    /// Returns the Y component of the position in the coordinate system that it was created in.
-    fn y(&self) -> Self::Component;
-
-    /// Returns the Z component of the position in the coordinate system that it was created in.
-    fn z(&self) -> Self::Component;
-
-    /// Constructs a position directly from its x,y,z components.
-    /// You most likely want to construct a position via some [CoordinateSystem], instead. This
-    /// is mostly useful for quick 'n dirty unit tests.
-    fn from_components(x: Self::Component, y: Self::Component, z: Self::Component) -> Self;
-
-    /// Calculate the distance between the two positions, assuming both positions were created in
-    /// the same coordinate system.
-    /// The distance is not meant to be interpreted as an absolute number, i.e. it cannot be
-    /// interpreted as "distance in meters". Rather distances can be compared to each other, to
-    /// establish an "is-closer-to-than" relationship.
-    fn distance_to(&self, other: &Self) -> Self::Component;
-
-    /// Constructs a point in the given coordinate system, that represents the given global
-    /// position coordinates.
-    #[inline]
-    fn encode<C>(coordinate_system: &C, global: &Point3<f64>) -> Result<Self, CoordinateSystemError>
-    where
-        C: CoordinateSystem<Position = Self>,
-        Self: Sized,
-    {
-        coordinate_system.encode_position(global)
-    }
-
-    /// Returns the global position coordinates, that this position encodes.
-    #[inline]
-    fn decode<C>(&self, coordinate_system: &C) -> Point3<f64>
-    where
-        C: CoordinateSystem<Position = Self>,
-    {
-        coordinate_system.decode_position(self)
-    }
-
-    #[inline]
-    fn transcode<C1, C2>(
-        &self,
-        source_coordinate_system: &C1,
-        target_coordinate_system: &C2,
-    ) -> Result<C2::Position, CoordinateSystemError>
-    where
-        C1: CoordinateSystem<Position = Self>,
-        C2: CoordinateSystem,
-    {
-        let global = source_coordinate_system.decode_position(self);
-        target_coordinate_system.encode_position(&global)
-    }
-}
-
-impl Component for f32 {
-    fn center(x1: Self, x2: Self) -> Self {
-        (x1 + x2) / 2.0
-    }
-}
-
-impl Component for f64 {
-    fn center(x1: Self, x2: Self) -> Self {
-        (x1 + x2) / 2.0
-    }
+    fn to_f64(self) -> f64;
+    fn from_f64(value: f64) -> Self;
+    fn centre(self, other: Self) -> Self;
+    fn position_attribute() -> PointAttributeDefinition;
+    const MIN: Self;
+    const MAX: Self;
 }
 
 impl Component for i32 {
-    fn center(x1: Self, x2: Self) -> Self {
-        x1 / 2 + x2 / 2
+    fn to_f64(self) -> f64 {
+        self as f64
     }
+
+    fn from_f64(value: f64) -> Self {
+        value.round() as i32
+    }
+
+    fn centre(self, other: Self) -> Self {
+        (self + other) / 2
+    }
+
+    fn position_attribute() -> PointAttributeDefinition {
+        PointAttributeDefinition::custom(Cow::Borrowed("position"), PointAttributeDataType::Vec3i32)
+    }
+
+    const MIN: Self = i32::MIN;
+    const MAX: Self = i32::MAX;
 }
 
-impl Component for i64 {
-    fn center(x1: Self, x2: Self) -> Self {
-        (x1 + x2) / 2
+impl Component for f64 {
+    fn to_f64(self) -> f64 {
+        self
     }
+
+    fn from_f64(value: f64) -> Self {
+        value
+    }
+
+    fn centre(self, other: Self) -> Self {
+        (self + other) * 0.5
+    }
+
+    fn position_attribute() -> PointAttributeDefinition {
+        PointAttributeDefinition::custom(Cow::Borrowed("position"), PointAttributeDataType::Vec3f64)
+    }
+
+    const MIN: Self = f64::MIN;
+    const MAX: Self = f64::MAX;
 }
 
-/// A simple coordinate system for f64 positions,
-/// that does not apply any transformation to the global point coordinates.
-#[derive(Debug, Copy, Clone, Default)]
-pub struct F64CoordinateSystem;
+/// The type that is used for the component in the position attribute.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum PositionComponentType {
+    /// Position attribute is Vector3<F64>
+    F64,
 
-/// Position with f64 x, y and z components.
-#[derive(Debug, Clone, PartialEq)]
-pub struct F64Position(Point3<f64>);
-
-impl F64Position {
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
-        F64Position(Point3::new(x, y, z))
-    }
-
-    pub fn global_position(&self) -> &Point3<f64> {
-        &self.0
-    }
-
-    pub fn set_x(&mut self, x: f64) {
-        self.0.x = x
-    }
-
-    pub fn set_y(&mut self, y: f64) {
-        self.0.y = y
-    }
-
-    pub fn set_z(&mut self, z: f64) {
-        self.0.z = z
-    }
+    /// Position attribute is Vector3<I32>
+    I32,
 }
 
-impl Default for F64Position {
-    fn default() -> Self {
-        F64Position(Point3::new(0.0, 0.0, 0.0))
-    }
-}
-
-impl F64CoordinateSystem {
-    /// Construct new coordinate system.
-    pub fn new() -> Self {
-        F64CoordinateSystem
-    }
-}
-
-impl CoordinateSystem for F64CoordinateSystem {
-    type Position = F64Position;
-
-    #[inline]
-    fn encode_position(
-        &self,
-        global: &Point3<f64>,
-    ) -> Result<Self::Position, CoordinateSystemError> {
-        Ok(F64Position(*global))
-    }
-
-    #[inline]
-    fn decode_position(&self, pos: &Self::Position) -> Point3<f64> {
-        pos.0
-    }
-
-    #[inline]
-    fn decode_distance(&self, distance: f64) -> f64 {
-        distance
-    }
-}
-
-impl Position for F64Position {
-    type Component = f64;
-
-    fn x(&self) -> Self::Component {
-        self.0.x
-    }
-
-    fn y(&self) -> Self::Component {
-        self.0.y
-    }
-
-    fn z(&self) -> Self::Component {
-        self.0.z
-    }
-
-    fn from_components(x: Self::Component, y: Self::Component, z: Self::Component) -> Self {
-        F64Position(Point3::new(x, y, z))
-    }
-
-    /// Squared (euclidean) distance.
-    fn distance_to(&self, other: &Self) -> Self::Component {
-        distance_squared(&self.0, &other.0)
-    }
-}
-
-/// Coordinate system for i32 coordinates, that is given explicit bounds for the coordinates,
-/// that it can represent. Coordinates within the bounds are mapped to the
-/// range \[i32::MIN - i32::MAX\].
-#[derive(Debug, Clone, PartialEq, Copy, Serialize, Deserialize)]
-pub struct I32CoordinateSystem {
-    scale: Vector3<f64>,
-    offset: Vector3<f64>,
-}
-
-impl I32CoordinateSystem {
-    /// Construct a new coordinate system with the given bounds.
-    pub fn new(min: Point3<f64>, max: Point3<f64>) -> Self {
-        assert!(min.x < max.x);
-        assert!(min.y < max.y);
-        assert!(min.z < max.z);
-        let int_min = i32::MIN as f64;
-        let int_max = i32::MAX as f64;
-        let int_range = Vector3::repeat(int_max - int_min);
-        let range = max.coords - min.coords;
-        let scale = range.component_div(&int_range);
-        let offset = min.coords - Vector3::repeat(int_min).component_mul(&scale);
-
-        I32CoordinateSystem { scale, offset }
-    }
-
-    pub fn from_las_transform(scale: Vector3<f64>, offset: Vector3<f64>) -> Self {
-        I32CoordinateSystem { scale, offset }
-    }
-
-    pub fn scale(&self) -> &Vector3<f64> {
-        &self.scale
-    }
-
-    pub fn offset(&self) -> &Vector3<f64> {
-        &self.offset
-    }
-
-    pub fn add_offset(&mut self, offset: Vector3<f64>) {
-        self.offset += offset;
-    }
-}
-
-impl CoordinateSystem for I32CoordinateSystem {
-    type Position = I32Position;
-
-    fn encode_position(
-        &self,
-        global: &Point3<f64>,
-    ) -> Result<Self::Position, CoordinateSystemError> {
-        // transformation
-        let inner = (global.coords - self.offset).component_div(&self.scale);
-
-        // bounds check
-        let int_min = i32::MIN as f64;
-        let int_max = i32::MAX as f64;
-        if inner.x < int_min
-            || inner.x > int_max
-            || inner.y < int_min
-            || inner.y > int_max
-            || inner.z < int_min
-            || inner.z > int_max
+impl PositionComponentType {
+    pub fn from_layout(layout: &PointLayout) -> Self {
+        match layout
+            .get_attribute_by_name("position")
+            .expect("missing position attribute")
+            .datatype()
         {
-            return Err(CoordinateSystemError::OutOfBounds);
+            PointAttributeDataType::Vec3f64 => PositionComponentType::F64,
+            PointAttributeDataType::Vec3i32 => PositionComponentType::I32,
+            _ => panic!("Unsupported position attribute type"),
         }
-
-        // convert to int
-        Ok(I32Position(Point3::new(
-            inner.x.round() as i32,
-            inner.y.round() as i32,
-            inner.z.round() as i32,
-        )))
-    }
-
-    fn decode_position(&self, pos: &Self::Position) -> Point3<f64> {
-        let pos_f64 = Vector3::<f64>::new(pos.0.x as f64, pos.0.y as f64, pos.0.z as f64);
-        Point3::from(pos_f64.component_mul(&self.scale) + self.offset)
-    }
-
-    fn decode_distance(&self, distance: i32) -> f64 {
-        // assume a distance along the x axis
-        self.scale.x * distance as f64
     }
 }
 
-/// Position with i32 x, y and z components.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct I32Position(Point3<i32>);
+pub trait WithComponentType {
+    type Output;
 
-impl Default for I32Position {
-    fn default() -> Self {
-        I32Position(Point3::new(0, 0, 0))
+    fn run<C: Component>(&self) -> Self::Output;
+
+    fn for_component_type(&self, typ: PositionComponentType) -> Self::Output {
+        match typ {
+            PositionComponentType::F64 => self.run::<f64>(),
+            PositionComponentType::I32 => self.run::<i32>(),
+        }
+    }
+
+    fn for_layout(&self, layout: &PointLayout) -> Self::Output {
+        self.for_component_type(PositionComponentType::from_layout(layout))
     }
 }
 
-impl Position for I32Position {
-    type Component = i32;
+pub trait WithComponentTypeMut {
+    type Output;
 
-    fn x(&self) -> Self::Component {
-        self.0.x
+    fn run_mut<C: Component>(&mut self) -> Self::Output;
+
+    fn for_component_type_mut(&mut self, typ: PositionComponentType) -> Self::Output {
+        match typ {
+            PositionComponentType::F64 => self.run_mut::<f64>(),
+            PositionComponentType::I32 => self.run_mut::<i32>(),
+        }
     }
 
-    fn y(&self) -> Self::Component {
-        self.0.y
+    fn for_layout_mut(&mut self, layout: &PointLayout) -> Self::Output {
+        self.for_component_type_mut(PositionComponentType::from_layout(layout))
+    }
+}
+
+pub trait WithComponentTypeOnce: Sized {
+    type Output;
+
+    fn run_once<C: Component>(self) -> Self::Output;
+
+    fn for_component_type_once(self, typ: PositionComponentType) -> Self::Output {
+        match typ {
+            PositionComponentType::F64 => self.run_once::<f64>(),
+            PositionComponentType::I32 => self.run_once::<i32>(),
+        }
     }
 
-    fn z(&self) -> Self::Component {
-        self.0.z
+    fn for_layout_once(self, layout: &PointLayout) -> Self::Output {
+        self.for_component_type_once(PositionComponentType::from_layout(layout))
     }
+}
 
-    fn from_components(x: Self::Component, y: Self::Component, z: Self::Component) -> Self {
-        I32Position(Point3::new(x, y, z))
-    }
+impl<T> WithComponentTypeMut for T
+where
+    T: WithComponentType,
+{
+    type Output = T::Output;
 
-    /// manhattan distance
-    fn distance_to(&self, other: &Self) -> Self::Component {
-        let p = self.0 - other.0;
-        p.x.abs()
-            .saturating_add(p.y.abs())
-            .saturating_add(p.z.abs())
+    fn run_mut<C: Component>(&mut self) -> Self::Output {
+        self.run::<C>()
     }
+}
+
+impl<T> WithComponentTypeOnce for T
+where
+    T: WithComponentTypeMut,
+{
+    type Output = T::Output;
+
+    fn run_once<C: Component>(mut self) -> Self::Output {
+        self.run_mut::<C>()
+    }
+}
+
+pub trait PasturePrimitiveHelper: Scalar {
+    type PasturePrimitive: PrimitiveType + Into<Position<Self>> + Default;
+}
+
+impl<C> PasturePrimitiveHelper for C
+where
+    C: Scalar,
+    Vector3<C>: PrimitiveType + Default,
+{
+    type PasturePrimitive = Vector3<Self>;
+}
+
+/*
+Here are some macros, to implement WithComponentType,
+WithComponentTypeMut and WithComponentTypeOnce on the fly.
+Basically, the with_component_type macro is to the WithComponentType
+trait, what closures are to the Fn trait. See tests below for examples.
+
+HOWEVER, I am not sure, if they should be used in actual code,
+because in their current state, rustfmt will not format the
+macro contents. In many cases, the code inside the macro body
+will be quite long, so this is actually really annoying.
+
+I will keep this commented out for now, until I find a solution for
+this, or until rustfmt becomes better.
+
+#[macro_export]
+macro_rules! wct_impl {
+    (
+        $traitname:ident $fnname:ident [$($self:tt)*] $selfvar:ident
+        <$ty:ident> $($rest:tt)*
+    ) => {
+        $crate::wct_impl!(
+            $traitname $fnname [$($self)*] $selfvar
+            <, $ty> $($rest)*
+        )
+    };
+    (
+        $traitname:ident $fnname:ident [$($self:tt)*] $selfvar:ident
+        <$($lifetime:lifetime),*, $ty:ident>($($arg:ident: $argty:ty = $argval:expr),*) $block:block
+    ) => {
+        $crate::wct_impl!(
+            $traitname $fnname [$($self)*] $selfvar
+            <$($lifetime),*, $ty> ($($arg: $argty = $argval),*) -> () $block
+        )
+    };
+    ($traitname:ident $fnname:ident [$($self:tt)*] $selfvar:ident <$($lifetime:lifetime),*, $ty:ident>($($arg:ident: $argty:ty = $argval:expr),*) -> $ret:ty $block:block) => {{
+        struct Wct<$($lifetime),*> {
+            $(
+                $arg: $argty
+            ),*
+        }
+        impl<$($lifetime),*> $crate::geometry::position::$traitname for Wct<$($lifetime),*> {
+            type Output = $ret;
+
+            fn $fnname<$ty: $crate::geometry::position::Component>($($self)*) -> Self::Output {
+                let Wct{$($arg),*} = $selfvar;
+                $block
+            }
+
+        }
+        Wct {
+            $(
+                $arg: $argval
+            ),*
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! with_component_type {
+    ($($tt:tt)*) => {
+        $crate::wct_impl!(WithComponentType run [&self] self $($tt)*)
+    };
+}
+
+#[macro_export]
+macro_rules! with_component_type_mut {
+    ($($tt:tt)*) => {
+        $crate::wct_impl!(WithComponentTypeMut run_mut [&mut self] self $($tt)*)
+    };
+}
+
+#[macro_export]
+macro_rules! with_component_type_once {
+    ($($tt:tt)*) => {
+        $crate::wct_impl!(WithComponentTypeOnce run_once [self] self $($tt)*)
+    };
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::geometry::position::{
-        CoordinateSystem, F64CoordinateSystem, F64Position, I32CoordinateSystem, I32Position,
-        Position,
-    };
-    use crate::nalgebra::{Point3, Vector3};
+mod macro_tests {
+    use std::borrow::Cow;
 
-    #[test]
-    fn f64_position_encode_decode() {
-        let coordinate_system = F64CoordinateSystem::new();
+    use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PointLayout};
 
-        // encode
-        let p = F64Position::encode(&coordinate_system, &Point3::new(1.0, 2.0, 3.0)).unwrap();
-        assert_eq!(p, F64Position(Point3::new(1.0, 2.0, 3.0)));
-        assert_eq!(p.x(), 1.0);
-        assert_eq!(p.y(), 2.0);
-        assert_eq!(p.z(), 3.0);
+    use crate::geometry::position::WithComponentTypeMut;
 
-        // decode
-        let global = p.decode(&coordinate_system);
-        assert_eq!(global, Point3::new(1.0, 2.0, 3.0));
+    use super::{WithComponentType, WithComponentTypeOnce};
+
+    fn make_test_layout_f64() -> PointLayout {
+        PointLayout::from_attributes(&[PointAttributeDefinition::custom(
+            Cow::Borrowed("position"),
+            PointAttributeDataType::Vec3f64,
+        )])
+    }
+
+    fn make_test_layout_i32() -> PointLayout {
+        PointLayout::from_attributes(&[PointAttributeDefinition::custom(
+            Cow::Borrowed("position"),
+            PointAttributeDataType::Vec3i32,
+        )])
     }
 
     #[test]
-    fn int_position_encode_decode_las() {
-        // make sure, that the definition of scale and offset is consistent with the one
-        // of the point transformations in LAS.
-        let coordinate_system = I32CoordinateSystem::from_las_transform(
-            Vector3::new(0.01, 0.01, 0.01),
-            Vector3::new(5.0, 5.0, 5.0),
-        );
+    fn test_macro() {
+        let wct = with_component_type!(<A>() -> usize {
+            std::mem::size_of::<A>()
+        });
 
-        // encode
-        let p = coordinate_system
-            .encode_position(&Point3::new(4.0, 5.2, 6.01))
-            .unwrap();
-        assert_eq!(p.x(), -100);
-        assert_eq!(p.y(), 20);
-        assert_eq!(p.z(), 101);
-
-        // decode
-        let global = I32Position::from_components(-200, 1, 2).decode(&coordinate_system);
-        assert_eq!(global, Point3::new(3.0, 5.01, 5.02));
+        let test_layout_f64 = make_test_layout_f64();
+        let test_layout_int = make_test_layout_i32();
+        assert_eq!(wct.for_layout(&test_layout_f64), 8);
+        assert_eq!(wct.for_layout(&test_layout_int), 4);
     }
 
     #[test]
-    fn int_position_encode_decode() {
-        let coordinate_system = I32CoordinateSystem::new(
-            Point3::new(-10.0, -10.0, -10.0),
-            Point3::new(10.0, 10.0, 10.0),
-        );
+    fn test_macro_mut() {
+        let mut wct = with_component_type_mut!(<A>(counter: u32 = 0) -> u32 {
+            *counter += 1;
+            *counter
+        });
 
-        // encode
-        let p = coordinate_system
-            .encode_position(&Point3::new(-10.0, 0.0, 10.0))
-            .unwrap();
-        assert_eq!(p.x(), i32::MIN);
-        assert_eq!(p.y(), 0);
-        assert_eq!(p.z(), i32::MAX);
-
-        // decode
-        let global = p.decode(&coordinate_system);
-        let diff = (global.coords - Vector3::new(-10.0, 0.0, 10.0)).norm();
-        assert!(diff < 0.001); // allow for small rounding errors
+        let test_layout = make_test_layout_f64();
+        assert_eq!(wct.for_layout_mut(&test_layout), 1);
+        assert_eq!(wct.for_layout_mut(&test_layout), 2);
+        assert_eq!(wct.for_layout_mut(&test_layout), 3);
     }
 
     #[test]
-    fn int_position_encode_bounds() {
-        let coordinate_system = I32CoordinateSystem::new(
-            Point3::new(-10.0, -10.0, -10.0),
-            Point3::new(10.0, 10.0, 10.0),
-        );
+    fn test_macro_mut_with_borrow() {
+        let mut counter = 0;
+        let mut wct = with_component_type_mut!(<'a, A>(
+            my_reference: &'a mut u32 = &mut counter
+        ) {
+            **my_reference += 1;
+        });
 
-        // bounds min is still ok
-        assert!(coordinate_system
-            .encode_position(&Point3::new(-10.0, -10.0, -10.0))
-            .is_ok());
+        let test_layout = make_test_layout_f64();
+        wct.for_layout_mut(&test_layout);
+        wct.for_layout_mut(&test_layout);
+        wct.for_layout_mut(&test_layout);
 
-        // bounds max is still ok
-        assert!(coordinate_system
-            .encode_position(&Point3::new(10.0, 10.0, 10.0))
-            .is_ok());
+        assert_eq!(counter, 3);
+    }
 
-        // everything, that exceeds the bounds leads to an error
-        assert!(coordinate_system
-            .encode_position(&Point3::new(-10.1, 0.0, 0.0))
-            .is_err());
-        assert!(coordinate_system
-            .encode_position(&Point3::new(0.0, -10.1, 0.0))
-            .is_err());
-        assert!(coordinate_system
-            .encode_position(&Point3::new(0.0, 0.0, -10.1))
-            .is_err());
-        assert!(coordinate_system
-            .encode_position(&Point3::new(10.1, 0.0, 0.0))
-            .is_err());
-        assert!(coordinate_system
-            .encode_position(&Point3::new(0.0, 10.1, 0.0))
-            .is_err());
-        assert!(coordinate_system
-            .encode_position(&Point3::new(0.0, 0.0, 10.1))
-            .is_err());
+    #[test]
+    fn test_macro_once() {
+        let input = vec!["Hello", "World"];
+        let wct = with_component_type_once!(<A>(
+            myvec: Vec<&'static str> = input
+        ) -> Vec<String> {
+            myvec.into_iter().map(|s| s.to_string()).collect()
+        });
+
+        let test_layout = make_test_layout_f64();
+        let result = wct.for_layout_once(&test_layout);
+        assert_eq!(result, vec!["Hello".to_string(), "World".to_string()]);
     }
 }
+ */

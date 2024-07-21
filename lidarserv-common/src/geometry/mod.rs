@@ -1,37 +1,29 @@
 pub mod bounding_box;
+pub mod coordinate_system;
 pub mod grid;
-pub mod points;
+pub mod plane;
 pub mod position;
 pub mod sampling;
 
 #[cfg(test)]
 pub mod test {
-    use crate::geometry::points::PointType;
-    use crate::geometry::position::{F64Position, Position};
+    use bytemuck::{Pod, Zeroable};
+    use nalgebra::Vector3;
+    use pasture_derive::PointType;
 
-    /// Trivial point type that can be used for unit tests
-    #[derive(Debug)]
-    pub struct Point {
-        position: F64Position,
+    /// A pasture point type for testing with a f64 position.
+    #[repr(C)]
+    #[derive(Debug, Copy, Clone, PointType, Pod, Zeroable)]
+    pub struct F64Point {
+        #[pasture(attribute = "position")]
+        pub position: Vector3<f64>,
     }
 
-    impl Point {
-        pub fn new(x: f64, y: f64, z: f64) -> Self {
-            Point {
-                position: F64Position::from_components(x, y, z),
-            }
-        }
-    }
-
-    impl PointType for Point {
-        type Position = F64Position;
-
-        fn new(position: Self::Position) -> Self {
-            Point { position }
-        }
-
-        fn position(&self) -> &Self::Position {
-            &self.position
-        }
+    /// A pasture point type for testing with a i32 position.
+    #[repr(C)]
+    #[derive(Debug, Copy, Clone, PointType, Pod, Zeroable)]
+    pub struct I32Point {
+        #[pasture(attribute = "position")]
+        pub position: Vector3<i32>,
     }
 }

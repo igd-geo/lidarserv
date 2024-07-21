@@ -1,6 +1,4 @@
-use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
-use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{I32Position, Position};
+use crate::geometry::grid::{GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
 use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
@@ -87,7 +85,7 @@ struct Inboxes<Point> {
 pub struct OctreeWriter<Point> {
     inboxes: Arc<Mutex<Inboxes<Point>>>,
     threads: Vec<thread::JoinHandle<Result<(), IndexingThreadError>>>,
-    node_hierarchy: I32GridHierarchy,
+    node_hierarchy: GridHierarchy,
 }
 
 #[derive(Error, Debug)]

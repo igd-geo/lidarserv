@@ -1,7 +1,4 @@
-use crate::geometry::bounding_box::OptionAABB;
 use crate::geometry::grid::LeveledGridCell;
-use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::Sampling;
 use crate::index::octree::grid_cell_directory::GridCellDirectory;
 use crate::las::{I32LasReadWrite, Las, LasPointAttributes, ReadLasError};

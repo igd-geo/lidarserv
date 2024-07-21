@@ -1,7 +1,4 @@
 use crate::geometry::grid::{LeveledGridCell, LodLevel};
-use crate::geometry::points::PointType;
-use crate::geometry::points::WithAttr;
-use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::Inner;
 use crate::index::{NodeId, Query, Reader, Update};

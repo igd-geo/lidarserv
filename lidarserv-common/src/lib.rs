@@ -2,10 +2,10 @@
 
 extern crate core;
 
+mod f64_utils;
 pub mod geometry;
 pub mod index;
 pub mod io;
-pub mod las;
 pub mod lru_cache;
 pub mod query;
 mod trace_utils;

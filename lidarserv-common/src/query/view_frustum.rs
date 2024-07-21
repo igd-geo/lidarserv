@@ -1,72 +1,85 @@
-use crate::geometry::bounding_box::{BaseAABB, AABB};
-use crate::geometry::grid::LodLevel;
-use crate::geometry::points::PointType;
-use crate::geometry::position::{
-    CoordinateSystem, F64Position, I32CoordinateSystem, I32Position, Position,
-};
-use crate::geometry::sampling::{Sampling, SamplingFactory};
-use crate::query::SpatialQuery;
-use nalgebra::{Matrix4, Point3, Vector3, Vector4};
+//! # ToDo
+//!
+//! This needs quite some work. It was simply copied over from the old version.
+//!
+//!  - Don't recalculate the view frustum every time. Do it once when building the query.
+//!  - Look through what else can be put into the builder instead of redoing it every time.
+//!  - In matches_node, distinguish between NodeQueryResult::Partial and NodeQueryResult::Positive. (Currently always returns Partial.)
+//!  - Unit tests!
+use nalgebra::{Matrix4, Point3, Vector4};
+use pasture_core::containers::{BorrowedBuffer, VectorBuffer};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+use crate::{
+    geometry::{
+        bounding_box::Aabb,
+        coordinate_system::CoordinateSystem,
+        grid::{GridHierarchy, LeveledGridCell, LodLevel},
+        plane::Plane,
+        position::{Component, PositionComponentType, WithComponentTypeOnce},
+    },
+    query::QueryContext,
+};
+
+use super::{NodeQueryResult, Query, QueryBuilder};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ViewFrustumQuery {
+    pub view_projection_matrix: Matrix4<f64>,
+    pub view_projection_matrix_inv: Matrix4<f64>,
+    pub window_width_pixels: f64,
+    pub min_distance_pixels: f64,
+}
+
+struct ViewFrustomQueryPrepared {
+    component_type: PositionComponentType,
+    coordinate_system: CoordinateSystem,
+    node_hierarchy: GridHierarchy,
     view_projection_matrix: Matrix4<f64>,
     view_projection_matrix_inv: Matrix4<f64>,
     clip_min_point_dist: f64,
     lod0_point_distance: f64,
 }
 
-impl ViewFrustumQuery {
-    pub const fn new_raw(
-        view_projection_matrix: Matrix4<f64>,
-        view_projection_matrix_inv: Matrix4<f64>,
-        clip_min_point_dist: f64,
-        lod0_point_distance: f64,
-    ) -> Self {
-        ViewFrustumQuery {
-            view_projection_matrix,
-            view_projection_matrix_inv,
-            clip_min_point_dist,
-            lod0_point_distance,
+impl QueryBuilder for ViewFrustumQuery {
+    fn build(self, ctx: &super::QueryContext) -> impl Query {
+        let clip_min_point_dist = self.min_distance_pixels / self.window_width_pixels * 2.0;
+
+        struct Wct<'a> {
+            ctx: &'a QueryContext,
         }
-    }
+        impl<'a> WithComponentTypeOnce for Wct<'a> {
+            type Output = f64;
 
-    pub fn new<SamplF, Point, CSys, Pos>(
-        view_projection_matrix: Matrix4<f64>,
-        view_projection_matrix_inv: Matrix4<f64>,
-        window_width_pixels: f64,
-        min_distance_pixels: f64,
-        sampling_factory: &SamplF,
-        coordinate_system: &CSys,
-    ) -> Self
-    where
-        SamplF: SamplingFactory<Point = Point>,
-        Point: PointType<Position = Pos>,
-        CSys: CoordinateSystem<Position = Pos>,
-        Pos: Position,
-    {
-        let clip_min_point_dist = min_distance_pixels / window_width_pixels * 2.0;
+            fn run_once<C: Component>(self) -> Self::Output {
+                let local_point_distance = self
+                    .ctx
+                    .point_hierarchy
+                    .level::<C>(LodLevel::base())
+                    .cell_size();
+                self.ctx
+                    .coordinate_system
+                    .decode_distance(local_point_distance)
+            }
+        }
+        let lod0_point_distance = Wct { ctx }.for_component_type_once(ctx.component_type);
 
-        let lod0_point_distance = sampling_factory.build(&LodLevel::base()).point_distance();
-        let lod0_point_distance = coordinate_system.decode_distance(lod0_point_distance);
-
-        ViewFrustumQuery {
-            view_projection_matrix,
-            view_projection_matrix_inv,
+        ViewFrustomQueryPrepared {
+            component_type: ctx.component_type,
+            coordinate_system: ctx.coordinate_system,
+            node_hierarchy: ctx.node_hierarchy,
+            view_projection_matrix: self.view_projection_matrix,
+            view_projection_matrix_inv: self.view_projection_matrix_inv,
             clip_min_point_dist,
             lod0_point_distance,
         }
     }
 }
 
-impl SpatialQuery for ViewFrustumQuery {
-    fn max_lod_position(
-        &self,
-        position: &I32Position,
-        coordinate_system: &I32CoordinateSystem,
-    ) -> Option<LodLevel> {
+impl ViewFrustomQueryPrepared {
+    fn max_lod_position<C: Component>(&self, position: Point3<C>) -> Option<LodLevel> {
         // intersection test with view frustum
-        let position = position.decode(coordinate_system);
+        let position = self.coordinate_system.decode_position(position);
         let position_hom = Vector4::new(position.x, position.y, position.z, 1.0);
         let clip_position_hom = self.view_projection_matrix * position_hom;
         let clip_position = clip_position_hom.xyz() / clip_position_hom.w;
@@ -90,22 +103,18 @@ impl SpatialQuery for ViewFrustumQuery {
         let min_point_dist: f64 = (self.view_projection_matrix_inv * clip_min_point_dist_hom)
             .xyz()
             .norm();
-        let lod_level = (self.lod0_point_distance / min_point_dist).log2().ceil() as u16;
+        let lod_level = (self.lod0_point_distance / min_point_dist).log2().ceil() as u8;
         Some(LodLevel::from_level(lod_level))
     }
 
-    fn max_lod_area(
-        &self,
-        bounds: &AABB<i32>,
-        coordinate_system: &I32CoordinateSystem,
-    ) -> Option<LodLevel> {
+    fn max_lod_area<C: Component>(&self, bounds: Aabb<C>) -> Option<LodLevel> {
         // convert aabb to global coordinates
-        let min = coordinate_system.decode_position(&bounds.min());
-        let max = coordinate_system.decode_position(&bounds.max());
-        let bounds = AABB::new(min, max);
+        let min = self.coordinate_system.decode_position(bounds.min);
+        let max = self.coordinate_system.decode_position(bounds.max);
+        let bounds = Aabb::new(min, max);
 
         // get vertices and planes, that make up both the view frustum and the aabb
-        let frustum_vertices = CubeVertices::from_aabb(&AABB::new(
+        let frustum_vertices = CubeVertices::from_aabb(Aabb::new(
             Point3::new(-1.0, -1.0, -1.0),
             Point3::new(1.0, 1.0, 1.0),
         ))
@@ -116,7 +125,7 @@ impl SpatialQuery for ViewFrustumQuery {
             world_v.into()
         });
         let frustum_planes = frustum_vertices.planes();
-        let aabb_vertices = CubeVertices::from_aabb(&bounds);
+        let aabb_vertices = CubeVertices::from_aabb(bounds);
         let aabb_planes = aabb_vertices.planes();
 
         // intersection test between aabb and view frustum
@@ -125,7 +134,7 @@ impl SpatialQuery for ViewFrustumQuery {
             frustum_vertices
                 .points()
                 .iter()
-                .all(|frustum_vert| aabb_plane.is_on_negative_side(frustum_vert))
+                .all(|frustum_vert| aabb_plane.is_on_negative_side(*frustum_vert))
         }) {
             return None;
         }
@@ -133,7 +142,7 @@ impl SpatialQuery for ViewFrustumQuery {
             aabb_vertices
                 .points()
                 .iter()
-                .all(|aabb_vert| frustum_plane.is_on_negative_side(aabb_vert))
+                .all(|aabb_vert| frustum_plane.is_on_negative_side(*aabb_vert))
         }) {
             return None;
         }
@@ -143,7 +152,7 @@ impl SpatialQuery for ViewFrustumQuery {
         let (mut min_d_point, min_d) = aabb_vertices
             .points()
             .iter()
-            .map(|p| (*p, near_clipping_plane.signed_distance(p)))
+            .map(|p| (*p, near_clipping_plane.signed_distance(*p)))
             .min_by(|(_, a), (_, b)| {
                 // f64::total_cmp is still unstable... :(
                 if a < b {
@@ -154,7 +163,7 @@ impl SpatialQuery for ViewFrustumQuery {
             })
             .unwrap();
         if min_d < 0.0 {
-            min_d_point = near_clipping_plane.project_onto_plane(&min_d_point);
+            min_d_point = near_clipping_plane.project_onto_plane(min_d_point);
         }
 
         // calculate the lod for that point
@@ -169,26 +178,86 @@ impl SpatialQuery for ViewFrustumQuery {
         let min_point_dist = (self.view_projection_matrix_inv * clip_min_point_dist_hom)
             .xyz()
             .norm();
-        let lod_level = (self.lod0_point_distance / min_point_dist).log2().ceil() as u16;
+        let lod_level = (self.lod0_point_distance / min_point_dist).log2().ceil() as u8;
         Some(LodLevel::from_level(lod_level))
+    }
+}
+
+impl Query for ViewFrustomQueryPrepared {
+    fn matches_node(&self, node: LeveledGridCell) -> NodeQueryResult {
+        struct Wct<'a> {
+            query: &'a ViewFrustomQueryPrepared,
+            node: LeveledGridCell,
+        }
+        impl<'a> WithComponentTypeOnce for Wct<'a> {
+            type Output = NodeQueryResult;
+
+            fn run_once<C: Component>(self) -> Self::Output {
+                let Self { query, node } = self;
+                let node_aabb_local = query.node_hierarchy.get_leveled_cell_bounds::<C>(node);
+                let max_lod = query.max_lod_area(node_aabb_local);
+                if let Some(max_lod) = max_lod {
+                    // todo detect fully positive nodes, too.
+                    if node.lod <= max_lod {
+                        NodeQueryResult::Partial
+                    } else {
+                        NodeQueryResult::Negative
+                    }
+                } else {
+                    NodeQueryResult::Negative
+                }
+            }
+        }
+        Wct { query: self, node }.for_component_type_once(self.component_type)
+    }
+
+    fn matches_points(&self, lod: LodLevel, points: &VectorBuffer) -> Vec<bool> {
+        struct Wct<'a> {
+            query: &'a ViewFrustomQueryPrepared,
+            lod: LodLevel,
+            points: &'a VectorBuffer,
+        }
+        impl<'a> WithComponentTypeOnce for Wct<'a> {
+            type Output = Vec<bool>;
+
+            fn run_once<C: Component>(self) -> Self::Output {
+                let Self { query, lod, points } = self;
+
+                points
+                    .view_attribute::<C::PasturePrimitive>(&C::position_attribute())
+                    .into_iter()
+                    .map(|p| p.into())
+                    .map(|point_local| {
+                        let max_lod = query.max_lod_position(point_local);
+                        max_lod.is_some_and(|max_lod| lod <= max_lod)
+                    })
+                    .collect()
+            }
+        }
+        Wct {
+            query: self,
+            lod,
+            points,
+        }
+        .for_component_type_once(self.component_type)
     }
 }
 
 struct CubeVertices([Point3<f64>; 8]);
 
 impl CubeVertices {
-    pub fn from_aabb(aabb: &AABB<f64>) -> Self {
-        let min = aabb.min::<F64Position>();
-        let max = aabb.max::<F64Position>();
+    pub fn from_aabb(aabb: Aabb<f64>) -> Self {
+        let min = aabb.min;
+        let max = aabb.max;
         CubeVertices([
-            Point3::new(min.x(), min.y(), min.z()),
-            Point3::new(min.x(), min.y(), max.z()),
-            Point3::new(min.x(), max.y(), min.z()),
-            Point3::new(min.x(), max.y(), max.z()),
-            Point3::new(max.x(), min.y(), min.z()),
-            Point3::new(max.x(), min.y(), max.z()),
-            Point3::new(max.x(), max.y(), min.z()),
-            Point3::new(max.x(), max.y(), max.z()),
+            Point3::new(min.x, min.y, min.z),
+            Point3::new(min.x, min.y, max.z),
+            Point3::new(min.x, max.y, min.z),
+            Point3::new(min.x, max.y, max.z),
+            Point3::new(max.x, min.y, min.z),
+            Point3::new(max.x, min.y, max.z),
+            Point3::new(max.x, max.y, min.z),
+            Point3::new(max.x, max.y, max.z),
         ])
     }
 
@@ -265,117 +334,63 @@ impl CubeVertices {
     }
 
     #[inline]
-    pub fn x1y1z1(&self) -> &Point3<f64> {
-        &self.0[0]
+    pub fn x1y1z1(&self) -> Point3<f64> {
+        self.0[0]
     }
 
     #[inline]
-    pub fn x1y1z2(&self) -> &Point3<f64> {
-        &self.0[1]
+    pub fn x1y1z2(&self) -> Point3<f64> {
+        self.0[1]
     }
 
     #[inline]
-    pub fn x1y2z1(&self) -> &Point3<f64> {
-        &self.0[2]
+    pub fn x1y2z1(&self) -> Point3<f64> {
+        self.0[2]
     }
 
     #[inline]
-    pub fn x1y2z2(&self) -> &Point3<f64> {
-        &self.0[3]
+    pub fn x1y2z2(&self) -> Point3<f64> {
+        self.0[3]
     }
 
     #[inline]
-    pub fn x2y1z1(&self) -> &Point3<f64> {
-        &self.0[4]
+    pub fn x2y1z1(&self) -> Point3<f64> {
+        self.0[4]
     }
 
     #[inline]
-    pub fn x2y1z2(&self) -> &Point3<f64> {
-        &self.0[5]
+    pub fn x2y1z2(&self) -> Point3<f64> {
+        self.0[5]
     }
 
     #[inline]
-    pub fn x2y2z1(&self) -> &Point3<f64> {
-        &self.0[6]
+    pub fn x2y2z1(&self) -> Point3<f64> {
+        self.0[6]
     }
 
     #[inline]
-    pub fn x2y2z2(&self) -> &Point3<f64> {
-        &self.0[7]
-    }
-}
-
-struct Plane {
-    normal: Vector3<f64>,
-    b: f64,
-}
-
-impl Plane {
-    pub fn from_triangle(p1: &Point3<f64>, p2: &Point3<f64>, p3: &Point3<f64>) -> Self {
-        let normal = (p2 - p1).cross(&(p3 - p1)).normalize();
-        let b = normal.dot(&p1.coords);
-        Plane { normal, b }
-    }
-
-    pub fn signed_distance(&self, p: &Point3<f64>) -> f64 {
-        self.normal.dot(&p.coords) - self.b
-    }
-
-    pub fn is_on_positive_side(&self, p: &Point3<f64>) -> bool {
-        self.signed_distance(p) >= 0.0
-    }
-
-    pub fn is_on_negative_side(&self, p: &Point3<f64>) -> bool {
-        !self.is_on_positive_side(p)
-    }
-
-    pub fn project_onto_plane(&self, p: &Point3<f64>) -> Point3<f64> {
-        p - self.normal * self.signed_distance(p)
+    pub fn x2y2z2(&self) -> Point3<f64> {
+        self.0[7]
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::geometry::bounding_box::{BaseAABB, AABB};
-    use crate::query::view_frustum::{CubeVertices, Plane};
-    use nalgebra::{Point3, Vector3};
-
-    #[test]
-    fn test_plane_from_triangle() {
-        let p = Plane::from_triangle(
-            &Point3::new(1.0, 0.0, 0.5),
-            &Point3::new(2.0, 0.0, 0.5),
-            &Point3::new(1.0, 3.0, 0.5),
-        );
-        assert_eq!(Vector3::new(0.0, 0.0, 1.0), p.normal);
-        assert_eq!(0.5, p.b);
-        assert!(p.is_on_positive_side(&Point3::new(0.0, 0.0, 1.0)));
-        assert!(p.is_on_negative_side(&Point3::new(0.0, 0.0, 0.0)));
-    }
+    use crate::{geometry::bounding_box::Aabb, query::view_frustum::CubeVertices};
+    use nalgebra::Point3;
 
     #[test]
     fn test_cube_inside_out() {
-        let c = CubeVertices::from_aabb(&AABB::new(
+        let c = CubeVertices::from_aabb(Aabb::new(
             Point3::new(0.0, 0.0, 0.0),
             Point3::new(1.0, 1.0, 1.0),
         ));
         let center = Point3::new(0.5, 0.5, 0.5);
-        assert!(c.plane_x_min().is_on_positive_side(&center));
-        assert!(c.plane_x_max().is_on_positive_side(&center));
-        assert!(c.plane_y_min().is_on_positive_side(&center));
-        assert!(c.plane_y_max().is_on_positive_side(&center));
-        assert!(c.plane_z_min().is_on_positive_side(&center));
-        assert!(c.plane_z_max().is_on_positive_side(&center));
-    }
-
-    #[test]
-    fn test_project_point_on_plane() {
-        let p = Plane::from_triangle(
-            &Point3::new(1.0, 0.0, 0.5),
-            &Point3::new(2.0, 0.0, 0.5),
-            &Point3::new(1.0, 3.0, 0.5),
-        );
-        let on_plane = p.project_onto_plane(&Point3::new(1.0, 2.0, 3.0));
-        assert_eq!(on_plane, Point3::new(1.0, 2.0, 0.5));
+        assert!(c.plane_x_min().is_on_positive_side(center));
+        assert!(c.plane_x_max().is_on_positive_side(center));
+        assert!(c.plane_y_min().is_on_positive_side(center));
+        assert!(c.plane_y_max().is_on_positive_side(center));
+        assert!(c.plane_z_min().is_on_positive_side(center));
+        assert!(c.plane_z_max().is_on_positive_side(center));
     }
 }

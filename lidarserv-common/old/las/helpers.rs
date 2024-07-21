@@ -1,7 +1,3 @@
-use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
-use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{CoordinateSystem, Position};
-use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use crate::las::{LasPointAttributes, ReadLasError};
 use las::point::Format;
 use las::raw::point::{Flags, ScanAngle};

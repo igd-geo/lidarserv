@@ -1,16 +1,20 @@
-use crate::geometry::bounding_box::{BaseAABB, AABB};
-use crate::geometry::position::{I32Position, Position};
-use crate::nalgebra::Point3;
+use nalgebra::point;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::mem;
+use std::ops::RangeInclusive;
+
+use crate::f64_utils::f64_next_down;
+
+use super::bounding_box::Aabb;
+use super::position::{Component, Position};
 
 /// Represents a level of detail.
 /// LOD 0 is the "base lod", the coarsest possible level.
 /// As the LOD level gets larger, more details are introduced - with every level, the minimum
 /// distance between two points is halved.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize)]
-pub struct LodLevel(u16);
+pub struct LodLevel(u8);
 
 impl LodLevel {
     /// Returns the coarsest possible level (LOD 0).
@@ -28,7 +32,7 @@ impl LodLevel {
 
     /// Returns the level, that is finer by the given number of LOD steps.
     #[inline]
-    pub fn finer_by(&self, by: u16) -> Self {
+    pub fn finer_by(&self, by: u8) -> Self {
         LodLevel(self.0 + by)
     }
 
@@ -43,137 +47,112 @@ impl LodLevel {
 
     /// Returns the current LOD level.
     #[inline]
-    pub fn level(&self) -> u16 {
+    pub fn level(&self) -> u8 {
         self.0
     }
 
     /// Constructs an LodLevel from the given level.
     #[inline]
-    pub fn from_level(level: u16) -> Self {
+    pub fn from_level(level: u8) -> Self {
         LodLevel(level)
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct I32GridHierarchy {
-    shift: u16,
+impl Display for LodLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LOD{}", self.0)
+    }
 }
 
-/// A partitioning of space into cubic grid cells.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct I32Grid {
-    shift: u8,
-}
+#[derive(Debug, Copy, Clone)]
+pub struct Grid<C: Component>(C::Grid);
 
-/// A specific level of a [GridHierarchy].
-/// Basically a grid, that also knows about its LOD within the GridHierarchy.
-pub struct LevelGrid {
-    lod: LodLevel,
-    grid: I32Grid,
-}
-
-impl LevelGrid {
-    /// Construct a new [LevelGrid]
-    pub fn new(lod: LodLevel, grid: I32Grid) -> Self {
-        LevelGrid { lod, grid }
-    }
-
-    /// Returns the cell within the [GridHierarchy], that contains the given position.
-    pub fn leveled_cell_at(&self, position: &I32Position) -> LeveledGridCell {
-        LeveledGridCell {
-            lod: self.lod,
-            pos: self.grid.cell_at(position),
-        }
-    }
-
-    /// Returns the underlying grid, essentially getting rid of the additional LOD information
-    /// carried by the LevelGrid.
-    pub fn into_grid(self) -> I32Grid {
-        self.grid
-    }
-
+impl<C: Component> Grid<C> {
     /// Calculates the bounds of the cell.
-    #[inline]
-    pub fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<i32> {
-        self.grid.cell_bounds(cell_pos)
-    }
-
-    /// Returns the cell, that contains the given position.
-    #[inline]
-    pub fn cell_at(&self, position: &I32Position) -> GridCell {
-        self.grid.cell_at(position)
+    pub fn cell_bounds(&self, cell_pos: GridCell) -> Aabb<C> {
+        let (xmin, xmax) = C::grid_get_cell_range(self.0, cell_pos.x);
+        let (ymin, ymax) = C::grid_get_cell_range(self.0, cell_pos.y);
+        let (zmin, zmax) = C::grid_get_cell_range(self.0, cell_pos.z);
+        Aabb::new(point![xmin, ymin, zmin], point![xmax, ymax, zmax])
     }
 
     /// Returns the side length of the cells in this grid
-    #[inline]
-    pub fn cell_size(&self) -> i32 {
-        self.grid.cell_size()
+    pub fn cell_size(&self) -> C {
+        C::grid_get_cell_size(self.0)
+    }
+
+    /// Returns the cell, that contains the given position.
+    pub fn cell_at(&self, position: Position<C>) -> GridCell {
+        GridCell {
+            x: position.x.grid_get_cell(self.0),
+            y: position.y.grid_get_cell(self.0),
+            z: position.z.grid_get_cell(self.0),
+        }
     }
 }
 
-impl I32GridHierarchy {
-    pub fn new(shift: u16) -> Self {
-        I32GridHierarchy { shift }
+/// A LOD Hierarchy of grids: The coarsest grid is at LOD 0 and with each LOD, the grid gets finer.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct GridHierarchy {
+    shift: i16,
+}
+
+impl GridHierarchy {
+    pub fn new(shift: i16) -> Self {
+        GridHierarchy { shift }
     }
 
     /// Returns the given hierarchy level.
-    pub fn level(&self, lod: &LodLevel) -> LevelGrid {
-        let grid = I32Grid::new(&lod.finer_by(self.shift));
-        LevelGrid::new(*lod, grid)
+    pub fn level<C: Component>(&self, lod: LodLevel) -> Grid<C> {
+        let level = self.shift - lod.level() as i16;
+        assert!(C::grid_get_level_minmax().contains(&level));
+        Grid(C::grid_get_level(level))
     }
 
-    pub fn max_level(&self) -> LodLevel {
-        LodLevel::from_level(31 - self.shift)
+    /// Returns the maximum LOD level that is allowed.
+    /// Or None, if the grid hierarchy is really incompatible
+    /// with the component type C.
+    /// (
+    /// Can e.g. happen, if already LOD 0 is finer than the resolution of C would allow. E.g. a grid hierarchy
+    /// where lod 0 has a node size of 0.01 - this would be fine for floats, but makes no sense for integers.
+    /// )
+    pub fn max_lod<C: Component>(&self) -> Option<LodLevel> {
+        let (level_min, level_max) = C::grid_get_level_minmax().into_inner();
+        let lod_min = self.shift - level_max;
+        let lod_max = self.shift - level_min;
+        if lod_min > 0 {
+            return None;
+        }
+        if lod_max < 0 {
+            return None;
+        }
+        if lod_max >= u8::MAX as i16 {
+            return Some(LodLevel::from_level(u8::MAX));
+        }
+        Some(LodLevel::from_level(lod_max as u8))
     }
 
     /// Returns the bounding box of the given cell
-    pub fn get_leveled_cell_bounds(&self, cell: &LeveledGridCell) -> AABB<i32> {
-        self.level(&cell.lod).cell_bounds(&cell.pos)
+    pub fn get_leveled_cell_bounds<C: Component>(&self, cell: LeveledGridCell) -> Aabb<C> {
+        self.level(cell.lod).cell_bounds(cell.pos)
+    }
+
+    /// Returns the cell that contains the given position at the requested lod
+    pub fn get_leveled_cell_at<C: Component>(
+        &self,
+        lod: LodLevel,
+        position: Position<C>,
+    ) -> LeveledGridCell {
+        LeveledGridCell {
+            lod,
+            pos: self.level(lod).cell_at(position),
+        }
     }
 }
 
-impl Default for I32GridHierarchy {
+impl Default for GridHierarchy {
     fn default() -> Self {
-        I32GridHierarchy::new(0)
-    }
-}
-
-impl I32Grid {
-    pub fn new(lod: &LodLevel) -> Self {
-        assert!(lod.level() < 32, "Grid level 32 or higher not supported.");
-        I32Grid {
-            shift: 31 - lod.level() as u8,
-        }
-    }
-
-    /// Calculates the bounds of the cell.
-    pub fn cell_bounds(&self, cell_pos: &GridCell) -> AABB<i32> {
-        AABB::new(
-            Point3::new(
-                cell_pos.x << self.shift,
-                cell_pos.y << self.shift,
-                cell_pos.z << self.shift,
-            ),
-            Point3::new(
-                (cell_pos.x.wrapping_add(1) << self.shift).wrapping_sub(1),
-                (cell_pos.y.wrapping_add(1) << self.shift).wrapping_sub(1),
-                (cell_pos.z.wrapping_add(1) << self.shift).wrapping_sub(1),
-            ),
-        )
-    }
-
-    /// Returns the side length of the cells in this grid
-    pub fn cell_size(&self) -> i32 {
-        1_i32 << self.shift
-    }
-
-    /// Returns the cell, that contains the given position.
-    pub fn cell_at(&self, position: &I32Position) -> GridCell {
-        GridCell {
-            x: position.x() >> self.shift,
-            y: position.y() >> self.shift,
-            z: position.z() >> self.shift,
-        }
+        GridHierarchy::new(0)
     }
 }
 
@@ -311,78 +290,127 @@ impl LeveledGridCell {
     }
 }
 
+pub trait GridComponent: Sized {
+    type Grid: Debug + Copy + Clone + Send + Sync;
+
+    /// Returns a grid for the given level of dissection.
+    /// Level 0 is always the level with grid size 1.
+    /// Each larger level doubles the grid size.
+    /// Each smaller (negative) level halves the grid size.
+    /// So, the grid size is always 2^level.
+    /// The level has to be in the range returned by [GridComponent::grid_get_level_minmax] (inclusive).
+    /// Otherwise, this function may panick.
+    fn grid_get_level(level: i16) -> Self::Grid;
+
+    fn grid_get_level_minmax() -> RangeInclusive<i16>;
+
+    /// The grid cell along this component
+    fn grid_get_cell(self, grid: Self::Grid) -> i32;
+
+    /// The cell size in this grid.
+    fn grid_get_cell_size(grid: Self::Grid) -> Self;
+
+    /// The range of values in the given cell
+    /// returns a tuple (min, max) (both inclusive).
+    fn grid_get_cell_range(grid: Self::Grid, cell: i32) -> (Self, Self);
+}
+
+impl GridComponent for i32 {
+    type Grid = u8;
+
+    fn grid_get_level(level: i16) -> Self::Grid {
+        assert!(level >= 0);
+        assert!(level <= 31);
+        level as u8
+    }
+
+    fn grid_get_level_minmax() -> RangeInclusive<i16> {
+        0..=31
+    }
+
+    fn grid_get_cell(self, grid: Self::Grid) -> i32 {
+        self >> grid
+    }
+
+    fn grid_get_cell_size(grid: Self::Grid) -> Self {
+        1 << grid
+    }
+
+    fn grid_get_cell_range(grid: Self::Grid, cell: i32) -> (Self, Self) {
+        let min = cell << grid;
+        let max = min + (1 << grid) - 1;
+        (min, max)
+    }
+}
+
+impl GridComponent for f64 {
+    type Grid = f64;
+
+    fn grid_get_level(level: i16) -> Self::Grid {
+        let sign = 0_u64;
+        let exponent = 1023_u64 + level as u64;
+        let fraction = 0_u64;
+        let number = (sign << 63) | (exponent << 52) | fraction;
+        f64::from_bits(number)
+    }
+
+    fn grid_get_level_minmax() -> RangeInclusive<i16> {
+        -1022..=1023
+    }
+
+    fn grid_get_cell(self, grid: Self::Grid) -> i32 {
+        (self / grid).floor() as i32
+    }
+
+    fn grid_get_cell_size(grid: Self::Grid) -> Self {
+        grid
+    }
+
+    fn grid_get_cell_range(grid: Self::Grid, cell: i32) -> (Self, Self) {
+        let min = (cell as f64) * grid;
+        let max = f64_next_down(min + grid);
+        (min, max)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::geometry::bounding_box::{BaseAABB, AABB};
-    use crate::geometry::grid::{GridCell, I32Grid, LeveledGridCell, LodLevel};
-    use crate::geometry::position::{CoordinateSystem, I32CoordinateSystem, Position};
-    use crate::nalgebra::Point3;
+    use nalgebra::point;
+
+    use crate::geometry::bounding_box::Aabb;
+    use crate::geometry::grid::{GridCell, LeveledGridCell, LodLevel};
+
+    use super::Grid;
 
     #[test]
     fn int_grid_cell() {
-        let grid = I32Grid::new(&LodLevel::from_level(2));
-        let coordinates =
-            I32CoordinateSystem::new(Point3::new(1.0, 1.0, 1.0), Point3::new(16.0, 16.0, 16.0));
+        let grid = Grid::<i32>(2);
         let test_cases = [
             (
-                coordinates
-                    .encode_position(&Point3::new(1.0, 2.0, 3.0))
-                    .unwrap(),
+                point![-5, -4, -3],
                 GridCell {
-                    x: -4,
-                    y: -4,
-                    z: -3,
+                    x: -2,
+                    y: -1,
+                    z: -1,
                 },
             ),
-            (
-                coordinates
-                    .encode_position(&Point3::new(4.0, 5.0, 6.0))
-                    .unwrap(),
-                GridCell {
-                    x: -3,
-                    y: -2,
-                    z: -2,
-                },
-            ),
-            (
-                coordinates
-                    .encode_position(&Point3::new(7.0, 8.0, 9.0))
-                    .unwrap(),
-                GridCell { x: -1, y: -1, z: 0 },
-            ),
-            (
-                coordinates
-                    .encode_position(&Point3::new(10.0, 11.0, 12.0))
-                    .unwrap(),
-                GridCell { x: 0, y: 1, z: 1 },
-            ),
-            (
-                coordinates
-                    .encode_position(&Point3::new(13.0, 14.0, 15.0))
-                    .unwrap(),
-                GridCell { x: 2, y: 2, z: 3 },
-            ),
-            (
-                coordinates
-                    .encode_position(&Point3::new(16.0, 16.0, 16.0))
-                    .unwrap(),
-                GridCell { x: 3, y: 3, z: 3 },
-            ),
+            (point![-2, -1, 0], GridCell { x: -1, y: -1, z: 0 }),
+            (point![1, 2, 3], GridCell { x: 0, y: 0, z: 0 }),
+            (point![4, 5, 6], GridCell { x: 1, y: 1, z: 1 }),
+            (point![7, 8, 9], GridCell { x: 1, y: 2, z: 2 }),
         ];
         for (position, cell) in test_cases {
             assert_eq!(
-                grid.cell_at(&position),
+                grid.cell_at(position),
                 cell,
-                "Test case for position {:?}",
-                position.decode(&coordinates)
+                "Test case for position {position}"
             )
         }
     }
 
     #[test]
-    #[allow(clippy::unusual_byte_groupings)] // bits are intentionally grouped like this
     fn int_grid_cell_bounds() {
-        let grid = I32Grid::new(&LodLevel::from_level(2));
+        let grid = Grid::<i32>(2);
 
         let test_cases = [
             (
@@ -391,54 +419,86 @@ mod tests {
                     y: -3,
                     z: -2,
                 },
-                AABB::new(
-                    Point3::new(
-                        0b100_00000000000000000000000000000_u32 as i32,
-                        0b101_00000000000000000000000000000_u32 as i32,
-                        0b110_00000000000000000000000000000_u32 as i32,
-                    ),
-                    Point3::new(
-                        0b100_11111111111111111111111111111_u32 as i32,
-                        0b101_11111111111111111111111111111_u32 as i32,
-                        0b110_11111111111111111111111111111_u32 as i32,
-                    ),
-                ),
+                Aabb::new(point![-16, -12, -8], point![-13, -9, -5]),
             ),
             (
                 GridCell { x: -1, y: 0, z: 1 },
-                AABB::new(
-                    Point3::new(
-                        0b111_00000000000000000000000000000_u32 as i32,
-                        0b000_00000000000000000000000000000,
-                        0b001_00000000000000000000000000000,
-                    ),
-                    Point3::new(
-                        0b111_11111111111111111111111111111_u32 as i32,
-                        0b000_11111111111111111111111111111,
-                        0b001_11111111111111111111111111111,
-                    ),
-                ),
+                Aabb::new(point![-4, 0, 4], point![-1, 3, 7]),
             ),
             (
                 GridCell { x: 2, y: 3, z: 3 },
-                AABB::new(
-                    Point3::new(
-                        0b010_00000000000000000000000000000,
-                        0b011_00000000000000000000000000000,
-                        0b011_00000000000000000000000000000,
-                    ),
-                    Point3::new(
-                        0b010_11111111111111111111111111111,
-                        0b011_11111111111111111111111111111,
-                        0b011_11111111111111111111111111111,
-                    ),
-                ),
+                Aabb::new(point![8, 12, 12], point![11, 15, 15]),
             ),
         ];
 
         for (cell, correct_bounds) in test_cases {
-            let bounds = grid.cell_bounds(&cell);
+            let bounds = grid.cell_bounds(cell);
             assert_eq!(bounds, correct_bounds, "failed at cell {:?}", cell);
+        }
+    }
+
+    #[test]
+    fn f64_grid_cell() {
+        let grid = Grid::<f64>(4.0);
+
+        let test_cases = [
+            (
+                point![-4.1, -4.0, -3.9],
+                GridCell {
+                    x: -2,
+                    y: -1,
+                    z: -1,
+                },
+            ),
+            (point![-0.0, 0.0, 2.0], GridCell { x: 0, y: 0, z: 0 }),
+            (point![3.9, 4.0, 4.1], GridCell { x: 0, y: 1, z: 1 }),
+            (point![7.9, 8.0, 8.1], GridCell { x: 1, y: 2, z: 2 }),
+        ];
+        for (position, cell) in test_cases {
+            assert_eq!(
+                grid.cell_at(position),
+                cell,
+                "Test case for position {position}"
+            )
+        }
+    }
+
+    #[test]
+    fn f64_grid_cell_bounds() {
+        let grid = Grid::<f64>(4.0);
+        let test_cases = [
+            (
+                GridCell {
+                    x: -4,
+                    y: -3,
+                    z: -2,
+                },
+                Aabb::new(point![-16.0, -12.0, -8.0], point![-12.0, -8.0, -4.0]),
+            ),
+            (
+                GridCell { x: -1, y: 0, z: 1 },
+                Aabb::new(point![-4.0, 0.0, 4.0], point![0.0, 4.0, 8.0]),
+            ),
+            (
+                GridCell { x: 2, y: 3, z: 3 },
+                Aabb::new(point![8.0, 12.0, 12.0], point![12.0, 16.0, 16.0]),
+            ),
+        ];
+
+        for (cell, correct_bounds) in test_cases {
+            let bounds = grid.cell_bounds(cell);
+            assert_eq!(
+                bounds.min, correct_bounds.min,
+                "test case for cell {cell:?}\n    expected bounds: {correct_bounds:?}\n    actual bounds: {bounds:?}",
+            );
+            assert!(
+                bounds.max < correct_bounds.max,
+                "test case for cell {cell:?}\n    expected bounds: {correct_bounds:?}\n    actual bounds: {bounds:?}",
+            );
+            assert!(
+                bounds.max.map(|c| c + 0.00001) > correct_bounds.max,
+                "test case for cell {cell:?}\n    expected bounds: {correct_bounds:?}\n    actual bounds: {bounds:?}",
+            );
         }
     }
 

@@ -27,10 +27,10 @@ pasture-core = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda
 anyhow = "1.0.83"
 byteorder = "1.5.0"
 lz4 = "1.24.0"
+bytemuck = "1.16.0"
 
 [features]
 trace = ["tracy-client/enable"]
 
 [dev-dependencies]
 pasture-derive = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d"}
-bytemuck = "1.16.0"

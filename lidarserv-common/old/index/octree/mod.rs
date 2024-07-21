@@ -8,9 +8,7 @@ pub mod page_manager;
 pub mod reader;
 pub mod writer;
 
-use crate::geometry::grid::{GridCell, I32GridHierarchy, LeveledGridCell, LodLevel};
-use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{CoordinateSystem, I32CoordinateSystem, I32Position};
+use crate::geometry::grid::{GridCell, GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
 use crate::index::octree::attribute_histograms::HistogramSettings;
 use crate::index::octree::attribute_index::AttributeIndex;
@@ -37,7 +35,7 @@ struct Inner<Point, Sampl, SamplF> {
     max_lod: LodLevel,
     max_bogus_inner: usize,
     max_bogus_leaf: usize,
-    node_hierarchy: I32GridHierarchy,
+    node_hierarchy: GridHierarchy,
     subscriptions: Mutex<Vec<crossbeam_channel::Sender<LeveledGridCell>>>,
     page_cache: LasPageManager<Sampl, Point>,
     attribute_index: Option<AttributeIndex>,
@@ -59,7 +57,7 @@ pub struct OctreeParams<Point, Sampl, SamplF> {
     pub attribute_index: Option<AttributeIndex>,
     pub enable_histogram_acceleration: bool,
     pub histogram_settings: HistogramSettings,
-    pub node_hierarchy: I32GridHierarchy,
+    pub node_hierarchy: GridHierarchy,
     pub page_loader: OctreePageLoader<Page<Sampl, Point>>,
     pub page_directory: GridCellDirectory,
     pub max_cache_size: usize,

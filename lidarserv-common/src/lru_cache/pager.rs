@@ -1,6 +1,7 @@
 use crate::lru_cache::later::{Later, LaterSender};
 use crate::lru_cache::lru::Lru;
 use crate::span;
+use std::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 use std::mem;
@@ -10,13 +11,13 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 use tracy_client::{create_plot, Plot};
 
-struct Page<V, F> {
+struct Page<V, E> {
     /// Every page has a unique number.
     /// This allows it to detect the ABA problem, if a page gets deleted and then re-created.
     page_number: u32,
 
     /// lock for synchronizing the access to the underlying file
-    file: Arc<Mutex<File<F>>>,
+    file: Arc<Mutex<File>>,
 
     /// the version number is incremented each time the value is changed, allowing
     /// changes to the value to be detected.
@@ -27,7 +28,7 @@ struct Page<V, F> {
 
     /// the actual value stored in the page.
     /// lock for synchronizing mutable access to the data.
-    data: Later<Result<Arc<V>, CacheLoadError>>,
+    data: Later<Result<Arc<V>, E>>,
 
     /// Indicates, if the page is currently being removed from the cache.
     ///
@@ -60,25 +61,22 @@ struct Page<V, F> {
     dirty: bool,
 }
 
-struct File<F> {
+struct File {
     /// Last version that was written to disk.
     /// If this is not equal to [Page::version_number], then the page data is "dirty" and needs
     /// to be written to disk. If both version numbers are equal, then the file is "up to date".
     /// Checking this version number before writing the file allows to resolve write-write conflicts
     /// where a later version could be overwritten with an earlier version of the file.
     version_number: u32,
-
-    /// Handle for writing the file
-    handle: F,
 }
 
 static DEFAULT_CACHE_SIZE_PLOT: Plot = create_plot!("Page LRU Cache size");
 static DEFAULT_RECENTLY_USED_PLOT: Plot = create_plot!("Page LRU Cache recently used");
 
 /// Manages all existing nodes and the cache.
-pub struct PageManager<P, K, V, F, D> {
+pub struct PageManager<P, K, V, E, D> {
     loader: P,
-    inner: Mutex<PageManagerInner<K, V, F, D>>,
+    inner: Mutex<PageManagerInner<K, V, E, D>>,
     wakeup: Condvar,
 }
 
@@ -87,8 +85,8 @@ pub struct PageManager<P, K, V, F, D> {
 /// * max_size is the maximum number of pages that can be stored in the cache.
 /// * num_pages_plot is a tracy plot that is updated with the current cache size.
 /// * recently_used_plot is a tracy plot that is updated with the number of pages that were
-struct PageManagerInner<K, V, F, D> {
-    cache: Lru<K, Page<V, F>>,
+struct PageManagerInner<K, V, E, D> {
+    cache: Lru<K, Page<V, E>>,
     directory: D,
     max_size: usize,
     next_page_number: u32,
@@ -96,64 +94,14 @@ struct PageManagerInner<K, V, F, D> {
     recently_used_plot: &'static Plot,
 }
 
-/// Responsible for loading pages to/from disk (filename handling).
+/// Responsible for loading pages to/from disk.
 pub trait PageLoader {
-    type FileName;
-    type FileHandle: PageFileHandle;
-    fn open(&self, file: &Self::FileName) -> Self::FileHandle;
-}
-
-/// Wrapper around std::io::Error, that can be cloned
-#[derive(Error, Debug, Clone)]
-#[error(transparent)]
-pub struct IoError(#[from] Arc<std::io::Error>);
-
-impl From<std::io::Error> for IoError {
-    fn from(e: std::io::Error) -> Self {
-        IoError(Arc::new(e))
-    }
-}
-
-#[derive(Error, Debug, Clone)]
-pub enum CacheLoadError {
-    #[error(transparent)]
-    IO { source: IoError },
-    #[error("{description}")]
-    FileFormat { description: String },
-}
-
-impl From<std::io::Error> for CacheLoadError {
-    fn from(e: std::io::Error) -> Self {
-        CacheLoadError::IO { source: e.into() }
-    }
-}
-
-/// Error when removing a page from the cache and writing it to disk.
-/// Returns the (removed) key and value of the page, so it can be dealt with
-/// (like re-inserting into the cache, or writing to a special "error-node")
-#[derive(Error)]
-#[error("Error at page {key}: {source}")]
-pub struct CacheCleanupError<K: Debug, V> {
-    #[source]
-    pub source: IoError,
-    pub key: K,
-    pub value: V,
-}
-
-impl<K: Debug, V> Debug for CacheCleanupError<K, V> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CacheCleanupError")
-            .field("key", &self.key)
-            .field("source", &self.source)
-            .finish()
-    }
-}
-
-/// Loads or stores a single page to/from disk
-pub trait PageFileHandle {
+    type Key;
     type Data;
-    fn load(&mut self) -> Result<Self::Data, CacheLoadError>;
-    fn store(&mut self, data: &Self::Data) -> Result<(), IoError>;
+    type Error;
+
+    fn load(&self, key: &Self::Key) -> Result<Self::Data, Self::Error>;
+    fn store(&self, key: &Self::Key, data: &Self::Data) -> Result<(), Self::Error>;
 }
 
 /// Keeps track of the list of existing pages,
@@ -168,12 +116,33 @@ pub trait PageDirectory {
     fn exists(&self, key: &Self::Key) -> bool;
 }
 
-impl<P, K, V, F, D> PageManager<P, K, V, F, D>
+/// Error when removing a page from the cache and writing it to disk.
+/// Returns the (removed) key and value of the page, so it can be dealt with
+/// (like re-inserting into the cache, or writing to a special "error-node")
+#[derive(Error)]
+#[error("Error at page {key:?}: {source}")]
+pub struct CacheCleanupError<K: Debug, V, E: Error> {
+    #[source]
+    pub source: E,
+    pub key: K,
+    pub value: Arc<V>,
+}
+
+impl<K: Debug, V, E: Error> Debug for CacheCleanupError<K, V, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CacheCleanupError")
+            .field("key", &self.key)
+            .field("source", &self.source)
+            .finish()
+    }
+}
+
+impl<P, K, V, E, D> PageManager<P, K, V, E, D>
 where
-    P: PageLoader<FileName = K, FileHandle = F>,
+    P: PageLoader<Key = K, Data = V, Error = E>,
     K: Clone + Eq + Hash + Debug,
     V: Default,
-    F: PageFileHandle<Data = V>,
+    E: Error + Clone,
     D: PageDirectory<Key = K>,
 {
     /// Creates a new PageManager.
@@ -217,18 +186,18 @@ where
     }
 
     /// Returns the inner page directory.
-    pub fn directory(&self) -> DirectoryGuard<'_, K, V, F, D> {
+    pub fn directory(&self) -> DirectoryGuard<'_, K, V, E, D> {
         DirectoryGuard(self.inner.lock().unwrap())
     }
 
-    #[inline]
     /// Used to overwrite page at key/node_id with new_value.
+    #[inline]
     pub fn store(&self, key: &K, new_value: V) {
         self.store_arc(key, Arc::new(new_value))
     }
 
     pub fn store_arc(&self, key: &K, new_value: Arc<V>) {
-        let s = span!("store");
+        let s = span!("PageManager::store");
 
         // (try to) get the entry from the cache
         let mut cache_lock = self.inner.lock().unwrap();
@@ -239,10 +208,7 @@ where
             // (No need to load the actual file, because we want to assign it a new value anyways)
             None => {
                 let page = Page {
-                    file: Arc::new(Mutex::new(File {
-                        version_number: 0,
-                        handle: self.loader.open(key),
-                    })),
+                    file: Arc::new(Mutex::new(File { version_number: 0 })),
                     data: Later::new(Ok(new_value)),
                     version_number: 1,
                     last_change: Instant::now(),
@@ -282,14 +248,14 @@ where
     #[inline]
     /// Load page. If it does not exist or an error occurs, return default page.
     /// Internally calls [Self::load]
-    pub fn load_or_default(&self, key: &K) -> Result<Arc<V>, CacheLoadError> {
+    pub fn load_or_default(&self, key: &K) -> Result<Arc<V>, E> {
         self.load(key)
             .map(|maybe_value| maybe_value.unwrap_or_else(|| Arc::new(V::default())))
     }
 
     /// Load a page. If it is not in the cache, load it from disk.
-    pub fn load(&self, key: &K) -> Result<Option<Arc<V>>, CacheLoadError> {
-        let s = span!("load");
+    pub fn load(&self, key: &K) -> Result<Option<Arc<V>>, E> {
+        let s = span!("PageManager::load");
 
         // (try to) get the entry from the cache
         let mut cache_lock = self.inner.lock().unwrap();
@@ -301,10 +267,7 @@ where
                     // Add a new page to the cache, with an yet unresolved Later value, to indicate
                     // that loading this page is still in progress.
 
-                    let file = Arc::new(Mutex::new(File {
-                        version_number: 0,
-                        handle: self.loader.open(key),
-                    }));
+                    let file = Arc::new(Mutex::new(File { version_number: 0 }));
                     let sender = LaterSender::new();
                     let later = sender.later();
                     let page = Page {
@@ -324,8 +287,8 @@ where
                     self.wakeup.notify_all();
 
                     // load file
-                    let mut file_lock = file.lock().unwrap();
-                    let value = file_lock.handle.load();
+                    let file_lock = file.lock().unwrap();
+                    let value = self.loader.load(key);
                     drop(file_lock);
 
                     // publish the loaded data into the Later value.
@@ -392,10 +355,10 @@ where
     }
 
     /// Like [Self::cleanup], just that it only removes a single page.
-    pub fn cleanup_one(&self) -> Result<bool, CacheCleanupError<K, Arc<V>>> {
-        let s = span!("cleanup one");
+    pub fn cleanup_one(&self) -> Result<bool, CacheCleanupError<K, V, E>> {
+        let s = span!("PageManager::cleanup_one");
 
-        let s1 = span!("cleanup one - locked 1");
+        let s1 = span!("PageManager::cleanup_one - locked 1");
         let mut cache_lock = self.inner.lock().unwrap();
 
         // decide, if we actually need to remove anything
@@ -453,7 +416,7 @@ where
             let mut file_lock = file.lock().unwrap();
             if version_number > file_lock.version_number {
                 file_lock.version_number = version_number;
-                file_lock.handle.store(data.as_ref())
+                self.loader.store(&key, data.as_ref())
             } else {
                 Ok(())
             }
@@ -463,7 +426,7 @@ where
 
         // acquire the lock again
         cache_lock = self.inner.lock().unwrap();
-        let s3 = span!("cleanup one - locked 2");
+        let s3 = span!("PageManager::cleanup_one - locked 2");
 
         // get a reference to the page again
         // (the old one got invalid when we dropped the lock.)
@@ -523,14 +486,14 @@ where
     /// In case of an IO error, the problem page is still removed from the cache,
     /// but instead of writing it to disk, it is returned as part of the returned error. It is up to
     /// the caller to decide, how to proceed (retry by re-inserting it, store it elsewhere, ignore it, panick, ...)
-    pub fn cleanup(&self) -> Result<(), CacheCleanupError<K, Arc<V>>> {
+    pub fn cleanup(&self) -> Result<(), CacheCleanupError<K, V, E>> {
         while self.cleanup_one()? {}
         Ok(())
     }
 
     /// Writes all cached pages to disk, leaving the cache empty.
-    pub fn flush(&self) -> Result<(), IoError> {
-        let _ = span!("flush");
+    pub fn flush(&self) -> Result<(), E> {
+        let _span = span!("PageManager::flush");
 
         // set max size to 0
         let original_max_size = {
@@ -556,10 +519,13 @@ where
     }
 }
 
-/// Stupid, `derive(Clone)` refuses to generate a clone implementation if V or F is not Clone,
-/// even if that would not be necessary. (All instances of V or F are behind an Arc, which always
+/// Stupid, `derive(Clone)` refuses to generate a clone implementation if V is not Clone,
+/// even if that would not be necessary. (All instances of V are behind an Arc, which always
 /// can be cloned.)
-impl<V, F> Clone for Page<V, F> {
+impl<V, E> Clone for Page<V, E>
+where
+    E: Clone,
+{
     fn clone(&self) -> Self {
         Page {
             page_number: self.page_number,
@@ -595,9 +561,9 @@ impl<K, V, F, D> PageManagerInner<K, V, F, D> {
     }
 }
 
-pub struct DirectoryGuard<'a, K, V, F, D>(MutexGuard<'a, PageManagerInner<K, V, F, D>>);
+pub struct DirectoryGuard<'a, K, V, E, D>(MutexGuard<'a, PageManagerInner<K, V, E, D>>);
 
-impl<'a, K, V, F, D> Deref for DirectoryGuard<'a, K, V, F, D> {
+impl<'a, K, V, E, D> Deref for DirectoryGuard<'a, K, V, E, D> {
     type Target = D;
 
     fn deref(&self) -> &Self::Target {
@@ -605,7 +571,7 @@ impl<'a, K, V, F, D> Deref for DirectoryGuard<'a, K, V, F, D> {
     }
 }
 
-impl<'a, K, V, F, D> DerefMut for DirectoryGuard<'a, K, V, F, D> {
+impl<'a, K, V, E, D> DerefMut for DirectoryGuard<'a, K, V, E, D> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0.directory
     }

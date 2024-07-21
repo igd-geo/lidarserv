@@ -1,72 +1,110 @@
-use crate::geometry::bounding_box::AABB;
-use crate::geometry::grid::LodLevel;
-use crate::geometry::points::PointType;
-use crate::geometry::position::{I32CoordinateSystem, I32Position};
 use std::fmt::Debug;
-use tracy_client::span;
 
-pub mod bounding_box;
+use crate::geometry::{
+    coordinate_system::CoordinateSystem,
+    grid::{GridHierarchy, LeveledGridCell, LodLevel},
+    position::PositionComponentType,
+};
+use pasture_core::containers::VectorBuffer;
+
+pub mod aabb;
 pub mod empty;
+pub mod full;
+pub mod lod;
+pub mod not;
 pub mod view_frustum;
 
-/// Implemented for EmptyQuery, BoundingBoxQuery, and ViewFrustumQuery.
-pub trait SpatialQuery: Debug {
-    /// Returns either the maximum LOD level at the given position
-    /// or None if the query does not match the position.
-    fn max_lod_position(
-        &self,
-        position: &I32Position,
-        coordinate_system: &I32CoordinateSystem,
-    ) -> Option<LodLevel>;
-
-    /// Returns either the maximum LOD level at the given area
-    /// or None if the query does not match the area.
-    fn max_lod_area(
-        &self,
-        bounds: &AABB<i32>,
-        coordinate_system: &I32CoordinateSystem,
-    ) -> Option<LodLevel>;
+/// Execution Context for queries.
+/// Contains everything the query might need to determine its result. E.g. details about the coordinate system.
+#[derive(Debug, Clone)]
+pub struct QueryContext {
+    pub node_hierarchy: GridHierarchy,
+    pub point_hierarchy: GridHierarchy,
+    pub coordinate_system: CoordinateSystem,
+    pub component_type: PositionComponentType,
+    // todo
+    //  - attribute index
 }
 
-/// Extension trait for Query trait objects for some convenience methods.
-pub trait SpatialQueryExt {
-    /// Returns true if the query matches the given area
-    fn matches_node(
-        &self,
-        bounds: &AABB<i32>,
-        coordinate_system: &I32CoordinateSystem,
-        lod: &LodLevel,
-    ) -> bool;
+/// Describes, how an octree node matches a query.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum NodeQueryResult {
+    /// The node does not match the query.
+    /// Don't accept any points into the query result.
+    /// Don't recurse into child nodes.
+    Negative,
 
-    /// Returns true if the query matches the given position
-    fn matches_point<Point>(&self, point: &Point, coordinate_system: &I32CoordinateSystem) -> bool
-    where
-        Point: PointType<Position = I32Position>;
+    /// The node matches the query.
+    /// Accept all points in the node into the query result without further filtering.
+    /// Recurse into the child nodes.
+    Positive,
+
+    /// Some points in the node are expected to match the query.
+    /// Use point-based filtering to determine which points to accept into the query result. (If PB filtering is enabled)
+    /// Recurse into the child nodes.
+    Partial,
 }
 
-/// Implementation for all types that implement Query.
-impl<Q> SpatialQueryExt for Q
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum LoadKind {
+    Full,
+    Filter,
+}
+
+/// Filter the point cloud based on some criterion, after
+/// initializing with some query context.
+pub trait QueryBuilder: Send + Sync + Debug + 'static {
+    /// Prepares the query for execution.
+    ///
+    /// (i.e.
+    ///  - convert coordinates into the local coordinate system,
+    ///  - open external index files
+    ///  - ...
+    /// )
+    fn build(self, ctx: &QueryContext) -> impl Query;
+}
+
+/// Filter the point cloud based on some criterion.
+pub trait Query: Send + Sync + 'static {
+    /// Checks, if the node matches the query
+    fn matches_node(&self, node: LeveledGridCell) -> NodeQueryResult;
+
+    /// Checks each point in the buffer if they match the query.
+    ///
+    /// Todo - consider some kind of bitvec, where 8 booleans are packed into a byte.
+    /// Hypothesis: This will allow to combine query results faster (AND, OR, NOT), but
+    /// the actual terminal conditions will have some overhead for setting the correct bit in a byte
+    fn matches_points(&self, lod: LodLevel, points: &VectorBuffer) -> Vec<bool>;
+}
+
+impl<T> QueryBuilder for T
 where
-    Q: SpatialQuery + ?Sized,
+    T: Query + Debug,
 {
-    fn matches_node(
-        &self,
-        bounds: &AABB<i32>,
-        coordinate_system: &I32CoordinateSystem,
-        lod: &LodLevel,
-    ) -> bool {
-        span!("QueryExt::matches_node");
-        match self.max_lod_area(bounds, coordinate_system) {
-            None => false,
-            Some(max_lod) => max_lod >= *lod,
-        }
+    fn build(self, _: &QueryContext) -> impl Query {
+        self
+    }
+}
+
+impl<T> Query for Box<T>
+where
+    T: Query + ?Sized,
+{
+    fn matches_node(&self, node: LeveledGridCell) -> NodeQueryResult {
+        self.as_ref().matches_node(node)
     }
 
-    fn matches_point<Point>(&self, point: &Point, coordinate_system: &I32CoordinateSystem) -> bool
-    where
-        Point: PointType<Position = I32Position>,
-    {
-        self.max_lod_position(point.position(), coordinate_system)
-            .is_some()
+    fn matches_points(&self, lod: LodLevel, points: &VectorBuffer) -> Vec<bool> {
+        self.as_ref().matches_points(lod, points)
+    }
+}
+
+impl NodeQueryResult {
+    pub fn should_load(&self) -> Option<LoadKind> {
+        match self {
+            NodeQueryResult::Negative => None,
+            NodeQueryResult::Positive => Some(LoadKind::Full),
+            NodeQueryResult::Partial => Some(LoadKind::Filter),
+        }
     }
 }

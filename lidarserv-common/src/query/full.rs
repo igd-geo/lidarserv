@@ -1,15 +1,17 @@
-use super::{NodeQueryResult, Query};
-use crate::geometry::grid::LodLevel;
 use pasture_core::containers::BorrowedBuffer;
 use serde::{Deserialize, Serialize};
 
-/// Query that matches nothing
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct QueryEmpty;
+use crate::geometry::grid::LodLevel;
 
-impl Query for QueryEmpty {
+use super::{NodeQueryResult, Query};
+
+/// Query that matches everything
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct QueryFull;
+
+impl Query for QueryFull {
     fn matches_node(&self, _node: crate::geometry::grid::LeveledGridCell) -> NodeQueryResult {
-        NodeQueryResult::Negative
+        NodeQueryResult::Positive
     }
 
     fn matches_points(
@@ -17,6 +19,6 @@ impl Query for QueryEmpty {
         _lod: LodLevel,
         points: &pasture_core::containers::VectorBuffer,
     ) -> Vec<bool> {
-        vec![false; points.len()]
+        vec![true; points.len()]
     }
 }

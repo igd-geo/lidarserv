@@ -39,12 +39,15 @@
 //!
 //! ## Uncompressed Point data
 //!
-//! Each point is the concatenation of its attributes. No padding between the attributes ("packed" layout).
+//! Each point is the concatenation of its attributes. No padding between the attributes ("packed layout").
 //!
 //! ## Lz4 compressed point data.
 //!
-//! Compressed point data is stored in an interleaved format. Meaning, that
-//! first the first byte of each point is compressed,
+//! Conceptually, each point also is the concatenation of its attribute, just like the packed layout representation
+//! also used for the uncompressed point data.
+//!
+//! However, compressed point data is stored in an interleaved format.
+//! Meaning, that first the first byte of each point is compressed,
 //! then the second byte of each point (in a new compression context)
 //! then the third byte of each point, and so on....
 //!
@@ -57,9 +60,8 @@
 //!                      The uncompressed size of this chunk is `nr_points` bytes long.
 //!                      It is the concatenation of the i'th byte of each point.
 
-use std::borrow::Cow;
-
-use anyhow::{anyhow, Context, Result};
+use super::{PointCodec, PointIoError};
+use anyhow::Result;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use nalgebra::{SVector, Vector3, Vector4};
 use pasture_core::{
@@ -71,6 +73,7 @@ use pasture_core::{
         PointLayout,
     },
 };
+use std::borrow::Cow;
 
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub enum Endianess {
@@ -95,7 +98,7 @@ pub enum Compression {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct AttributeHeader {
+struct AttributeHeader {
     /// attribute name
     pub name: String,
 
@@ -104,19 +107,21 @@ pub struct AttributeHeader {
 }
 
 impl AttributeHeader {
-    pub fn new(attr: PointAttributeDefinition) -> Self {
+    pub fn new(attr: &PointAttributeDefinition) -> Self {
         AttributeHeader {
             name: attr.name().to_string(),
             datatype: attr.datatype(),
         }
     }
 
-    pub fn read(rd: &mut impl std::io::Read) -> Result<AttributeHeader> {
+    pub fn read(rd: &mut impl std::io::Read) -> Result<AttributeHeader, PointIoError> {
         // name
         let name_len = rd.read_u8()?;
         let mut name_buf = vec![0; name_len as usize];
         rd.read_exact(&mut name_buf)?;
-        let name = String::from_utf8(name_buf)?;
+        let name = String::from_utf8(name_buf).map_err(|_| {
+            PointIoError::DataFormat("attribute name is not valid utf8.".to_string())
+        })?;
 
         // length
         let len = rd.read_u64::<LittleEndian>()?;
@@ -140,16 +145,22 @@ impl AttributeHeader {
             14 => PointAttributeDataType::Vec3f64,
             15 => PointAttributeDataType::Vec4u8,
             16 => PointAttributeDataType::ByteArray(len),
-            _ => return Err(anyhow!("Invalid point attribute datatype in header.")),
+            _ => {
+                return Err(PointIoError::DataFormat(
+                    "Invalid point attribute datatype in header.".to_string(),
+                ))
+            }
         };
         if datatype.size() != len {
-            return Err(anyhow!("Invalid point attribute len in header."));
+            return Err(PointIoError::DataFormat(
+                "Invalid point attribute len in header.".to_string(),
+            ));
         }
 
         Ok(AttributeHeader { name, datatype })
     }
 
-    pub fn write(&self, wr: &mut impl std::io::Write) -> Result<()> {
+    pub fn write(&self, wr: &mut impl std::io::Write) -> Result<(), PointIoError> {
         // name
         let name_buf = self.name.as_bytes();
         wr.write_u8(name_buf.len() as u8)?;
@@ -178,19 +189,17 @@ impl AttributeHeader {
             PointAttributeDataType::Vec4u8 => 15,
             PointAttributeDataType::ByteArray(_) => 16,
             PointAttributeDataType::Custom { .. } => {
-                return Err(anyhow!("Not supported: PointAttributeDataType::Custom"))
+                return Err(PointIoError::Unsupported(
+                    "The point attribute data type `PointAttributeDataType::Custom` is not supported.".to_string(),
+                ));
             }
         })?;
         Ok(())
     }
-
-    pub fn nr_bytes(&self) -> u64 {
-        self.name.as_bytes().len() as u64 + 10
-    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
-pub struct Header {
+struct Header {
     pub version: u8,
     pub endianess: Endianess,
     pub compression: Compression,
@@ -201,32 +210,44 @@ pub struct Header {
 impl Header {
     const MAGIC_NUMBER: &'static str = "lidarserv points";
 
-    pub fn read(rd: &mut impl std::io::Read) -> Result<Header> {
+    pub fn read(rd: &mut impl std::io::Read) -> Result<Header, PointIoError> {
         // magic number
         let mut magic_buf = [0; 16];
         rd.read_exact(&mut magic_buf)?;
         if std::str::from_utf8(&magic_buf) != Ok(Self::MAGIC_NUMBER) {
-            return Err(anyhow!("This is not a lidarserv points file."));
+            return Err(PointIoError::DataFormat(
+                "This is not a lidarserv points file.".to_string(),
+            ));
         }
 
         // version number
         let version = rd.read_u8()?;
         if version != 1 {
-            return Err(anyhow!("Wrong version: {version} (expected version 1)"));
+            return Err(PointIoError::DataFormat(format!(
+                "Wrong version: {version} (expected version 1)"
+            )));
         }
 
         // endianess
         let endianess = match rd.read_u8()? {
             0 => Endianess::LittleEndian,
             1 => Endianess::BigEndian,
-            _ => return Err(anyhow!("Invalid endianess in header.")),
+            _ => {
+                return Err(PointIoError::DataFormat(
+                    "Invalid endianess in header.".to_string(),
+                ))
+            }
         };
 
         // compression
         let compression = match rd.read_u8()? {
             0 => Compression::None,
             1 => Compression::Lz4,
-            _ => return Err(anyhow!("Invalid compression in header.")),
+            _ => {
+                return Err(PointIoError::DataFormat(
+                    "Invalid compression in header.".to_string(),
+                ))
+            }
         };
 
         // point count
@@ -249,13 +270,18 @@ impl Header {
         })
     }
 
-    pub fn write(&self, wr: &mut impl std::io::Write) -> Result<()> {
+    pub fn write(&self, wr: &mut impl std::io::Write) -> Result<(), PointIoError> {
         // check version
         // (currently version 1 is the only existing one)
         if self.version != 1 {
-            return Err(anyhow!(
+            return Err(PointIoError::Unsupported(format!(
                 "Wrong version: {} (expected version 1)",
                 self.version
+            )));
+        }
+        if self.attributes.len() > 255 {
+            return Err(PointIoError::Unsupported(
+                "Too many attributes. (max 255).".to_string(),
             ));
         }
 
@@ -285,7 +311,7 @@ impl Header {
             .attributes
             .len()
             .try_into()
-            .context("Too manyattributes. (max 255)")?;
+            .expect("tested at the top, that nr_attributes <= 255");
         wr.write_u8(nr_attributes)?;
         for attr in &self.attributes {
             attr.write(wr)?;
@@ -293,22 +319,13 @@ impl Header {
 
         Ok(())
     }
-
-    pub fn nr_bytes(&self) -> u64 {
-        self.attributes
-            .iter()
-            .map(|attr| attr.nr_bytes())
-            .sum::<u64>()
-            + Self::MAGIC_NUMBER.as_bytes().len() as u64
-            + 12
-    }
 }
 
 fn write_point_data_uncompressed<'a>(
     points: &'a impl BorrowedBuffer<'a>,
     header: &Header,
     write: &mut impl std::io::Write,
-) -> Result<()> {
+) -> Result<(), PointIoError> {
     // layout that should be used for writing to file:
     // Densely pack the attributes, no padding, interleaved
     let point_attrs = header
@@ -445,7 +462,7 @@ fn read_point_data_uncompressed(
     header: &Header,
     layout: PointLayout,
     rd: &mut impl std::io::Read,
-) -> Result<VectorBuffer> {
+) -> Result<VectorBuffer, PointIoError> {
     // read
     let point_size = header
         .attributes
@@ -472,7 +489,7 @@ fn read_point_data_uncompressed(
                 Cow::Owned(attr.name.clone()),
                 attr.datatype,
             ))
-            .context("layout missmatch")?
+            .expect("layout missmatch") // expect: before calling this (private) function, we ensure that the layout matches.
             .byte_range_within_point();
         let conversion = byteorder_convert_fn(header, attr);
         conversions.push((byte_range_in_data, byte_range_in_layout, conversion));
@@ -495,7 +512,7 @@ fn write_point_data_lz4<'a>(
     points: &'a impl BorrowedBuffer<'a>,
     header: &Header,
     wr: &mut impl std::io::Write,
-) -> Result<()> {
+) -> Result<(), PointIoError> {
     let point_size = header
         .attributes
         .iter()
@@ -541,7 +558,7 @@ fn read_point_data_lz4(
     header: &Header,
     layout: PointLayout,
     rd: &mut impl std::io::Read,
-) -> Result<VectorBuffer> {
+) -> Result<VectorBuffer, PointIoError> {
     let point_size = header
         .attributes
         .iter()
@@ -572,7 +589,7 @@ fn read_point_data_lz4(
                 Cow::Owned(attr.name.clone()),
                 attr.datatype,
             ))
-            .context("layout missmatch")?
+            .expect("layout missmatch") // expect: before calling this function, we ensure that the layout matches.
             .byte_range_within_point();
         let conversion = byteorder_convert_fn(header, attr);
         conversions.push((byte_range_in_data, byte_range_in_layout, conversion));
@@ -592,11 +609,12 @@ fn read_point_data_lz4(
     Ok(result)
 }
 
+/// Writes the pasture buffer to the file.
 pub fn write_points<'a, B: BorrowedBuffer<'a>>(
     points: &'a B,
     compression: Compression,
     wr: &mut impl std::io::Write,
-) -> Result<()> {
+) -> Result<(), PointIoError> {
     let endianess = if cfg!(target_endian = "big") {
         Endianess::BigEndian
     } else {
@@ -605,10 +623,7 @@ pub fn write_points<'a, B: BorrowedBuffer<'a>>(
     let attributes = points
         .point_layout()
         .attributes()
-        .map(|a| AttributeHeader {
-            name: a.name().to_string(),
-            datatype: a.datatype(),
-        })
+        .map(|a| AttributeHeader::new(a.attribute_definition()))
         .collect();
 
     let header = Header {
@@ -627,21 +642,69 @@ pub fn write_points<'a, B: BorrowedBuffer<'a>>(
     Ok(())
 }
 
-pub fn read_points(layout: &PointLayout, rd: &mut impl std::io::Read) -> Result<VectorBuffer> {
+/// Reads points from the file and returns them as a pasture buffer.
+pub fn read_points(
+    layout: &PointLayout,
+    rd: &mut impl std::io::Read,
+) -> Result<VectorBuffer, PointIoError> {
+    // read header
     let header = Header::read(rd)?;
+
+    // check attributes
+    let attribute_error = PointIoError::PointLayoutMismatch {
+        expected: layout
+            .attributes()
+            .map(|a| a.attribute_definition().clone())
+            .collect(),
+        actual: header
+            .attributes
+            .iter()
+            .map(|attr| {
+                PointAttributeDefinition::custom(Cow::Owned(attr.name.clone()), attr.datatype)
+            })
+            .collect(),
+    };
     if header.attributes.len() != layout.attributes().count() {
-        return Err(anyhow!("Point layout missmatch"));
+        return Err(attribute_error);
     }
     for attr in &header.attributes {
         let attribute =
             PointAttributeDefinition::custom(Cow::Owned(attr.name.clone()), attr.datatype);
         if !layout.has_attribute(&attribute) {
-            return Err(anyhow!("Point layout missmatch"));
+            return Err(attribute_error);
         }
     }
     match header.compression {
         Compression::None => read_point_data_uncompressed(&header, layout.clone(), rd),
         Compression::Lz4 => read_point_data_lz4(&header, layout.clone(), rd),
+    }
+}
+
+pub struct PastureIo {
+    compression: Compression,
+}
+
+impl PastureIo {
+    pub fn new(compression: Compression) -> Self {
+        Self { compression }
+    }
+}
+
+impl PointCodec for PastureIo {
+    fn write_points(
+        &self,
+        points: &VectorBuffer,
+        wr: &mut impl std::io::Write,
+    ) -> std::result::Result<(), PointIoError> {
+        write_points(points, self.compression, wr)
+    }
+
+    fn read_points(
+        &self,
+        rd: &mut impl std::io::Read,
+        point_layout: &PointLayout,
+    ) -> std::result::Result<VectorBuffer, PointIoError> {
+        read_points(point_layout, rd)
     }
 }
 
@@ -663,10 +726,10 @@ mod tests {
     #[test]
     fn test_attribute_header_rw() {
         let test_values = [
-            AttributeHeader::new(POSITION_3D),
-            AttributeHeader::new(INTENSITY),
-            AttributeHeader::new(COLOR_RGB),
-            AttributeHeader::new(CLASSIFICATION),
+            AttributeHeader::new(&POSITION_3D),
+            AttributeHeader::new(&INTENSITY),
+            AttributeHeader::new(&COLOR_RGB),
+            AttributeHeader::new(&CLASSIFICATION),
             AttributeHeader {
                 name: "extra_bytes".to_string(),
                 datatype: PointAttributeDataType::ByteArray(17),
@@ -676,9 +739,6 @@ mod tests {
             // write to buffer
             let mut buf = Vec::new();
             test_attribute.write(&mut buf).unwrap();
-
-            // check length
-            assert_eq!(buf.len() as u64, test_attribute.nr_bytes());
 
             // read back from buffer
             let read_back = AttributeHeader::read(&mut buf.as_slice()).unwrap();
@@ -732,9 +792,6 @@ mod tests {
             // write to buffer
             let mut buf = Vec::new();
             header.write(&mut buf).unwrap();
-
-            // check length
-            assert_eq!(buf.len(), header.nr_bytes() as usize);
 
             // read back
             let read_back = Header::read(&mut buf.as_slice()).unwrap();

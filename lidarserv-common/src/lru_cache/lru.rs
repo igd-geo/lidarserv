@@ -241,7 +241,7 @@ where
             None => None,
             Some(next_key) => {
                 let (k, v) = self.lru.entries.get_key_value(next_key).unwrap();
-                self.next = v.next.clone();
+                self.next.clone_from(&v.next);
                 Some((k, &v.data))
             }
         };
@@ -268,8 +268,7 @@ where
                     hash_map::Entry::Occupied(o) => o,
                     hash_map::Entry::Vacant(_) => unreachable!(),
                 };
-
-                self.next = occupied_entry.get().next.clone();
+                self.next.clone_from(&occupied_entry.get().next);
 
                 // Cast references to key/value so their lifetimes directly borrow the lru cache.
                 //

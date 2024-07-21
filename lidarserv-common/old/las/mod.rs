@@ -1,8 +1,5 @@
 mod helpers;
 
-use crate::geometry::bounding_box::{BaseAABB, OptionAABB};
-use crate::geometry::points::{PointType, WithAttr};
-use crate::geometry::position::{I32CoordinateSystem, I32Position, Position};
 use crate::las::helpers::{
     get_header_info_i32, init_las_header, read_las_string, read_point_data_i32,
     write_point_data_i32,
