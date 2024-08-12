@@ -2,6 +2,8 @@ use crate::geometry::grid::{I32GridHierarchy, LeveledGridCell, LodLevel};
 use crate::geometry::points::{PointType, WithAttr};
 use crate::geometry::position::{I32Position, Position};
 use crate::geometry::sampling::{Sampling, SamplingFactory};
+use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
+use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
 use crate::index::octree::live_metrics_collector::{LiveMetricsCollector, MetricName};
 use crate::index::octree::page_manager::Page;
 use crate::index::octree::Inner;
@@ -19,13 +21,7 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 use std::{mem, thread};
 use thiserror::Error;
-use tracy_client::{create_plot, Plot, span};
-use crate::index::octree::attribute_bounds::LasPointAttributeBounds;
-use crate::index::octree::attribute_histograms::LasPointAttributeHistograms;
-
-static TASKS_DEFAULT_PLOT: Plot = create_plot!("Task queue length");
-static POINTS_DEFAULT_PLOT: Plot = create_plot!("Task queue length in points");
-static POINT_RATE_DEFAULT_PLOT: Plot = create_plot!("Incoming points per generation");
+use tracy_client::{frame_mark, plot, secondary_frame_mark, span};
 
 struct InsertionTask<Point> {
     points: Vec<Point>,
@@ -77,9 +73,6 @@ struct Inboxes<Point> {
     current_gen: u32,
     current_gen_started: Instant,
     current_gen_points: u32,
-    tasks_plot: &'static Plot,
-    points_plot: &'static Plot,
-    incoming_points_plot: &'static Plot,
     priority_function: TaskPriorityFunction,
     metrics: Arc<LiveMetricsCollector>,
 }
@@ -188,9 +181,6 @@ impl<P> Inboxes<P> {
             current_gen: 0,
             current_gen_started: Instant::now(),
             current_gen_points: 0,
-            tasks_plot: &TASKS_DEFAULT_PLOT,
-            points_plot: &POINTS_DEFAULT_PLOT,
-            incoming_points_plot: &POINT_RATE_DEFAULT_PLOT,
             priority_function,
             metrics,
         }
@@ -271,12 +261,14 @@ impl<P> Inboxes<P> {
         let now = Instant::now();
         let generation_duration: Duration = Duration::from_secs_f64(0.1);
         while now.duration_since(self.current_gen_started) > generation_duration {
-            self.incoming_points_plot
-                .point(self.current_gen_points as f64);
+            plot!(
+                "Incoming points per generation",
+                self.current_gen_points as f64
+            );
             self.current_gen += 1;
             self.current_gen_points = 0;
             self.current_gen_started += generation_duration;
-            tracy_client::finish_continuous_frame!("mno generation");
+            frame_mark();
         }
     }
 
@@ -284,14 +276,14 @@ impl<P> Inboxes<P> {
     fn plot_tasks_len(&self) {
         let val = self.tasks.len() as f64;
         self.metrics.metric(MetricName::NrIncomingTasks, val);
-        self.tasks_plot.point(val);
+        plot!("Task queue length", val);
     }
 
     #[inline]
     fn plot_nr_of_points(&self) {
         let val = self.nr_of_points() as f64;
         self.metrics.metric(MetricName::NrIncomingPoints, val);
-        self.points_plot.point(val);
+        plot!("Task queue length in points", val);
     }
 }
 
@@ -330,12 +322,17 @@ where
             let is_max_lod = self.inner.max_lod == node_id.lod;
             let task_min_generation = task.min_generation;
             let task_max_generation = task.max_generation;
+            let _s2 = span!("OctreeWorkerThread::thread - call to writer_task()");
             let (child_tasks, should_notify) = self.writer_task(node_id, task, is_max_lod)?;
+            drop(_s2);
             debug_assert!(!is_max_lod || child_tasks.is_none()); // if we are at the max lod, no more children are allowed
 
             // unlock the node, create child tasks
             {
+                let _span = span!("OctreeWorkerThread::thread - create child tasks.");
+                let lck = span!("acquire lock");
                 let mut lock = self.inboxes.lock().unwrap();
+                drop(lck);
                 lock.unlock(node_id);
 
                 if let Some(tasks) = child_tasks {
@@ -387,6 +384,8 @@ where
         task: InsertionTask<Point>,
         is_max_lod: bool,
     ) -> Result<(Option<[(LeveledGridCell, Vec<Point>); 8]>, bool), WriterTaskError> {
+        let _span_base = span!("OctreeWorkerThread::writer_task");
+
         // get points
         let _span = span!("OctreeWorkerThread::writer_task - get points");
         let node_arc = self.inner.page_cache.load_or_default(&node_id)?.get_node(
@@ -394,7 +393,9 @@ where
             || self.inner.sample_factory.build(&node_id.lod),
             &self.inner.coordinate_system,
         )?;
+        let _span2 = span!("OctreeWorkerThread::writer_task - clone points");
         let mut node = (*node_arc).clone();
+        drop(_span2);
         drop(_span);
 
         // update attribute index
@@ -403,17 +404,34 @@ where
             if self.inner.enable_histogram_acceleration {
                 // WITH HISTOGRAMS
                 let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-                let mut histogram: LasPointAttributeHistograms = LasPointAttributeHistograms::new(&self.inner.histogram_settings);
+                let mut histogram: LasPointAttributeHistograms =
+                    LasPointAttributeHistograms::new(&self.inner.histogram_settings);
                 let _ = &task.points.iter().for_each(|p| {
                     bounds.update_by_attributes(p.attribute());
                     histogram.fill_with(p.attribute());
                 });
-                self.inner.attribute_index.as_ref().unwrap().update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &Some(histogram));
+                self.inner
+                    .attribute_index
+                    .as_ref()
+                    .unwrap()
+                    .update_bounds_and_histograms(
+                        node_id.lod,
+                        &node_id.pos,
+                        &bounds,
+                        &Some(histogram),
+                    );
             } else {
                 // NO HISTOGRAMS
                 let mut bounds: LasPointAttributeBounds = LasPointAttributeBounds::new();
-                let _ = &task.points.iter().for_each(|p| bounds.update_by_attributes(p.attribute()));
-                self.inner.attribute_index.as_ref().unwrap().update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &None);
+                let _ = &task
+                    .points
+                    .iter()
+                    .for_each(|p| bounds.update_by_attributes(p.attribute()));
+                self.inner
+                    .attribute_index
+                    .as_ref()
+                    .unwrap()
+                    .update_bounds_and_histograms(node_id.lod, &node_id.pos, &bounds, &None);
             }
         }
         drop(_span);
@@ -424,6 +442,7 @@ where
         let initial_nr_bogus = node.bogus_points.len();
         let mut next_lod_points = node.sampling.insert(task.points, |_, _| ());
         node.bogus_points.append(&mut next_lod_points);
+        drop(_span);
 
         // only create child tasks, if we have a considerable amount of points.
         let make_children = if is_max_lod {
@@ -454,6 +473,7 @@ where
         if !make_children {
             return Ok((None, should_notify_clients));
         }
+        let _span = span!("OctreeWorkerThread::writer_task - split children");
         let mut children: [Vec<Point>; 8] = [
             Vec::with_capacity(children_points.len()),
             Vec::with_capacity(children_points.len()),
@@ -491,6 +511,7 @@ where
             (child_node_ids[6], mem::take(&mut children[6])),
             (child_node_ids[7], mem::take(&mut children[7])),
         ];
+        drop(_span);
         Ok((Some(result), should_notify_clients))
     }
 }
@@ -520,7 +541,7 @@ where
                     condvar: Arc::clone(&condvar),
                 };
                 thread::spawn(move || {
-                    tracy_client::set_thread_name(&format!("worker thread #{}", thread_id));
+                    tracy_client::set_thread_name!("worker thread");
                     thread.thread()
                 })
             })

@@ -7,6 +7,5 @@ pub mod index;
 pub mod las;
 pub mod lru_cache;
 pub mod query;
-mod trace_utils;
 
 pub use nalgebra;
