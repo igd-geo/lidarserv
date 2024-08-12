@@ -7,7 +7,7 @@ import numpy as np
 from matplotlib import font_manager
 from matplotlib.lines import Line2D
 from labellines import labelLine, labelLines
-from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter, StrMethodFormatter
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits import mplot3d
 import matplotlib.cm as cm
@@ -571,7 +571,7 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
     bar_width = 0.3
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#4285F4']
+    colors = ['#D55E00', '#E69F00', '#0072B2']
 
     # plot horizontal line for total number of points
     plt.axhline(y=nr_points/1e6, color=colors[0], linestyle='-')
@@ -584,7 +584,7 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
         for p in range(len(queries)):
 
             # number of points per subquery
-            # plt.bar(p, nr_points, bar_width, label="nr_points", color="#DB4437")
+            # plt.bar(p, nr_points, bar_width, label="nr_points", color="#D55E00")
             for i, subquery in enumerate(subqueries):
                 nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
 
@@ -623,7 +623,7 @@ def plot_query_by_num_points_pg(lidarserv_data, pg_data, nr_points, filename, qu
     bar_width = 0.15
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#4285F4', '#0F9D58']
+    colors = ['#D55E00', '#E69F00', '#0072B2', '#009E73']
 
     # plot horizontal line for total number of points
     plt.axhline(y=nr_points / 1e6, color=colors[0], linestyle=':', linewidth=2)
@@ -636,7 +636,7 @@ def plot_query_by_num_points_pg(lidarserv_data, pg_data, nr_points, filename, qu
         for p in range(len(queries)):
 
             # number of points per subquery
-            # plt.bar(p, nr_points, bar_width, label="nr_points", color="#DB4437")
+            # plt.bar(p, nr_points, bar_width, label="nr_points", color="#D55E00")
             for i, subquery in enumerate(subqueries):
 
                 # lidarserv
@@ -690,7 +690,7 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
     bar_width = 0.3
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#4285F4']
+    colors = ['#D55E00', '#E69F00', '#0072B2']
 
     # plot horizontal line for total number of nodes
     plt.axhline(y=nr_nodes/1e3, color=colors[0], linestyle='-')
@@ -701,7 +701,7 @@ def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=
         for p in range(len(queries)):
 
             # number of nodes per subquery
-            # plt.bar(p, nr_nodes, bar_width, label="nr_nodes", color="#DB4437")
+            # plt.bar(p, nr_nodes, bar_width, label="nr_nodes", color="#D55E00")
             for i, subquery in enumerate(subqueries):
                 nr_nodes_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_nodes"]]
 
@@ -748,7 +748,7 @@ def plot_query_by_num_nodes_pg(lidarserv_data, pg_data, lidarserv_nr_nodes, pg_n
     bar_width = 0.3
     index = range(len(queries))
 
-    colors = ['#F4B400', '#4285F4']
+    colors = ['#E69F00', '#0072B2']
 
     for run in lidarserv_data:
         for p in range(len(queries)):
@@ -800,7 +800,7 @@ def plot_false_positive_rates(test_runs, filename, queries=None, labels=None, ti
     bar_width = 0.4
     index = range(len(queries))
 
-    colors = ['#DB4437', '#0F9D58']
+    colors = ['#D55E00', '#009E73']
 
     for run in test_runs:
         for p in range(len(queries)):
@@ -876,7 +876,7 @@ def plot_false_positive_rates_pg(lidarserv_data, pg_data, filename, queries=None
     bar_width = 0.2
     index = range(len(queries))
 
-    colors = ['#DB4437', '#0F9D58', '#4285F4', '#F4B400']
+    colors = ['#D55E00', '#009E73', '#0072B2', '#E69F00']
 
     for run in lidarserv_data:
         for p in range(len(queries)):
@@ -948,7 +948,7 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
     bar_width = 1 / (len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400']
+    colors = ['#D55E00', '#E69F00']
 
     for run in test_runs:
         for p in range(len(queries)):
@@ -1008,7 +1008,7 @@ def plot_query_by_time_pg(lidarserv_data, pg_data, outputfile, title=None, queri
     bar_width = 1 / (2*len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#4285F4']
+    colors = ['#D55E00', '#E69F00', '#0072B2']
 
     for run in lidarserv_data:
         for p in range(len(queries)):
@@ -1484,7 +1484,7 @@ def plot_insertion_speed_comparison(test_runs, filename):
     (width, height) = figsize
     fig, ax = plt.subplots(figsize=(width, height/1.5))
     bar_width = 1 / (len(test_runs) + 1)
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#DB4437', '#F4B400', '#0F9D58']
+    colors = ['#D55E00', '#E69F00', '#009E73', '#D55E00', '#E69F00', '#009E73']
     runs = [
         'uncompressed_no_attribute_index',
         'uncompressed_attribute_index',
@@ -1548,7 +1548,7 @@ def plot_insertion_speed_comparison_pg(lidarserv_runs, pg_runs, num_points, file
     (width, height) = figsize
     fig, ax = plt.subplots(figsize=(width, height/1.5))
     bar_width = 1 / 5
-    colors = ['#F4B400', '#4285F4', '#F4B400', '#4285F4']
+    colors = ['#E69F00', '#0072B2', '#E69F00', '#0072B2']
     runs = [
         'uncompressed_attribute_index',
         'compressed_attribute_index',
@@ -1563,10 +1563,10 @@ def plot_insertion_speed_comparison_pg(lidarserv_runs, pg_runs, num_points, file
 
     # plot horizontal bar at 1,92 M
     # Increase the linewidth to make the line thicker
-    plt.axhline(y=1.92, color='#DB4437', linestyle=':', linewidth=2, label='Insertion Rate Goal (1.92 M Points/s)')
+    plt.axhline(y=1.92, color='#D55E00', linestyle=':', linewidth=2, label='Insertion Rate Goal (1.92 M Points/s)')
 
     # Add annotation
-    plt.annotate('Scanner Speed', xy=(0.8, 1.92), xytext=(0.75, 1.9), horizontalalignment='center', verticalalignment='top', color='#DB4437')
+    plt.annotate('Scanner Speed', xy=(0.8, 1.92), xytext=(0.75, 1.9), horizontalalignment='center', verticalalignment='top', color='#D55E00')
 
     for i in range(len(runs)):
         lidarserv_insertion_rate = lidarserv_runs[runs[i]][0]["results"]["insertion_rate"]["insertion_rate_points_per_sec"] / 1e6
@@ -1594,10 +1594,10 @@ def plot_insertion_speed_comparison_pg(lidarserv_runs, pg_runs, num_points, file
     # plt.xlabel('Insertion Settings', fontsize=fontsize)
     plt.ylabel('Insertion Rate | Points/s', fontsize=fontsize)
     # plt.title("Insertion Speed Comparison")
-    plt.xticks([p for p in index], custom_legend_labels, rotation=90, fontsize=fontsize)
+    plt.xticks([p for p in index], custom_legend_labels, rotation=0, fontsize=fontsize)
     # only 3 ticks on y-axis
-    plt.yticks([0,1,2],fontsize=fontsize)
-    plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%d M'))
+    plt.yticks([0,0.5,1,1.5,2],fontsize=fontsize)
+    plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.1f} M'))
 
     # Create custom legend handles for the legend
     custom_legend_colors = colors[:len(custom_legend_labels)]
