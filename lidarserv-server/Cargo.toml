@@ -6,8 +6,8 @@ default-run = "lidarserv-server"
 authors = ["Tobias Dorra <mail@tobiasdorra.de>"]
 
 [dependencies]
-structopt = { version = "0.3.23", features = ["paw", "wrap_help", "color", "suggestions"]}
-paw = "1.0.0"
+nalgebra = { version = "0.32.5", features = ["serde-serialize"] }
+clap = {version = "4.5", features = ["derive"]}
 log = "0.4.14"
 simple_logger = "4.1.0"
 human-panic = "1.0.3"
@@ -22,3 +22,6 @@ ciborium = "0.2.1"
 crossbeam-channel = "0.5.1"
 pasture-core = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d", features = ["serde"]}
 pasture-io = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d"}
+pest = "2.7.11"
+pest_derive = {version = "2.7.11", features = ["grammar-extras"]}
+dialoguer = "0.11"

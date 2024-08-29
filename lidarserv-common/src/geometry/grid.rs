@@ -92,7 +92,7 @@ impl<C: Component> Grid<C> {
 }
 
 /// A LOD Hierarchy of grids: The coarsest grid is at LOD 0 and with each LOD, the grid gets finer.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GridHierarchy {
     shift: i16,
 }
@@ -100,6 +100,11 @@ pub struct GridHierarchy {
 impl GridHierarchy {
     pub fn new(shift: i16) -> Self {
         GridHierarchy { shift }
+    }
+
+    /// Returns the shift value of this hierarchy
+    pub fn shift(&self) -> i16 {
+        self.shift
     }
 
     /// Returns the given hierarchy level.
@@ -348,7 +353,7 @@ impl GridComponent for f64 {
 
     fn grid_get_level(level: i16) -> Self::Grid {
         let sign = 0_u64;
-        let exponent = 1023_u64 + level as u64;
+        let exponent = (1023_i16 + level) as u64;
         let fraction = 0_u64;
         let number = (sign << 63) | (exponent << 52) | fraction;
         f64::from_bits(number)

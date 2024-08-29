@@ -6,6 +6,8 @@ use std::{borrow::Cow, fmt::Debug};
 
 use super::grid::GridComponent;
 
+pub const POSITION_ATTRIBUTE_NAME: &str = "Position3D";
+
 /// A position in the global coordinate system
 pub type PositionGlobal = Point3<f64>;
 
@@ -57,7 +59,10 @@ impl Component for i32 {
     }
 
     fn position_attribute() -> PointAttributeDefinition {
-        PointAttributeDefinition::custom(Cow::Borrowed("position"), PointAttributeDataType::Vec3i32)
+        PointAttributeDefinition::custom(
+            Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
+            PointAttributeDataType::Vec3i32,
+        )
     }
 
     const MIN: Self = i32::MIN;
@@ -78,7 +83,10 @@ impl Component for f64 {
     }
 
     fn position_attribute() -> PointAttributeDefinition {
-        PointAttributeDefinition::custom(Cow::Borrowed("position"), PointAttributeDataType::Vec3f64)
+        PointAttributeDefinition::custom(
+            Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
+            PointAttributeDataType::Vec3f64,
+        )
     }
 
     const MIN: Self = f64::MIN;
@@ -98,7 +106,7 @@ pub enum PositionComponentType {
 impl PositionComponentType {
     pub fn from_layout(layout: &PointLayout) -> Self {
         match layout
-            .get_attribute_by_name("position")
+            .get_attribute_by_name(POSITION_ATTRIBUTE_NAME)
             .expect("missing position attribute")
             .datatype()
         {
@@ -183,7 +191,10 @@ where
 }
 
 pub trait PasturePrimitiveHelper: Scalar {
-    type PasturePrimitive: PrimitiveType + Into<Position<Self>> + Default;
+    type PasturePrimitive: PrimitiveType + Default;
+
+    fn pasture_to_position(p: Self::PasturePrimitive) -> Position<Self>;
+    fn position_to_pasture(p: Position<Self>) -> Self::PasturePrimitive;
 }
 
 impl<C> PasturePrimitiveHelper for C
@@ -192,6 +203,26 @@ where
     Vector3<C>: PrimitiveType + Default,
 {
     type PasturePrimitive = Vector3<Self>;
+
+    fn pasture_to_position(p: Self::PasturePrimitive) -> Position<Self> {
+        Position::from(p)
+    }
+
+    fn position_to_pasture(p: Position<Self>) -> Self::PasturePrimitive {
+        p.coords
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pasture_core::layout::attributes::POSITION_3D;
+
+    use crate::geometry::position::POSITION_ATTRIBUTE_NAME;
+
+    #[test]
+    fn position_attribute_name() {
+        assert_eq!(POSITION_ATTRIBUTE_NAME, POSITION_3D.name())
+    }
 }
 
 /*
@@ -284,14 +315,14 @@ mod macro_tests {
 
     fn make_test_layout_f64() -> PointLayout {
         PointLayout::from_attributes(&[PointAttributeDefinition::custom(
-            Cow::Borrowed("position"),
+            Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
             PointAttributeDataType::Vec3f64,
         )])
     }
 
     fn make_test_layout_i32() -> PointLayout {
         PointLayout::from_attributes(&[PointAttributeDefinition::custom(
-            Cow::Borrowed("position"),
+            Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
             PointAttributeDataType::Vec3i32,
         )])
     }

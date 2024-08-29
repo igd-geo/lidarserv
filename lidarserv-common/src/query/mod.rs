@@ -8,10 +8,12 @@ use crate::geometry::{
 use pasture_core::containers::VectorBuffer;
 
 pub mod aabb;
+pub mod and;
 pub mod empty;
 pub mod full;
 pub mod lod;
 pub mod not;
+pub mod or;
 pub mod view_frustum;
 
 /// Execution Context for queries.
@@ -53,19 +55,22 @@ pub enum LoadKind {
 
 /// Filter the point cloud based on some criterion, after
 /// initializing with some query context.
-pub trait QueryBuilder: Send + Sync + Debug + 'static {
+pub trait Query: Send + Sync + Debug + 'static {
+    /// The type returned by build.
+    type Executable: ExecutableQuery;
+
     /// Prepares the query for execution.
     ///
     /// (i.e.
     ///  - convert coordinates into the local coordinate system,
     ///  - open external index files
     ///  - ...
-    /// )
-    fn build(self, ctx: &QueryContext) -> impl Query;
+    ///    )
+    fn prepare(self, ctx: &QueryContext) -> Self::Executable;
 }
 
 /// Filter the point cloud based on some criterion.
-pub trait Query: Send + Sync + 'static {
+pub trait ExecutableQuery: Send + Sync + 'static {
     /// Checks, if the node matches the query
     fn matches_node(&self, node: LeveledGridCell) -> NodeQueryResult;
 
@@ -77,18 +82,20 @@ pub trait Query: Send + Sync + 'static {
     fn matches_points(&self, lod: LodLevel, points: &VectorBuffer) -> Vec<bool>;
 }
 
-impl<T> QueryBuilder for T
+impl<T> Query for Box<T>
 where
-    T: Query + Debug,
+    T: Query,
 {
-    fn build(self, _: &QueryContext) -> impl Query {
-        self
+    type Executable = T::Executable;
+
+    fn prepare(self, ctx: &QueryContext) -> Self::Executable {
+        (*self).prepare(ctx)
     }
 }
 
-impl<T> Query for Box<T>
+impl<T> ExecutableQuery for Box<T>
 where
-    T: Query + ?Sized,
+    T: ExecutableQuery + ?Sized,
 {
     fn matches_node(&self, node: LeveledGridCell) -> NodeQueryResult {
         self.as_ref().matches_node(node)

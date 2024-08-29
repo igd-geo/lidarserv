@@ -1,10 +1,13 @@
-use crate::index::point::LasPoint;
-use lidarserv_common::geometry::position::I32CoordinateSystem;
-use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
-use lidarserv_common::nalgebra::{Matrix4, Vector3};
+use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
+use lidarserv_common::geometry::grid::LeveledGridCell;
+use lidarserv_common::io::pasture::{Compression, PastureIo};
+use lidarserv_common::io::InMemoryPointCodec;
+use pasture_core::layout::PointAttributeDefinition;
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
+use std::ops::Deref;
+
+use crate::index::query::Query;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Message {
@@ -17,7 +20,8 @@ pub enum Message {
     /// contains some general information about the point cloud, that is managed by the server.
     PointCloudInfo {
         coordinate_system: CoordinateSystem,
-        point_record_format: u8,
+        attributes: Vec<PointAttributeDefinition>,
+        codec: PointDataCodec,
     },
 
     /// First command sent from the client to the server after exchanging the hello message.
@@ -30,22 +34,18 @@ pub enum Message {
     Error { message: String },
 
     /// Sent from client to server in CaptureDevice mode, to insert a batch of new points.
-    InsertPoints { data: LasPointData },
+    InsertPoints { data: PointData },
 
     /// Sent from the client to server in Viewer mode, to set or update the query.
-    Query {
-        spatial_query: Box<SpatialQuery>,
-        attributes_query: LasPointAttributeBounds,
-        config: QueryConfig,
-    },
+    Query { query: Query, config: QueryConfig },
 
     /// Sent from the server to the client with some update to the current query result.
-    /// "replaces" is the node id of the node, that is replaced by the new nodes.
-    /// "nodes" is a list of nodes, that are added to the current query result.
-    /// it contains the node id, the points and the coordinate system of each node.
-    IncrementalResult {
-        replaces: Option<NodeId>,
-        nodes: Vec<(NodeId, Vec<LasPoint>, I32CoordinateSystem)>,
+    /// The node should be updated (or added, if it is new) in the query result with the given point buffer.
+    /// If the point buffer is None, then the node shall be deleted.
+    Node {
+        node: LeveledGridCell,
+        points: Option<PointData>,
+        update_number: u64,
     },
 
     /// Sent from the server to the client, to indicate that the current query result is complete.
@@ -64,50 +64,44 @@ pub enum DeviceType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum CoordinateSystem {
-    I32CoordinateSystem {
-        scale: Vector3<f64>,
-        offset: Vector3<f64>,
-    },
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[allow(clippy::large_enum_variant)]
-pub enum SpatialQuery {
-    AabbQuery {
-        min_bounds: Vector3<f64>,
-        max_bounds: Vector3<f64>,
-        lod_level: u16,
-    },
-    ViewFrustumQuery {
-        view_projection_matrix: Matrix4<f64>,
-        view_projection_matrix_inv: Matrix4<f64>,
-        window_width_pixels: f64,
-        min_distance_pixels: f64,
-    },
-}
-
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct QueryConfig {
-    pub enable_attribute_acceleration: bool,
-    pub enable_histogram_acceleration: bool,
-    pub enable_point_filtering: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
-pub struct NodeId {
-    pub lod_level: u16,
-    pub id: [u8; 14],
+    pub one_shot: bool,
 }
 
 /// Just a wrapper around Vec<u8>, with a custom Debug impl, so that not the full binary file is
 /// printed in the debug output.
 #[derive(Serialize, Deserialize, Clone)]
-pub struct LasPointData(pub Arc<Vec<u8>>);
+pub struct PointData(pub Vec<u8>);
 
-impl Debug for LasPointData {
+impl Debug for PointData {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         // Don't include the actual point data. It would just clutter the debug output.
-        f.serialize_unit_struct("[Las Point Data]")
+        f.serialize_unit_struct("[Point Data]")
+    }
+}
+
+impl Deref for PointData {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum PointDataCodec {
+    Pasture { compression: bool },
+    // todo: Las {compression: bool, point_format: u8, },
+}
+
+impl PointDataCodec {
+    pub fn instance(&self) -> Box<dyn InMemoryPointCodec + Send> {
+        match *self {
+            PointDataCodec::Pasture { compression } => Box::new(PastureIo::new(if compression {
+                Compression::Lz4
+            } else {
+                Compression::None
+            })),
+        }
     }
 }

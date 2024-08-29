@@ -4,11 +4,14 @@ pub mod server;
 
 use thiserror::Error;
 
-const PROTOCOL_VERSION: u32 = 2;
+const PROTOCOL_VERSION: u32 = 3;
 
 /// Error type for the indexing server.
 #[derive(Error, Debug)]
 pub enum LidarServerError {
+    #[error("Client-Side error: {0}")]
+    Client(String),
+
     #[error("Network error: {0}")]
     Net(#[from] std::io::Error),
 

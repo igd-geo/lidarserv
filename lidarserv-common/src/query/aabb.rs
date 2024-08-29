@@ -9,29 +9,31 @@ use crate::{
         grid::{GridHierarchy, LeveledGridCell, LodLevel},
         position::{Component, WithComponentTypeOnce},
     },
-    query::empty::QueryEmpty,
+    query::empty::EmptyQuery,
 };
 
-use super::{NodeQueryResult, Query, QueryBuilder};
+use super::{ExecutableQuery, NodeQueryResult, Query};
 
 /// Query that matches all points in a certain bounding box.
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AabbQuery {
+pub struct AabbQuery(
     /// The bounding box in global coordinates
-    pub aabb: Aabb<f64>,
-}
+    pub Aabb<f64>,
+);
 
 /// Query that matches all points in a certain bounding box (local coordinates).
 #[derive(Debug, Copy, Clone, PartialEq)]
-struct AabbQueryLocalCoordinates<C: Component> {
+struct AabbQueryExecutable<C: Component> {
     node_hierarchy: GridHierarchy,
     aabb: Aabb<C>,
 }
 
-impl QueryBuilder for AabbQuery {
-    fn build(self, ctx: &super::QueryContext) -> impl Query {
-        if self.aabb.is_empty() {
-            return Box::new(QueryEmpty) as Box<dyn Query>;
+impl Query for AabbQuery {
+    type Executable = Box<dyn ExecutableQuery>;
+
+    fn prepare(self, ctx: &super::QueryContext) -> Box<dyn ExecutableQuery> {
+        if self.0.is_empty() {
+            return Box::new(EmptyQuery) as Box<dyn ExecutableQuery>;
         }
 
         struct Wct {
@@ -40,7 +42,7 @@ impl QueryBuilder for AabbQuery {
             node_hierarchy: GridHierarchy,
         }
         impl WithComponentTypeOnce for Wct {
-            type Output = Box<dyn Query>;
+            type Output = Box<dyn ExecutableQuery>;
 
             fn run_once<C: Component>(self) -> Self::Output {
                 // ensure this aabb is in the bounds of this coordinate system
@@ -65,7 +67,7 @@ impl QueryBuilder for AabbQuery {
                 }
 
                 // create query
-                let q = AabbQueryLocalCoordinates {
+                let q = AabbQueryExecutable {
                     node_hierarchy: self.node_hierarchy,
                     aabb: Aabb::new(local_min, local_max),
                 };
@@ -74,7 +76,7 @@ impl QueryBuilder for AabbQuery {
         }
 
         Wct {
-            aabb_global: self.aabb,
+            aabb_global: self.0,
             coordinate_system: ctx.coordinate_system,
             node_hierarchy: ctx.node_hierarchy,
         }
@@ -82,7 +84,7 @@ impl QueryBuilder for AabbQuery {
     }
 }
 
-impl<C: Component> Query for AabbQueryLocalCoordinates<C> {
+impl<C: Component> ExecutableQuery for AabbQueryExecutable<C> {
     fn matches_node(&self, node: LeveledGridCell) -> super::NodeQueryResult {
         let node_aabb = self.node_hierarchy.get_leveled_cell_bounds::<C>(node);
         if self.aabb.intersects_aabb(node_aabb) {
@@ -104,7 +106,8 @@ impl<C: Component> Query for AabbQueryLocalCoordinates<C> {
         points
             .view_attribute::<C::PasturePrimitive>(&C::position_attribute())
             .into_iter()
-            .map(|pos| self.aabb.contains(pos.into()))
+            .map(|p| C::pasture_to_position(p))
+            .map(|pos| self.aabb.contains(pos))
             .collect()
     }
 }
@@ -122,16 +125,17 @@ mod tests {
             position::PositionComponentType,
             test::{F64Point, I32Point},
         },
-        query::{NodeQueryResult, Query, QueryBuilder, QueryContext},
+        query::{ExecutableQuery, NodeQueryResult, Query, QueryContext},
     };
 
     use super::AabbQuery;
 
     #[test]
     fn test_filter_nodes_f64() {
-        let query = AabbQuery {
-            aabb: Aabb::new(point![50.0, 50.0, 50.0], point![75.0, 75.0, 75.0]),
-        };
+        let query = AabbQuery(Aabb::new(
+            point![50.0, 50.0, 50.0],
+            point![75.0, 75.0, 75.0],
+        ));
 
         let ctx = QueryContext {
             node_hierarchy: GridHierarchy::new(10),
@@ -158,7 +162,7 @@ mod tests {
             )
         );
 
-        let q = query.build(&ctx);
+        let q = query.prepare(&ctx);
         assert_eq!(
             q.matches_node(LeveledGridCell {
                 lod: LodLevel::from_level(0),
@@ -191,9 +195,10 @@ mod tests {
 
     #[test]
     fn test_filter_points_f64() {
-        let query = AabbQuery {
-            aabb: Aabb::new(point![50.0, 50.0, 50.0], point![75.0, 75.0, 75.0]),
-        };
+        let query = AabbQuery(Aabb::new(
+            point![50.0, 50.0, 50.0],
+            point![75.0, 75.0, 75.0],
+        ));
 
         let ctx = QueryContext {
             node_hierarchy: GridHierarchy::new(10),
@@ -205,7 +210,7 @@ mod tests {
             component_type: PositionComponentType::F64,
         };
 
-        let q = query.build(&ctx);
+        let q = query.prepare(&ctx);
         let points: VectorBuffer = [
             F64Point {
                 position: vector![500.0, 500.0, 500.0],
@@ -230,9 +235,10 @@ mod tests {
 
     #[test]
     fn test_filter_nodes_i32() {
-        let query = AabbQuery {
-            aabb: Aabb::new(point![2.56, 2.56, 2.56], point![5.11, 5.11, 5.11]),
-        };
+        let query = AabbQuery(Aabb::new(
+            point![2.56, 2.56, 2.56],
+            point![5.11, 5.11, 5.11],
+        ));
 
         // lod 0:                      0
         // lod 0:                   0.0-10.23
@@ -265,7 +271,7 @@ mod tests {
             Aabb::new(point![0, 0, 0], point![1023, 1023, 1023])
         );
 
-        let q = query.build(&ctx);
+        let q = query.prepare(&ctx);
         assert_eq!(
             q.matches_node(LeveledGridCell {
                 lod: LodLevel::from_level(0),
@@ -298,9 +304,10 @@ mod tests {
 
     #[test]
     fn test_filter_points_i32() {
-        let query = AabbQuery {
-            aabb: Aabb::new(point![2.56, 2.56, 2.56], point![5.11, 5.11, 5.11]),
-        };
+        let query = AabbQuery(Aabb::new(
+            point![2.56, 2.56, 2.56],
+            point![5.11, 5.11, 5.11],
+        ));
 
         let ctx = QueryContext {
             node_hierarchy: GridHierarchy::new(21),
@@ -312,7 +319,7 @@ mod tests {
             component_type: PositionComponentType::I32,
         };
 
-        let q = query.build(&ctx);
+        let q = query.prepare(&ctx);
 
         let points: VectorBuffer = [
             I32Point {

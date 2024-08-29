@@ -1,18 +1,25 @@
-use serde::{Deserialize, Serialize};
-
+use super::{ExecutableQuery, NodeQueryResult, Query};
 use crate::geometry::grid::LodLevel;
-
-use super::{NodeQueryResult, Query, QueryBuilder};
+use serde::{Deserialize, Serialize};
 
 /// Query that inverses the result of the inner query
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct NotQuery<Inner: QueryBuilder>(pub Inner);
+pub struct NotQuery<Inner>(pub Inner);
 
-struct NotQueryPrepared<Inner: Query>(Inner);
-
-impl<T> Query for NotQueryPrepared<T>
+impl<T> Query for NotQuery<T>
 where
     T: Query,
+{
+    type Executable = NotQuery<T::Executable>;
+
+    fn prepare(self, ctx: &super::QueryContext) -> Self::Executable {
+        NotQuery(self.0.prepare(ctx))
+    }
+}
+
+impl<T> ExecutableQuery for NotQuery<T>
+where
+    T: ExecutableQuery,
 {
     fn matches_node(&self, node: crate::geometry::grid::LeveledGridCell) -> super::NodeQueryResult {
         match self.0.matches_node(node) {
@@ -32,14 +39,5 @@ where
             *b = !*b
         }
         result
-    }
-}
-
-impl<T> QueryBuilder for NotQuery<T>
-where
-    T: QueryBuilder,
-{
-    fn build(self, ctx: &super::QueryContext) -> impl Query {
-        NotQueryPrepared(self.0.build(ctx))
     }
 }

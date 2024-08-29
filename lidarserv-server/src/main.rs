@@ -1,18 +1,18 @@
 #![deny(unused_must_use)]
+use anyhow::Result;
+use clap::Parser;
+use cli::{Command, LidarservOptions};
+use human_panic::setup_panic;
 
 mod cli;
 mod commands;
-pub mod index;
-pub mod net;
-use crate::cli::{Args, Command};
-use anyhow::Result;
-use human_panic::setup_panic;
-pub use lidarserv_common as common;
 
-#[paw::main]
-fn main(args: Args) -> Result<()> {
+fn main() -> Result<()> {
     // panic handler
     setup_panic!();
+
+    // arg parsing
+    let args = LidarservOptions::parse();
 
     // logger
     // unwrap: will only fail, if the logger is already initialized - which it clearly is not

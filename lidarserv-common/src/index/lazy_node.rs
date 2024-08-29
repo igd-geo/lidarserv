@@ -68,8 +68,7 @@ impl LazyNode {
         binary: NodeData,
     ) -> Result<Node, PointIoError> {
         // read points
-        let mut read = &*binary;
-        let points = codec.read_points(&mut read, layout)?;
+        let (points, mut read) = codec.read_points(&binary, layout)?;
 
         // read nr of bogus points
         let nr_bogus_points = read.read_u64::<LittleEndian>()? as usize;
@@ -183,7 +182,9 @@ impl LazyNode {
             Ok(VectorBuffer::new_from_layout(layout.clone()))
         } else {
             _span.emit_text("read_points");
-            codec.read_points(&mut &*data, layout)
+            codec
+                .read_points(&data, layout)
+                .map(|(points, _rest)| points)
         }
     }
 

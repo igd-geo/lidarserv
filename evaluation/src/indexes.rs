@@ -1,6 +1,6 @@
 use crate::settings::{Base, SingleIndex};
 use crate::Point;
-use lidarserv_common::geometry::grid::{I32GridHierarchy, LodLevel};
+use lidarserv_common::geometry::grid::{GridHierarchy, LodLevel};
 use lidarserv_common::geometry::position::I32CoordinateSystem;
 use lidarserv_common::geometry::sampling::{GridCenterSampling, GridCenterSamplingFactory};
 use lidarserv_common::index::octree::attribute_index::AttributeIndex;
@@ -20,8 +20,8 @@ pub fn create_octree_index(
 ) -> I32Octree {
     let mut data_folder: PathBuf = base_settings.data_folder.clone();
     data_folder.push("octree");
-    let node_hierarchy = I32GridHierarchy::new(settings.node_hierarchy);
-    let point_hierarchy = I32GridHierarchy::new(settings.point_hierarchy);
+    let node_hierarchy = GridHierarchy::new(settings.node_hierarchy);
+    let point_hierarchy = GridHierarchy::new(settings.point_hierarchy);
     let max_lod = LodLevel::from_level(10);
     let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
     let las_loader = I32LasReadWrite::new(settings.compression, 3);

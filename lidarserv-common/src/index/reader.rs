@@ -5,7 +5,7 @@ use crate::{
         position::PositionComponentType,
     },
     lru_cache::pager::PageDirectory,
-    query::{LoadKind, NodeQueryResult, Query, QueryBuilder, QueryContext},
+    query::{ExecutableQuery, LoadKind, NodeQueryResult, Query, QueryContext},
 };
 use log::debug;
 use pasture_core::containers::{BorrowedBuffer, InterleavedBuffer, OwningBuffer, VectorBuffer};
@@ -18,7 +18,7 @@ use tracy_client::span;
 pub struct OctreeReader {
     inner: Arc<Inner>,
     query_context: QueryContext,
-    query: Box<dyn Query>,
+    query: Box<dyn ExecutableQuery>,
     frontier: HashMap<LeveledGridCell, FrontierElement>,
     known_root_nodes: HashSet<LeveledGridCell>,
     changed_nodes_receiver: crossbeam_channel::Receiver<LeveledGridCell>,
@@ -38,7 +38,7 @@ struct FrontierElement {
 impl OctreeReader {
     /// Creates a new reader for the given octree and query.
     /// All root nodes of the octree are added to the reader.
-    pub(super) fn new(inner: Arc<Inner>, query: impl QueryBuilder) -> Self {
+    pub(super) fn new(inner: Arc<Inner>, query: impl Query) -> Self {
         // add subscription to changes
         let changed_nodes_receiver = {
             let (changed_nodes_sender, changed_nodes_receiver) = crossbeam_channel::unbounded();
@@ -54,7 +54,7 @@ impl OctreeReader {
             coordinate_system: inner.coordinate_system,
             component_type: PositionComponentType::from_layout(&inner.point_layout),
         };
-        let query = Box::new(query.build(&ctx));
+        let query = Box::new(query.prepare(&ctx));
 
         let mut reader = OctreeReader {
             inner,
@@ -95,7 +95,7 @@ impl OctreeReader {
     /// Filters out all points of the given Vector, that do not match the query or filter
     /// returns vector of points that match the query and filter.
     fn filter_points(&self, lod: LodLevel, points: &VectorBuffer) -> VectorBuffer {
-        span!("OctreeReader::filter_points");
+        let _s1 = span!("OctreeReader::filter_points");
         let bitmap = self.query.matches_points(lod, points);
         assert!(bitmap.len() == points.len());
         let mut filtered_points =
@@ -260,10 +260,10 @@ impl OctreeReader {
     }
 
     /// Sets the query
-    pub fn set_query(&mut self, q: impl QueryBuilder) {
+    pub fn set_query(&mut self, q: impl Query) {
         let _span = span!("OctreeReader::set_query");
         debug!("Setting new query: {q:?}");
-        let query = q.build(&self.query_context);
+        let query = q.prepare(&self.query_context);
         self.query = Box::new(query);
         self.update_new_query();
     }

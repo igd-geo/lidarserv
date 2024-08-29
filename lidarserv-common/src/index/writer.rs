@@ -22,11 +22,7 @@ use std::{
     time::{Duration, Instant},
 };
 use thiserror::Error;
-use tracy_client::{create_plot, span, Plot};
-
-static TASKS_PLOT: Plot = create_plot!("Task queue length");
-static POINTS_PLOT: Plot = create_plot!("Task queue length in points");
-static POINT_RATE_PLOT: Plot = create_plot!("Incoming points per generation");
+use tracy_client::{plot, secondary_frame_mark, span};
 
 pub(super) struct InsertionTask {
     /// Points to insert in the node
@@ -175,11 +171,14 @@ impl Inboxes {
         let now = Instant::now();
         let generation_duration: Duration = Duration::from_secs_f64(0.1);
         while now.duration_since(self.current_gen_started) > generation_duration {
-            POINT_RATE_PLOT.point(self.current_gen_points as f64);
+            plot!(
+                "Incoming points per generation",
+                self.current_gen_points as f64
+            );
             self.current_gen += 1;
             self.current_gen_points = 0;
             self.current_gen_started += generation_duration;
-            tracy_client::finish_continuous_frame!("mno generation");
+            secondary_frame_mark!("mno generation");
         }
     }
 
@@ -187,14 +186,14 @@ impl Inboxes {
     fn plot_tasks_len(&self) {
         let val = self.tasks.len() as f64;
         self.metrics.metric(MetricName::NrIncomingTasks, val);
-        TASKS_PLOT.point(val);
+        plot!("Task queue length", val);
     }
 
     #[inline]
     fn plot_nr_of_points(&self) {
         let val = self.nr_of_points() as f64;
         self.metrics.metric(MetricName::NrIncomingPoints, val);
-        POINTS_PLOT.point(val);
+        plot!("Task queue length in points", val);
     }
 }
 
@@ -432,7 +431,7 @@ impl OctreeWorkerThread {
                         &mut position,
                     ))
                     .copy_from_slice(position_bytes);
-                    let position: Point3<C> = position.into();
+                    let position: Point3<C> = C::pasture_to_position(position);
 
                     // find correct child
                     let child_x = if position.x < center.x { 0 } else { 1 };
@@ -488,7 +487,10 @@ impl OctreeWriter {
                     condvar: Arc::clone(&condvar),
                 };
                 thread::spawn(move || {
-                    tracy_client::set_thread_name(&format!("worker thread #{}", thread_id));
+                    if let Some(tracy) = tracy_client::Client::running() {
+                        let thread_name = format!("worker thread #{}", thread_id);
+                        tracy.set_thread_name(&thread_name);
+                    }
                     thread.thread()
                 })
             })
@@ -501,15 +503,15 @@ impl OctreeWriter {
         }
     }
 
-    pub fn insert(&mut self, points: VectorBuffer) {
+    pub fn insert(&mut self, points: &VectorBuffer) {
         let nr_points = points.len() as f64;
 
-        struct Wct {
-            points: VectorBuffer,
+        struct Wct<'a> {
+            points: &'a VectorBuffer,
             node_hierarchy: GridHierarchy,
         }
 
-        impl WithComponentTypeOnce for Wct {
+        impl<'a> WithComponentTypeOnce for Wct<'a> {
             type Output = HashMap<LeveledGridCell, VectorBuffer>;
 
             fn run_once<C: Component>(self) -> Self::Output {
@@ -526,7 +528,7 @@ impl OctreeWriter {
                     points.view_attribute::<C::PasturePrimitive>(&C::position_attribute());
 
                 for rd in 0..points.len() {
-                    let position: Point3<C> = positions.at(rd).into();
+                    let position = C::pasture_to_position(positions.at(rd));
                     let cell = grid.cell_at(position);
                     let node = LeveledGridCell {
                         lod: LodLevel::base(),

@@ -41,6 +41,22 @@ impl FromStr for TaskPriorityFunction {
     }
 }
 
+impl std::fmt::Display for TaskPriorityFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            TaskPriorityFunction::NrPoints => "NrPoints",
+            TaskPriorityFunction::Lod => "Lod",
+            TaskPriorityFunction::OldestPoint => "OldestPoint",
+            TaskPriorityFunction::NewestPoint => "NewestPoint",
+            TaskPriorityFunction::TaskAge => "TaskAge",
+            TaskPriorityFunction::NrPointsWeightedByTaskAge => "NrPointsTaskAge",
+            TaskPriorityFunction::NrPointsWeightedByOldestPoint => "NrPointsOldestPoint",
+            TaskPriorityFunction::NrPointsWeightedByNegNewestPoint => "NrPointsNegNewestPoint",
+        };
+        str.fmt(f)
+    }
+}
+
 impl TaskPriorityFunction {
     pub(super) fn cmp(
         &self,

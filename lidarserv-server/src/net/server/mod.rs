@@ -1,18 +1,17 @@
-use std::sync::Arc;
-
-use log::{error, info};
-use tokio::net::{TcpListener, ToSocketAddrs};
-use tokio::sync::broadcast::Receiver;
-
-use crate::index::DynIndex;
+use crate::net::protocol::messages::PointDataCodec;
 use crate::net::server::connection::handle_connection;
 use crate::net::LidarServerError;
+use lidarserv_common::index::Octree;
+use log::{error, info};
+use std::sync::Arc;
+use tokio::net::{TcpListener, ToSocketAddrs};
+use tokio::sync::broadcast::Receiver;
 
 mod connection;
 
 pub async fn serve<A>(
     addr: A,
-    index: Box<dyn DynIndex>,
+    index: Octree,
     mut shutdown_receiver: Receiver<u32>,
 ) -> Result<(), LidarServerError>
 where
@@ -21,11 +20,14 @@ where
     let listener = TcpListener::bind(addr).await?;
     info!("Ready to accept connections at: {}", listener.local_addr()?);
 
-    let mut index = Arc::<dyn DynIndex>::from(index);
+    let mut index = Arc::new(index);
 
     let (connections_alive_sender, mut connections_alive_receiver) =
         tokio::sync::mpsc::channel::<()>(1);
     let (connection_shutdown_broadcast, _) = tokio::sync::broadcast::channel(1);
+
+    // todo - either make this configable or use the same codec used for the storage by the octree.
+    let codec = PointDataCodec::Pasture { compression: false };
 
     loop {
         let accepted = tokio::select! {
@@ -69,7 +71,7 @@ where
             tokio::spawn(async move {
                 // handle connection
                 let result =
-                    handle_connection(connection, index, connection_shutdown_receiver).await;
+                    handle_connection(connection, index, codec, connection_shutdown_receiver).await;
                 if let Err(e) = result {
                     error!("{}: {}", addr, e);
                 }

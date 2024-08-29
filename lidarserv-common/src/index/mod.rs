@@ -8,7 +8,7 @@ use crate::{
         InMemoryPointCodec, PointIoError,
     },
     lru_cache::pager::PageManager,
-    query::QueryBuilder,
+    query::Query,
 };
 use grid_cell_directory::GridCellDirectory;
 use lazy_node::LazyNode;
@@ -53,15 +53,6 @@ pub struct OctreeParams {
     pub max_cache_size: usize,
     pub priority_function: TaskPriorityFunction,
     pub num_threads: u16,
-    //pub page_loader: OctreePageLoader<Page<Sampl, Point>>,
-    //pub page_directory: GridCellDirectory,
-    //pub loader: I32LasReadWrite,
-    //pub coordinate_system: I32CoordinateSystem,
-    //pub metrics: Option<LiveMetricsCollector>,
-    //pub point_record_format: u8,
-    //pub enable_histogram_acceleration: bool,
-    //pub attribute_index: Option<AttributeIndex>,
-    //pub histogram_settings: HistogramSettings,
 }
 
 pub struct Octree {
@@ -147,11 +138,19 @@ impl Octree {
         Ok(())
     }
 
+    pub fn coordinate_system(&self) -> CoordinateSystem {
+        self.inner.coordinate_system
+    }
+
+    pub fn point_layout(&self) -> &PointLayout {
+        &self.inner.point_layout
+    }
+
     pub fn writer(&self) -> OctreeWriter {
         OctreeWriter::new(Arc::clone(&self.inner))
     }
 
-    pub fn reader(&self, initial_query: impl QueryBuilder) -> OctreeReader {
+    pub fn reader(&self, initial_query: impl Query) -> OctreeReader {
         OctreeReader::new(Arc::clone(&self.inner), initial_query)
     }
 }

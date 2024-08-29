@@ -1,53 +1,544 @@
 use crate::cli::InitOptions;
-use crate::common::geometry::grid::LodLevel;
-use crate::index::settings::{GeneralSettings, IndexSettings, OctreeSettings};
 use anyhow::Result;
+use dialoguer::{
+    theme::{ColorfulTheme, Theme},
+    Confirm, Input, MultiSelect, Select,
+};
+use lidarserv_common::{
+    geometry::{
+        coordinate_system::CoordinateSystem,
+        grid::{GridHierarchy, LodLevel},
+        position::{PositionComponentType, WithComponentTypeOnce, POSITION_ATTRIBUTE_NAME},
+    },
+    index::priority_function::TaskPriorityFunction,
+};
+use lidarserv_server::index::settings::IndexSettings;
+use nalgebra::vector;
+use pasture_core::layout::{
+    attributes::{
+        CLASSIFICATION, CLASSIFICATION_FLAGS, COLOR_RGB, EDGE_OF_FLIGHT_LINE, GPS_TIME, INTENSITY,
+        NIR, NORMAL, NUMBER_OF_RETURNS, POINT_ID, POINT_SOURCE_ID, RETURN_NUMBER,
+        RETURN_POINT_WAVEFORM_LOCATION, SCANNER_CHANNEL, SCAN_ANGLE, SCAN_ANGLE_RANK,
+        SCAN_DIRECTION_FLAG, WAVEFORM_DATA_OFFSET, WAVEFORM_PACKET_SIZE, WAVEFORM_PARAMETERS,
+        WAVE_PACKET_DESCRIPTOR_INDEX,
+    },
+    PointAttributeDataType, PointAttributeDefinition, PointLayout,
+};
+use pasture_io::{
+    las::{
+        point_layout_from_las_point_format, ATTRIBUTE_BASIC_FLAGS, ATTRIBUTE_EXTENDED_FLAGS,
+        ATTRIBUTE_LOCAL_LAS_POSITION,
+    },
+    las_rs::point::Format,
+};
+use std::{borrow::Cow, collections::HashSet, num::NonZero, ops::RangeInclusive};
 
-pub fn run(init_options: InitOptions) -> Result<()> {
-    // create the directory
-    std::fs::create_dir_all(&init_options.path)?;
+fn las_attributes(point_format: u8) -> Vec<PointAttributeDefinition> {
+    let format = Format::new(point_format).unwrap();
+    let layout = point_layout_from_las_point_format(&format, true).unwrap();
+    let mut attrs: Vec<_> = layout
+        .attributes()
+        .map(|a| a.attribute_definition().clone())
+        .collect();
 
-    // check point record format
-    if init_options.las_point_record_format > 3 {
-        anyhow::bail!(
-            "Invalid point record format: {}, only 0-3 are supported",
-            init_options.las_point_record_format
-        );
+    // rename the position attribute to "our" position attribute.
+    for attr in &mut attrs {
+        if attr.name() == ATTRIBUTE_LOCAL_LAS_POSITION.name() {
+            *attr = PointAttributeDefinition::custom(
+                Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
+                attr.datatype(),
+            );
+        }
+    }
+    attrs
+}
+
+fn attributes_interactive(theme: &dyn Theme) -> Vec<PointAttributeDefinition> {
+    let s = Select::with_theme(theme)
+        .with_prompt("Select a point format preset:")
+        .item("Position only - 32 bit integer")
+        .item("Position only - 64 bit floating point")
+        .item("LAS point format 0")
+        .item("LAS point format 1")
+        .item("LAS point format 2")
+        .item("LAS point format 3")
+        .item("LAS point format 4")
+        .item("LAS point format 5")
+        .item("LAS point format 6")
+        .item("LAS point format 7")
+        .item("LAS point format 8")
+        .item("LAS point format 9")
+        .item("LAS point format 10")
+        .default(2)
+        .interact()
+        .unwrap();
+
+    let mut attributes = match s {
+        0 => vec![PointAttributeDefinition::custom(
+            Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
+            PointAttributeDataType::Vec3i32,
+        )],
+        1 => vec![PointAttributeDefinition::custom(
+            Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
+            PointAttributeDataType::Vec3f64,
+        )],
+        2 => las_attributes(0),
+        3 => las_attributes(1),
+        4 => las_attributes(2),
+        5 => las_attributes(3),
+        6 => las_attributes(4),
+        7 => las_attributes(5),
+        8 => las_attributes(6),
+        9 => las_attributes(7),
+        10 => las_attributes(8),
+        11 => las_attributes(9),
+        12 => las_attributes(10),
+        _ => unreachable!(),
+    };
+
+    loop {
+        println!("You have added the following point attributes so far:");
+        for attr in &attributes {
+            println!(" - {} ({})", attr.name(), attr.datatype());
+        }
+
+        let s = Select::with_theme(theme)
+            .with_prompt("Edit attributes:")
+            .item("Add predefined attribute(s).")
+            .item("Add custom attribute.")
+            .item("Remove attribute(s).")
+            .item("Done.")
+            .default(3)
+            .interact()
+            .unwrap();
+        match s {
+            0 => add_predefined_attributes(theme, &mut attributes),
+            1 => add_custom_attribute(theme, &mut attributes),
+            2 => remove_attribute(theme, &mut attributes),
+            3 => break,
+            _ => unreachable!(),
+        }
     }
 
-    // write settings
-    let settings = IndexSettings {
-        general_settings: GeneralSettings {
-            nr_threads: init_options.num_threads,
-            max_cache_size: init_options.cache_size,
-            las_scale: init_options.las_scale.0,
-            las_offset: init_options.las_offset.0,
-            use_compression: !init_options.las_no_compression,
-            point_record_format: init_options.las_point_record_format,
-        },
-        octree_settings: OctreeSettings {
-            priority_function: init_options.mno_task_priority,
-            max_lod: LodLevel::from_level(init_options.max_lod),
-            max_bogus_inner: init_options
-                .mno_bogus_inner
-                .unwrap_or(init_options.mno_bogus),
-            max_bogus_leaf: init_options
-                .mno_bogus_leaf
-                .unwrap_or(init_options.mno_bogus),
-            enable_attribute_indexing: init_options.enable_attribute_indexing,
-            enable_histogram_acceleration: init_options.enable_histogram_acceleration,
-            use_metrics: init_options.mno_use_metrics,
-            point_grid_shift: 31
-                - (init_options.point_grid_size / init_options.las_scale.0.x)
-                    .log2()
-                    .round() as u16,
-            node_grid_shift: 31
-                - (init_options.mno_node_grid_size / init_options.las_scale.0.x)
-                    .log2()
-                    .round() as u16,
-        },
-        histogram_settings: Default::default(),
+    attributes
+}
+
+fn add_predefined_attributes(theme: &dyn Theme, attributes: &mut Vec<PointAttributeDefinition>) {
+    let mut predefined_attributes = vec![
+        INTENSITY,
+        COLOR_RGB,
+        CLASSIFICATION,
+        CLASSIFICATION_FLAGS,
+        RETURN_NUMBER,
+        NUMBER_OF_RETURNS,
+        SCANNER_CHANNEL,
+        SCAN_DIRECTION_FLAG,
+        EDGE_OF_FLIGHT_LINE,
+        SCAN_ANGLE_RANK,
+        SCAN_ANGLE,
+        POINT_SOURCE_ID,
+        GPS_TIME,
+        NIR,
+        POINT_ID,
+        NORMAL,
+        WAVE_PACKET_DESCRIPTOR_INDEX,
+        WAVEFORM_DATA_OFFSET,
+        WAVEFORM_PACKET_SIZE,
+        RETURN_POINT_WAVEFORM_LOCATION,
+        WAVEFORM_PARAMETERS,
+        ATTRIBUTE_BASIC_FLAGS,
+        ATTRIBUTE_EXTENDED_FLAGS,
+    ];
+
+    let attribute_names: HashSet<_> = attributes.iter().map(|a| a.name().to_string()).collect();
+    predefined_attributes.retain(|attr| !attribute_names.contains(attr.name()));
+
+    if predefined_attributes.is_empty() {
+        println!("All predefined attributes have already been added.");
+        return;
+    }
+
+    let items: Vec<String> = predefined_attributes
+        .iter()
+        .map(|a| format!("{} ({})", a.name(), a.datatype()))
+        .collect();
+    let selected = MultiSelect::with_theme(theme)
+        .with_prompt("Select attribute(s): ")
+        .items(&items)
+        .interact()
+        .unwrap();
+    for index in selected {
+        attributes.push(predefined_attributes[index].clone());
+    }
+}
+
+fn add_custom_attribute(theme: &dyn Theme, attributes: &mut Vec<PointAttributeDefinition>) {
+    let name: String = Input::with_theme(theme)
+        .with_prompt("Enter attribute name: ")
+        .interact()
+        .unwrap();
+    let name = name.trim();
+    if name.is_empty() {
+        return;
+    }
+
+    let types = vec![
+        PointAttributeDataType::U8,
+        PointAttributeDataType::I8,
+        PointAttributeDataType::U16,
+        PointAttributeDataType::I16,
+        PointAttributeDataType::U32,
+        PointAttributeDataType::I32,
+        PointAttributeDataType::U64,
+        PointAttributeDataType::I64,
+        PointAttributeDataType::F32,
+        PointAttributeDataType::F64,
+        PointAttributeDataType::Vec3u8,
+        PointAttributeDataType::Vec3u16,
+        PointAttributeDataType::Vec3f32,
+        PointAttributeDataType::Vec3i32,
+        PointAttributeDataType::Vec3f64,
+        PointAttributeDataType::Vec4u8,
+    ];
+    let mut type_names: Vec<_> = types.iter().map(|t| t.to_string()).collect();
+    type_names.push("ByteArray".to_string());
+
+    let s = Select::with_theme(theme)
+        .with_prompt("Select data type:")
+        .items(&type_names)
+        .interact()
+        .unwrap();
+    let typ = if s < types.len() {
+        types[s]
+    } else {
+        let len: u64 = Input::with_theme(theme)
+            .with_prompt("Len: ")
+            .interact()
+            .unwrap();
+        PointAttributeDataType::ByteArray(len)
     };
+
+    attributes.push(PointAttributeDefinition::custom(
+        Cow::Owned(name.to_string()),
+        typ,
+    ));
+}
+
+fn remove_attribute(theme: &dyn Theme, attributes: &mut Vec<PointAttributeDefinition>) {
+    if attributes.is_empty() {
+        println!("No attributes to delete.");
+        return;
+    }
+    let mut names: Vec<_> = attributes
+        .iter()
+        .map(|attr| (format!("{} ({})", attr.name(), attr.datatype()), true))
+        .collect();
+    loop {
+        let s = MultiSelect::with_theme(theme)
+            .with_prompt("Un-check the attributes to delete:")
+            .items_checked(&names)
+            .report(false)
+            .interact()
+            .unwrap();
+        let keep: HashSet<_> = s.into_iter().collect();
+        let keep_position = keep
+            .iter()
+            .cloned()
+            .any(|index| attributes[index].name() == POSITION_ATTRIBUTE_NAME);
+        if !keep_position {
+            println!("Cannot remove the position attribute.");
+            names.iter_mut().for_each(|(_, select)| *select = false);
+            for index in keep {
+                names[index].1 = true;
+            }
+            continue;
+        }
+        *attributes = attributes
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| keep.contains(i))
+            .map(|(_, attr)| attr.clone())
+            .collect();
+        break;
+    }
+}
+
+fn coordinate_system_interactive(
+    theme: &dyn Theme,
+    point_layout: &PointLayout,
+) -> CoordinateSystem {
+    let position = PositionComponentType::from_layout(point_layout);
+    let default_scale = match position {
+        PositionComponentType::F64 => 1.0,
+        PositionComponentType::I32 => 0.001,
+    };
+    let scale_x: f64 = Input::with_theme(theme)
+        .with_prompt("Scale X:")
+        .default(default_scale)
+        .interact()
+        .unwrap();
+    let scale_y: f64 = Input::with_theme(theme)
+        .with_prompt("Scale Y:")
+        .default(scale_x)
+        .interact()
+        .unwrap();
+    let scale_z: f64 = Input::with_theme(theme)
+        .with_prompt("Scale Z:")
+        .default(scale_x)
+        .interact()
+        .unwrap();
+    let offset_x: f64 = Input::with_theme(theme)
+        .with_prompt("Offset X:")
+        .default(0.0)
+        .interact()
+        .unwrap();
+    let offset_y: f64 = Input::with_theme(theme)
+        .with_prompt("Offset Y:")
+        .default(0.0)
+        .interact()
+        .unwrap();
+    let offset_z: f64 = Input::with_theme(theme)
+        .with_prompt("Offset Z:")
+        .default(0.0)
+        .interact()
+        .unwrap();
+    CoordinateSystem::from_las_transform(
+        vector![scale_x, scale_y, scale_z],
+        vector![offset_x, offset_y, offset_z],
+    )
+}
+
+struct OctreeParams {
+    node_hierarchy: GridHierarchy,
+    point_hierarchy: GridHierarchy,
+    max_lod: LodLevel,
+}
+
+fn octree_interactive(
+    theme: &dyn Theme,
+    coordinate_system: &CoordinateSystem,
+    layout: &PointLayout,
+) -> OctreeParams {
+    fn auto_estimate_params(
+        theme: &dyn Theme,
+        coordinate_system: &CoordinateSystem,
+        layout: &PointLayout,
+    ) -> OctreeParams {
+        let root_size_global: f64 = Input::with_theme(theme)
+            .with_prompt("Largest node size in metres:")
+            .default(100.0)
+            .interact()
+            .unwrap();
+        let finest_grid_spacing_global: f64 = Input::with_theme(theme)
+            .with_prompt("Finest point spacing in metres:")
+            .default(0.01)
+            .interact()
+            .unwrap();
+        let sampling_grid_size: u32 = Input::with_theme(theme)
+            .with_prompt("Sampling grid size:")
+            .default(256)
+            .interact()
+            .unwrap();
+
+        struct Wct;
+        impl WithComponentTypeOnce for Wct {
+            type Output = RangeInclusive<i16>;
+
+            fn run_once<C: lidarserv_common::geometry::position::Component>(self) -> Self::Output {
+                C::grid_get_level_minmax()
+            }
+        }
+        let allowed_levels = Wct.for_layout_once(layout);
+
+        let root_size: f64 = coordinate_system.encode_distance(root_size_global).unwrap();
+        let finest_grid_spacing: f64 = coordinate_system
+            .encode_distance(finest_grid_spacing_global)
+            .unwrap();
+        let node_level =
+            (root_size.log2().floor() as i16).clamp(*allowed_levels.start(), *allowed_levels.end());
+        let shift = sampling_grid_size.ilog2() as i16;
+        let point_level = node_level - shift;
+        let point_level_finest = finest_grid_spacing.log2().floor() as i16;
+
+        let max_lod = if point_level_finest <= point_level {
+            LodLevel::from_level((point_level - point_level_finest) as u8)
+        } else {
+            LodLevel::base()
+        };
+
+        OctreeParams {
+            node_hierarchy: GridHierarchy::new(node_level),
+            point_hierarchy: GridHierarchy::new(point_level),
+            max_lod,
+        }
+    }
+
+    fn summary(params: &OctreeParams, coordinate_system: &CoordinateSystem) {
+        println!("Based on your input, the following octree parameters have been calculated:");
+        println!(" - node hierarchy shift: {}", params.node_hierarchy.shift());
+        println!(
+            " - point hierarchy shift: {}",
+            params.point_hierarchy.shift()
+        );
+        println!(" - max level of detail: {}", params.max_lod);
+        println!();
+        println!("With these parameters, the octree will have the following properties:");
+
+        for lod_level in 0..=params.max_lod.level() {
+            let lod = LodLevel::from_level(lod_level);
+            let node_size = coordinate_system
+                .decode_distance(params.node_hierarchy.level::<f64>(lod).cell_size());
+            println!(" - In {lod}, the node size is {node_size:0.3} metres.");
+        }
+        println!(
+            " - Each node contains a {0}x{0}x{0} sampling grid.",
+            2_i32.pow((params.node_hierarchy.shift() - params.point_hierarchy.shift()) as u32)
+        );
+        for lod_level in 0..=params.max_lod.level() {
+            let lod = LodLevel::from_level(lod_level);
+            let point_dist = coordinate_system
+                .decode_distance(params.point_hierarchy.level::<f64>(lod).cell_size());
+            println!(" - In {lod}, the point distance is {point_dist:0.3} metres.");
+        }
+    }
+
+    loop {
+        let params = auto_estimate_params(theme, coordinate_system, layout);
+        summary(&params, coordinate_system);
+        let is_ok = Confirm::with_theme(theme)
+            .with_prompt("Does this look acceptable to you?")
+            .default(true)
+            .interact()
+            .unwrap();
+        if is_ok {
+            return params;
+        }
+    }
+}
+
+struct IndexerSettings {
+    num_threads: u16,
+    cache_size: usize,
+    bogus_inner: usize,
+    bogus_leaf: usize,
+    priority_function: TaskPriorityFunction,
+    use_metrics: bool,
+}
+
+fn indexer_settings_interactive(theme: &dyn Theme) -> IndexerSettings {
+    let nr_threads = Input::with_theme(theme)
+        .with_prompt("Number of threads: ")
+        .default(
+            std::thread::available_parallelism()
+                .unwrap_or(NonZero::new(1).unwrap())
+                .get() as u16,
+        )
+        .interact()
+        .unwrap();
+
+    let priority_function_choices = [
+        TaskPriorityFunction::NrPointsWeightedByTaskAge,
+        TaskPriorityFunction::NrPoints,
+        TaskPriorityFunction::Lod,
+        TaskPriorityFunction::OldestPoint,
+        TaskPriorityFunction::TaskAge,
+    ];
+    let priority_function_names = priority_function_choices.map(|p| p.to_string());
+    let s = Select::with_theme(theme)
+        .with_prompt("Task priority function: ")
+        .items(&priority_function_names)
+        .default(0)
+        .interact()
+        .unwrap();
+    let priority_function = priority_function_choices[s];
+
+    let cache_size = Input::with_theme(theme)
+        .with_prompt("Cache size (nodes): ")
+        .default(5_000)
+        .interact()
+        .unwrap();
+
+    let bogus_inner = Input::with_theme(theme)
+        .with_prompt("Maximum number of bogus points per inner node:")
+        .default(500)
+        .interact()
+        .unwrap();
+    let bogus_leaf = Input::with_theme(theme)
+        .with_prompt("Maximum number of bogus points per leaf node:")
+        .default(5000)
+        .interact()
+        .unwrap();
+
+    let use_metrics = Confirm::with_theme(theme)
+        .with_prompt("Should metrics be recorded during indexing?")
+        .default(false)
+        .interact()
+        .unwrap();
+
+    IndexerSettings {
+        num_threads: nr_threads,
+        cache_size,
+        bogus_inner,
+        bogus_leaf,
+        priority_function,
+        use_metrics,
+    }
+}
+
+fn print_header(header: &str) {
+    println!();
+    println!("################################################################################");
+    println!("# {header}");
+    println!("################################################################################");
+}
+
+pub fn run(init_options: InitOptions) -> Result<()> {
+    let theme = ColorfulTheme::default();
+
+    // attributes
+    print_header("Point Format");
+    let attrs: Vec<PointAttributeDefinition> = attributes_interactive(&theme);
+    let point_layout = PointLayout::from_attributes(&attrs);
+    let s = Select::with_theme(&theme)
+        .with_prompt("Point Data compression: ")
+        .item("None")
+        .item("Lz4")
+        .default(0)
+        .interact()
+        .unwrap();
+    let enable_compression = s == 1;
+
+    // coordinate system
+    print_header("Coordinate System");
+    let coordinate_system = coordinate_system_interactive(&theme, &point_layout);
+
+    // octree setup
+    print_header("Octree");
+    let octree_params = octree_interactive(&theme, &coordinate_system, &point_layout);
+
+    // indexer settings
+    print_header("Indexing");
+    let index_params = indexer_settings_interactive(&theme);
+
+    // Remaining stuff
+
+    let settings = IndexSettings {
+        node_hierarchy: octree_params.node_hierarchy,
+        point_hierarchy: octree_params.point_hierarchy,
+        coordinate_system,
+        point_layout,
+        max_lod: octree_params.max_lod,
+        priority_function: index_params.priority_function,
+        num_threads: index_params.num_threads,
+        max_cache_size: index_params.cache_size,
+        max_bogus_inner: index_params.bogus_inner,
+        max_bogus_leaf: index_params.bogus_leaf,
+        use_metrics: index_params.use_metrics,
+        enable_compression,
+    };
+
+    // create the directory and write settings json
+    std::fs::create_dir_all(&init_options.path)?;
     settings.save_to_data_folder(&init_options.path)?;
     Ok(())
 }

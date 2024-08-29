@@ -18,9 +18,8 @@ pub enum CoordinateSystemError {
     OutOfBounds,
 }
 
-/// Coordinate system for i32 coordinates, that is given explicit bounds for the coordinates,
-/// that it can represent. Coordinates within the bounds are mapped to the
-/// range \[i32::MIN - i32::MAX\].
+/// The coordinate system is used to convert between
+/// the stored coordinates and actual "world coordinates".
 #[derive(Debug, Clone, PartialEq, Copy, Serialize, Deserialize)]
 pub struct CoordinateSystem {
     scale: Vector3<f64>,
@@ -75,6 +74,21 @@ impl CoordinateSystem {
 
         // convert to int
         Ok(inner.map(|c| C::from_f64(c)).into())
+    }
+
+    pub fn encode_distance<C: Component>(&self, global: f64) -> Result<C, CoordinateSystemError> {
+        // transformation
+        let inner = global / self.scale.x;
+
+        // bounds check
+        let int_min = C::MIN.to_f64();
+        let int_max = C::MAX.to_f64();
+        if inner < int_min || inner > int_max {
+            return Err(CoordinateSystemError::OutOfBounds);
+        }
+
+        // convert to int
+        Ok(C::from_f64(inner))
     }
 
     pub fn decode_position<C: Component>(&self, pos: Position<C>) -> PositionGlobal {

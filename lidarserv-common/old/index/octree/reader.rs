@@ -92,7 +92,7 @@ where
         query: &Query,
         inner: &Inner<Point, Sampl, SamplF>,
     ) -> bool {
-        span!("cell_matches_query_impl");
+        let _span = span!("cell_matches_query_impl");
         let bounds = inner.node_hierarchy.get_leveled_cell_bounds(cell);
         let lod = cell.lod;
 
@@ -107,7 +107,7 @@ where
 
         // check attributes for cell
         if query.enable_attribute_acceleration {
-            span!("cell_matches_query_impl::attribute_acceleration");
+            let _span = span!("cell_matches_query_impl::attribute_acceleration");
             let attribute_index = inner.attribute_index.as_ref().unwrap();
             if !attribute_index.cell_overlaps_with_bounds(
                 lod,
@@ -129,7 +129,7 @@ where
     /// Filters out all points of the given Vector, that do not match the query or filter
     /// returns vector of points that match the query and filter.
     fn filter_points(&self, points: &Vec<Point>) -> Vec<Point> {
-        span!("filter_points");
+        let _span = span!("filter_points");
         let mut filtered_points = Vec::new();
         for point in points {
             if self

@@ -1,108 +1,53 @@
-use crate::common::index::octree::grid_cell_directory::{GridCellDirectory, GridCellIoError};
-use crate::common::index::octree::page_manager::OctreePageLoader;
-use crate::common::index::octree::Octree;
 use crate::index::settings::IndexSettings;
-use crate::index::DynIndex;
-use lidarserv_common::geometry::grid::I32GridHierarchy;
-use lidarserv_common::geometry::position::I32CoordinateSystem;
-use lidarserv_common::geometry::sampling::GridCenterSamplingFactory;
-use lidarserv_common::index::octree::attribute_index::{AttributeIndex, AttributeIndexLoadError};
-use lidarserv_common::index::octree::live_metrics_collector::{LiveMetricsCollector, MetricsError};
-use lidarserv_common::index::octree::OctreeParams;
-use lidarserv_common::las::I32LasReadWrite;
-use log::debug;
+use anyhow::Result;
+use lidarserv_common::index::{Octree, OctreeParams};
 use std::path::{Path, PathBuf};
-use thiserror::Error;
 
-#[derive(Debug, Error)]
-pub enum BuilderError {
-    #[error("Could not load directory: {0}")]
-    GridCellIo(#[from] GridCellIoError),
-
-    #[error("Could not open metric file: {0}")]
-    MetricsIo(#[from] MetricsError),
-
-    #[error("Could not open attribute index: {0}")]
-    AttributeIndexIo(#[from] AttributeIndexLoadError),
-}
-
-pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Box<dyn DynIndex>, BuilderError> {
+pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Octree> {
     let IndexSettings {
-        general_settings,
-        octree_settings,
-        histogram_settings,
+        use_metrics,
+        node_hierarchy,
+        point_hierarchy,
+        coordinate_system,
+        max_lod,
+        max_bogus_inner,
+        max_bogus_leaf,
+        enable_compression,
+        max_cache_size,
+        priority_function,
+        num_threads,
+        point_layout,
     } = settings;
 
-    // tree stuff
-    let node_hierarchy = I32GridHierarchy::new(octree_settings.node_grid_shift);
-    let point_hierarchy = I32GridHierarchy::new(octree_settings.point_grid_shift);
-    let sample_factory = GridCenterSamplingFactory::new(point_hierarchy);
-
-    // page loading stuff
-    let las_loader = I32LasReadWrite::new(
-        general_settings.use_compression,
-        general_settings.point_record_format,
-    );
-    let page_loader = OctreePageLoader::new(las_loader.clone(), data_path.to_owned());
-    let mut directory_file_name = data_path.to_owned();
-    directory_file_name.push("directory.bin");
-    let page_directory = GridCellDirectory::new(&octree_settings.max_lod, directory_file_name)?;
-    let coordinate_system = I32CoordinateSystem::from_las_transform(
-        general_settings.las_scale,
-        general_settings.las_offset,
-    );
-
-    // attribute indexing stuff
-    let mut attribute_index = None;
-    if octree_settings.enable_attribute_indexing {
-        let mut attribute_index_file_name = data_path.to_owned();
-        attribute_index_file_name.push("attribute_index.bin");
-        let attribute_index = attribute_index.insert(AttributeIndex::new(
-            octree_settings.max_lod.level() as usize,
-            attribute_index_file_name,
-        )?);
-        debug!("Attribute indexing enabled");
-        if octree_settings.enable_histogram_acceleration {
-            debug!("Histogram acceleration enabled");
-            attribute_index.set_histogram_acceleration(true);
-        }
-    }
-
     // metrics
-    let metrics = if octree_settings.use_metrics {
+    let metrics_file = if use_metrics {
         let mut metrics_file_name = PathBuf::new();
         for i in 0.. {
-            metrics_file_name = data_path.to_owned();
-            metrics_file_name.push(format!("metrics_{}.cbor", i));
+            metrics_file_name = data_path.join(format!("metrics_{}.cbor", i));
             if !metrics_file_name.exists() {
                 break;
             }
         }
-        let m = LiveMetricsCollector::new_file_backed_collector(&metrics_file_name)?;
-        Some(m)
+        Some(metrics_file_name)
     } else {
         None
     };
 
     // build octree
-    let octree = Octree::new(OctreeParams {
-        num_threads: general_settings.nr_threads as u16,
-        priority_function: octree_settings.priority_function,
-        max_lod: octree_settings.max_lod,
-        max_bogus_inner: octree_settings.max_bogus_inner,
-        max_bogus_leaf: octree_settings.max_bogus_leaf,
-        attribute_index,
-        enable_histogram_acceleration: octree_settings.enable_histogram_acceleration,
-        histogram_settings,
+    Octree::new(OctreeParams {
+        directory_file: data_path.join("directory.bin"),
+        point_data_folder: data_path.to_path_buf(),
+        metrics_file,
+        point_layout,
         node_hierarchy,
-        page_loader,
-        page_directory,
-        max_cache_size: general_settings.max_cache_size,
-        sample_factory,
-        loader: las_loader,
+        point_hierarchy,
         coordinate_system,
-        metrics,
-        point_record_format: general_settings.point_record_format,
-    });
-    Ok(Box::new(octree))
+        max_lod,
+        max_bogus_inner,
+        max_bogus_leaf,
+        enable_compression,
+        max_cache_size,
+        priority_function,
+        num_threads,
+    })
 }

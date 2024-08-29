@@ -3,13 +3,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::geometry::grid::LodLevel;
 
-use super::{NodeQueryResult, Query};
+use super::{ExecutableQuery, NodeQueryResult, Query};
 
 /// Query that matches everything
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct QueryFull;
+pub struct FullQuery;
 
-impl Query for QueryFull {
+impl Query for FullQuery {
+    type Executable = Self;
+
+    fn prepare(self, _ctx: &super::QueryContext) -> Self::Executable {
+        self
+    }
+}
+
+impl ExecutableQuery for FullQuery {
     fn matches_node(&self, _node: crate::geometry::grid::LeveledGridCell) -> NodeQueryResult {
         NodeQueryResult::Positive
     }

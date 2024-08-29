@@ -2,15 +2,15 @@ use lidarserv_common::geometry::bounding_box::{BaseAABB, AABB};
 use lidarserv_common::geometry::grid::LodLevel;
 use lidarserv_common::index::octree::attribute_bounds::LasPointAttributeBounds;
 use lidarserv_common::query::bounding_box::BoundingBoxQuery;
-use lidarserv_common::query::view_frustum::ViewFrustumQuery;
+use lidarserv_common::query::view_frustum::ViewFrustumMatrixQuery;
 use nalgebra::{Matrix4, Point3};
 
 /// A query that "looks down at an overwiew of the full point cloud".
 /// It mostly covers shallow lod levels.
 #[rustfmt::skip]
 #[allow(clippy::approx_constant)]
-pub fn vf_preset_query_1() -> ViewFrustumQuery {
-    ViewFrustumQuery::new_raw(
+pub fn vf_preset_query_1() -> ViewFrustumMatrixQuery {
+    ViewFrustumMatrixQuery::new_raw(
         Matrix4::new(
             2.414213562373095, 0.0000000000000001045301427691423, 0.00000000000000003295012305146171, 0.000000000000000032950057151281516,
             -0.00000000000000013016323879389544, 1.7071067811865472, std::f64::consts::FRAC_1_SQRT_2, std::f64::consts::FRAC_1_SQRT_2,
@@ -31,8 +31,8 @@ pub fn vf_preset_query_1() -> ViewFrustumQuery {
 /// A query, that "looks down the street".
 /// As a result, it covers both detailed lod levels close to the camera and shallow lod levels far away.
 #[rustfmt::skip]
-pub fn vf_preset_query_2() -> ViewFrustumQuery {
-    ViewFrustumQuery::new_raw(
+pub fn vf_preset_query_2() -> ViewFrustumMatrixQuery {
+    ViewFrustumMatrixQuery::new_raw(
         Matrix4::new(
             -2.011705014272859, 0.2674860964718512, 0.5416431284229128, 0.5416420451377393,
             -1.3347172210980225, -0.40315889614282446, -0.8163723222949177, -0.8163706895519058,
@@ -53,8 +53,8 @@ pub fn vf_preset_query_2() -> ViewFrustumQuery {
 /// A query, that "looks at a detail on the ground".
 /// As a result, it covers very detailed lod levels.
 #[rustfmt::skip]
-pub fn vf_preset_query_3() -> ViewFrustumQuery {
-    ViewFrustumQuery::new_raw(
+pub fn vf_preset_query_3() -> ViewFrustumMatrixQuery {
+    ViewFrustumMatrixQuery::new_raw(
         Matrix4::new(
             -2.33458662155896, 0.6149247361946918, 0.0, 0.0,
             -0.6149247361946918, -2.33458662155896, -0.0000000000000001147389927325049, -0.0000000000000001147387632547489,

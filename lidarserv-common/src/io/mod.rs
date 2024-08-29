@@ -71,16 +71,22 @@ pub trait PointCodec {
         rd: &mut impl std::io::Read,
         point_layout: &PointLayout,
     ) -> Result<VectorBuffer, PointIoError>;
+
+    fn is_compatible_with(&self, other: &Self) -> bool;
 }
 
 pub trait InMemoryPointCodec {
     fn write_points(&self, points: &VectorBuffer, wr: &mut Vec<u8>) -> Result<(), PointIoError>;
 
-    fn read_points(
+    fn read_points<'a>(
         &self,
-        rd: &mut &[u8],
+        rd: &'a [u8],
         point_layout: &PointLayout,
-    ) -> Result<VectorBuffer, PointIoError>;
+    ) -> Result<(VectorBuffer, &'a [u8]), PointIoError>;
+
+    fn is_compatible_with(&self, other: &Self) -> bool
+    where
+        Self: Sized;
 }
 
 impl<T> InMemoryPointCodec for T
@@ -91,11 +97,17 @@ where
         PointCodec::write_points(self, points, wr)
     }
 
-    fn read_points(
+    fn read_points<'a>(
         &self,
-        rd: &mut &[u8],
+        rd: &'a [u8],
         point_layout: &PointLayout,
-    ) -> Result<VectorBuffer, PointIoError> {
-        PointCodec::read_points(self, rd, point_layout)
+    ) -> Result<(VectorBuffer, &'a [u8]), PointIoError> {
+        let mut rd = rd;
+        let result = PointCodec::read_points(self, &mut rd, point_layout);
+        result.map(|points| (points, rd))
+    }
+
+    fn is_compatible_with(&self, other: &Self) -> bool {
+        PointCodec::is_compatible_with(self, other)
     }
 }

@@ -1,18 +1,11 @@
-use crate::common::las::Las;
-use crate::index::DynIndex;
 use crate::net::protocol::connection::Connection;
-use crate::net::protocol::messages::Message::{IncrementalResult, ResultComplete};
-use crate::net::protocol::messages::{CoordinateSystem, DeviceType, Message, SpatialQuery};
+use crate::net::protocol::messages::Message::{self, Node, ResultComplete};
+use crate::net::protocol::messages::{DeviceType, PointData, PointDataCodec, QueryConfig};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
-use lidarserv_common::geometry::bounding_box::{BaseAABB, OptionAABB};
-use lidarserv_common::geometry::grid::LodLevel;
-use lidarserv_common::geometry::position::{I32Position, Position};
-use lidarserv_common::las::I32LasReadWrite;
-use lidarserv_common::nalgebra::Point3;
-use lidarserv_common::query::bounding_box::BoundingBoxQuery;
-use lidarserv_common::query::view_frustum::ViewFrustumQuery;
-use log::{debug, info};
-use std::io::Cursor;
+use crossbeam_channel::{RecvError, TryRecvError};
+use lidarserv_common::index::Octree;
+use lidarserv_common::query::empty::EmptyQuery;
+use log::{debug, info, warn};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::thread;
@@ -21,12 +14,12 @@ use tokio::sync::broadcast::Receiver;
 
 pub async fn handle_connection(
     con: TcpStream,
-    index: Arc<dyn DynIndex>,
+    index: Arc<Octree>,
+    codec: PointDataCodec,
     mut shutdown: Receiver<()>,
 ) -> Result<(), LidarServerError> {
     let addr = con.peer_addr()?;
     info!("New connection: {}", addr);
-    con.set_nodelay(true)?;
 
     // send "Hello" message
     let mut con = Connection::new(con, addr, &mut shutdown).await?;
@@ -52,23 +45,28 @@ pub async fn handle_connection(
 
     // send index information to client
     con.write_message(&Message::PointCloudInfo {
-        coordinate_system: CoordinateSystem::I32CoordinateSystem {
-            scale: *index.index_info().coordinate_system.scale(),
-            offset: *index.index_info().coordinate_system.offset(),
-        },
-        point_record_format: index.index_info().point_record_format,
+        coordinate_system: index.coordinate_system(),
+        attributes: index
+            .point_layout()
+            .attributes()
+            .map(|a| a.attribute_definition().clone())
+            .collect(),
+        codec,
     })
     .await?;
 
     // wait for "Init" message from client.
-    let msg = con.read_message(&mut shutdown).await?;
+    let msg = match con.read_message_or_eof(&mut shutdown).await? {
+        Some(msg) => msg,
+        None => return Ok(()),
+    };
     if let Message::ConnectionMode { device } = msg {
         match device {
             DeviceType::Viewer => {
-                viewer_mode(con, index, shutdown, addr).await?;
+                viewer_mode(con, index, shutdown, codec, addr).await?;
             }
             DeviceType::CaptureDevice => {
-                capture_device_mode(con, index, shutdown).await?;
+                capture_device_mode(con, index, codec, shutdown).await?;
             }
         }
     } else {
@@ -82,10 +80,11 @@ pub async fn handle_connection(
 
 async fn capture_device_mode(
     mut con: Connection<TcpStream>,
-    index: Arc<dyn DynIndex>,
+    index: Arc<Octree>,
+    codec: PointDataCodec,
     mut shutdown: Receiver<()>,
 ) -> Result<(), LidarServerError> {
-    let las_reader = I32LasReadWrite::new(false, index.index_info().point_record_format);
+    let codec = codec.instance();
     let mut writer = index.writer();
 
     // keep receiving 'InsertPoints' messages, until the connection is closed
@@ -102,13 +101,8 @@ async fn capture_device_mode(
         };
 
         // decode las
-        let read = Cursor::new(data.0.as_slice());
-        let Las {
-            points,
-            coordinate_system,
-            ..
-        } = match las_reader.read_las(read) {
-            Ok(r) => r,
+        let points = match codec.read_points(&data, index.point_layout()) {
+            Ok((points, _rest)) => points,
             Err(e) => {
                 let error = format!("Could not read LAS data: {}", e);
                 con.write_message(&Message::Error {
@@ -120,29 +114,22 @@ async fn capture_device_mode(
         };
 
         // insert
-        if let Err(e) = writer.insert_points(points, &coordinate_system) {
-            let message = format!("{}", e);
-            con.write_message(&Message::Error {
-                message: message.clone(),
-            })
-            .await?;
-            return Err(LidarServerError::Protocol(message));
-        }
+        writer.insert(&points);
     }
     Ok(())
 }
+
 /// Handle a connection in viewer mode (serverside).
 /// This function will spawn a new thread that will handle the connection.
 /// The thread will check for updates in the index and send them to the client.
 async fn viewer_mode(
     con: Connection<TcpStream>,
-    index: Arc<dyn DynIndex>,
+    index: Arc<Octree>,
     mut shutdown: Receiver<()>,
+    codec: PointDataCodec,
     addr: SocketAddr,
 ) -> Result<(), LidarServerError> {
     let (mut con_read, mut con_write) = con.into_split();
-    let coordinate_system = *index.index_info().coordinate_system;
-    let sampling_factory = index.index_info().sampling_factory.clone();
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded();
     let (updates_sender, mut updates_receiver) = tokio::sync::mpsc::channel(1);
     let (query_ack_sender, query_ack_receiver) = crossbeam_channel::unbounded();
@@ -159,90 +146,118 @@ async fn viewer_mode(
 
     // query
     let query_thread = thread::spawn(move || -> Result<(), LidarServerError> {
+        let codec = codec.instance();
         let mut sent_updates = 0;
         let mut ackd_updates = 0;
 
-        debug!("Creating reader and channels.");
-        let mut reader = index.reader();
-        let mut queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
+        let mut query_config = QueryConfig { one_shot: true };
+        let mut query_done = true;
 
-        debug!("Calling update_one() once.");
-        reader.update_one();
+        let mut reader = index.reader(EmptyQuery);
+        let queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
 
-        'update_loop: loop {
-            // send result complete message, when no more updates are currently available
-            debug!("Checking for updates.");
-            if !reader.updates_available(&mut queries_receiver) {
-                debug!(
-                    "No Updates available, sending ResultComplete message and waiting for updates."
-                );
-                if updates_sender.blocking_send(ResultComplete).is_err() {
-                    break 'update_loop;
-                }
-                reader.blocking_update(&mut queries_receiver);
+        let error_msg = 'update_loop: loop {
+            // update
+            let maybe_new_query = if query_done {
+                Some(queries_receiver.recv())
+            } else if !query_config.one_shot {
+                reader.wait_update_or(&queries_receiver)
             } else {
-                debug!("Updates available, sending NO ResultComplete message.");
-            }
+                match queries_receiver.try_recv() {
+                    Ok(ok) => Some(Ok(ok)),
+                    Err(TryRecvError::Disconnected) => Some(Err(RecvError)),
+                    Err(TryRecvError::Empty) => None,
+                }
+            };
+            match maybe_new_query {
+                Some(Ok((q, c))) => {
+                    query_done = false;
+                    query_config = c;
+                    reader.update();
+                    reader.set_query(q)
+                }
+                Some(Err(RecvError)) => return Ok(()),
+                None => (),
+            };
+
+            let mut at_least_one_update = false;
 
             // check for new nodes to load
-            debug!("Checking for new nodes.");
-            if let Some((node_id, data, coordinate_system)) = reader.load_one() {
-                debug!("Loading node {:?} with {:?} points.", node_id, data.len());
-                match updates_sender.blocking_send(IncrementalResult {
-                    replaces: None,
-                    nodes: vec![(node_id, data, coordinate_system)],
+            if let Some((node_id, points)) = reader.load_one() {
+                at_least_one_update = true;
+                sent_updates += 1;
+                let mut data = Vec::new();
+                if let Err(e) = codec.write_points(&points, &mut data) {
+                    break 'update_loop format!("{e}");
+                }
+                if let Err(e) = updates_sender.blocking_send(Node {
+                    node: node_id,
+                    points: Some(PointData(data)),
+                    update_number: sent_updates,
                 }) {
-                    Ok(_) => sent_updates += 1,
-                    Err(_) => break 'update_loop,
+                    break 'update_loop format!("{e}");
                 }
             }
+
             // check for new nodes to remove
-            debug!("Checking for removed nodes.");
             if let Some(node_id) = reader.remove_one() {
-                debug!("Removing node {:?}.", node_id);
-                match updates_sender.blocking_send(IncrementalResult {
-                    replaces: Some(node_id),
-                    nodes: vec![],
+                at_least_one_update = true;
+                sent_updates += 1;
+                if let Err(e) = updates_sender.blocking_send(Node {
+                    node: node_id,
+                    points: None,
+                    update_number: sent_updates,
                 }) {
-                    Ok(_) => sent_updates += 1,
-                    Err(_) => break 'update_loop,
+                    break 'update_loop format!("{e}");
                 }
             }
+
             // check for new nodes to update
-            debug!("Checking for updated nodes.");
-            if let Some((node_id, replacements)) = reader.update_one() {
-                debug!("Replacing node {:?}.", node_id);
-                match updates_sender.blocking_send(IncrementalResult {
-                    replaces: Some(node_id),
-                    nodes: replacements,
+            if let Some((node_id, points)) = reader.reload_one() {
+                at_least_one_update = true;
+                sent_updates += 1;
+                let mut data = Vec::new();
+                if let Err(e) = codec.write_points(&points, &mut data) {
+                    break 'update_loop format!("{e}");
+                }
+                if let Err(e) = updates_sender.blocking_send(Node {
+                    node: node_id,
+                    points: Some(PointData(data)),
+                    update_number: sent_updates,
                 }) {
-                    Ok(_) => sent_updates += 1,
-                    Err(_) => break 'update_loop,
+                    break 'update_loop format!("{e}");
+                }
+            }
+
+            // notify client of EOF
+            if query_config.one_shot && !at_least_one_update {
+                query_done = true;
+                if let Err(e) = updates_sender.blocking_send(ResultComplete) {
+                    break 'update_loop format!("{e}");
                 }
             }
 
             // wait for acks
-            debug!("Waiting for acks.");
-            while ackd_updates + 10 < sent_updates {
+            let max_nr_inflight_updates = if query_config.one_shot { 100 } else { 10 };
+            while ackd_updates + max_nr_inflight_updates < sent_updates {
                 ackd_updates = match query_ack_receiver.recv() {
                     Ok(v) => v,
-                    Err(_) => break 'update_loop,
+                    Err(RecvError) => return Ok(()),
                 };
             }
-        }
-        debug!("Query thread finished unexpectedly.");
+        };
+        warn!("{addr}: Query thread finished unexpectedly: {error_msg}");
+        updates_sender
+            .blocking_send(Message::Error { message: error_msg })
+            .ok();
         Ok(())
     });
 
     // read incoming messages and send to queries to query thread
     let receive_queries = async move {
         while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
-            let (spatial_query, attributes_query, query_config) = match msg {
-                Message::Query {
-                    spatial_query,
-                    attributes_query,
-                    config,
-                } => (*spatial_query, attributes_query, config),
+            let (query, query_config) = match msg {
+                Message::Query { query, config } => (query, config),
                 Message::ResultAck { update_number } => {
                     query_ack_sender.send(update_number).ok();
                     continue;
@@ -253,64 +268,9 @@ async fn viewer_mode(
                     ));
                 }
             };
-            debug!(
-                "Received Query: {:?} and Filter {:?}",
-                spatial_query, attributes_query
-            );
-            debug!("{:?}", query_config);
-            let spatial_query: Box<dyn lidarserv_common::query::SpatialQuery + Send + Sync> =
-                match spatial_query {
-                    SpatialQuery::AabbQuery {
-                        lod_level,
-                        min_bounds,
-                        max_bounds,
-                    } => {
-                        let mut aabb = OptionAABB::empty();
-                        for p in [min_bounds, max_bounds] {
-                            let pos =
-                                match I32Position::encode(&coordinate_system, &Point3::from(p)) {
-                                    Ok(pos) => pos,
-                                    Err(e) => {
-                                        return Err(LidarServerError::Protocol(format!(
-                                            "Received invalid query: {}",
-                                            e
-                                        )));
-                                    }
-                                };
-                            aabb.extend(&pos);
-                        }
-                        let aabb = aabb.into_aabb().unwrap(); // unwrap: we just added two points, so it cannot be empty
-                        let lod = LodLevel::from_level(lod_level);
-                        let query = BoundingBoxQuery::new(aabb, lod);
-                        Box::new(query)
-                    }
-                    SpatialQuery::ViewFrustumQuery {
-                        view_projection_matrix,
-                        view_projection_matrix_inv,
-                        window_width_pixels,
-                        min_distance_pixels,
-                    } => {
-                        let query = ViewFrustumQuery::new(
-                            view_projection_matrix,
-                            view_projection_matrix_inv,
-                            window_width_pixels,
-                            min_distance_pixels,
-                            &sampling_factory,
-                            &coordinate_system,
-                        );
-                        Box::new(query)
-                    }
-                };
-
-            let query = lidarserv_common::index::Query {
-                spatial: spatial_query,
-                attributes: attributes_query,
-                enable_attribute_acceleration: query_config.enable_attribute_acceleration,
-                enable_histogram_acceleration: query_config.enable_histogram_acceleration,
-                enable_point_filtering: query_config.enable_point_filtering,
-            };
-            debug!("{}: Query: {:?}", addr, &query);
-            queries_sender.send(query).unwrap();
+            debug!("{addr}: Received Query: {:?}", query);
+            debug!("{addr}: Config: {:?}", query_config);
+            queries_sender.send((query, query_config)).unwrap();
         }
         Ok(())
     };

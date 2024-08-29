@@ -1,6 +1,5 @@
 use crate::lru_cache::later::{Later, LaterSender};
 use crate::lru_cache::lru::Lru;
-use crate::span;
 use std::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
@@ -9,7 +8,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 use thiserror::Error;
-use tracy_client::{create_plot, Plot};
+use tracy_client::{plot, span};
 
 struct Page<V, E> {
     /// Every page has a unique number.
@@ -70,9 +69,6 @@ struct File {
     version_number: u32,
 }
 
-static DEFAULT_CACHE_SIZE_PLOT: Plot = create_plot!("Page LRU Cache size");
-static DEFAULT_RECENTLY_USED_PLOT: Plot = create_plot!("Page LRU Cache recently used");
-
 /// Manages all existing nodes and the cache.
 pub struct PageManager<P, K, V, E, D> {
     loader: P,
@@ -90,8 +86,6 @@ struct PageManagerInner<K, V, E, D> {
     directory: D,
     max_size: usize,
     next_page_number: u32,
-    num_pages_plot: &'static Plot,
-    recently_used_plot: &'static Plot,
 }
 
 /// Responsible for loading pages to/from disk.
@@ -155,8 +149,6 @@ where
                 directory: page_directory,
                 max_size,
                 next_page_number: 0,
-                num_pages_plot: &DEFAULT_CACHE_SIZE_PLOT,
-                recently_used_plot: &DEFAULT_RECENTLY_USED_PLOT,
             }),
             wakeup: Condvar::new(),
         }
@@ -542,7 +534,7 @@ where
 impl<K, V, F, D> PageManagerInner<K, V, F, D> {
     #[inline]
     fn plot_cache_size(&self) {
-        self.num_pages_plot.point(self.cache.len() as f64)
+        plot!("Page LRU Cache size", self.cache.len() as f64)
     }
 
     /// Plots the number of pages that were used in the defined time interval.
@@ -557,7 +549,7 @@ impl<K, V, F, D> PageManagerInner<K, V, F, D> {
                 count += 1;
             }
         }
-        self.recently_used_plot.point(count as f64)
+        plot!("Page LRU Cache recently used", count as f64);
     }
 }
 

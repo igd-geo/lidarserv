@@ -1,8 +1,9 @@
 use crate::cli::ServeOptions;
-use crate::index::builder::build;
-use crate::index::settings::IndexSettings;
-use crate::net::server::serve;
 use anyhow::Result;
+use lidarserv_server::{
+    index::{builder::build, settings::IndexSettings},
+    net::server::serve,
+};
 use log::debug;
 
 #[tokio::main]
@@ -14,7 +15,6 @@ pub async fn run(serve_options: ServeOptions) -> Result<()> {
     // init index
     debug!("Building index...");
     let index = build(settings, &serve_options.path)?;
-
     // handle ctrl+c
     let (shutdown_sender, shutdown_receiver) = tokio::sync::broadcast::channel(1);
     tokio::spawn(async move {

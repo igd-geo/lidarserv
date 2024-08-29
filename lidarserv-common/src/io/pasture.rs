@@ -1,4 +1,6 @@
-//! # Format description
+//! A data format that can store arbitrary pasture buffers.
+//!
+//!  # Format description
 //!
 //! ## Header
 //!
@@ -706,6 +708,13 @@ impl PointCodec for PastureIo {
     ) -> std::result::Result<VectorBuffer, PointIoError> {
         read_points(point_layout, rd)
     }
+
+    fn is_compatible_with(&self, _other: &Self) -> bool {
+        // self.compression does not need to match,
+        // because the compression parameter only affects the writer.
+        // we can always read point data of any compression.
+        true
+    }
 }
 
 #[cfg(test)]
@@ -773,7 +782,7 @@ mod tests {
                 nr_points: 50_000,
                 attributes: vec![
                     AttributeHeader {
-                        name: "position".into(),
+                        name: "position_3d".into(),
                         datatype: PointAttributeDataType::Vec3i32,
                     },
                     AttributeHeader {

@@ -15,7 +15,7 @@ pub mod test {
     #[repr(C)]
     #[derive(Debug, Copy, Clone, PointType, Pod, Zeroable)]
     pub struct F64Point {
-        #[pasture(attribute = "position")]
+        #[pasture(BUILTIN_POSITION_3D)]
         pub position: Vector3<f64>,
     }
 
@@ -23,7 +23,7 @@ pub mod test {
     #[repr(C)]
     #[derive(Debug, Copy, Clone, PointType, Pod, Zeroable)]
     pub struct I32Point {
-        #[pasture(attribute = "position")]
+        #[pasture(BUILTIN_POSITION_3D)]
         pub position: Vector3<i32>,
     }
 }

@@ -11,7 +11,7 @@ las = { version = "0.7.5", features = ["laz"] }
 laz = "0.6.0"
 num-traits = "0.2.14"
 thiserror = "1.0.30"
-tracy-client = { version = "0.12.5", default_features=false }
+tracy-client = { version = "0.17.3", default-features=false }
 crossbeam-channel = "0.5.1"
 serde = { version = "1.0.126", features = ["derive"] }
 ciborium = "0.2.1"
