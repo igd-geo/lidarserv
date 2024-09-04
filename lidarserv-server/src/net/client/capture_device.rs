@@ -5,8 +5,8 @@ use lidarserv_common::geometry::coordinate_system::{CoordinateSystem, Coordinate
 use lidarserv_common::geometry::position::{Component, WithComponentTypeOnce};
 use nalgebra::{Point3, Vector3};
 use pasture_core::containers::{
-    BorrowedBuffer, BorrowedMutBuffer, InterleavedBuffer, InterleavedBufferMut,
-    MakeBufferFromLayout, OwningBuffer, VectorBuffer,
+    BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, InterleavedBuffer,
+    InterleavedBufferMut, MakeBufferFromLayout, OwningBuffer, VectorBuffer,
 };
 use pasture_core::layout::{PointAttributeDefinition, PointLayout};
 use tokio::net::{TcpStream, ToSocketAddrs};

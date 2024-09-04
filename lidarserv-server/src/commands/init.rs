@@ -33,9 +33,9 @@ use pasture_io::{
 };
 use std::{borrow::Cow, collections::HashSet, num::NonZero, ops::RangeInclusive};
 
-fn las_attributes(point_format: u8) -> Vec<PointAttributeDefinition> {
+fn las_attributes(point_format: u8, exact_binary_repr: bool) -> Vec<PointAttributeDefinition> {
     let format = Format::new(point_format).unwrap();
-    let layout = point_layout_from_las_point_format(&format, true).unwrap();
+    let layout = point_layout_from_las_point_format(&format, exact_binary_repr).unwrap();
     let mut attrs: Vec<_> = layout
         .attributes()
         .map(|a| a.attribute_definition().clone())
@@ -69,6 +69,17 @@ fn attributes_interactive(theme: &dyn Theme) -> Vec<PointAttributeDefinition> {
         .item("LAS point format 8")
         .item("LAS point format 9")
         .item("LAS point format 10")
+        .item("LAS point format 0 - RAW")
+        .item("LAS point format 1 - RAW")
+        .item("LAS point format 2 - RAW")
+        .item("LAS point format 3 - RAW")
+        .item("LAS point format 4 - RAW")
+        .item("LAS point format 5 - RAW")
+        .item("LAS point format 6 - RAW")
+        .item("LAS point format 7 - RAW")
+        .item("LAS point format 8 - RAW")
+        .item("LAS point format 9 - RAW")
+        .item("LAS point format 10 - RAW")
         .default(2)
         .interact()
         .unwrap();
@@ -82,17 +93,28 @@ fn attributes_interactive(theme: &dyn Theme) -> Vec<PointAttributeDefinition> {
             Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
             PointAttributeDataType::Vec3f64,
         )],
-        2 => las_attributes(0),
-        3 => las_attributes(1),
-        4 => las_attributes(2),
-        5 => las_attributes(3),
-        6 => las_attributes(4),
-        7 => las_attributes(5),
-        8 => las_attributes(6),
-        9 => las_attributes(7),
-        10 => las_attributes(8),
-        11 => las_attributes(9),
-        12 => las_attributes(10),
+        2 => las_attributes(0, false),
+        3 => las_attributes(1, false),
+        4 => las_attributes(2, false),
+        5 => las_attributes(3, false),
+        6 => las_attributes(4, false),
+        7 => las_attributes(5, false),
+        8 => las_attributes(6, false),
+        9 => las_attributes(7, false),
+        10 => las_attributes(8, false),
+        11 => las_attributes(9, false),
+        12 => las_attributes(10, false),
+        13 => las_attributes(0, true),
+        14 => las_attributes(1, true),
+        15 => las_attributes(2, true),
+        16 => las_attributes(3, true),
+        17 => las_attributes(4, true),
+        18 => las_attributes(5, true),
+        19 => las_attributes(6, true),
+        20 => las_attributes(7, true),
+        21 => las_attributes(8, true),
+        22 => las_attributes(9, true),
+        23 => las_attributes(10, true),
         _ => unreachable!(),
     };
 
@@ -107,15 +129,17 @@ fn attributes_interactive(theme: &dyn Theme) -> Vec<PointAttributeDefinition> {
             .item("Add predefined attribute(s).")
             .item("Add custom attribute.")
             .item("Remove attribute(s).")
+            .item("Delete all attributes and start over.")
             .item("Done.")
-            .default(3)
+            .default(4)
             .interact()
             .unwrap();
         match s {
             0 => add_predefined_attributes(theme, &mut attributes),
             1 => add_custom_attribute(theme, &mut attributes),
             2 => remove_attribute(theme, &mut attributes),
-            3 => break,
+            3 => return attributes_interactive(theme),
+            4 => break,
             _ => unreachable!(),
         }
     }

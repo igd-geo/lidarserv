@@ -13,7 +13,7 @@ use crate::{
     query::QueryContext,
 };
 use nalgebra::{vector, Isometry3, Matrix4, Perspective3, Point3, Vector2, Vector3, Vector4};
-use pasture_core::containers::{BorrowedBuffer, VectorBuffer};
+use pasture_core::containers::{BorrowedBufferExt, VectorBuffer};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

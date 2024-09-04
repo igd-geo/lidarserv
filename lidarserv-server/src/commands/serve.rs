@@ -15,6 +15,7 @@ pub async fn run(serve_options: ServeOptions) -> Result<()> {
     // init index
     debug!("Building index...");
     let index = build(settings, &serve_options.path)?;
+
     // handle ctrl+c
     let (shutdown_sender, shutdown_receiver) = tokio::sync::broadcast::channel(1);
     tokio::spawn(async move {

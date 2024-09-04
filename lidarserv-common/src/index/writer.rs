@@ -14,7 +14,9 @@ use crate::{
 };
 use log::info;
 use nalgebra::Point3;
-use pasture_core::containers::{BorrowedBuffer, InterleavedBuffer, OwningBuffer, VectorBuffer};
+use pasture_core::containers::{
+    BorrowedBuffer, BorrowedBufferExt, InterleavedBuffer, OwningBuffer, VectorBuffer,
+};
 use std::{
     collections::{hash_map::Entry, HashMap},
     sync::{Arc, Condvar, Mutex},

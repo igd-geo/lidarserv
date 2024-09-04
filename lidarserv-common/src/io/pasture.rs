@@ -323,8 +323,8 @@ impl Header {
     }
 }
 
-fn write_point_data_uncompressed<'a>(
-    points: &'a impl BorrowedBuffer<'a>,
+fn write_point_data_uncompressed(
+    points: &impl BorrowedBuffer,
     header: &Header,
     write: &mut impl std::io::Write,
 ) -> Result<(), PointIoError> {
@@ -510,8 +510,8 @@ fn read_point_data_uncompressed(
     Ok(result)
 }
 
-fn write_point_data_lz4<'a>(
-    points: &'a impl BorrowedBuffer<'a>,
+fn write_point_data_lz4(
+    points: &impl BorrowedBuffer,
     header: &Header,
     wr: &mut impl std::io::Write,
 ) -> Result<(), PointIoError> {
@@ -612,8 +612,8 @@ fn read_point_data_lz4(
 }
 
 /// Writes the pasture buffer to the file.
-pub fn write_points<'a, B: BorrowedBuffer<'a>>(
-    points: &'a B,
+pub fn write_points<B: BorrowedBuffer>(
+    points: &B,
     compression: Compression,
     wr: &mut impl std::io::Write,
 ) -> Result<(), PointIoError> {

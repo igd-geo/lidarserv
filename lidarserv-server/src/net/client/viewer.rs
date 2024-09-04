@@ -7,8 +7,8 @@ use lidarserv_common::geometry::grid::LeveledGridCell;
 use lidarserv_common::geometry::position::{WithComponentTypeOnce, POSITION_ATTRIBUTE_NAME};
 use nalgebra::Vector3;
 use pasture_core::containers::{
-    BorrowedBuffer, BorrowedMutBuffer, InterleavedBuffer, InterleavedBufferMut,
-    MakeBufferFromLayout, OwningBuffer, VectorBuffer,
+    BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, InterleavedBuffer,
+    InterleavedBufferMut, MakeBufferFromLayout, OwningBuffer, VectorBuffer,
 };
 use pasture_core::layout::attributes::POSITION_3D;
 use pasture_core::layout::{PointAttributeDefinition, PointLayout};

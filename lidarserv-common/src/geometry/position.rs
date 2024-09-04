@@ -16,10 +16,10 @@ pub type Position<C> = Point3<C>;
 
 pub trait Component:
     nalgebra::Scalar
-    + nalgebra::ClosedAdd
-    + nalgebra::ClosedSub
-    + nalgebra::ClosedMul
-    + nalgebra::ClosedDiv
+    + nalgebra::ClosedAddAssign
+    + nalgebra::ClosedSubAssign
+    + nalgebra::ClosedMulAssign
+    + nalgebra::ClosedDivAssign
     + num_traits::One
     + num_traits::Zero
     + bytemuck::Pod
@@ -105,14 +105,19 @@ pub enum PositionComponentType {
 
 impl PositionComponentType {
     pub fn from_layout(layout: &PointLayout) -> Self {
-        match layout
+        let data_type = layout
             .get_attribute_by_name(POSITION_ATTRIBUTE_NAME)
             .expect("missing position attribute")
-            .datatype()
-        {
-            PointAttributeDataType::Vec3f64 => PositionComponentType::F64,
-            PointAttributeDataType::Vec3i32 => PositionComponentType::I32,
-            _ => panic!("Unsupported position attribute type"),
+            .datatype();
+        Self::from_point_attribute_data_type(data_type)
+            .expect("Unsupported position attribute type")
+    }
+
+    pub fn from_point_attribute_data_type(data_type: PointAttributeDataType) -> Option<Self> {
+        match data_type {
+            PointAttributeDataType::Vec3f64 => Some(PositionComponentType::F64),
+            PointAttributeDataType::Vec3i32 => Some(PositionComponentType::I32),
+            _ => None,
         }
     }
 }

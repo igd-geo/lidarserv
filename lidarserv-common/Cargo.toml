@@ -6,9 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nalgebra = { version = "0.32.5", features = ["serde-serialize"] }
-las = { version = "0.7.5", features = ["laz"] }
-laz = "0.6.0"
+nalgebra.workspace = true
 num-traits = "0.2.14"
 thiserror = "1.0.30"
 tracy-client = { version = "0.17.3", default-features=false }
@@ -16,14 +14,9 @@ crossbeam-channel = "0.5.1"
 serde = { version = "1.0.126", features = ["derive"] }
 ciborium = "0.2.1"
 log = "0.4.14"
-crossbeam-utils = "0.8.5"
-crossbeam-deque = "0.8.1"
-rand = "0.8.4"
-core_affinity = "0.5.10"
-csv = "1.2"
 serde_json = "1.0.72"
 bincode = "1.3.3"
-pasture-core = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d", features = ["serde"]}
+pasture-core.workspace = true
 anyhow = "1.0.83"
 byteorder = "1.5.0"
 lz4 = "1.24.0"
@@ -33,4 +26,4 @@ bytemuck = "1.16.0"
 trace = ["tracy-client/enable"]
 
 [dev-dependencies]
-pasture-derive = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d"}
+pasture-derive.workspace = true

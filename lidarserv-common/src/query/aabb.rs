@@ -1,4 +1,4 @@
-use pasture_core::containers::BorrowedBuffer;
+use pasture_core::containers::BorrowedBufferExt;
 use serde::{Deserialize, Serialize};
 use std::mem;
 
