@@ -150,17 +150,18 @@ async fn viewer_mode(
         let mut sent_updates = 0;
         let mut ackd_updates = 0;
 
-        let mut query_config = QueryConfig { one_shot: true };
+        let mut query_config = QueryConfig { one_shot: true, point_filtering: true };
         let mut query_done = true;
 
         let mut reader = index.reader(EmptyQuery);
         let queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
+        let mut at_least_one_update = true;
 
         let error_msg = 'update_loop: loop {
             // update
             let maybe_new_query = if query_done {
                 Some(queries_receiver.recv())
-            } else if !query_config.one_shot {
+            } else if !query_config.one_shot && !at_least_one_update {
                 reader.wait_update_or(&queries_receiver)
             } else {
                 match queries_receiver.try_recv() {
@@ -174,13 +175,13 @@ async fn viewer_mode(
                     query_done = false;
                     query_config = c;
                     reader.update();
-                    reader.set_query(q)
+                    reader.set_query(q, query_config.point_filtering)
                 }
                 Some(Err(RecvError)) => return Ok(()),
                 None => (),
             };
 
-            let mut at_least_one_update = false;
+            at_least_one_update = false;
 
             // check for new nodes to load
             if let Some((node_id, points)) = reader.load_one() {

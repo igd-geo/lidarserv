@@ -1,17 +1,16 @@
 use crate::cli::{Args, PointColorArg};
 use anyhow::Result;
 use bytemuck::{Pod, Zeroable};
-use lidarserv_server::common::geometry::points::PointType;
-use lidarserv_server::common::geometry::position::Position;
-use lidarserv_server::common::index::octree::attribute_bounds::LasPointAttributeBounds;
-use lidarserv_server::common::las::LasPointAttributes;
 use lidarserv_server::common::nalgebra::{Matrix4, Point3};
-use lidarserv_server::index::point::GlobalPoint;
-use lidarserv_server::net::client::viewer::{IncrementalUpdate, ViewerClient};
-use lidarserv_server::net::protocol::messages::QueryConfig;
-use log::{debug, trace};
-use pasture_core::containers::VectorBuffer;
-use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY};
+use lidarserv_server::common::query::view_frustum::ViewFrustumQuery;
+use lidarserv_server::index::query::Query;
+use lidarserv_server::net::client::viewer::{PartialResult, QueryConfig, ViewerClient};
+use log::info;
+use nalgebra::{point, vector};
+use pasture_core::containers::{BorrowedBuffer, BorrowedMutBufferExt, VectorBuffer};
+use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY, POSITION_3D};
+use pasture_core::layout::conversion::BufferLayoutConverter;
+use pasture_core::layout::PointType;
 use pasture_core::math::AABB as PastureAABB;
 use pasture_core::nalgebra::Vector3;
 use pasture_derive::PointType;
@@ -23,6 +22,7 @@ use point_cloud_viewer::renderer::settings::{
 };
 use point_cloud_viewer::renderer::viewer::RenderThreadBuilderExt;
 use std::collections::HashMap;
+use std::f64::consts::FRAC_PI_4;
 use std::thread;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::error::TryRecvError;
@@ -75,13 +75,19 @@ fn main(args: Args) {
         let (tokio_camera_sender, tokio_camera_receiver) = tokio::sync::mpsc::channel(500);
         let (exit_sender, mut exit_receiver) = tokio::sync::broadcast::channel(1);
         let (updates_sender, updates_receiver) = crossbeam_channel::bounded(5);
+
         thread::spawn(move || {
-            network_thread(
+            let rt = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            rt.block_on(network_thread(
                 args,
                 &mut exit_receiver,
                 updates_sender,
                 tokio_camera_receiver,
-            )
+            ))
+            .unwrap();
         });
         thread::spawn(move || {
             forward_camera(camera_receiver, tokio_camera_sender, offset);
@@ -102,50 +108,34 @@ fn main(args: Args) {
         // keep applying updates
         let mut point_clouds = HashMap::new();
         for update in updates_receiver.iter() {
-            let IncrementalUpdate {
-                mut remove,
-                mut insert,
-                ..
-            } = update;
-
-            debug!("Received update with {} insertions", insert.len());
-
-            // update
-            let mut update_points = None;
-            if let Some(remove_node_id) = &remove {
-                let matching_index = insert.iter().position(|n| n.node_id == *remove_node_id);
-                if let Some(i) = matching_index {
-                    update_points = Some(insert.swap_remove(i));
-                    remove = None;
+            match update {
+                PartialResult::DeleteNode(node_id) => {
+                    let point_cloud_id = point_clouds.remove(&node_id).unwrap();
+                    window.remove_point_cloud(point_cloud_id).unwrap();
                 }
-            }
-            if let Some(node) = update_points {
-                let point_cloud_id = *point_clouds.get(&node.node_id).unwrap();
-                window
-                    .update_point_cloud(
-                        point_cloud_id,
-                        &node_to_pasture(node.points, offset),
-                        &[&INTENSITY, &COLOR_RGB],
-                    )
-                    .unwrap();
-            }
-
-            // insert new pcs
-            for node in insert {
-                let point_cloud_id = window
-                    .add_point_cloud_with_attributes(
-                        &node_to_pasture(node.points, offset),
-                        &[&INTENSITY, &COLOR_RGB],
-                    )
-                    .unwrap();
-                point_clouds.insert(node.node_id, point_cloud_id);
-            }
-
-            // if there is a pc to remove:
-            if let Some(node_id) = remove {
-                let point_cloud_id = point_clouds.remove(&node_id).unwrap();
-                window.remove_point_cloud(point_cloud_id).unwrap();
-            }
+                PartialResult::UpdateNode(update) => {
+                    if let Some(point_cloud_id) = point_clouds.get(&update.node_id) {
+                        // update
+                        window
+                            .update_point_cloud(
+                                *point_cloud_id,
+                                &node_to_pasture(update.points, offset),
+                                &[&INTENSITY, &COLOR_RGB],
+                            )
+                            .unwrap();
+                    } else {
+                        // insert
+                        let point_cloud_id = window
+                            .add_point_cloud_with_attributes(
+                                &node_to_pasture(update.points, offset),
+                                &[&INTENSITY, &COLOR_RGB],
+                            )
+                            .unwrap();
+                        point_clouds.insert(update.node_id, point_cloud_id);
+                    }
+                }
+                PartialResult::Complete => (),
+            };
         }
     });
 }
@@ -180,72 +170,75 @@ fn forward_camera(
     }
 }
 
-#[tokio::main]
 async fn network_thread(
     args: Args,
     shutdown: &mut Receiver<()>,
-    updates_sender: crossbeam_channel::Sender<IncrementalUpdate>,
+    updates_sender: crossbeam_channel::Sender<PartialResult<VectorBuffer>>,
     mut camera_reciver: tokio::sync::mpsc::Receiver<Matrices>,
 ) -> Result<()> {
     // connect
-    let client = ViewerClient::connect((args.host, args.port), shutdown).await?;
-    let (mut client_read, mut client_write) = client.into_split();
-    let (ack_sender, mut ack_receiver) = tokio::sync::mpsc::unbounded_channel();
+    let ViewerClient {
+        read: mut client_read,
+        write: client_write,
+    } = ViewerClient::connect((args.host, args.port), shutdown).await?;
 
     // task to send query to server
     tokio::spawn(async move {
         loop {
-            tokio::select! {
-                c = camera_reciver.recv() => {
-                    // get latest query
-                    let mut camera_matrix = match c {
-                        None => return,
-                        Some(m) => m,
-                    };
-                    loop {
-                        match camera_reciver.try_recv() {
-                            Ok(m) => camera_matrix = m,
-                            Err(TryRecvError::Empty) => break,
-                            Err(TryRecvError::Disconnected) => return,
-                        }
-                    }
-
-                    // send to server
-                    let view_projection_matrix =
-                        camera_matrix.projection_matrix * camera_matrix.view_matrix;
-                    let view_projection_matrix_inv =
-                        camera_matrix.view_matrix_inv * camera_matrix.projection_matrix_inv;
-                    debug!("Query: {:?}", view_projection_matrix);
-                    client_write
-                        .query_view_frustum(
-                            view_projection_matrix,
-                            view_projection_matrix_inv,
-                            camera_matrix.window_size.x,
-                            args.point_distance,
-                            LasPointAttributeBounds::default(),
-                            QueryConfig { enable_attribute_acceleration: false, enable_histogram_acceleration: false, enable_point_filtering: false },
-                        )
-                        .await
-                        .unwrap()
-
-                },
-                c = ack_receiver.recv() => {
-                    match c {
-                        None => return,
-                        Some(()) => {
-                            client_write.ack().await.unwrap();
-                        },
-                    }
-                },
+            let mut camera_matrix = match camera_reciver.recv().await {
+                None => return,
+                Some(m) => m,
+            };
+            loop {
+                match camera_reciver.try_recv() {
+                    Ok(m) => camera_matrix = m,
+                    Err(TryRecvError::Empty) => break,
+                    Err(TryRecvError::Disconnected) => return,
+                }
             }
+            let camera_pos = camera_matrix
+                .view_matrix_inv
+                .transform_point(&Point3::origin());
+            let camera_dir = (camera_matrix.view_matrix_inv * vector![0.0, 0.0, -1.0, 0.0])
+                .xyz()
+                .normalize();
+            let z_far = camera_matrix
+                .projection_matrix_inv
+                .transform_point(&point![0.0, 0.0, 1.0])
+                .z
+                .abs();
+            let z_near = camera_matrix
+                .projection_matrix_inv
+                .transform_point(&point![0.0, 0.0, -1.0])
+                .z
+                .abs();
+            client_write
+                .query(
+                    Query::ViewFrustum(ViewFrustumQuery {
+                        camera_pos,
+                        camera_dir,
+                        camera_up: vector![0.0, 0.0, 1.0],
+                        fov_y: FRAC_PI_4,
+                        z_near,
+                        z_far,
+                        window_size: camera_matrix.window_size,
+                        max_distance: args.point_distance,
+                    }),
+                    &QueryConfig {
+                        point_filtering: false,
+                    },
+                )
+                .await
+                .unwrap();
         }
     });
 
     // keep receiving updates
     loop {
-        let update = client_read.receive_update(shutdown).await?;
-        ack_sender.send(()).ok();
-        trace!("{:?}", update);
+        let update = client_read
+            .receive_update_global_coordinates(shutdown)
+            .await?;
+        info!("{:?}", update);
         updates_sender.send(update).unwrap();
     }
 }
@@ -261,21 +254,16 @@ pub struct PasturePointt {
     pub color: Vector3<u16>,
 }
 
-fn node_to_pasture(points: Vec<GlobalPoint>, offset: Vector3<f64>) -> VectorBuffer {
-    points
-        .into_iter()
-        .map(|point| PasturePointt {
-            position: Vector3::new(
-                point.position().x(),
-                point.position().y(),
-                point.position().z(),
-            ) - offset,
-            intensity: point.attribute::<LasPointAttributes>().intensity,
-            color: Vector3::new(
-                point.attribute::<LasPointAttributes>().color.0,
-                point.attribute::<LasPointAttributes>().color.1,
-                point.attribute::<LasPointAttributes>().color.2,
-            ),
-        })
-        .collect()
+fn node_to_pasture(points: VectorBuffer, offset: Vector3<f64>) -> VectorBuffer {
+    let to_layout = PasturePointt::layout();
+    let converter =
+        BufferLayoutConverter::for_layouts_with_default(points.point_layout(), &to_layout);
+    let mut converted: VectorBuffer = converter.convert(&points);
+    let mut positions = converted.view_attribute_mut::<Point3<f64>>(&POSITION_3D);
+
+    for i in 0..points.len() {
+        let pos = positions.at(i) - offset;
+        positions.set_at(i, pos);
+    }
+    converted
 }

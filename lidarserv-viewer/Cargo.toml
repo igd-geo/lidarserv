@@ -14,7 +14,8 @@ tokio = { version = "1.28.0", features = ["full"] }
 log = "0.4.14"
 simple_logger = "4.1.0"
 point-cloud-viewer = { path = "../point-cloud-viewer" }
-pasture-core = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d", features = ["serde"]}
-pasture-derive = {git = "https://github.com/Mortano/pasture.git", rev = "1be6f0dda8c0dbcebf2d24db9ae4c01cee74767d"}
+pasture-core.workspace = true
+pasture-derive.workspace = true
+nalgebra.workspace = true
 crossbeam-channel = "0.5.1"
 bytemuck = "1.16"

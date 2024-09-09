@@ -3,14 +3,14 @@ use crate::renderer::backends::glium::GliumRenderOptions;
 use crate::renderer::renderer_command::RendererCommand;
 use glium::backend::glutin::glutin::event::Event;
 use glium::glutin::event::WindowEvent;
-use glium::glutin::event_loop::{ControlFlow, EventLoop as WInitEventLoop};
+use glium::glutin::event_loop::{ControlFlow, EventLoop as WInitEventLoop, EventLoopBuilder};
 use log::{debug, trace};
 use std::time::Instant;
 
 pub type EventLoop = WInitEventLoop<RendererCommand>;
 
 pub fn new() -> EventLoop {
-    EventLoop::with_user_event()
+    EventLoopBuilder::with_user_event().build()
 }
 
 pub fn run(event_loop: EventLoop, options: &GliumRenderOptions) {

@@ -171,9 +171,9 @@ impl<'a> Window<'a> {
         result_receiver.recv().unwrap()
     }
 
-    fn add_point_cloud_impl<'b>(
+    fn add_point_cloud_impl(
         &self,
-        points: &'b impl BorrowedBuffer<'b>,
+        points: &impl BorrowedBuffer,
         attributes: &[&PointAttributeDefinition],
         settings: Option<PointCloudRenderSettings>,
     ) -> RendererResult<PointCloudId> {
@@ -206,10 +206,7 @@ impl<'a> Window<'a> {
     /// Adds the given points to the renderer.
     /// Only the POSITION_3D will be uploaded to the GPU by default.
     /// If you need to visualize additional attributes (color, intensity, ...), use [Window::add_point_cloud_with_attributes] instead.
-    pub fn add_point_cloud<'b>(
-        &self,
-        points: &'b impl BorrowedBuffer<'b>,
-    ) -> RendererResult<PointCloudId> {
+    pub fn add_point_cloud(&self, points: &impl BorrowedBuffer) -> RendererResult<PointCloudId> {
         self.add_point_cloud_impl(points, &[], None)
     }
 
@@ -218,18 +215,18 @@ impl<'a> Window<'a> {
     ///
     /// The settings that have been set using [Window::set_default_point_cloud_settings] will be used for rendering this point cloud.
     /// You can use [Window::add_point_cloud_with_attributes_and_settings] to create a point cloud with customized render settings.
-    pub fn add_point_cloud_with_attributes<'b>(
+    pub fn add_point_cloud_with_attributes(
         &self,
-        points: &'b impl BorrowedBuffer<'b>,
+        points: &impl BorrowedBuffer,
         attributes: &[&PointAttributeDefinition],
     ) -> RendererResult<PointCloudId> {
         self.add_point_cloud_impl(points, attributes, None)
     }
 
     /// Adds the given points to the renderer, with custom render settings.
-    pub fn add_point_cloud_with_attributes_and_settings<'b>(
+    pub fn add_point_cloud_with_attributes_and_settings(
         &self,
-        points: &'b impl BorrowedBuffer<'b>,
+        points: &impl BorrowedBuffer,
         attributes: &[&PointAttributeDefinition],
         settings: PointCloudRenderSettings,
     ) -> RendererResult<PointCloudId> {
@@ -268,10 +265,10 @@ impl<'a> Window<'a> {
     }
 
     /// Replaces the points of an existing point cloud with new point data.
-    pub fn update_point_cloud<'b>(
+    pub fn update_point_cloud(
         &self,
         id: PointCloudId,
-        points: &'b impl BorrowedBuffer<'b>,
+        points: &impl BorrowedBuffer,
         attributes: &[&PointAttributeDefinition],
     ) -> RendererResult<()> {
         // position vertex data

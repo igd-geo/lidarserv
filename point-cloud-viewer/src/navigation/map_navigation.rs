@@ -1,5 +1,7 @@
 //! A map-like navigation.
 
+use std::f64::consts::{FRAC_PI_2, PI};
+
 use crate::navigation::event::{MouseButton, MouseDragSettings};
 use crate::navigation::{Matrices, Navigation, ViewDirection};
 use pasture_core::math::AABB;
@@ -111,7 +113,8 @@ impl Navigation for MapNavigation {
             MouseButton::Middle | MouseButton::Right => {
                 if !drag.alt_pressed {
                     let new_rot_x = self.camera_rotation.x + (y2 - y1) * 0.01;
-                    self.camera_rotation.x = new_rot_x.clamp(0.0, std::f64::consts::PI / 2.0);
+                    const ONE_DEGREE: f64 = 1.0 / 180.0 * PI;
+                    self.camera_rotation.x = new_rot_x.clamp(0.0, FRAC_PI_2 - ONE_DEGREE);
                 }
                 if !drag.shift_pressed {
                     self.camera_rotation.y += (x1 - x2) * 0.01;

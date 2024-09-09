@@ -66,6 +66,7 @@ pub enum DeviceType {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct QueryConfig {
     pub one_shot: bool,
+    pub point_filtering: bool
 }
 
 /// Just a wrapper around Vec<u8>, with a custom Debug impl, so that not the full binary file is

@@ -110,7 +110,7 @@ impl<'a> ModifyVertexFormat<'a> {
                     .to_mut()
                     .iter_mut()
                     .zip(new_names.iter())
-                    .for_each(|((name, _, _, _), &b)| {
+                    .for_each(|((name, _, _, _, _), &b)| {
                         *name = Cow::from(b);
                     });
                 Some(new_vert_format)

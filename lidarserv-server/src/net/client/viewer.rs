@@ -1,6 +1,8 @@
 use crate::index::query::Query;
 use crate::net::protocol::connection::Connection;
-use crate::net::protocol::messages::{DeviceType, Message, PointData, PointDataCodec, QueryConfig};
+use crate::net::protocol::messages::{
+    DeviceType, Message, PointData, PointDataCodec, QueryConfig as QueryConfigMsg,
+};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::geometry::grid::LeveledGridCell;
@@ -50,6 +52,11 @@ pub enum PartialResult<Points> {
     DeleteNode(LeveledGridCell),
     UpdateNode(NodeUpdate<Points>),
     Complete,
+}
+
+#[derive(Debug)]
+pub struct QueryConfig {
+    pub point_filtering: bool,
 }
 
 impl<P> PartialResult<P> {
@@ -206,7 +213,11 @@ impl ViewerClient {
 }
 
 impl WriteViewerClient {
-    async fn query_impl(&self, query: Query, config: QueryConfig) -> Result<(), LidarServerError> {
+    async fn query_impl(
+        &self,
+        query: Query,
+        config: QueryConfigMsg,
+    ) -> Result<(), LidarServerError> {
         let mut lock = self.inner.lock().await;
         lock.ack_after = if config.one_shot { 20 } else { 3 };
         lock.connection
@@ -214,13 +225,30 @@ impl WriteViewerClient {
             .await
     }
 
-    pub async fn query(&self, query: Query) -> Result<(), LidarServerError> {
-        self.query_impl(query, QueryConfig { one_shot: false })
-            .await
+    pub async fn query(&self, query: Query, config: &QueryConfig) -> Result<(), LidarServerError> {
+        self.query_impl(
+            query,
+            QueryConfigMsg {
+                one_shot: false,
+                point_filtering: config.point_filtering,
+            },
+        )
+        .await
     }
 
-    pub async fn query_oneshot(&self, query: Query) -> Result<(), LidarServerError> {
-        self.query_impl(query, QueryConfig { one_shot: true }).await
+    pub async fn query_oneshot(
+        &self,
+        query: Query,
+        config: &QueryConfig,
+    ) -> Result<(), LidarServerError> {
+        self.query_impl(
+            query,
+            QueryConfigMsg {
+                one_shot: true,
+                point_filtering: config.point_filtering,
+            },
+        )
+        .await
     }
 }
 

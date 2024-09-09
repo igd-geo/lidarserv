@@ -107,11 +107,15 @@ where
 }
 
 impl NodeQueryResult {
-    pub fn should_load(&self) -> Option<LoadKind> {
+    pub fn should_load(&self, point_filtering: bool) -> Option<LoadKind> {
         match self {
             NodeQueryResult::Negative => None,
             NodeQueryResult::Positive => Some(LoadKind::Full),
-            NodeQueryResult::Partial => Some(LoadKind::Filter),
+            NodeQueryResult::Partial => if point_filtering {
+                Some(LoadKind::Filter)
+            } else {
+                Some(LoadKind::Full)
+            },
         }
     }
 }

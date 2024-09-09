@@ -19,6 +19,7 @@ pub struct OctreeReader {
     inner: Arc<Inner>,
     query_context: QueryContext,
     query: Box<dyn ExecutableQuery>,
+    point_filtering: bool,
     frontier: HashMap<LeveledGridCell, FrontierElement>,
     known_root_nodes: HashSet<LeveledGridCell>,
     changed_nodes_receiver: crossbeam_channel::Receiver<LeveledGridCell>,
@@ -68,6 +69,7 @@ impl OctreeReader {
             reload_queue: HashMap::new(),
             loaded: HashMap::new(),
             generation: 0,
+            point_filtering: true,
         };
         for root_node in root_nodes {
             reader.add_root(root_node);
@@ -86,7 +88,7 @@ impl OctreeReader {
                 exists: true,
             },
         );
-        if let Some(load_kind) = matches_query.should_load() {
+        if let Some(load_kind) = matches_query.should_load(self.point_filtering) {
             self.load_queue.insert(cell, load_kind);
         }
         self.known_root_nodes.insert(cell);
@@ -147,7 +149,7 @@ impl OctreeReader {
             if let Some(elem) = self.frontier.get_mut(change) {
                 if !elem.exists {
                     elem.exists = true;
-                    if let Some(load_kind) = elem.matches_query.should_load() {
+                    if let Some(load_kind) = elem.matches_query.should_load(self.point_filtering) {
                         self.load_queue.insert(*change, load_kind);
                     }
                 }
@@ -179,7 +181,7 @@ impl OctreeReader {
             .filter(|(_, it)| it.exists)
             .filter_map(|(cell, it)| {
                 it.matches_query
-                    .should_load()
+                    .should_load(self.point_filtering)
                     .map(|load_kind| (*cell, load_kind))
             })
             .collect();
@@ -208,7 +210,7 @@ impl OctreeReader {
         self.generation += 1;
         for (loaded, old_kind) in &self.loaded {
             let matches_node = self.query.matches_node(*loaded);
-            if let Some(new_kind) = matches_node.should_load() {
+            if let Some(new_kind) = matches_node.should_load(self.point_filtering) {
                 if let Some((_, reload_kind)) = self.reload_queue.get_mut(loaded) {
                     *reload_kind = new_kind
                 } else if *old_kind == LoadKind::Filter || new_kind == LoadKind::Filter {
@@ -260,11 +262,12 @@ impl OctreeReader {
     }
 
     /// Sets the query
-    pub fn set_query(&mut self, q: impl Query) {
+    pub fn set_query(&mut self, q: impl Query, point_filtering: bool) {
         let _span = span!("OctreeReader::set_query");
         debug!("Setting new query: {q:?}");
         let query = q.prepare(&self.query_context);
         self.query = Box::new(query);
+        self.point_filtering = point_filtering;
         self.update_new_query();
     }
 
@@ -315,7 +318,7 @@ impl OctreeReader {
             let exists = self.inner.page_cache.directory().exists(&child);
             let matches_query = self.query.matches_node(child);
             if exists {
-                if let Some(load_kind) = matches_query.should_load() {
+                if let Some(load_kind) = matches_query.should_load(self.point_filtering) {
                     self.load_queue.insert(child, load_kind);
                 }
             }
