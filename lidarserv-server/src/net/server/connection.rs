@@ -1,6 +1,6 @@
 use crate::net::protocol::connection::Connection;
-use crate::net::protocol::messages::Message::{self, Node, ResultComplete};
-use crate::net::protocol::messages::{DeviceType, PointData, PointDataCodec, QueryConfig};
+use crate::net::protocol::messages::Header::{self, Node, ResultComplete};
+use crate::net::protocol::messages::{DeviceType, PointDataCodec, QueryConfig};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use crossbeam_channel::{RecvError, TryRecvError};
 use lidarserv_common::index::Octree;
@@ -23,14 +23,17 @@ pub async fn handle_connection(
 
     // send "Hello" message
     let mut con = Connection::new(con, addr, &mut shutdown).await?;
-    con.write_message(&Message::Hello {
-        protocol_version: PROTOCOL_VERSION,
-    })
+    con.write_message(
+        &Header::Hello {
+            protocol_version: PROTOCOL_VERSION,
+        },
+        &[],
+    )
     .await?;
 
     // receive "Hello" message from client and check protocol version compatibility
     let msg = con.read_message(&mut shutdown).await?;
-    if let Message::Hello { protocol_version } = msg {
+    if let Header::Hello { protocol_version } = msg.header {
         if protocol_version != PROTOCOL_VERSION {
             return Err(LidarServerError::Protocol(format!(
                 "Protocol version mismatch (Server: {}, Client: {}).",
@@ -44,15 +47,18 @@ pub async fn handle_connection(
     }
 
     // send index information to client
-    con.write_message(&Message::PointCloudInfo {
-        coordinate_system: index.coordinate_system(),
-        attributes: index
-            .point_layout()
-            .attributes()
-            .map(|a| a.attribute_definition().clone())
-            .collect(),
-        codec,
-    })
+    con.write_message(
+        &Header::PointCloudInfo {
+            coordinate_system: index.coordinate_system(),
+            attributes: index
+                .point_layout()
+                .attributes()
+                .map(|a| a.attribute_definition().clone())
+                .collect(),
+            codec,
+        },
+        &[],
+    )
     .await?;
 
     // wait for "Init" message from client.
@@ -60,7 +66,7 @@ pub async fn handle_connection(
         Some(msg) => msg,
         None => return Ok(()),
     };
-    if let Message::ConnectionMode { device } = msg {
+    if let Header::ConnectionMode { device } = msg.header {
         match device {
             DeviceType::Viewer => {
                 viewer_mode(con, index, shutdown, codec, addr).await?;
@@ -89,13 +95,16 @@ async fn capture_device_mode(
 
     // keep receiving 'InsertPoints' messages, until the connection is closed
     while let Some(msg) = con.read_message_or_eof(&mut shutdown).await? {
-        let data = if let Message::InsertPoints { data } = msg {
-            data
+        let data = if let Header::InsertPoints = msg.header {
+            msg.payload
         } else {
             let error = "Expected `InsertPoints` message or EOF.";
-            con.write_message(&Message::Error {
-                message: error.into(),
-            })
+            con.write_message(
+                &Header::Error {
+                    message: error.into(),
+                },
+                &[],
+            )
             .await?;
             return Err(LidarServerError::Protocol(error.into()));
         };
@@ -105,9 +114,12 @@ async fn capture_device_mode(
             Ok((points, _rest)) => points,
             Err(e) => {
                 let error = format!("Could not read LAS data: {}", e);
-                con.write_message(&Message::Error {
-                    message: error.clone(),
-                })
+                con.write_message(
+                    &Header::Error {
+                        message: error.clone(),
+                    },
+                    &[],
+                )
                 .await?;
                 return Err(LidarServerError::Protocol(error));
             }
@@ -131,12 +143,12 @@ async fn viewer_mode(
 ) -> Result<(), LidarServerError> {
     let (mut con_read, mut con_write) = con.into_split();
     let (queries_sender, queries_receiver) = crossbeam_channel::unbounded();
-    let (updates_sender, mut updates_receiver) = tokio::sync::mpsc::channel(1);
+    let (updates_sender, mut updates_receiver) = tokio::sync::mpsc::channel::<(Header, Vec<u8>)>(1);
     let (query_ack_sender, query_ack_receiver) = crossbeam_channel::unbounded();
 
     let send_task = tokio::spawn(async move {
-        while let Some(message) = updates_receiver.recv().await {
-            match con_write.write_message(&message).await {
+        while let Some((message, payload)) = updates_receiver.recv().await {
+            match con_write.write_message(&message, &payload).await {
                 Ok(_) => {}
                 Err(e) => return Err(e),
             }
@@ -150,7 +162,10 @@ async fn viewer_mode(
         let mut sent_updates = 0;
         let mut ackd_updates = 0;
 
-        let mut query_config = QueryConfig { one_shot: true, point_filtering: true };
+        let mut query_config = QueryConfig {
+            one_shot: true,
+            point_filtering: true,
+        };
         let mut query_done = true;
 
         let mut reader = index.reader(EmptyQuery);
@@ -191,11 +206,13 @@ async fn viewer_mode(
                 if let Err(e) = codec.write_points(&points, &mut data) {
                     break 'update_loop format!("{e}");
                 }
-                if let Err(e) = updates_sender.blocking_send(Node {
-                    node: node_id,
-                    points: Some(PointData(data)),
-                    update_number: sent_updates,
-                }) {
+                if let Err(e) = updates_sender.blocking_send((
+                    Node {
+                        node: node_id,
+                        update_number: sent_updates,
+                    },
+                    data,
+                )) {
                     break 'update_loop format!("{e}");
                 }
             }
@@ -204,11 +221,13 @@ async fn viewer_mode(
             if let Some(node_id) = reader.remove_one() {
                 at_least_one_update = true;
                 sent_updates += 1;
-                if let Err(e) = updates_sender.blocking_send(Node {
-                    node: node_id,
-                    points: None,
-                    update_number: sent_updates,
-                }) {
+                if let Err(e) = updates_sender.blocking_send((
+                    Node {
+                        node: node_id,
+                        update_number: sent_updates,
+                    },
+                    vec![],
+                )) {
                     break 'update_loop format!("{e}");
                 }
             }
@@ -221,11 +240,13 @@ async fn viewer_mode(
                 if let Err(e) = codec.write_points(&points, &mut data) {
                     break 'update_loop format!("{e}");
                 }
-                if let Err(e) = updates_sender.blocking_send(Node {
-                    node: node_id,
-                    points: Some(PointData(data)),
-                    update_number: sent_updates,
-                }) {
+                if let Err(e) = updates_sender.blocking_send((
+                    Node {
+                        node: node_id,
+                        update_number: sent_updates,
+                    },
+                    data,
+                )) {
                     break 'update_loop format!("{e}");
                 }
             }
@@ -233,7 +254,7 @@ async fn viewer_mode(
             // notify client of EOF
             if query_config.one_shot && !at_least_one_update {
                 query_done = true;
-                if let Err(e) = updates_sender.blocking_send(ResultComplete) {
+                if let Err(e) = updates_sender.blocking_send((ResultComplete, vec![])) {
                     break 'update_loop format!("{e}");
                 }
             }
@@ -249,7 +270,7 @@ async fn viewer_mode(
         };
         warn!("{addr}: Query thread finished unexpectedly: {error_msg}");
         updates_sender
-            .blocking_send(Message::Error { message: error_msg })
+            .blocking_send((Header::Error { message: error_msg }, vec![]))
             .ok();
         Ok(())
     });
@@ -257,9 +278,9 @@ async fn viewer_mode(
     // read incoming messages and send to queries to query thread
     let receive_queries = async move {
         while let Some(msg) = con_read.read_message_or_eof(&mut shutdown).await? {
-            let (query, query_config) = match msg {
-                Message::Query { query, config } => (query, config),
-                Message::ResultAck { update_number } => {
+            let (query, query_config) = match msg.header {
+                Header::Query { query, config } => (query, config),
+                Header::ResultAck { update_number } => {
                     query_ack_sender.send(update_number).ok();
                     continue;
                 }

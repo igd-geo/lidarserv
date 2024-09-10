@@ -1,13 +1,14 @@
 #![deny(unused_must_use)]
-use anyhow::Result;
 use clap::Parser;
 use cli::{Command, LidarservOptions};
 use human_panic::setup_panic;
+use log::{debug, error};
+use std::process::ExitCode;
 
 mod cli;
 mod commands;
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
     // panic handler
     setup_panic!();
 
@@ -19,8 +20,15 @@ fn main() -> Result<()> {
     simple_logger::init_with_level(args.log_level).unwrap();
 
     // run the passed command
-    match args.command {
+    let result = match args.command {
         Command::Init(options) => commands::init::run(options),
         Command::Serve(options) => commands::serve::run(options),
+    };
+    if let Err(e) = result {
+        error!("{e}");
+        debug!("{e:?}");
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
     }
 }

@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::{stdout, BufWriter, Read, Seek, SeekFrom, Write},
     path::PathBuf,
-    process::exit,
+    process::ExitCode,
     sync::{
         atomic::{AtomicU64, Ordering},
         mpsc::RecvTimeoutError,
@@ -20,7 +20,7 @@ use lidarserv_server::{
     index::query::Query,
     net::client::viewer::{PartialResult, QueryConfig, ViewerClient},
 };
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use pasture_core::containers::{BorrowedBuffer, VectorBuffer};
 use pasture_io::{
     base::PointWriter,
@@ -34,7 +34,7 @@ use tokio::sync::{
 mod cli;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
     setup_panic!();
 
     // arg parsing
@@ -58,16 +58,18 @@ async fn main() {
         thread::spawn(move || write_thread(points_rx, file_name))
     };
 
-    match query_thread(points_tx, &args, status).await {
-        Ok(_) => (),
+    let exit_code = match query_thread(points_tx, &args, status).await {
+        Ok(_) => ExitCode::SUCCESS,
         Err(e) => {
             error!("{e}");
-            exit(1)
+            debug!("{e:?}");
+            ExitCode::FAILURE
         }
-    }
+    };
     writer_thread_handle.join().unwrap().unwrap();
     drop(shutdown_tx);
     report_thread_handle.join().unwrap();
+    exit_code
 }
 
 async fn query_thread(

@@ -10,3 +10,4 @@ pub mod lru_cache;
 pub mod query;
 
 pub use nalgebra;
+pub use tracy_client;

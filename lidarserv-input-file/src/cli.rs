@@ -39,7 +39,7 @@ pub struct ReplayOptions {
 
     /// If set, the points are replayed at a fixed rate.
     /// Otherwise, the points will be replayed based on the gps time attribute.
-    #[clap(long)]
+    #[clap(long, alias = "pps")]
     pub points_per_second: Option<u32>,
 
     /// If the input las file is a combination of multiple flights,

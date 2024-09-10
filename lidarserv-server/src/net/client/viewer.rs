@@ -1,7 +1,7 @@
 use crate::index::query::Query;
 use crate::net::protocol::connection::Connection;
 use crate::net::protocol::messages::{
-    DeviceType, Message, PointData, PointDataCodec, QueryConfig as QueryConfigMsg,
+    DeviceType, Header, PointDataCodec, QueryConfig as QueryConfigMsg,
 };
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
@@ -144,13 +144,16 @@ impl ViewerClient {
 
         // exchange hello messages and check each others protocol compatibility
         connection
-            .write_message(&Message::Hello {
-                protocol_version: PROTOCOL_VERSION,
-            })
+            .write_message(
+                &Header::Hello {
+                    protocol_version: PROTOCOL_VERSION,
+                },
+                &[],
+            )
             .await?;
         let hello = connection.read_message(shutdown).await?;
-        match hello {
-            Message::Hello { protocol_version } => {
+        match hello.header {
+            Header::Hello { protocol_version } => {
                 if protocol_version != PROTOCOL_VERSION {
                     return Err(LidarServerError::Protocol(format!(
                         "Protocol version mismatch (Server: {}, Client: {}).",
@@ -167,16 +170,19 @@ impl ViewerClient {
 
         // tell the server that we are a viewer, that will query points.
         connection
-            .write_message(&Message::ConnectionMode {
-                device: DeviceType::Viewer,
-            })
+            .write_message(
+                &Header::ConnectionMode {
+                    device: DeviceType::Viewer,
+                },
+                &[],
+            )
             .await?;
 
         // wait for the point cloud info.
         // (we don't need that info at the moment, so all we do with it is ignoring it...)
         let pc_info = connection.read_message(shutdown).await?;
-        let (coordinate_system, codec, attributes) = match pc_info {
-            Message::PointCloudInfo {
+        let (coordinate_system, codec, attributes) = match pc_info.header {
+            Header::PointCloudInfo {
                 coordinate_system,
                 codec,
                 attributes,
@@ -221,7 +227,7 @@ impl WriteViewerClient {
         let mut lock = self.inner.lock().await;
         lock.ack_after = if config.one_shot { 20 } else { 3 };
         lock.connection
-            .write_message(&Message::Query { query, config })
+            .write_message(&Header::Query { query, config }, &[])
             .await
     }
 
@@ -269,10 +275,10 @@ impl ReadViewerClient {
         &mut self,
         shutdown: &mut Receiver<()>,
     ) -> Result<PartialResult<Vec<u8>>, LidarServerError> {
-        match self.connection.read_message(shutdown).await? {
-            Message::Node {
+        let message = self.connection.read_message(shutdown).await?;
+        match message.header {
+            Header::Node {
                 node,
-                points,
                 update_number,
             } => {
                 // send ack
@@ -280,23 +286,23 @@ impl ReadViewerClient {
                     let mut lock = self.inner.lock().await;
                     if update_number >= lock.last_ack + lock.ack_after {
                         lock.connection
-                            .write_message(&Message::ResultAck { update_number })
+                            .write_message(&Header::ResultAck { update_number }, &[])
                             .await?;
                         lock.last_ack = update_number;
                     }
                 }
 
                 // result
-                if let Some(PointData(points)) = points {
+                if message.payload.is_empty() {
+                    Ok(PartialResult::DeleteNode(node))
+                } else {
                     Ok(PartialResult::UpdateNode(NodeUpdate {
                         node_id: node,
-                        points,
+                        points: message.payload,
                     }))
-                } else {
-                    Ok(PartialResult::DeleteNode(node))
                 }
             }
-            Message::ResultComplete => Ok(PartialResult::Complete),
+            Header::ResultComplete => Ok(PartialResult::Complete),
             _ => Err(LidarServerError::Protocol(
                 "Expected an `IncrementalResult` or an `ResultComplete` message.".to_string(),
             )),

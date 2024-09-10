@@ -1,8 +1,9 @@
 use crate::net::protocol::connection::Connection;
-use crate::net::protocol::messages::{DeviceType, Message, PointData, PointDataCodec};
+use crate::net::protocol::messages::{DeviceType, Header, PointDataCodec};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::coordinate_system::{CoordinateSystem, CoordinateSystemError};
 use lidarserv_common::geometry::position::{Component, WithComponentTypeOnce};
+use lidarserv_common::tracy_client::span;
 use nalgebra::{Point3, Vector3};
 use pasture_core::containers::{
     BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, InterleavedBuffer,
@@ -32,13 +33,16 @@ impl CaptureDeviceClient {
 
         // exchange hello messages and check each others protocol compatibility
         connection
-            .write_message(&Message::Hello {
-                protocol_version: PROTOCOL_VERSION,
-            })
+            .write_message(
+                &Header::Hello {
+                    protocol_version: PROTOCOL_VERSION,
+                },
+                &[],
+            )
             .await?;
         let hello = connection.read_message(shutdown).await?;
-        match hello {
-            Message::Hello { protocol_version } => {
+        match hello.header {
+            Header::Hello { protocol_version } => {
                 if protocol_version != PROTOCOL_VERSION {
                     return Err(LidarServerError::Protocol(format!(
                         "Protocol version mismatch (Server: {}, Client: {}).",
@@ -55,17 +59,20 @@ impl CaptureDeviceClient {
 
         // tell the server that we are a capture device, that would like to insert points.
         connection
-            .write_message(&Message::ConnectionMode {
-                device: DeviceType::CaptureDevice,
-            })
+            .write_message(
+                &Header::ConnectionMode {
+                    device: DeviceType::CaptureDevice,
+                },
+                &[],
+            )
             .await?;
 
         // wait for the point cloud info.
         // We need that first, before we can start inserting points,
         // because it tells us how to encode the points (E.g. the las transformation (scale+offset))
         let pc_info = connection.read_message(shutdown).await?;
-        let (coordinate_system, attributes, codec) = match pc_info {
-            Message::PointCloudInfo {
+        let (coordinate_system, attributes, codec) = match pc_info.header {
+            Header::PointCloudInfo {
                 coordinate_system,
                 attributes,
                 codec,
@@ -180,17 +187,17 @@ impl CaptureDeviceClient {
         }
 
         let mut data = Vec::new();
+        let _s1 = span!("CaptureDeviceClient::insert_points_local_coordinates encode point data");
         if let Err(e) = self.codec.instance().write_points(points, &mut data) {
             return Err(LidarServerError::Client(format!("Encoding error: {e}")));
         }
-        self.insert_raw_point_data(data).await
+        drop(_s1);
+        self.insert_raw_point_data(&data).await
     }
 
-    pub async fn insert_raw_point_data(&mut self, data: Vec<u8>) -> Result<(), LidarServerError> {
+    pub async fn insert_raw_point_data(&mut self, data: &[u8]) -> Result<(), LidarServerError> {
         self.connection
-            .write_message(&Message::InsertPoints {
-                data: PointData(data),
-            })
+            .write_message(&Header::InsertPoints, data)
             .await?;
 
         Ok(())

@@ -1,16 +1,15 @@
-use std::process::exit;
-
 use clap::Parser;
 use cli::{AppOptions, Command};
 use commands::{replay::replay, sort::sort};
 use human_panic::setup_panic;
-use log::error;
+use log::{debug, error};
+use std::process::ExitCode;
 
 mod cli;
 mod commands;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
     setup_panic!();
 
     // arg parsing
@@ -26,6 +25,9 @@ async fn main() {
     };
     if let Err(e) = result {
         error!("{e}");
-        exit(1)
+        debug!("{e:?}");
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
     }
 }

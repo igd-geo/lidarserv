@@ -1,6 +1,7 @@
 use crate::cli::ReplayOptions;
 use anyhow::{anyhow, Result};
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
+use lidarserv_common::tracy_client::{plot, span};
 use lidarserv_input_file::extractors::basic_flags::LasBasicFlagsExtractor;
 use lidarserv_input_file::extractors::copy::CopyExtractor;
 use lidarserv_input_file::extractors::extended_flags::LasExtendedFlagsExtractor;
@@ -11,7 +12,7 @@ use lidarserv_input_file::splitters::fixed::FixedPointRateSplitter;
 use lidarserv_input_file::splitters::gpstime::GpsTimeSplitter;
 use lidarserv_input_file::splitters::{PointSplitter, PointSplitterChunk};
 use lidarserv_server::net::client::capture_device::CaptureDeviceClient;
-use log::{error, warn};
+use log::error;
 use pasture_core::containers::{
     InterleavedBuffer, InterleavedBufferMut, MakeBufferFromLayout, OwningBuffer, SliceBuffer,
 };
@@ -37,6 +38,7 @@ pub async fn replay(options: ReplayOptions) -> Result<()> {
         CaptureDeviceClient::connect((options.host, options.port), &mut shutdown_rx).await?;
 
     let read = LASReader::from_path(&options.file, false)?;
+    let src_layout = read.get_default_point_layout().clone();
     let buffer_size = 10 * options.fps as usize; // buffer over 10 seconds of point data
     let progress_state = Arc::new(ReplayState {
         buffer_size: buffer_size as u64,
@@ -52,37 +54,42 @@ pub async fn replay(options: ReplayOptions) -> Result<()> {
     };
 
     // read file
+    let (points_tx, points_rx) = std::sync::mpsc::sync_channel(10);
+    let read_thread_handle = thread::spawn(move || read_thread(points_tx, read));
+
     let (frames_tx, frames_rx) = tokio::sync::mpsc::channel(buffer_size);
-    let read_thread_handle = {
+    let convert_thread_handle = {
         let attributes = client.attributes().to_owned();
         let coordinate_system = client.coordinate_system();
         let progress_state = Arc::clone(&progress_state);
         if let Some(pps) = options.points_per_second {
             let splitter = FixedPointRateSplitter::init(pps, options.fps);
             thread::spawn(move || {
-                read_thread(
+                convert_thread(
                     frames_tx,
                     coordinate_system,
-                    read,
+                    points_rx,
                     splitter,
                     attributes,
                     progress_state,
+                    src_layout,
                 )
             })
         } else {
-            let has_gps_time = read.get_default_point_layout().has_attribute(&GPS_TIME);
+            let has_gps_time = src_layout.has_attribute(&GPS_TIME);
             if !has_gps_time {
                 return Err(anyhow!("Missing {GPS_TIME} point attribute. (Note: You could specify the '--points-per-second' option to replay the file at a fixed point rate.)"));
             }
             let splitter = GpsTimeSplitter::init(options.fps, options.autoskip, options.accelerate);
             thread::spawn(move || {
-                read_thread(
+                convert_thread(
                     frames_tx,
                     coordinate_system,
-                    read,
+                    points_rx,
                     splitter,
                     attributes,
                     progress_state,
+                    src_layout,
                 )
             })
         }
@@ -92,6 +99,7 @@ pub async fn replay(options: ReplayOptions) -> Result<()> {
     send_thread(frames_rx, options.fps, client, progress_state).await;
 
     // shutdown
+    convert_thread_handle.join().unwrap();
     read_thread_handle.join().unwrap();
     drop(shutdown_tx);
     report_thread_handle.join().unwrap();
@@ -99,16 +107,42 @@ pub async fn replay(options: ReplayOptions) -> Result<()> {
     Ok(())
 }
 
-fn read_thread(
+fn read_thread(points_tx: std::sync::mpsc::SyncSender<VectorBuffer>, mut read: impl PointReader) {
+    loop {
+        let _s1 = span!("read_thread read");
+        let chunk = match read.read::<VectorBuffer>(50_000) {
+            Ok(o) => o,
+            Err(e) => {
+                error!("Error while reading points: {e}");
+                break;
+            }
+        };
+        if chunk.is_empty() {
+            // reached EOF
+            break;
+        }
+        drop(_s1);
+
+        let _s2 = span!("read_thread send");
+        if points_tx.send(chunk).is_err() {
+            // receiver disconnected
+            break;
+        }
+        drop(_s2);
+    }
+}
+
+fn convert_thread(
     frames_tx: mpsc::Sender<(u64, VectorBuffer)>,
     coordinate_system: CoordinateSystem,
-    mut read: impl PointReader,
+    points_rx: std::sync::mpsc::Receiver<VectorBuffer>,
     mut splitter: impl PointSplitter,
     attributes: Vec<PointAttributeDefinition>,
     state: Arc<ReplayState>,
+    src_layout: PointLayout,
 ) {
     let mut frame_manager = match FrameManager::new(
-        read.get_default_point_layout(),
+        &src_layout,
         &attributes,
         &coordinate_system,
         frames_tx,
@@ -121,25 +155,21 @@ fn read_thread(
         }
     };
     loop {
-        let chunk = match read.read::<VectorBuffer>(50_000) {
+        let _s1 = span!("convert_thread receive chunk");
+        let chunk = match points_rx.recv() {
             Ok(o) => o,
-            Err(e) => {
-                error!("Error while reading points: {e}");
-                break;
-            }
+            Err(_) => break,
         };
-        if chunk.is_empty() {
-            // reached EOF
-            break;
-        }
-        let nr_points = chunk.len();
-        let mut splitter = splitter.next_chunk(&chunk);
+        drop(_s1);
 
         struct CurrentFrame {
             frame_number: u64,
             start_position: usize,
         }
+        let nr_points = chunk.len();
+        let mut splitter = splitter.next_chunk(&chunk);
         let mut current_frame = None;
+        let _s2 = span!("convert_thread process chunk");
         for point in 0..nr_points {
             let frame_number = splitter.next_point();
 
@@ -170,6 +200,7 @@ fn read_thread(
                 Err(FrameManagerError::SendError(_)) => return,
             }
         }
+        drop(_s2);
     }
 }
 
@@ -269,10 +300,13 @@ impl FrameManager {
         frame_number: u64,
         points: &T,
     ) -> Result<(), FrameManagerError> {
+        let _s1 = span!("FrameManager::add_points");
         assert!(frame_number >= self.current_frame_number);
         if self.current_frame_number != frame_number {
+            let _s2 = span!("FrameManager::add_points flush");
             self.flush()?;
-            self.current_frame_number = frame_number
+            self.current_frame_number = frame_number;
+            drop(_s2);
         }
 
         let offset = self.current_frame_points.len();
@@ -282,9 +316,11 @@ impl FrameManager {
             .current_frame_points
             .get_point_range_mut(offset..new_len);
         let src = points.get_point_range_ref(0..points.len());
+        let _s3 = span!("FrameManager::add_points extract");
         for extractor in &self.extractors {
             extractor.extract(src, dst);
         }
+        drop(_s3);
         Ok(())
     }
 }
@@ -308,16 +344,16 @@ async fn send_thread(
         let time_now = Instant::now();
 
         // wait for frame timing
+        let _s1 = span!("sleeping");
         if time_now < time_frame {
             let wait_for = time_frame - time_now;
+            state.behind_by.store(0, Ordering::Relaxed);
             sleep(wait_for).await
-        } else if time_now > time_frame + Duration::from_secs(1) {
-            let behind_by = time_now - time_frame;
-            warn!(
-                "We are to slow with sending points! (Behind by {:0.2} seconds.)",
-                behind_by.as_secs_f64()
-            );
+        } else {
+            let behind_by = ((time_now - time_frame).as_secs_f64() * 10.0).round() as u64;
+            state.behind_by.store(behind_by, Ordering::Relaxed);
         }
+        drop(_s1);
 
         // send
         match client.insert_points_local_coordinates(&points).await {
@@ -341,6 +377,7 @@ struct ReplayState {
     points_sent: AtomicU64,
     frames_sent: AtomicU64,
     frames_read: AtomicU64,
+    behind_by: AtomicU64,
     points_full: u64,
     buffer_size: u64,
 }
@@ -375,7 +412,21 @@ fn report_thread(shutdown_rx: std::sync::mpsc::Receiver<Infallible>, state: Arc<
             .clamp(0.0, 100.0)
             .round() as u8;
 
-        println!("[fps: {frames_per_second:2} pps: {points_per_second:7}][buffer: {buffer_percentage:3}%][{progress_bar}| {points_sent}/{points_total} points sent]")
+        let behind_by = state.behind_by.load(Ordering::Relaxed);
+        let behind_str = if behind_by < 10 {
+            "".to_string()
+        } else {
+            format!(
+                "[ !!! Too slow !!! {:.1}s behind !!! ]",
+                behind_by as f64 * 0.1
+            )
+        };
+
+        println!("[fps: {frames_per_second:2} pps: {points_per_second:7}][buffer: {buffer_percentage:3}%][{progress_bar}| {points_sent}/{points_total} points sent]{behind_str}");
+        plot!("fps", frames_per_second as f64);
+        plot!("pps", points_per_second as f64);
+        plot!("buffered frames", buffered_frames as f64);
+        plot!("behind by", behind_by as f64 * 0.1);
     }
 }
 

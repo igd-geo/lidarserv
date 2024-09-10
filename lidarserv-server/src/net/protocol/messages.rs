@@ -3,14 +3,13 @@ use lidarserv_common::geometry::grid::LeveledGridCell;
 use lidarserv_common::io::pasture::{Compression, PastureIo};
 use lidarserv_common::io::InMemoryPointCodec;
 use pasture_core::layout::PointAttributeDefinition;
-use serde::{Deserialize, Serialize, Serializer};
-use std::fmt::{Debug, Formatter};
-use std::ops::Deref;
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 use crate::index::query::Query;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum Message {
+pub enum Header {
     /// First message, that both the client and the server send to each other.
     /// Contains the protocol version number, that each of them is speaking, so they can check
     /// if they are compatible to each other.
@@ -34,7 +33,7 @@ pub enum Message {
     Error { message: String },
 
     /// Sent from client to server in CaptureDevice mode, to insert a batch of new points.
-    InsertPoints { data: PointData },
+    InsertPoints,
 
     /// Sent from the client to server in Viewer mode, to set or update the query.
     Query { query: Query, config: QueryConfig },
@@ -44,7 +43,6 @@ pub enum Message {
     /// If the point buffer is None, then the node shall be deleted.
     Node {
         node: LeveledGridCell,
-        points: Option<PointData>,
         update_number: u64,
     },
 
@@ -57,6 +55,11 @@ pub enum Message {
     ResultAck { update_number: u64 },
 }
 
+pub struct Message {
+    pub header: Header,
+    pub payload: Vec<u8>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum DeviceType {
     CaptureDevice,
@@ -66,27 +69,7 @@ pub enum DeviceType {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct QueryConfig {
     pub one_shot: bool,
-    pub point_filtering: bool
-}
-
-/// Just a wrapper around Vec<u8>, with a custom Debug impl, so that not the full binary file is
-/// printed in the debug output.
-#[derive(Serialize, Deserialize, Clone)]
-pub struct PointData(pub Vec<u8>);
-
-impl Debug for PointData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // Don't include the actual point data. It would just clutter the debug output.
-        f.serialize_unit_struct("[Point Data]")
-    }
-}
-
-impl Deref for PointData {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    pub point_filtering: bool,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
