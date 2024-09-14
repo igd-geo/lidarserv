@@ -186,7 +186,7 @@ impl PartialEq for FloatOrd {
 }
 
 struct Merger {
-    input: VecDeque<tempfile::NamedTempFile>,
+    input: VecDeque<tempfile::TempPath>,
     layout: PointLayout,
 }
 
@@ -204,25 +204,33 @@ impl Merger {
         info!("Create chunk {}", file.path().display());
         let data = points.get_point_range_ref(0..points.len());
         file.write_all(data)?;
-        self.input.push_back(file);
+        self.input.push_back(file.into_temp_path());
         Ok(())
     }
 
     pub fn merge_step(&mut self) -> Result<()> {
-        let Some(mut f1_raw) = self.input.pop_front() else {
+        let Some(f1_path) = self.input.pop_front() else {
             return Ok(());
         };
-        let Some(mut f2_raw) = self.input.pop_front() else {
-            self.input.push_front(f1_raw);
+        let Some(f2_path) = self.input.pop_front() else {
+            self.input.push_front(f1_path);
             return Ok(());
         };
+        let mut f1_raw = File::open(&f1_path)?;
+        let mut f2_raw = File::open(&f2_path)?;
+
+        let f1_nr_bytes = f1_raw.seek(SeekFrom::End(0))?;
+        let f2_nr_bytes = f2_raw.seek(SeekFrom::End(0))?;
         f1_raw.seek(SeekFrom::Start(0))?;
         f2_raw.seek(SeekFrom::Start(0))?;
+        let nr_points = (f1_nr_bytes + f2_nr_bytes) / self.layout.size_of_point_entry();
+
         let mut merged_raw = NamedTempFile::new()?;
+        let merged_path = merged_raw.path().to_path_buf();
         info!(
             "Merging {} and {} into {}",
-            f1_raw.path().display(),
-            f2_raw.path().display(),
+            f1_path.display(),
+            f2_path.display(),
             merged_raw.path().display()
         );
 
@@ -242,6 +250,7 @@ impl Merger {
                 .copy_from_slice(&point[gps_time_attr.byte_range_within_point()]);
             gps_time
         };
+        let mut points_merged = 0_u64;
 
         loop {
             let p1 = f1.peek()?;
@@ -263,11 +272,20 @@ impl Merger {
                 merged.write_all(p2.unwrap())?;
                 f2.consume();
             }
+            points_merged += 1;
+            if points_merged % 50_000_000 == 0 && nr_points >= 500_000_000 {
+                let percent = 100.0 * points_merged as f64 / nr_points as f64;
+                info!("Writing {}: {:.1}%", merged_path.display(), percent);
+            }
         }
 
         merged.flush()?;
         drop(merged);
-        self.input.push_back(merged_raw);
+        drop(f1);
+        drop(f1_path);
+        drop(f2);
+        drop(f2_path);
+        self.input.push_back(merged_raw.into_temp_path());
         Ok(())
     }
 
@@ -303,7 +321,8 @@ impl Merger {
         let mut buf = vec![0; buf_size_bytes];
         let mut points = VectorBuffer::new_from_layout(self.layout.clone());
 
-        for mut file in self.input {
+        for file_path in self.input {
+            let mut file = File::open(&file_path)?;
             let mut remaining_bytes = file.seek(SeekFrom::End(0))? as usize;
             file.seek(SeekFrom::Start(0))?;
 
@@ -348,6 +367,9 @@ impl Merger {
                     })
                 }
             }
+
+            drop(file);
+            drop(file_path);
         }
 
         wr.write_all(header.point_padding())?;
@@ -367,13 +389,13 @@ impl Merger {
 }
 
 struct PeekOnePoint {
-    reader: BufReader<NamedTempFile>,
+    reader: BufReader<File>,
     init: bool,
     data: Vec<u8>,
 }
 
 impl PeekOnePoint {
-    pub fn new(point_size: usize, reader: NamedTempFile) -> Self {
+    pub fn new(point_size: usize, reader: File) -> Self {
         PeekOnePoint {
             reader: BufReader::new(reader),
             init: false,
