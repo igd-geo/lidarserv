@@ -155,7 +155,7 @@ impl Inboxes {
     pub fn drain(&mut self) {
         info!("Finishing up... {} tasks remaining", self.tasks.len());
         self.drain = true;
-        self.drain = true;
+        self.priority_function = TaskPriorityFunction::Cleanup;
         self.waiter.notify_all();
     }
 

@@ -7,7 +7,7 @@ use crate::{
     lru_cache::pager::PageDirectory,
     query::{ExecutableQuery, LoadKind, NodeQueryResult, Query, QueryContext},
 };
-use log::debug;
+use log::{debug, trace};
 use pasture_core::containers::{BorrowedBuffer, InterleavedBuffer, OwningBuffer, VectorBuffer};
 use std::{
     collections::{HashMap, HashSet},
@@ -280,7 +280,7 @@ impl OctreeReader {
             None => return None,
             Some((k, (_, v))) => (*k, *v),
         };
-        debug!("Reloading node {:?}", reload);
+        trace!("Reloading node {:?}", reload);
         self.reload_queue.remove(&reload);
         self.loaded.insert(reload, load_kind);
         let node = self.inner.page_cache.load_or_default(&reload).unwrap();
@@ -306,7 +306,7 @@ impl OctreeReader {
             Some((l, k)) => (*l, *k),
         };
         self.load_queue.remove(&load);
-        debug!("Loading node {:?}", load);
+        trace!("Loading node {:?}", load);
 
         // update the set of loaded nodes
         self.loaded.insert(load, kind);

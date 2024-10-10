@@ -20,6 +20,9 @@ pub enum TaskPriorityFunction {
     NrPointsWeightedByTaskAge,
     NrPointsWeightedByOldestPoint,
     NrPointsWeightedByNegNewestPoint,
+
+    /// (semi-)Private. Used during task cleanup.
+    Cleanup,
 }
 
 #[derive(Debug, Copy, Clone, Error)]
@@ -52,6 +55,7 @@ impl std::fmt::Display for TaskPriorityFunction {
             TaskPriorityFunction::NrPointsWeightedByTaskAge => "NrPointsTaskAge",
             TaskPriorityFunction::NrPointsWeightedByOldestPoint => "NrPointsOldestPoint",
             TaskPriorityFunction::NrPointsWeightedByNegNewestPoint => "NrPointsNegNewestPoint",
+            TaskPriorityFunction::Cleanup => "LodInverse",
         };
         str.fmt(f)
     }
@@ -69,6 +73,7 @@ impl TaskPriorityFunction {
             TaskPriorityFunction::NrPoints => task_1.points.len().cmp(&task_2.points.len()),
             TaskPriorityFunction::Lod => (cell_1.lod, u32::MAX - task_1.created_generation)
                 .cmp(&(cell_2.lod, u32::MAX - task_2.created_generation)),
+            TaskPriorityFunction::Cleanup => cell_2.lod.cmp(&cell_1.lod),
             TaskPriorityFunction::OldestPoint => task_2.min_generation.cmp(&task_1.min_generation),
             TaskPriorityFunction::NewestPoint => task_2.max_generation.cmp(&task_1.max_generation),
             TaskPriorityFunction::TaskAge => {

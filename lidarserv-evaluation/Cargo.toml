@@ -1,0 +1,25 @@
+[package]
+name = "lidarserv-evaluation"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+human-panic = "2.0"
+clap = {version = "4.5", features = ["derive"]}
+log = "0.4"
+simple_logger = {version = "5.0", features = ["stderr"]}
+anyhow = "1.0"
+nalgebra.workspace = true
+pasture-core.workspace = true
+pasture-derive.workspace = true
+pasture-io.workspace = true
+serde = { version = "1.0", features=["derive"]}
+serde_json = "1.0"
+toml = "0.8"
+lidarserv-input-file = { path = "../lidarserv-input-file" }
+lidarserv-common = { path = "../lidarserv-common" }
+lidarserv-server = { path = "../lidarserv-server" }
+git-version = "0.3"
+chrono = "0.4"
+gethostname = "0.5"
+indicatif = "0.17"
