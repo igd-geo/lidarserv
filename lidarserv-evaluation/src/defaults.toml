@@ -1,0 +1,32 @@
+points_file = "./points.las"
+index_folder = "./data"
+output_file = "evaluation_%d_%i.json"
+use_existing_index = false
+cooldown_seconds = 0
+target_point_pressure = 1_000_000
+indexing_timeout_seconds = 600
+
+[queries]
+full-point-cloud = "full"
+root-nodes = "lod(0)"
+lod1 = "lod(1)"
+lod2 = "lod(2)"
+
+[defaults]
+node_hierarchy = 13
+point_hierarchy = 5
+priority_function = "NrPointsWeightedByTaskAge"
+num_threads = 8
+cache_size = 5000
+compression = false
+nr_bogus_points = [500, 500]
+max_lod = 10
+
+
+[runs.example]
+cache_size = [
+    1000,
+    5000,
+    10000,
+    50000,
+]

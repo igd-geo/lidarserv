@@ -4,3 +4,4 @@
 /.env
 /preconv.laz
 /lidarserv-common/test.json
+/.vscode/

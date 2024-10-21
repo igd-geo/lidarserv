@@ -4,6 +4,7 @@ use std::{
     io::{Read, SeekFrom, Write},
     path::{Path, PathBuf},
     process::ExitCode,
+    sync::OnceLock,
     thread::sleep,
     time::Duration,
 };
@@ -13,6 +14,8 @@ use chrono::{Local, Utc};
 use clap::Parser;
 use cli::EvaluationOptions;
 use git_version::git_version;
+use indicatif::MultiProgress;
+use indicatif_log_bridge::LogWrapper;
 use insertion_rate::measure_insertion_rate;
 use lidarserv_common::{
     geometry::{
@@ -30,7 +33,8 @@ use pasture_io::{
 };
 use query_performance::measure_one_query;
 use serde_json::{json, Value};
-use settings::{Base, EvaluationScript, MultiRun, SingleIndex};
+use settings::{Base, EvaluationScript, MultiIndex, SingleIndex};
+use simple_logger::SimpleLogger;
 
 mod cli;
 mod insertion_rate;
@@ -43,10 +47,16 @@ const VERSION: &str = git_version!(
     fallback = "unknown"
 );
 
+pub static MULTI_PROGRESS: OnceLock<MultiProgress> = OnceLock::new();
+
 fn main() -> ExitCode {
     human_panic::setup_panic!();
     let args = EvaluationOptions::parse();
-    simple_logger::init_with_level(args.log_level).expect("Failed to initialize logger.");
+    let level = args.log_level.to_level_filter();
+    let logger = SimpleLogger::new().with_level(level);
+    let multi = MULTI_PROGRESS.get_or_init(MultiProgress::new).clone();
+    LogWrapper::new(multi, logger).try_init().unwrap();
+
     match main_result(args) {
         Ok(_) => ExitCode::SUCCESS,
         Err(e) => {
@@ -120,9 +130,10 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
         debug!("Applied defaults: {:?}", run);
         let mut run_results = Vec::new();
         let mut current_run = 1;
-        for index in &run.index {
-            info!("Running index {}", current_run);
-            let result = match evaluate(&index, &run, &config.base) {
+        for index in &run {
+            info!("--- {name} run {current_run} ---");
+            prettyprint_index_run(&run, &index);
+            let result = match evaluate(&index, &config.base) {
                 Ok(o) => o,
                 Err(e) => {
                     error!("Evaluation run finished with an error: {e}");
@@ -148,7 +159,10 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
     let hostname = gethostname::gethostname().to_string_lossy().into_owned();
     let start_date = started_at.to_rfc3339();
     let end_date = finished_at.to_rfc3339();
-    let input_file_str = args.input_file.to_string_lossy();
+    let input_file_str = match args.input_file.canonicalize() {
+        Ok(canonical) => canonical.to_string_lossy().into_owned(),
+        Err(_) => args.input_file.to_string_lossy().into_owned(),
+    };
     let duration = (finished_at - started_at).num_seconds();
     let output = json!({
         "env": {
@@ -160,6 +174,7 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
             "finished_at": end_date,
             "duration:": duration,
         },
+        "settings": config.base,
         "runs": all_results
     });
     println!("{}", &output);
@@ -188,11 +203,7 @@ pub fn processor_cooldown(base_config: &Base) {
     }
 }
 
-fn evaluate(
-    index_config: &SingleIndex,
-    run: &MultiRun,
-    base_config: &Base,
-) -> Result<Value, anyhow::Error> {
+fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, anyhow::Error> {
     // reset data folder if necessary
     if !base_config.use_existing_index {
         reset_data_folder(base_config)?;
@@ -250,8 +261,10 @@ fn evaluate(
         let inner_result_insertion_rate = measure_insertion_rate(
             &mut index,
             &mut input_file,
-            &run.insertion_rate.single(),
-            base_config.indexing_timeout_seconds,
+            base_config.target_point_pressure,
+            base_config
+                .indexing_timeout_seconds
+                .map(Duration::from_secs),
         )?;
         info!("Results: {}", &inner_result_insertion_rate);
         result_insertion_rate = inner_result_insertion_rate;
@@ -259,7 +272,7 @@ fn evaluate(
 
     // measure query performance
     let mut query_perf_results = HashMap::new();
-    for (query_name, query) in run.query_perf.queries() {
+    for (query_name, query) in &base_config.queries {
         processor_cooldown(base_config);
         info!("Measuring query perf: {query_name}: {query}");
         let sensorpos_query_perf = measure_one_query(&mut index, query);
@@ -280,4 +293,30 @@ fn evaluate(
         "insertion_rate": result_insertion_rate,
         "query_performance": result_query_perf
     }))
+}
+
+pub fn prettyprint_index_run(multi: &MultiIndex, index: &SingleIndex) {
+    macro_rules! prettyprint_index_run {
+        ($($fields:ident),*) => {
+            let SingleIndex {$($fields),*} = index;
+            $(
+                {
+                    let cnt = multi.$fields.as_ref().map(|it| it.len()).unwrap_or(0);
+                    if cnt > 1 {
+                        log::info!("--- {} = {:?}", std::stringify!($fields), $fields);
+                    }
+                }
+            )*
+        };
+    }
+    prettyprint_index_run!(
+        cache_size,
+        priority_function,
+        node_hierarchy,
+        point_hierarchy,
+        compression,
+        num_threads,
+        nr_bogus_points,
+        max_lod
+    );
 }

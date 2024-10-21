@@ -141,7 +141,7 @@ impl Inboxes {
         self.locked.insert(
             node_id,
             LockedTask {
-                nr_points: task.points.len(),
+                nr_points: task.nr_points(),
             },
         );
         Some((node_id, task))
@@ -165,7 +165,7 @@ impl Inboxes {
 
     pub fn nr_of_points(&self) -> usize {
         let locked_tasks_points: usize = self.locked.values().map(|l| l.nr_points).sum();
-        let pending_tasks_points: usize = self.tasks.values().map(|t| t.points.len()).sum();
+        let pending_tasks_points: usize = self.tasks.values().map(|t| t.nr_points()).sum();
         locked_tasks_points + pending_tasks_points
     }
 
@@ -293,7 +293,9 @@ impl OctreeWorkerThread {
             &self.inner.point_hierarchy,
             node_id.lod,
         )?;
+        let _s2 = span!("OctreeWorkerThread::writer_task - get points - clone()");
         let mut node = (*node_arc).dyn_clone();
+        drop(_s2);
         drop(_span);
 
         // update attribute index
@@ -536,8 +538,10 @@ impl OctreeWriter {
                         lod: LodLevel::base(),
                         pos: cell,
                     };
+                    let nr_cells = points_by_cell.len();
                     let cell_points = points_by_cell.entry(node).or_insert_with(|| {
-                        VectorBuffer::with_capacity(points.len(), points.point_layout().clone())
+                        let capacity = (points.len() / (nr_cells + 1) * 5).min(points.len());
+                        VectorBuffer::with_capacity(capacity, points.point_layout().clone())
                     });
                     // safety: both point buffers have the same point layout.
                     unsafe { cell_points.push_points(points.get_point_ref(rd)) };
@@ -583,5 +587,12 @@ impl Drop for OctreeWriter {
         for thread in self.threads.drain(..) {
             thread.join().unwrap().unwrap()
         }
+    }
+}
+
+impl InsertionTask {
+    #[inline]
+    pub fn nr_points(&self) -> usize {
+        self.points.iter().map(|buf| buf.len()).sum::<usize>()
     }
 }
