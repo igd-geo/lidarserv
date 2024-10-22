@@ -17,3 +17,4 @@ lidarserv-common = { path = "../lidarserv-common" }
 bytemuck = "1.17"
 thiserror = "1.0"
 tempfile = "3.12"
+nalgebra.workspace = true

@@ -2,13 +2,14 @@ use std::slice;
 
 use lidarserv_common::geometry::{
     coordinate_system::CoordinateSystem,
-    position::{Component, PositionComponentType, WithComponentTypeOnce, POSITION_ATTRIBUTE_NAME},
+    position::{Component, PositionComponentType, POSITION_ATTRIBUTE_NAME},
 };
 use log::warn;
 use pasture_core::{
-    layout::{PointAttributeMember, PointLayout},
-    nalgebra::Point3,
+    layout::{PointAttributeDataType, PointAttributeMember, PointLayout},
+    nalgebra::{vector, Vector3},
 };
+use pasture_io::las::ATTRIBUTE_LOCAL_LAS_POSITION;
 
 use super::AttributeExtractor;
 
@@ -18,10 +19,12 @@ use super::AttributeExtractor;
 pub struct PositionExtractor {
     src_offset: usize,
     src_stride: usize,
+    src_component_type: PositionComponentType,
     dst_offset: usize,
     dst_stride: usize,
-    coordinate_system: CoordinateSystem,
-    component_type: PositionComponentType,
+    dst_component_type: PositionComponentType,
+    transform_scale: Vector3<f64>,
+    transform_offset: Vector3<f64>,
 }
 
 impl PositionExtractor {
@@ -30,61 +33,109 @@ impl PositionExtractor {
         dst_attribute: &PointAttributeMember,
         dst_point_size: usize,
         src_layout: &PointLayout,
+        src_coordinate_system: Option<CoordinateSystem>,
     ) -> Option<Self>
     where
         Self: Sized,
     {
         // check that dst_attribute is a position attribute
-        let component_type =
-            PositionComponentType::from_point_attribute_data_type(dst_attribute.datatype())?;
-        if dst_attribute.name() != POSITION_ATTRIBUTE_NAME {
-            return None;
-        }
+        let dst_component_type =
+            if *dst_attribute.attribute_definition() == ATTRIBUTE_LOCAL_LAS_POSITION {
+                assert_eq!(dst_attribute.datatype(), PointAttributeDataType::Vec3i32);
+                PositionComponentType::I32
+            } else if dst_attribute.name() == POSITION_ATTRIBUTE_NAME {
+                PositionComponentType::from_point_attribute_data_type(dst_attribute.datatype())?
+            } else {
+                return None;
+            };
 
         // get the position attribute from the source
-        let position_f64 = f64::position_attribute();
-        let src_attribute = src_layout.get_attribute(&position_f64)?;
+        let (src_attribute, src_component_type) = if let Some(position_attr) =
+            src_layout.get_attribute_by_name(POSITION_ATTRIBUTE_NAME)
+        {
+            let component_type =
+                PositionComponentType::from_point_attribute_data_type(position_attr.datatype())?;
+            (position_attr, component_type)
+        } else if let Some(position_attr) = src_layout.get_attribute(&ATTRIBUTE_LOCAL_LAS_POSITION)
+        {
+            assert_eq!(position_attr.datatype(), PointAttributeDataType::Vec3i32);
+            (position_attr, PositionComponentType::I32)
+        } else {
+            return None;
+        };
 
+        let (transform_scale, transform_offset) =
+            if let Some(src_coordinate_system) = src_coordinate_system {
+                let src_scale = *src_coordinate_system.scale();
+                let src_offset = *src_coordinate_system.offset();
+                let dst_scale = *dst_coordinate_system.scale();
+                let dst_offset = *dst_coordinate_system.offset();
+
+                (
+                    src_scale.component_div(&dst_scale),
+                    (src_offset - dst_offset).component_div(&dst_scale),
+                )
+            } else {
+                let dst_scale = *dst_coordinate_system.scale();
+                let dst_offset = *dst_coordinate_system.offset();
+
+                (
+                    vector![1.0, 1.0, 1.0].component_div(&dst_scale),
+                    -dst_offset.component_div(&dst_scale),
+                )
+            };
         Some(PositionExtractor {
             src_offset: src_attribute.byte_range_within_point().start,
             src_stride: src_layout.size_of_point_entry() as usize,
             dst_offset: dst_attribute.byte_range_within_point().start,
             dst_stride: dst_point_size,
-            coordinate_system: dst_coordinate_system,
-            component_type,
+            src_component_type,
+            dst_component_type,
+            transform_scale,
+            transform_offset,
         })
     }
 
-    fn extract_component_type<C: Component>(&self, src: &[u8], dst: &mut [u8]) {
-        //let position_f64 = f64::position_attribute();
+    fn extract_component_type<CSrc: Component, CDst: Component>(&self, src: &[u8], dst: &mut [u8]) {
         let nr_points = src.len() / self.src_stride;
         assert!(src.len() == nr_points * self.src_stride);
         assert!(dst.len() == nr_points * self.dst_stride);
         let mut nr_points_out_of_bounds = 0;
         for i in 0..nr_points {
             let src_start = i * self.src_stride + self.src_offset;
-            let src_end = src_start + f64::position_attribute().size() as usize;
+            let src_end = src_start + CSrc::position_attribute().size() as usize;
             let dst_start = i * self.dst_stride + self.dst_offset;
-            let dst_end = dst_start + C::position_attribute().size() as usize;
+            let dst_end = dst_start + CDst::position_attribute().size() as usize;
             let src_slice = &src[src_start..src_end];
             let dst_slice = &mut dst[dst_start..dst_end];
 
             // load from src
-            let mut src_position = Point3::<f64>::origin();
-            bytemuck::cast_slice_mut::<Point3<f64>, u8>(slice::from_mut(&mut src_position))
+            let mut src_position = Vector3::<CSrc>::zeros();
+            bytemuck::cast_slice_mut::<Vector3<CSrc>, u8>(slice::from_mut(&mut src_position))
                 .copy_from_slice(src_slice);
 
             // coordinate system transformation
-            let dst_position = match self.coordinate_system.encode_position::<C>(src_position) {
-                Ok(o) => o,
-                Err(_) => {
-                    nr_points_out_of_bounds += 1;
-                    Default::default()
-                }
+            let src_position_f64 = src_position.map(|c| c.to_f64());
+            let dst_position_f64 =
+                src_position_f64.component_mul(&self.transform_scale) + self.transform_offset;
+
+            let cmin = CDst::MIN.to_f64();
+            let cmax = CDst::MAX.to_f64();
+            let dst_position = if dst_position_f64.x >= cmin
+                && dst_position_f64.y >= cmin
+                && dst_position_f64.z >= cmin
+                && dst_position_f64.x <= cmax
+                && dst_position_f64.y <= cmax
+                && dst_position_f64.z <= cmax
+            {
+                dst_position_f64.map(CDst::from_f64)
+            } else {
+                nr_points_out_of_bounds += 1;
+                Vector3::zeros()
             };
 
             // store at dst
-            dst_slice.copy_from_slice(bytemuck::cast_slice::<Point3<C>, u8>(slice::from_ref(
+            dst_slice.copy_from_slice(bytemuck::cast_slice::<Vector3<CDst>, u8>(slice::from_ref(
                 &dst_position,
             )))
         }
@@ -100,19 +151,19 @@ impl PositionExtractor {
 
 impl AttributeExtractor for PositionExtractor {
     fn extract(&self, src: &[u8], dst: &mut [u8]) {
-        struct Wct<'a, 'b, 'c> {
-            me: &'a PositionExtractor,
-            src: &'b [u8],
-            dst: &'c mut [u8],
-        }
-        impl<'a, 'b, 'c> WithComponentTypeOnce for Wct<'a, 'b, 'c> {
-            type Output = ();
-
-            fn run_once<C: Component>(self) -> Self::Output {
-                let Wct { me, src, dst } = self;
-                me.extract_component_type::<C>(src, dst)
+        match (self.src_component_type, self.dst_component_type) {
+            (PositionComponentType::F64, PositionComponentType::F64) => {
+                self.extract_component_type::<f64, f64>(src, dst)
+            }
+            (PositionComponentType::F64, PositionComponentType::I32) => {
+                self.extract_component_type::<f64, i32>(src, dst)
+            }
+            (PositionComponentType::I32, PositionComponentType::F64) => {
+                self.extract_component_type::<i32, f64>(src, dst)
+            }
+            (PositionComponentType::I32, PositionComponentType::I32) => {
+                self.extract_component_type::<i32, i32>(src, dst)
             }
         }
-        Wct { me: self, src, dst }.for_component_type_once(self.component_type)
     }
 }

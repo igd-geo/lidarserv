@@ -5,6 +5,9 @@ use_existing_index = false
 cooldown_seconds = 0
 target_point_pressure = 1_000_000
 indexing_timeout_seconds = 600
+attributes = "LasPointFormat6"
+coordinate_system.scale = [0.001, 0.001, 0.001]
+coordinate_system.offset = [0.0, 0.0, 0.0]
 
 [queries]
 full-point-cloud = "full"

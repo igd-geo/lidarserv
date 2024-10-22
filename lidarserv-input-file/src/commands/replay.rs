@@ -6,7 +6,7 @@ use lidarserv_input_file::extractors::basic_flags::LasBasicFlagsExtractor;
 use lidarserv_input_file::extractors::copy::CopyExtractor;
 use lidarserv_input_file::extractors::extended_flags::LasExtendedFlagsExtractor;
 use lidarserv_input_file::extractors::position::PositionExtractor;
-use lidarserv_input_file::extractors::scan_angle::ScanAngleRankExtractor;
+use lidarserv_input_file::extractors::scan_angle_rank::ScanAngleRankExtractor;
 use lidarserv_input_file::extractors::AttributeExtractor;
 use lidarserv_input_file::splitters::fixed::FixedPointRateSplitter;
 use lidarserv_input_file::splitters::gpstime::GpsTimeSplitter;
@@ -230,6 +230,7 @@ impl FrameManager {
                 dst_attribute,
                 dst_point_size,
                 src_layout,
+                None,
             ) {
                 extractors.push(Box::new(extractor));
                 continue;

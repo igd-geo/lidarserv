@@ -1419,6 +1419,7 @@ dependencies = [
  "lidarserv-common",
  "lidarserv-server",
  "log",
+ "nalgebra",
  "pasture-core",
  "pasture-io",
  "simple_logger 5.0.0",

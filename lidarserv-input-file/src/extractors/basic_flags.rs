@@ -116,20 +116,32 @@ impl AttributeExtractor for LasBasicFlagsExtractor {
 mod test {
     use std::slice;
 
-    use crate::extractors::AttributeExtractor;
+    use pasture_core::layout::{
+        attributes::{EDGE_OF_FLIGHT_LINE, NUMBER_OF_RETURNS, RETURN_NUMBER, SCAN_DIRECTION_FLAG},
+        PointLayout,
+    };
+    use pasture_io::las::ATTRIBUTE_BASIC_FLAGS;
+
+    use crate::extractors::{
+        edge_of_flight_line::EdgeOfFlightLineExtractor,
+        number_of_returns_3bit::NumberOfReturns3BitExtractor,
+        return_number_3bit::ReturnNumber3BitExtractor,
+        scan_direction_flag::ScanDirectionFlagExtractor, AttributeExtractor,
+    };
 
     use super::LasBasicFlagsExtractor;
 
+    #[derive(Debug)]
+    struct BasicFlagsValues {
+        return_number: u8,
+        nr_of_returns: u8,
+        scan_direction_flag: u8,
+        edge_of_flightline: u8,
+    }
+
     #[test]
     fn test_extract_basic_flags() {
-        #[derive(Debug)]
-        struct TestInput {
-            return_number: u8,
-            nr_of_returns: u8,
-            scan_direction_flag: u8,
-            edge_of_flightline: u8,
-        }
-        fn test_case(input: TestInput, expected_result: u8) {
+        fn test_case(input: BasicFlagsValues, expected_result: u8) {
             let extractor = LasBasicFlagsExtractor {
                 src_offset_return_number: 0,
                 src_offset_nr_of_returns: 1,
@@ -158,7 +170,7 @@ mod test {
         }
 
         test_case(
-            TestInput {
+            BasicFlagsValues {
                 return_number: 1,
                 nr_of_returns: 1,
                 scan_direction_flag: 0,
@@ -167,7 +179,7 @@ mod test {
             0x09,
         );
         test_case(
-            TestInput {
+            BasicFlagsValues {
                 return_number: 1,
                 nr_of_returns: 2,
                 scan_direction_flag: 0,
@@ -176,7 +188,7 @@ mod test {
             0x11,
         );
         test_case(
-            TestInput {
+            BasicFlagsValues {
                 return_number: 1,
                 nr_of_returns: 7,
                 scan_direction_flag: 0,
@@ -185,7 +197,7 @@ mod test {
             0x39,
         );
         test_case(
-            TestInput {
+            BasicFlagsValues {
                 return_number: 2,
                 nr_of_returns: 7,
                 scan_direction_flag: 0,
@@ -194,7 +206,7 @@ mod test {
             0x3A,
         );
         test_case(
-            TestInput {
+            BasicFlagsValues {
                 return_number: 7,
                 nr_of_returns: 7,
                 scan_direction_flag: 0,
@@ -203,7 +215,7 @@ mod test {
             0x3F,
         );
         test_case(
-            TestInput {
+            BasicFlagsValues {
                 return_number: 1,
                 nr_of_returns: 1,
                 scan_direction_flag: 1,
@@ -212,7 +224,134 @@ mod test {
             0x49,
         );
         test_case(
-            TestInput {
+            BasicFlagsValues {
+                return_number: 1,
+                nr_of_returns: 1,
+                scan_direction_flag: 0,
+                edge_of_flightline: 1,
+            },
+            0x89,
+        );
+    }
+
+    #[test]
+    fn test_basic_flags_roundtrip() {
+        fn test_case(values: BasicFlagsValues, basic_flags: u8) {
+            let layout_src = PointLayout::from_attributes(&[ATTRIBUTE_BASIC_FLAGS]);
+            let layout_dst = PointLayout::from_attributes(&[
+                RETURN_NUMBER,
+                NUMBER_OF_RETURNS,
+                SCAN_DIRECTION_FLAG,
+                EDGE_OF_FLIGHT_LINE,
+            ]);
+
+            let extr1 = ReturnNumber3BitExtractor::check(
+                layout_dst.get_attribute(&RETURN_NUMBER).unwrap(),
+                layout_dst.size_of_point_entry() as usize,
+                &layout_src,
+            )
+            .unwrap();
+            let extr2 = NumberOfReturns3BitExtractor::check(
+                layout_dst.get_attribute(&NUMBER_OF_RETURNS).unwrap(),
+                layout_dst.size_of_point_entry() as usize,
+                &layout_src,
+            )
+            .unwrap();
+            let extr3 = ScanDirectionFlagExtractor::check(
+                layout_dst.get_attribute(&SCAN_DIRECTION_FLAG).unwrap(),
+                layout_dst.size_of_point_entry() as usize,
+                &layout_src,
+            )
+            .unwrap();
+            let extr4 = EdgeOfFlightLineExtractor::check(
+                layout_dst.get_attribute(&EDGE_OF_FLIGHT_LINE).unwrap(),
+                layout_dst.size_of_point_entry() as usize,
+                &layout_src,
+            )
+            .unwrap();
+
+            let src = [basic_flags];
+            let mut dst = [0; 4];
+            extr1.extract(&src, &mut dst);
+            extr2.extract(&src, &mut dst);
+            extr3.extract(&src, &mut dst);
+            extr4.extract(&src, &mut dst);
+
+            let expected = [
+                values.return_number,
+                values.nr_of_returns,
+                values.scan_direction_flag,
+                values.edge_of_flightline,
+            ];
+            assert_eq!(dst, expected);
+
+            let reverse = LasBasicFlagsExtractor::check(
+                layout_src.get_attribute(&ATTRIBUTE_BASIC_FLAGS).unwrap(),
+                layout_src.size_of_point_entry() as usize,
+                &layout_dst,
+            )
+            .unwrap();
+            let mut orig = [0];
+            reverse.extract(&dst, &mut orig);
+            assert_eq!(orig, [basic_flags]);
+        }
+
+        test_case(
+            BasicFlagsValues {
+                return_number: 1,
+                nr_of_returns: 1,
+                scan_direction_flag: 1,
+                edge_of_flightline: 1,
+            },
+            0xC9,
+        );
+        test_case(
+            BasicFlagsValues {
+                return_number: 1,
+                nr_of_returns: 2,
+                scan_direction_flag: 0,
+                edge_of_flightline: 0,
+            },
+            0x11,
+        );
+        test_case(
+            BasicFlagsValues {
+                return_number: 1,
+                nr_of_returns: 7,
+                scan_direction_flag: 0,
+                edge_of_flightline: 1,
+            },
+            0xB9,
+        );
+        test_case(
+            BasicFlagsValues {
+                return_number: 2,
+                nr_of_returns: 7,
+                scan_direction_flag: 0,
+                edge_of_flightline: 0,
+            },
+            0x3A,
+        );
+        test_case(
+            BasicFlagsValues {
+                return_number: 7,
+                nr_of_returns: 7,
+                scan_direction_flag: 0,
+                edge_of_flightline: 0,
+            },
+            0x3F,
+        );
+        test_case(
+            BasicFlagsValues {
+                return_number: 1,
+                nr_of_returns: 1,
+                scan_direction_flag: 1,
+                edge_of_flightline: 0,
+            },
+            0x49,
+        );
+        test_case(
+            BasicFlagsValues {
                 return_number: 1,
                 nr_of_returns: 1,
                 scan_direction_flag: 0,

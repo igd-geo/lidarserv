@@ -1,9 +1,16 @@
 use chrono::NaiveDate;
 use indexmap::IndexMap;
 use itertools::iproduct;
+use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
+use lidarserv_common::geometry::position::POSITION_ATTRIBUTE_NAME;
 use lidarserv_common::index::priority_function::TaskPriorityFunction;
+use nalgebra::vector;
+use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PointLayout};
+use pasture_io::las::point_layout_from_las_point_format;
+use pasture_io::las_rs::point::Format;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use toml::map::Map;
@@ -74,6 +81,99 @@ pub struct Base {
 
     #[serde(default)]
     pub queries: IndexMap<String, String>,
+
+    #[serde(default)]
+    pub attributes: Attributes,
+
+    #[serde(default = "coordinate_system_default")]
+    pub coordinate_system: CoordinateSystem,
+}
+
+fn coordinate_system_default() -> CoordinateSystem {
+    CoordinateSystem::from_las_transform(vector![0.001, 0.001, 0.001], vector![0.0, 0.0, 0.0])
+}
+
+#[derive(Debug, Serialize, Deserialize, Copy, Clone, Eq, PartialEq)]
+pub enum AttributesPreset {
+    PositionF64,
+    PositionI32,
+    LasPointFormat0,
+    LasPointFormat1,
+    LasPointFormat2,
+    LasPointFormat3,
+    LasPointFormat4,
+    LasPointFormat5,
+    LasPointFormat6,
+    LasPointFormat7,
+    LasPointFormat8,
+    LasPointFormat9,
+    LasPointFormat10,
+}
+
+impl AttributesPreset {
+    pub fn attributes(self) -> Vec<PointAttributeDefinition> {
+        fn las_attributes(point_format: u8) -> Vec<PointAttributeDefinition> {
+            let format = Format::new(point_format).unwrap();
+            let layout = point_layout_from_las_point_format(&format, false).unwrap();
+            layout
+                .attributes()
+                .map(|a| a.attribute_definition().clone())
+                .collect()
+        }
+
+        match self {
+            AttributesPreset::PositionF64 => vec![PointAttributeDefinition::custom(
+                Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
+                PointAttributeDataType::Vec3f64,
+            )],
+            AttributesPreset::PositionI32 => vec![PointAttributeDefinition::custom(
+                Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
+                PointAttributeDataType::Vec3i32,
+            )],
+            AttributesPreset::LasPointFormat0 => las_attributes(0),
+            AttributesPreset::LasPointFormat1 => las_attributes(1),
+            AttributesPreset::LasPointFormat2 => las_attributes(2),
+            AttributesPreset::LasPointFormat3 => las_attributes(3),
+            AttributesPreset::LasPointFormat4 => las_attributes(4),
+            AttributesPreset::LasPointFormat5 => las_attributes(5),
+            AttributesPreset::LasPointFormat6 => las_attributes(6),
+            AttributesPreset::LasPointFormat7 => las_attributes(7),
+            AttributesPreset::LasPointFormat8 => las_attributes(8),
+            AttributesPreset::LasPointFormat9 => las_attributes(9),
+            AttributesPreset::LasPointFormat10 => las_attributes(10),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum Attributes {
+    Preset(AttributesPreset),
+    Manual(IndexMap<String, PointAttributeDataType>),
+}
+
+impl Attributes {
+    pub fn attributes(&self) -> Vec<PointAttributeDefinition> {
+        match self {
+            Attributes::Preset(attributes_preset) => attributes_preset.attributes(),
+            Attributes::Manual(index_map) => index_map
+                .iter()
+                .map(|(name, data_type)| {
+                    PointAttributeDefinition::custom(Cow::Owned(name.to_string()), *data_type)
+                })
+                .collect(),
+        }
+    }
+
+    pub fn point_layout(&self) -> PointLayout {
+        PointLayout::from_attributes(&self.attributes())
+    }
+}
+
+impl Default for Attributes {
+    fn default() -> Self {
+        Attributes::Preset(AttributesPreset::PositionF64)
+    }
 }
 
 impl Base {

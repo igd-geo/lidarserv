@@ -1,18 +1,8 @@
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{Read, SeekFrom, Write},
-    path::{Path, PathBuf},
-    process::ExitCode,
-    sync::OnceLock,
-    thread::sleep,
-    time::Duration,
-};
-
 use anyhow::anyhow;
 use chrono::{Local, Utc};
 use clap::Parser;
 use cli::EvaluationOptions;
+use converter::{ConvertingPointReader, MissingAttributesStrategy};
 use git_version::git_version;
 use indicatif::MultiProgress;
 use indicatif_log_bridge::LogWrapper;
@@ -26,17 +16,24 @@ use lidarserv_common::{
 };
 use log::{debug, error, info};
 use nalgebra::vector;
-use pasture_core::layout::{attributes::POSITION_3D, PointAttributeMember, PointLayout};
-use pasture_io::{
-    base::{PointReader, SeekToPoint},
-    las::{LASReader, ATTRIBUTE_LOCAL_LAS_POSITION},
-};
+use pasture_io::{base::SeekToPoint, las::LASReader};
 use query_performance::measure_one_query;
 use serde_json::{json, Value};
 use settings::{Base, EvaluationScript, MultiIndex, SingleIndex};
 use simple_logger::SimpleLogger;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{Read, SeekFrom, Write},
+    path::{Path, PathBuf},
+    process::ExitCode,
+    sync::OnceLock,
+    thread::sleep,
+    time::Duration,
+};
 
 mod cli;
+mod converter;
 mod insertion_rate;
 mod query_performance;
 mod settings;
@@ -117,7 +114,7 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
 
     // create output file
     let out_file_name = get_output_filename(&config.base)?;
-    let out_file = std::fs::File::create(out_file_name)?;
+    let out_file = std::fs::File::create(&out_file_name)?;
 
     // run tests
     info!("Running tests");
@@ -177,7 +174,7 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
         "settings": config.base,
         "runs": all_results
     });
-    println!("{}", &output);
+    info!("Writing results to: {}", out_file_name.display());
     match serde_json::to_writer_pretty(out_file, &output) {
         Ok(_) => (),
         Err(e) => error!("Could not write output file: {}", e),
@@ -210,23 +207,21 @@ fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, any
     }
 
     // open input file
-    let mut input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
-
-    // point layout
-    // freely definable layout and proper layout conversion
-    let attributes = input_file
-        .get_default_point_layout()
-        .attributes()
-        .cloned()
-        .map(|attr| {
-            if attr.name() == ATTRIBUTE_LOCAL_LAS_POSITION.name() {
-                PointAttributeMember::custom(POSITION_3D.name(), attr.datatype(), attr.offset())
-            } else {
-                attr
-            }
-        })
-        .collect::<Vec<_>>();
-    let point_layout = PointLayout::from_members_and_alignment(&attributes, 1);
+    let raw_input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
+    let trans = raw_input_file.header().transforms();
+    let src_coordinate_system = CoordinateSystem::from_las_transform(
+        vector![trans.x.scale, trans.y.scale, trans.z.scale],
+        vector![trans.x.offset, trans.y.offset, trans.z.offset],
+    );
+    let point_layout = base_config.attributes.point_layout();
+    let coordinate_system = base_config.coordinate_system;
+    let mut input_file = ConvertingPointReader::new(
+        raw_input_file,
+        src_coordinate_system,
+        point_layout.clone(),
+        coordinate_system,
+        MissingAttributesStrategy::ZeroInitializeAndWarn,
+    )?;
 
     // Create index
     let mut index = Octree::new(OctreeParams {
@@ -236,13 +231,7 @@ fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, any
         point_layout,
         node_hierarchy: GridHierarchy::new(index_config.node_hierarchy),
         point_hierarchy: GridHierarchy::new(index_config.point_hierarchy),
-        coordinate_system: {
-            let t = input_file.header().transforms();
-            CoordinateSystem::from_las_transform(
-                vector![t.x.scale, t.y.scale, t.z.scale],
-                vector![t.x.offset, t.y.offset, t.z.offset],
-            )
-        },
+        coordinate_system,
         max_lod: LodLevel::from_level(index_config.max_lod),
         max_bogus_inner: index_config.nr_bogus_points.0,
         max_bogus_leaf: index_config.nr_bogus_points.1,
