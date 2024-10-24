@@ -1,3 +1,4 @@
+use self::attribute_index::{range_index::RangeIndex, AttributeIndex};
 use crate::{
     geometry::{
         coordinate_system::CoordinateSystem,
@@ -15,7 +16,7 @@ use lazy_node::LazyNode;
 use live_metrics_collector::LiveMetricsCollector;
 use log::debug;
 use page_loader::OctreeLoader;
-use pasture_core::layout::PointLayout;
+use pasture_core::layout::{attributes::INTENSITY, PointLayout};
 use priority_function::TaskPriorityFunction;
 use reader::OctreeReader;
 use std::{
@@ -24,6 +25,7 @@ use std::{
 };
 use writer::OctreeWriter;
 
+pub mod attribute_index;
 pub mod grid_cell_directory;
 pub mod lazy_node;
 pub mod live_metrics_collector;
@@ -76,7 +78,7 @@ struct Inner {
     max_bogus_leaf: usize,
     metrics: Arc<LiveMetricsCollector>,
     coordinate_system: CoordinateSystem,
-    //attribute_index: Option<AttributeIndex>,
+    attribute_index: AttributeIndex,
     //enable_histogram_acceleration: bool,
     //histogram_settings: HistogramSettings,
 }
@@ -98,6 +100,16 @@ impl Octree {
         };
         let metrics = Arc::new(metrics);
 
+        let mut attribute_index = AttributeIndex::new();
+
+        // just for testing.
+        // todo: Make configurable
+        if config.point_layout.has_attribute(&INTENSITY) {
+            let mut path = config.directory_file.clone();
+            path.set_file_name("intensity-index.bin");
+            attribute_index.add_index(INTENSITY, RangeIndex::<u16>::default(), path)?;
+        }
+
         Ok(Octree {
             inner: Arc::new(Inner {
                 subscriptions: Mutex::new(vec![]),
@@ -113,6 +125,7 @@ impl Octree {
                 priority_function: config.priority_function,
                 num_threads: config.num_threads,
                 coordinate_system: config.coordinate_system,
+                attribute_index,
             }),
         })
     }
@@ -129,7 +142,8 @@ impl Octree {
         let mut directory = self.inner.page_cache.directory();
         directory.write_to_file()?;
 
-        //debug!("Flushing attribute index");
+        debug!("Flushing attribute index");
+        self.inner.attribute_index.flush()?;
         //let attribute_index = &self.inner.attribute_index;
         //match attribute_index {
         //    Some(index) => index.write_to_file_if_dirty()?,

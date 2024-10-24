@@ -9,6 +9,7 @@ use pasture_core::containers::VectorBuffer;
 
 pub mod aabb;
 pub mod and;
+pub mod attribute;
 pub mod empty;
 pub mod full;
 pub mod lod;
@@ -111,11 +112,21 @@ impl NodeQueryResult {
         match self {
             NodeQueryResult::Negative => None,
             NodeQueryResult::Positive => Some(LoadKind::Full),
-            NodeQueryResult::Partial => if point_filtering {
-                Some(LoadKind::Filter)
-            } else {
-                Some(LoadKind::Full)
-            },
+            NodeQueryResult::Partial => {
+                if point_filtering {
+                    Some(LoadKind::Filter)
+                } else {
+                    Some(LoadKind::Full)
+                }
+            }
+        }
+    }
+
+    pub fn inverse(self) -> Self {
+        match self {
+            NodeQueryResult::Negative => NodeQueryResult::Positive,
+            NodeQueryResult::Positive => NodeQueryResult::Negative,
+            NodeQueryResult::Partial => NodeQueryResult::Partial,
         }
     }
 }

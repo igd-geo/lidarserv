@@ -285,6 +285,11 @@ impl OctreeWorkerThread {
         task: InsertionTask,
         is_max_lod: bool,
     ) -> Result<(Option<[(LeveledGridCell, VectorBuffer); 8]>, bool), IndexingThreadError> {
+        // update attribute indexes
+        for points in &task.points {
+            self.inner.attribute_index.index(node_id, points);
+        }
+
         // get points
         let _span = span!("OctreeWorkerThread::writer_task - get points");
         let node_arc = self.inner.page_cache.load_or_default(&node_id)?.get_node(

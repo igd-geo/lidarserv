@@ -21,12 +21,8 @@ impl<T> ExecutableQuery for NotQuery<T>
 where
     T: ExecutableQuery,
 {
-    fn matches_node(&self, node: crate::geometry::grid::LeveledGridCell) -> super::NodeQueryResult {
-        match self.0.matches_node(node) {
-            NodeQueryResult::Negative => NodeQueryResult::Positive,
-            NodeQueryResult::Positive => NodeQueryResult::Negative,
-            NodeQueryResult::Partial => NodeQueryResult::Partial,
-        }
+    fn matches_node(&self, node: crate::geometry::grid::LeveledGridCell) -> NodeQueryResult {
+        self.0.matches_node(node).inverse()
     }
 
     fn matches_points(
