@@ -35,12 +35,42 @@ pub trait IndexFunction {
     /// The resulting node should "contain" all attribute values of both input nodes.
     fn merge(&self, node1: &mut Self::NodeType, node2: Self::NodeType);
 
-    /// Evaluate the query for the node
-    fn test(
-        &self,
-        node: &Self::NodeType,
-        test: &TestFunction<Self::AttributeValue>,
-    ) -> NodeQueryResult;
+    /// Tests, if points in the node are equal to the given operand.
+    fn test_eq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult;
+
+    /// Tests, if points in the node are unequal to the given operand.
+    ///
+    /// For attributes that are non-scalar (color, point normals):
+    /// ALL components have to be unequal to the operand.
+    ///
+    /// This is unintuitive at first, but required for "complete" query possibilities.
+    /// Note, that for non-scalar attributes test_neq is different from not(test_eq).
+    /// The latter is probably what you intuitively would want in most case.
+    fn test_neq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult;
+
+    /// Tests, if points in the node are smaller than the given operand.
+    ///
+    /// For non-scalar attributes, ALL components need to be smaller than the operand components in order for a point to match.
+    /// Note that this is different from not(test_greater_eq), which would match if ANY of the components is smaller than a point.
+    fn test_less(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult;
+
+    /// Tests, if points in the node are smaller or equal to the given operand.
+    ///
+    /// For non-scalar attributes, ALL components need to be smaller or equal to the operand components.
+    /// Note that this is different from not(test_greater), which would match if ANY of the components are smaller or equal.
+    fn test_less_eq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult;
+
+    /// Tests, if points in the node are larger than the given operand.
+    ///
+    /// For non-scalar attributes, ALL components need to be larger than their corresponding operand components.
+    /// Note that this is different from not(test_less_eq), which would match if ANY of the components is larger.
+    fn test_greater(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult;
+
+    /// Tests, if points in the node are larger or equal to the given operand.
+    ///
+    /// For non-scalar attributes, ALL components need to be larger or equal to the operand components.
+    /// Note that this is different from not(test_less), which would match if ANY of the components are larger or equal.
+    fn test_greater_eq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult;
 }
 
 struct NodeManager<Idx, Node> {
@@ -172,7 +202,31 @@ where
         let nodes = self.nodes.read().unwrap();
         if let Some(node) = nodes.get(cell) {
             let node_lock = node.lock().unwrap();
-            self.index.test(&node_lock, &test)
+
+            match test {
+                TestFunction::Eq(o) => self.index.test_eq(&node_lock, o),
+                TestFunction::Neq(o) => self.index.test_neq(&node_lock, o),
+                TestFunction::Less(o) => self.index.test_less(&node_lock, o),
+                TestFunction::LessEq(o) => self.index.test_less_eq(&node_lock, o),
+                TestFunction::Greater(o) => self.index.test_greater(&node_lock, o),
+                TestFunction::GreaterEq(o) => self.index.test_greater_eq(&node_lock, o),
+                TestFunction::RangeExclusive(o, p) => self
+                    .index
+                    .test_greater(&node_lock, o)
+                    .and(self.index.test_less(&node_lock, p)),
+                TestFunction::RangeLeftInclusive(o, p) => self
+                    .index
+                    .test_greater_eq(&node_lock, o)
+                    .and(self.index.test_less(&node_lock, p)),
+                TestFunction::RangeRightInclusive(o, p) => self
+                    .index
+                    .test_greater(&node_lock, o)
+                    .and(self.index.test_less_eq(&node_lock, p)),
+                TestFunction::RangeAllInclusive(o, p) => self
+                    .index
+                    .test_greater_eq(&node_lock, o)
+                    .and(self.index.test_less_eq(&node_lock, p)),
+            }
         } else {
             NodeQueryResult::Negative
         }

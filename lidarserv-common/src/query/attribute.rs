@@ -16,7 +16,7 @@ pub enum TestFunction<T> {
     RangeExclusive(T, T),
     RangeLeftInclusive(T, T),
     RangeRightInclusive(T, T),
-    RangeInclusive(T, T),
+    RangeAllInclusive(T, T),
 }
 
 impl<T> TestFunction<T> {
@@ -36,7 +36,9 @@ impl<T> TestFunction<T> {
             TestFunction::RangeRightInclusive(t, u) => {
                 TestFunction::RangeRightInclusive(fun(t), fun(u))
             }
-            TestFunction::RangeInclusive(t, u) => TestFunction::RangeInclusive(fun(t), fun(u)),
+            TestFunction::RangeAllInclusive(t, u) => {
+                TestFunction::RangeAllInclusive(fun(t), fun(u))
+            }
         }
     }
 }
@@ -68,14 +70,15 @@ impl<'a> TestFunctionDyn<'a> {
         }
     }
 
-    /// Convert it back to a TestFunction<T>.
+    /// Convert it back to a TestFunction<&T>.
+    /// (Where &T is a reference into the original TestFunction)
     /// The T::data_type() must match self.datatype() - otherwise: panick!
-    pub fn convert_to<T: PrimitiveType>(&self) -> TestFunction<T> {
+    pub fn convert_to<T: PrimitiveType>(&self) -> TestFunction<&'a T> {
         let datatype = T::data_type();
         assert_eq!(datatype.size(), size_of::<T>() as u64);
         assert_eq!(datatype.min_alignment(), align_of::<T>() as u64);
         assert_eq!(datatype, self.datatype);
         self.test_function
-            .map(|data| bytemuck::cast_slice::<u8, T>(data)[0])
+            .map(|data| &bytemuck::cast_slice::<u8, T>(data)[0])
     }
 }

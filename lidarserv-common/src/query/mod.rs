@@ -129,4 +129,32 @@ impl NodeQueryResult {
             NodeQueryResult::Partial => NodeQueryResult::Partial,
         }
     }
+
+    pub fn and(self, other: Self) -> Self {
+        match (self, other) {
+            (NodeQueryResult::Negative, NodeQueryResult::Negative) => NodeQueryResult::Negative,
+            (NodeQueryResult::Negative, NodeQueryResult::Positive) => NodeQueryResult::Negative,
+            (NodeQueryResult::Negative, NodeQueryResult::Partial) => NodeQueryResult::Negative,
+            (NodeQueryResult::Positive, NodeQueryResult::Negative) => NodeQueryResult::Negative,
+            (NodeQueryResult::Positive, NodeQueryResult::Positive) => NodeQueryResult::Positive,
+            (NodeQueryResult::Positive, NodeQueryResult::Partial) => NodeQueryResult::Partial,
+            (NodeQueryResult::Partial, NodeQueryResult::Negative) => NodeQueryResult::Negative,
+            (NodeQueryResult::Partial, NodeQueryResult::Positive) => NodeQueryResult::Partial,
+            (NodeQueryResult::Partial, NodeQueryResult::Partial) => NodeQueryResult::Partial,
+        }
+    }
+
+    pub fn or(self, other: Self) -> Self {
+        match (self, other) {
+            (NodeQueryResult::Negative, NodeQueryResult::Negative) => NodeQueryResult::Negative,
+            (NodeQueryResult::Negative, NodeQueryResult::Positive) => NodeQueryResult::Positive,
+            (NodeQueryResult::Negative, NodeQueryResult::Partial) => NodeQueryResult::Partial,
+            (NodeQueryResult::Positive, NodeQueryResult::Negative) => NodeQueryResult::Positive,
+            (NodeQueryResult::Positive, NodeQueryResult::Positive) => NodeQueryResult::Positive,
+            (NodeQueryResult::Positive, NodeQueryResult::Partial) => NodeQueryResult::Positive,
+            (NodeQueryResult::Partial, NodeQueryResult::Negative) => NodeQueryResult::Partial,
+            (NodeQueryResult::Partial, NodeQueryResult::Positive) => NodeQueryResult::Positive,
+            (NodeQueryResult::Partial, NodeQueryResult::Partial) => NodeQueryResult::Partial,
+        }
+    }
 }

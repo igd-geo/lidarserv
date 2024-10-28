@@ -1,77 +1,82 @@
-use std::marker::PhantomData;
-
 use super::IndexFunction;
-use crate::query::{attribute::TestFunction, NodeQueryResult};
+use crate::query::NodeQueryResult;
 use nalgebra::{vector, Scalar, Vector3, Vector4};
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValueRange<T> {
-    min: T,
-    max: T,
-}
-
+/// A fixed-size (usually: 1, 3 or 4) vector of boolean values.
+/// Used to assert a component-wise condition on an point attribute value
+/// (in case of non-scalar attributes like color, or normals)
 trait BoolVec {
-    fn any(&self) -> bool;
-    fn all(&self) -> bool;
+    /// Component-wise logical and
     fn and(&self, other: &Self) -> Self;
+
+    /// Component-wise logical or
     fn or(&self, other: &Self) -> Self;
-    fn not(&self) -> Self;
+
+    /// Returns true, if at least one component is true.
+    fn any(&self) -> bool;
+
+    /// Returns true, if all components are true.
+    fn all(&self) -> bool;
 }
 
 impl BoolVec for bool {
+    #[inline]
     fn any(&self) -> bool {
         *self
     }
 
+    #[inline]
     fn all(&self) -> bool {
         *self
     }
 
+    #[inline]
     fn and(&self, other: &Self) -> Self {
         *self && *other
     }
 
+    #[inline]
     fn or(&self, other: &Self) -> Self {
         *self || *other
-    }
-
-    fn not(&self) -> Self {
-        !*self
     }
 }
 
 impl BoolVec for Vector3<bool> {
+    #[inline]
     fn any(&self) -> bool {
         self.x || self.y || self.z
     }
 
+    #[inline]
     fn all(&self) -> bool {
         self.x && self.y && self.z
     }
 
+    #[inline]
     fn and(&self, other: &Self) -> Self {
         vector![self.x && other.x, self.y && other.y, self.z && other.z,]
     }
 
+    #[inline]
     fn or(&self, other: &Self) -> Self {
         vector![self.x || other.x, self.y || other.y, self.z || other.z,]
-    }
-
-    fn not(&self) -> Self {
-        vector![!self.x, !self.y, !self.z,]
     }
 }
 
 impl BoolVec for Vector4<bool> {
+    #[inline]
     fn any(&self) -> bool {
         self.x || self.y || self.z || self.w
     }
 
+    #[inline]
     fn all(&self) -> bool {
         self.x && self.y && self.z && self.w
     }
 
+    #[inline]
     fn and(&self, other: &Self) -> Self {
         vector![
             self.x && other.x,
@@ -81,6 +86,7 @@ impl BoolVec for Vector4<bool> {
         ]
     }
 
+    #[inline]
     fn or(&self, other: &Self) -> Self {
         vector![
             self.x || other.x,
@@ -89,24 +95,43 @@ impl BoolVec for Vector4<bool> {
             self.w || other.w
         ]
     }
-
-    fn not(&self) -> Self {
-        vector![!self.x, !self.y, !self.z, !self.w]
-    }
 }
 
+/// Contains the operations on a point attribute type needed
+/// ny the range index.
 trait MinMax {
+    /// Smallest representable value of the type.
     const MIN: Self;
+
+    /// Largest representable value of the type.
     const MAX: Self;
 
+    /// Calculates the component-wise minimum between self and other,
+    /// and updates self accordingly.
     fn min_mut(&mut self, other: &Self);
+
+    /// Calculates the component-wise maximum between self and other,
+    /// and updates self accordingly.
     fn max_mut(&mut self, other: &Self);
 
+    /// Result type for the (component-wise) comparison operations below.
+    /// For scalar attributes, this will always be bool.
+    /// For vector attributes, this will be some VectorN<bool>.
     type Bool: BoolVec;
+
+    /// Component-wise equality check.
     fn is_eq(&self, other: &Self) -> Self::Bool;
+
+    /// Component-wise test if self is smaller then other.
     fn is_less(&self, other: &Self) -> Self::Bool;
+
+    /// Component-wise test if self is smaller or equal then other.
     fn is_less_eq(&self, other: &Self) -> Self::Bool;
+
+    /// Component-wise test if self is larger then other.
     fn is_greater(&self, other: &Self) -> Self::Bool;
+
+    /// Component-wise test if self is larger or equal then other.
     fn is_greater_eq(&self, other: &Self) -> Self::Bool;
 }
 
@@ -214,148 +239,99 @@ impl_minmax_int!(i32);
 impl_minmax_int!(u64);
 impl_minmax_int!(i64);
 
-impl<T> MinMax for Vector3<T>
-where
-    T: MinMax<Bool = bool> + Scalar,
-{
-    const MIN: Self = vector![T::MIN, T::MIN, T::MIN];
-    const MAX: Self = vector![T::MAX, T::MAX, T::MAX];
-
-    #[inline]
-    fn min_mut(&mut self, other: &Self) {
-        self.x.min_mut(&other.x);
-        self.y.min_mut(&other.y);
-        self.z.min_mut(&other.z);
-    }
-
-    #[inline]
-    fn max_mut(&mut self, other: &Self) {
-        self.x.max_mut(&other.x);
-        self.y.max_mut(&other.y);
-        self.z.max_mut(&other.z);
-    }
-
-    type Bool = Vector3<bool>;
-
-    #[inline]
-    fn is_eq(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_eq(&other.x),
-            self.y.is_eq(&other.y),
-            self.z.is_eq(&other.z),
-        ]
-    }
-
-    #[inline]
-    fn is_less(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_less(&other.x),
-            self.y.is_less(&other.y),
-            self.z.is_less(&other.z),
-        ]
-    }
-
-    #[inline]
-    fn is_less_eq(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_less_eq(&other.x),
-            self.y.is_less_eq(&other.y),
-            self.z.is_less_eq(&other.z),
-        ]
-    }
-
-    #[inline]
-    fn is_greater(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_greater(&other.x),
-            self.y.is_greater(&other.y),
-            self.z.is_greater(&other.z),
-        ]
-    }
-
-    #[inline]
-    fn is_greater_eq(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_greater_eq(&other.x),
-            self.y.is_greater_eq(&other.y),
-            self.z.is_greater_eq(&other.z),
-        ]
-    }
+macro_rules! myvec {
+    ($($ignore:tt : $value:expr),*) => {
+        vector![$($value),*]
+    };
 }
 
-impl<T> MinMax for Vector4<T>
-where
-    T: MinMax<Bool = bool> + Scalar,
-{
-    const MIN: Self = vector![T::MIN, T::MIN, T::MIN, T::MIN];
-    const MAX: Self = vector![T::MAX, T::MAX, T::MAX, T::MAX];
+macro_rules! impl_minmax_vec {
+    ($t:ident, $($f:ident)*) => {
+        impl<T> MinMax for $t<T>
+        where
+            T: MinMax<Bool = bool> + Scalar,
+        {
+            const MIN: Self = myvec![$($f: T::MIN),*];
+            const MAX: Self = myvec![$($f: T::MAX),*];
 
-    #[inline]
-    fn min_mut(&mut self, other: &Self) {
-        self.x.min_mut(&other.x);
-        self.y.min_mut(&other.y);
-        self.z.min_mut(&other.z);
-        self.w.min_mut(&other.w);
-    }
+            #[inline]
+            fn min_mut(&mut self, other: &Self) {
+                $(
+                    self.$f.min_mut(&other.$f);
+                )*
+            }
 
-    #[inline]
-    fn max_mut(&mut self, other: &Self) {
-        self.x.max_mut(&other.x);
-        self.y.max_mut(&other.y);
-        self.z.max_mut(&other.z);
-        self.w.max_mut(&other.w);
-    }
+            #[inline]
+            fn max_mut(&mut self, other: &Self) {
+                $(
+                    self.$f.max_mut(&other.$f);
+                )*
+            }
 
-    type Bool = Vector4<bool>;
+            type Bool = $t<bool>;
 
-    #[inline]
-    fn is_eq(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_eq(&other.x),
-            self.y.is_eq(&other.y),
-            self.z.is_eq(&other.z),
-            self.w.is_eq(&other.w),
-        ]
-    }
+            #[inline]
+            fn is_eq(&self, other: &Self) -> Self::Bool {
+                vector![
+                    $(
+                        self.$f.is_eq(&other.$f)
+                    ),*
+                ]
+            }
 
-    #[inline]
-    fn is_less(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_less(&other.x),
-            self.y.is_less(&other.y),
-            self.z.is_less(&other.z),
-            self.w.is_less(&other.w),
-        ]
-    }
+            #[inline]
+            fn is_less(&self, other: &Self) -> Self::Bool {
+                vector![
+                    $(
+                        self.$f.is_less(&other.$f)
+                    ),*
+                ]
+            }
 
-    #[inline]
-    fn is_less_eq(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_less_eq(&other.x),
-            self.y.is_less_eq(&other.y),
-            self.z.is_less_eq(&other.z),
-            self.w.is_less_eq(&other.w),
-        ]
-    }
+            #[inline]
+            fn is_less_eq(&self, other: &Self) -> Self::Bool {
+                vector![
+                    $(
+                        self.$f.is_less_eq(&other.$f)
+                    ),*
+                ]
+            }
 
-    #[inline]
-    fn is_greater(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_greater(&other.x),
-            self.y.is_greater(&other.y),
-            self.z.is_greater(&other.z),
-            self.w.is_greater(&other.w),
-        ]
-    }
+            #[inline]
+            fn is_greater(&self, other: &Self) -> Self::Bool {
+                vector![
+                    $(
+                        self.$f.is_greater(&other.$f)
+                    ),*
+                ]
+            }
 
-    #[inline]
-    fn is_greater_eq(&self, other: &Self) -> Self::Bool {
-        vector![
-            self.x.is_greater_eq(&other.x),
-            self.y.is_greater_eq(&other.y),
-            self.z.is_greater_eq(&other.z),
-            self.w.is_greater_eq(&other.w),
-        ]
+            #[inline]
+            fn is_greater_eq(&self, other: &Self) -> Self::Bool {
+                vector![
+                    $(
+                        self.$f.is_greater_eq(&other.$f)
+                    ),*
+                ]
+            }
+        }
+    };
+}
+
+impl_minmax_vec!(Vector3, x y z);
+impl_minmax_vec!(Vector4, x y z w);
+
+/// Inclusive range between min and max.
+/// Describes the range of values found in some octree node and its subtree.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValueRange<T> {
+    min: T,
+    max: T,
+}
+
+impl<T> ValueRange<T> {
+    pub fn new(min: T, max: T) -> Self {
+        ValueRange { min, max }
     }
 }
 
@@ -391,73 +367,615 @@ where
         node1.max.max_mut(&node2.max);
     }
 
-    fn test(&self, node: &Self::NodeType, test: &TestFunction<AttributeValue>) -> NodeQueryResult {
-        // todo unit tests!!!!!!
-        match test {
-            TestFunction::Eq(op) => {
-                if node.min.is_less_eq(op).all() && node.max.is_greater_eq(op).all() {
-                    if node.min.is_eq(op).all() && node.max.is_eq(op).all() {
-                        NodeQueryResult::Positive
-                    } else {
-                        NodeQueryResult::Partial
-                    }
-                } else {
-                    NodeQueryResult::Negative
-                }
-            }
-            TestFunction::Neq(op) => {
-                // todo i dont think this is correct...
-                if node.min.is_less_eq(op).all() && node.max.is_greater_eq(op).all() {
-                    if node.min.is_eq(op).all() && node.max.is_eq(op).all() {
-                        NodeQueryResult::Negative
-                    } else {
-                        NodeQueryResult::Partial
-                    }
-                } else {
-                    NodeQueryResult::Positive
-                }
-            }
-
-            TestFunction::Less(op) => {
-                if node.min.is_greater_eq(op).any() {
-                    NodeQueryResult::Negative
-                } else if node.max.is_less(op).all() {
-                    NodeQueryResult::Positive
-                } else {
-                    NodeQueryResult::Partial
-                }
-            }
-            TestFunction::LessEq(op) => {
-                if node.min.is_greater(op).any() {
-                    NodeQueryResult::Negative
-                } else if node.max.is_less_eq(op).all() {
-                    NodeQueryResult::Positive
-                } else {
-                    NodeQueryResult::Partial
-                }
-            }
-            TestFunction::Greater(op) => {
-                if node.max.is_less_eq(op).any() {
-                    NodeQueryResult::Negative
-                } else if node.min.is_greater(op).all() {
-                    NodeQueryResult::Positive
-                } else {
-                    NodeQueryResult::Partial
-                }
-            }
-            TestFunction::GreaterEq(op) => {
-                if node.max.is_less(op).any() {
-                    NodeQueryResult::Negative
-                } else if node.min.is_greater_eq(op).all() {
-                    NodeQueryResult::Positive
-                } else {
-                    NodeQueryResult::Partial
-                }
-            }
-            TestFunction::RangeExclusive(_, _) => todo!(),
-            TestFunction::RangeLeftInclusive(_, _) => todo!(),
-            TestFunction::RangeRightInclusive(_, _) => todo!(),
-            TestFunction::RangeInclusive(_, _) => todo!(),
+    fn test_eq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult {
+        if node.min.is_greater(op).or(&node.max.is_less(op)).any() {
+            return NodeQueryResult::Negative;
         }
+        if node.min.is_eq(op).all() && node.max.is_eq(op).all() {
+            return NodeQueryResult::Positive;
+        }
+        NodeQueryResult::Partial
+    }
+
+    fn test_neq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult {
+        if node.min.is_eq(op).and(&node.max.is_eq(op)).any() {
+            return NodeQueryResult::Negative;
+        }
+        if node.min.is_greater(op).or(&node.max.is_less(op)).all() {
+            return NodeQueryResult::Positive;
+        }
+        NodeQueryResult::Partial
+    }
+
+    fn test_less(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult {
+        if node.min.is_greater_eq(op).any() {
+            NodeQueryResult::Negative
+        } else if node.max.is_less(op).all() {
+            NodeQueryResult::Positive
+        } else {
+            NodeQueryResult::Partial
+        }
+    }
+
+    fn test_less_eq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult {
+        if node.min.is_greater(op).any() {
+            NodeQueryResult::Negative
+        } else if node.max.is_less_eq(op).all() {
+            NodeQueryResult::Positive
+        } else {
+            NodeQueryResult::Partial
+        }
+    }
+
+    fn test_greater(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult {
+        if node.max.is_less_eq(op).any() {
+            NodeQueryResult::Negative
+        } else if node.min.is_greater(op).all() {
+            NodeQueryResult::Positive
+        } else {
+            NodeQueryResult::Partial
+        }
+    }
+
+    fn test_greater_eq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult {
+        if node.max.is_less(op).any() {
+            NodeQueryResult::Negative
+        } else if node.min.is_greater_eq(op).all() {
+            NodeQueryResult::Positive
+        } else {
+            NodeQueryResult::Partial
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use nalgebra::{vector, Vector3};
+
+    use crate::{
+        index::attribute_index::{range_index::ValueRange, IndexFunction},
+        query::NodeQueryResult,
+    };
+
+    use super::RangeIndex;
+
+    #[test]
+    fn test_range_queries_scalar_eq() {
+        let idx = RangeIndex::<i32>::default();
+        assert_eq!(
+            idx.test_eq(&ValueRange::<i32>::new(1, 3), &5),
+            NodeQueryResult::Negative
+        );
+        assert_eq!(
+            idx.test_eq(&ValueRange::<i32>::new(1, 5), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_eq(&ValueRange::<i32>::new(1, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_eq(&ValueRange::<i32>::new(5, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_eq(&ValueRange::<i32>::new(6, 8), &5),
+            NodeQueryResult::Negative
+        );
+        assert_eq!(
+            idx.test_eq(&ValueRange::<i32>::new(5, 5), &5),
+            NodeQueryResult::Positive
+        );
+    }
+
+    #[test]
+    fn test_range_queries_scalar_neq() {
+        let idx = RangeIndex::<i32>::default();
+        assert_eq!(
+            idx.test_neq(&ValueRange::<i32>::new(1, 3), &5),
+            NodeQueryResult::Positive
+        );
+        assert_eq!(
+            idx.test_neq(&ValueRange::<i32>::new(1, 5), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_neq(&ValueRange::<i32>::new(1, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_neq(&ValueRange::<i32>::new(5, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_neq(&ValueRange::<i32>::new(6, 8), &5),
+            NodeQueryResult::Positive
+        );
+        assert_eq!(
+            idx.test_neq(&ValueRange::<i32>::new(5, 5), &5),
+            NodeQueryResult::Negative
+        );
+    }
+
+    #[test]
+    fn test_range_queries_scalar_less() {
+        let idx = RangeIndex::<i32>::default();
+        assert_eq!(
+            idx.test_less(&ValueRange::<i32>::new(1, 3), &5),
+            NodeQueryResult::Positive
+        );
+        assert_eq!(
+            idx.test_less(&ValueRange::<i32>::new(1, 5), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_less(&ValueRange::<i32>::new(1, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_less(&ValueRange::<i32>::new(5, 8), &5),
+            NodeQueryResult::Negative
+        );
+        assert_eq!(
+            idx.test_less(&ValueRange::<i32>::new(6, 8), &5),
+            NodeQueryResult::Negative
+        );
+        assert_eq!(
+            idx.test_less(&ValueRange::<i32>::new(5, 5), &5),
+            NodeQueryResult::Negative
+        );
+    }
+
+    #[test]
+    fn test_range_queries_scalar_lesseq() {
+        let idx = RangeIndex::<i32>::default();
+        assert_eq!(
+            idx.test_less_eq(&ValueRange::<i32>::new(1, 3), &5),
+            NodeQueryResult::Positive
+        );
+        assert_eq!(
+            idx.test_less_eq(&ValueRange::<i32>::new(1, 5), &5),
+            NodeQueryResult::Positive
+        );
+        assert_eq!(
+            idx.test_less_eq(&ValueRange::<i32>::new(1, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_less_eq(&ValueRange::<i32>::new(5, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_less_eq(&ValueRange::<i32>::new(6, 8), &5),
+            NodeQueryResult::Negative
+        );
+        assert_eq!(
+            idx.test_less_eq(&ValueRange::<i32>::new(5, 5), &5),
+            NodeQueryResult::Positive
+        );
+    }
+
+    #[test]
+    fn test_range_queries_scalar_greater() {
+        let idx = RangeIndex::<i32>::default();
+        assert_eq!(
+            idx.test_greater(&ValueRange::<i32>::new(1, 3), &5),
+            NodeQueryResult::Negative
+        );
+        assert_eq!(
+            idx.test_greater(&ValueRange::<i32>::new(1, 5), &5),
+            NodeQueryResult::Negative
+        );
+        assert_eq!(
+            idx.test_greater(&ValueRange::<i32>::new(1, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_greater(&ValueRange::<i32>::new(5, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_greater(&ValueRange::<i32>::new(6, 8), &5),
+            NodeQueryResult::Positive
+        );
+        assert_eq!(
+            idx.test_greater(&ValueRange::<i32>::new(5, 5), &5),
+            NodeQueryResult::Negative
+        );
+    }
+
+    #[test]
+    fn test_range_queries_scalar_greatereq() {
+        let idx = RangeIndex::<i32>::default();
+        assert_eq!(
+            idx.test_greater_eq(&ValueRange::<i32>::new(1, 3), &5),
+            NodeQueryResult::Negative
+        );
+        assert_eq!(
+            idx.test_greater_eq(&ValueRange::<i32>::new(1, 5), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_greater_eq(&ValueRange::<i32>::new(1, 8), &5),
+            NodeQueryResult::Partial
+        );
+        assert_eq!(
+            idx.test_greater_eq(&ValueRange::<i32>::new(5, 8), &5),
+            NodeQueryResult::Positive
+        );
+        assert_eq!(
+            idx.test_greater_eq(&ValueRange::<i32>::new(6, 8), &5),
+            NodeQueryResult::Positive
+        );
+        assert_eq!(
+            idx.test_greater_eq(&ValueRange::<i32>::new(5, 5), &5),
+            NodeQueryResult::Positive
+        );
+    }
+
+    #[test]
+    fn test_range_queries_vec_test_neq() {
+        let idx = RangeIndex::<Vector3<i32>>::default();
+
+        assert_eq!(
+            idx.test_neq(
+                &ValueRange::new(vector![1, 7, 1], vector![2, 8, 2]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Positive
+        );
+
+        assert_eq!(
+            idx.test_neq(
+                &ValueRange::new(vector![5, 5, 5], vector![5, 5, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_neq(
+                &ValueRange::new(vector![1, 1, 5], vector![5, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_neq(
+                &ValueRange::new(vector![7, 5, 5], vector![8, 5, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_neq(
+                &ValueRange::new(vector![5, 1, 1], vector![5, 5, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_neq(
+                &ValueRange::new(vector![5, 1, 7], vector![8, 2, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_neq(
+                &ValueRange::new(vector![7, 5, 5], vector![8, 5, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+    }
+
+    #[test]
+    fn test_range_queries_vec_test_eq() {
+        let idx = RangeIndex::<Vector3<i32>>::default();
+
+        assert_eq!(
+            idx.test_eq(
+                &ValueRange::new(vector![5, 5, 5], vector![5, 5, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Positive
+        );
+
+        assert_eq!(
+            idx.test_eq(
+                &ValueRange::new(vector![1, 7, 7], vector![2, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_eq(
+                &ValueRange::new(vector![1, 1, 5], vector![5, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_eq(
+                &ValueRange::new(vector![5, 1, 7], vector![5, 2, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_eq(
+                &ValueRange::new(vector![1, 1, 1], vector![2, 5, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_eq(
+                &ValueRange::new(vector![5, 5, 5], vector![8, 5, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_eq(
+                &ValueRange::new(vector![5, 7, 5], vector![5, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+    }
+
+    #[test]
+    fn test_range_queries_vec_test_greater_eq() {
+        let idx = RangeIndex::<Vector3<i32>>::default();
+
+        assert_eq!(
+            idx.test_greater_eq(
+                &ValueRange::new(vector![5, 7, 5], vector![8, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Positive
+        );
+
+        assert_eq!(
+            idx.test_greater_eq(
+                &ValueRange::new(vector![1, 1, 1], vector![2, 2, 2]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_greater_eq(
+                &ValueRange::new(vector![1, 1, 5], vector![5, 8, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_greater_eq(
+                &ValueRange::new(vector![7, 1, 1], vector![8, 2, 2]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_greater_eq(
+                &ValueRange::new(vector![1, 1, 1], vector![2, 5, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_greater_eq(
+                &ValueRange::new(vector![1, 5, 7], vector![5, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_greater_eq(
+                &ValueRange::new(vector![7, 1, 5], vector![8, 2, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+    }
+
+    #[test]
+    fn test_range_queries_vec_test_greater() {
+        let idx = RangeIndex::<Vector3<i32>>::default();
+
+        assert_eq!(
+            idx.test_greater(
+                &ValueRange::new(vector![7, 7, 7], vector![8, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Positive
+        );
+
+        assert_eq!(
+            idx.test_greater(
+                &ValueRange::new(vector![1, 1, 5], vector![2, 5, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_greater(
+                &ValueRange::new(vector![1, 5, 5], vector![8, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_greater(
+                &ValueRange::new(vector![7, 1, 1], vector![8, 2, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_greater(
+                &ValueRange::new(vector![5, 1, 1], vector![5, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_greater(
+                &ValueRange::new(vector![5, 7, 7], vector![8, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_greater(
+                &ValueRange::new(vector![7, 5, 5], vector![8, 5, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+    }
+
+    #[test]
+    fn test_range_queries_vec_test_less() {
+        let idx = RangeIndex::<Vector3<i32>>::default();
+
+        assert_eq!(
+            idx.test_less(
+                &ValueRange::new(vector![1, 1, 1], vector![2, 2, 2]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Positive
+        );
+
+        assert_eq!(
+            idx.test_less(
+                &ValueRange::new(vector![5, 5, 7], vector![5, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_less(
+                &ValueRange::new(vector![1, 1, 1], vector![5, 8, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_less(
+                &ValueRange::new(vector![1, 5, 5], vector![2, 5, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_less(
+                &ValueRange::new(vector![7, 1, 1], vector![8, 5, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_less(
+                &ValueRange::new(vector![1, 1, 1], vector![5, 2, 2]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_less(
+                &ValueRange::new(vector![1, 5, 1], vector![2, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+    }
+
+    #[test]
+    fn test_range_queries_vec_test_less_eq() {
+        let idx = RangeIndex::<Vector3<i32>>::default();
+
+        assert_eq!(
+            idx.test_less_eq(
+                &ValueRange::new(vector![1, 1, 1], vector![2, 5, 2]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Positive
+        );
+
+        assert_eq!(
+            idx.test_less_eq(
+                &ValueRange::new(vector![7, 7, 7], vector![8, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_less_eq(
+                &ValueRange::new(vector![1, 5, 5], vector![8, 5, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_less_eq(
+                &ValueRange::new(vector![1, 7, 7], vector![5, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_less_eq(
+                &ValueRange::new(vector![7, 1, 5], vector![8, 8, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
+
+        assert_eq!(
+            idx.test_less_eq(
+                &ValueRange::new(vector![5, 1, 1], vector![8, 2, 5]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Partial
+        );
+
+        assert_eq!(
+            idx.test_less_eq(
+                &ValueRange::new(vector![1, 7, 5], vector![5, 8, 8]),
+                &vector![5, 5, 5]
+            ),
+            NodeQueryResult::Negative
+        );
     }
 }
