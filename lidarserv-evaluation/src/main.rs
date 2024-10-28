@@ -25,6 +25,7 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{Read, SeekFrom, Write},
+    panic::catch_unwind,
     path::{Path, PathBuf},
     process::ExitCode,
     sync::OnceLock,
@@ -201,87 +202,102 @@ pub fn processor_cooldown(base_config: &Base) {
 }
 
 fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, anyhow::Error> {
-    // reset data folder if necessary
-    if !base_config.use_existing_index {
-        reset_data_folder(base_config)?;
-    }
+    let unwind_result = catch_unwind(|| {
+        // reset data folder if necessary
+        if !base_config.use_existing_index {
+            reset_data_folder(base_config)?;
+        }
 
-    // open input file
-    let raw_input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
-    let trans = raw_input_file.header().transforms();
-    let src_coordinate_system = CoordinateSystem::from_las_transform(
-        vector![trans.x.scale, trans.y.scale, trans.z.scale],
-        vector![trans.x.offset, trans.y.offset, trans.z.offset],
-    );
-    let point_layout = base_config.attributes.point_layout();
-    let coordinate_system = base_config.coordinate_system;
-    let mut input_file = ConvertingPointReader::new(
-        raw_input_file,
-        src_coordinate_system,
-        point_layout.clone(),
-        coordinate_system,
-        MissingAttributesStrategy::ZeroInitializeAndWarn,
-    )?;
-
-    // Create index
-    let mut index = Octree::new(OctreeParams {
-        directory_file: base_config.index_folder_absolute().join("directory.bin"),
-        point_data_folder: base_config.index_folder_absolute(),
-        metrics_file: None,
-        point_layout,
-        node_hierarchy: GridHierarchy::new(index_config.node_hierarchy),
-        point_hierarchy: GridHierarchy::new(index_config.point_hierarchy),
-        coordinate_system,
-        max_lod: LodLevel::from_level(index_config.max_lod),
-        max_bogus_inner: index_config.nr_bogus_points.0,
-        max_bogus_leaf: index_config.nr_bogus_points.1,
-        enable_compression: index_config.compression,
-        max_cache_size: index_config.cache_size,
-        priority_function: index_config.priority_function,
-        num_threads: index_config.num_threads,
-    })?;
-
-    // measure insertion rate
-    let mut result_insertion_rate = serde_json::Value::Null;
-    if !base_config.use_existing_index {
-        processor_cooldown(base_config);
-        info!("Measuring insertion rate...");
-        input_file.seek_point(SeekFrom::Start(0))?;
-        let inner_result_insertion_rate = measure_insertion_rate(
-            &mut index,
-            &mut input_file,
-            base_config.target_point_pressure,
-            base_config
-                .indexing_timeout_seconds
-                .map(Duration::from_secs),
+        // open input file
+        let raw_input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
+        let trans = raw_input_file.header().transforms();
+        let src_coordinate_system = CoordinateSystem::from_las_transform(
+            vector![trans.x.scale, trans.y.scale, trans.z.scale],
+            vector![trans.x.offset, trans.y.offset, trans.z.offset],
+        );
+        let point_layout = base_config.attributes.point_layout();
+        let coordinate_system = base_config.coordinate_system;
+        let mut input_file = ConvertingPointReader::new(
+            raw_input_file,
+            src_coordinate_system,
+            point_layout.clone(),
+            coordinate_system,
+            MissingAttributesStrategy::ZeroInitializeAndWarn,
         )?;
-        info!("Results: {}", &inner_result_insertion_rate);
-        result_insertion_rate = inner_result_insertion_rate;
-    }
 
-    // measure query performance
-    let mut query_perf_results = HashMap::new();
-    for (query_name, query) in &base_config.queries {
-        processor_cooldown(base_config);
-        info!("Measuring query perf: {query_name}: {query}");
-        let sensorpos_query_perf = measure_one_query(&mut index, query);
-        query_perf_results.insert(query_name.clone(), sensorpos_query_perf);
-    }
-    let result_query_perf = if !query_perf_results.is_empty() {
-        let result = json!(query_perf_results);
-        info!("Results: {}", &result);
-        result
-    } else {
-        drop(index);
-        serde_json::Value::Null
-    };
+        // Create index
+        let mut index = Octree::new(OctreeParams {
+            directory_file: base_config.index_folder_absolute().join("directory.bin"),
+            point_data_folder: base_config.index_folder_absolute(),
+            metrics_file: None,
+            point_layout,
+            node_hierarchy: GridHierarchy::new(index_config.node_hierarchy),
+            point_hierarchy: GridHierarchy::new(index_config.point_hierarchy),
+            coordinate_system,
+            max_lod: LodLevel::from_level(index_config.max_lod),
+            max_bogus_inner: index_config.nr_bogus_points.0,
+            max_bogus_leaf: index_config.nr_bogus_points.1,
+            enable_compression: index_config.compression,
+            max_cache_size: index_config.cache_size,
+            priority_function: index_config.priority_function,
+            num_threads: index_config.num_threads,
+        })?;
 
-    Ok(json!({
-        //"index_info": index_info, // TODO
-        //"latency": results_latency,   // TODO
-        "insertion_rate": result_insertion_rate,
-        "query_performance": result_query_perf
-    }))
+        // measure insertion rate
+        let mut result_insertion_rate = serde_json::Value::Null;
+        if !base_config.use_existing_index {
+            processor_cooldown(base_config);
+            info!("Measuring insertion rate...");
+            input_file.seek_point(SeekFrom::Start(0))?;
+            let inner_result_insertion_rate = measure_insertion_rate(
+                &mut index,
+                &mut input_file,
+                base_config.target_point_pressure,
+                base_config
+                    .indexing_timeout_seconds
+                    .map(Duration::from_secs),
+            )?;
+            info!("Results: {}", &inner_result_insertion_rate);
+            result_insertion_rate = inner_result_insertion_rate;
+        }
+
+        // measure query performance
+        let mut query_perf_results = HashMap::new();
+        for (query_name, query) in &base_config.queries {
+            processor_cooldown(base_config);
+            info!("Measuring query perf: {query_name}: {query}");
+            let sensorpos_query_perf = measure_one_query(&mut index, query);
+            query_perf_results.insert(query_name.clone(), sensorpos_query_perf);
+        }
+        let result_query_perf = if !query_perf_results.is_empty() {
+            let result = json!(query_perf_results);
+            info!("Results: {}", &result);
+            result
+        } else {
+            drop(index);
+            serde_json::Value::Null
+        };
+
+        Ok(json!({
+            //"index_info": index_info, // TODO
+            //"latency": results_latency,   // TODO
+            "insertion_rate": result_insertion_rate,
+            "query_performance": result_query_perf
+        }))
+    });
+
+    match unwind_result {
+        Ok(o) => o,
+        Err(e) => {
+            if let Some(e) = e.downcast_ref::<String>() {
+                Err(anyhow!("Panick! ({e})"))
+            } else if let Some(e) = e.downcast_ref::<&str>() {
+                Err(anyhow!("Panick! ({e})"))
+            } else {
+                Err(anyhow!("Panick!"))
+            }
+        }
+    }
 }
 
 pub fn prettyprint_index_run(multi: &MultiIndex, index: &SingleIndex) {
