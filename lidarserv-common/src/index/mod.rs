@@ -1,4 +1,4 @@
-use self::attribute_index::{range_index::RangeIndex, AttributeIndex};
+use self::attribute_index::AttributeIndex;
 use crate::{
     geometry::{
         coordinate_system::CoordinateSystem,
@@ -11,12 +11,13 @@ use crate::{
     lru_cache::pager::PageManager,
     query::Query,
 };
+use attribute_index::config::AttributeIndexConfig;
 use grid_cell_directory::GridCellDirectory;
 use lazy_node::LazyNode;
 use live_metrics_collector::LiveMetricsCollector;
 use log::debug;
 use page_loader::OctreeLoader;
-use pasture_core::layout::{attributes::INTENSITY, PointLayout};
+use pasture_core::layout::PointLayout;
 use priority_function::TaskPriorityFunction;
 use reader::OctreeReader;
 use std::{
@@ -55,6 +56,9 @@ pub struct OctreeParams {
     pub max_cache_size: usize,
     pub priority_function: TaskPriorityFunction,
     pub num_threads: u16,
+
+    // attribute indexing
+    pub attribute_indexes: Vec<AttributeIndexConfig>,
 }
 
 pub struct Octree {
@@ -101,13 +105,12 @@ impl Octree {
         let metrics = Arc::new(metrics);
 
         let mut attribute_index = AttributeIndex::new();
-
-        // just for testing.
-        // todo: Make configurable
-        if config.point_layout.has_attribute(&INTENSITY) {
-            let mut path = config.directory_file.clone();
-            path.set_file_name("intensity-index.bin");
-            attribute_index.add_index(INTENSITY, RangeIndex::<u16>::default(), path)?;
+        for attribute_index_cfg in config.attribute_indexes {
+            attribute_index.add_index_from_config(
+                attribute_index_cfg.attribute,
+                &attribute_index_cfg.index,
+                attribute_index_cfg.path,
+            )?
         }
 
         Ok(Octree {

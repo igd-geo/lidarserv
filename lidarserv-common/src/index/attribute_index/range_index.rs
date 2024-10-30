@@ -1,104 +1,14 @@
-use super::IndexFunction;
+use super::{
+    utils::{boolvec::BoolVec, cmp::ComponentwiseCmp},
+    IndexFunction,
+};
 use crate::query::NodeQueryResult;
-use nalgebra::{vector, Scalar, Vector3, Vector4};
+use nalgebra::{ArrayStorage, SVector, Scalar};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
-/// A fixed-size (usually: 1, 3 or 4) vector of boolean values.
-/// Used to assert a component-wise condition on an point attribute value
-/// (in case of non-scalar attributes like color, or normals)
-trait BoolVec {
-    /// Component-wise logical and
-    fn and(&self, other: &Self) -> Self;
-
-    /// Component-wise logical or
-    fn or(&self, other: &Self) -> Self;
-
-    /// Returns true, if at least one component is true.
-    fn any(&self) -> bool;
-
-    /// Returns true, if all components are true.
-    fn all(&self) -> bool;
-}
-
-impl BoolVec for bool {
-    #[inline]
-    fn any(&self) -> bool {
-        *self
-    }
-
-    #[inline]
-    fn all(&self) -> bool {
-        *self
-    }
-
-    #[inline]
-    fn and(&self, other: &Self) -> Self {
-        *self && *other
-    }
-
-    #[inline]
-    fn or(&self, other: &Self) -> Self {
-        *self || *other
-    }
-}
-
-impl BoolVec for Vector3<bool> {
-    #[inline]
-    fn any(&self) -> bool {
-        self.x || self.y || self.z
-    }
-
-    #[inline]
-    fn all(&self) -> bool {
-        self.x && self.y && self.z
-    }
-
-    #[inline]
-    fn and(&self, other: &Self) -> Self {
-        vector![self.x && other.x, self.y && other.y, self.z && other.z,]
-    }
-
-    #[inline]
-    fn or(&self, other: &Self) -> Self {
-        vector![self.x || other.x, self.y || other.y, self.z || other.z,]
-    }
-}
-
-impl BoolVec for Vector4<bool> {
-    #[inline]
-    fn any(&self) -> bool {
-        self.x || self.y || self.z || self.w
-    }
-
-    #[inline]
-    fn all(&self) -> bool {
-        self.x && self.y && self.z && self.w
-    }
-
-    #[inline]
-    fn and(&self, other: &Self) -> Self {
-        vector![
-            self.x && other.x,
-            self.y && other.y,
-            self.z && other.z,
-            self.w && other.w
-        ]
-    }
-
-    #[inline]
-    fn or(&self, other: &Self) -> Self {
-        vector![
-            self.x || other.x,
-            self.y || other.y,
-            self.z || other.z,
-            self.w || other.w
-        ]
-    }
-}
-
 /// Contains the operations on a point attribute type needed
-/// ny the range index.
+/// by the range index.
 trait MinMax {
     /// Smallest representable value of the type.
     const MIN: Self;
@@ -113,26 +23,6 @@ trait MinMax {
     /// Calculates the component-wise maximum between self and other,
     /// and updates self accordingly.
     fn max_mut(&mut self, other: &Self);
-
-    /// Result type for the (component-wise) comparison operations below.
-    /// For scalar attributes, this will always be bool.
-    /// For vector attributes, this will be some VectorN<bool>.
-    type Bool: BoolVec;
-
-    /// Component-wise equality check.
-    fn is_eq(&self, other: &Self) -> Self::Bool;
-
-    /// Component-wise test if self is smaller then other.
-    fn is_less(&self, other: &Self) -> Self::Bool;
-
-    /// Component-wise test if self is smaller or equal then other.
-    fn is_less_eq(&self, other: &Self) -> Self::Bool;
-
-    /// Component-wise test if self is larger then other.
-    fn is_greater(&self, other: &Self) -> Self::Bool;
-
-    /// Component-wise test if self is larger or equal then other.
-    fn is_greater_eq(&self, other: &Self) -> Self::Bool;
 }
 
 macro_rules! impl_minmax_float {
@@ -149,33 +39,6 @@ macro_rules! impl_minmax_float {
             #[inline]
             fn max_mut(&mut self, other: &Self) {
                 *self = self.max(*other);
-            }
-
-            type Bool = bool;
-
-            #[inline]
-            fn is_eq(&self, other: &Self) -> Self::Bool {
-                *self == *other
-            }
-
-            #[inline]
-            fn is_less(&self, other: &Self) -> Self::Bool {
-                *self < *other
-            }
-
-            #[inline]
-            fn is_less_eq(&self, other: &Self) -> Self::Bool {
-                *self <= *other
-            }
-
-            #[inline]
-            fn is_greater(&self, other: &Self) -> Self::Bool {
-                *self > *other
-            }
-
-            #[inline]
-            fn is_greater_eq(&self, other: &Self) -> Self::Bool {
-                *self >= *other
             }
         }
     };
@@ -199,33 +62,6 @@ macro_rules! impl_minmax_int {
             fn max_mut(&mut self, other: &Self) {
                 *self = (*self).max(*other);
             }
-
-            type Bool = bool;
-
-            #[inline]
-            fn is_eq(&self, other: &Self) -> Self::Bool {
-                *self == *other
-            }
-
-            #[inline]
-            fn is_less(&self, other: &Self) -> Self::Bool {
-                *self < *other
-            }
-
-            #[inline]
-            fn is_less_eq(&self, other: &Self) -> Self::Bool {
-                *self <= *other
-            }
-
-            #[inline]
-            fn is_greater(&self, other: &Self) -> Self::Bool {
-                *self > *other
-            }
-
-            #[inline]
-            fn is_greater_eq(&self, other: &Self) -> Self::Bool {
-                *self >= *other
-            }
         }
     };
 }
@@ -239,87 +75,31 @@ impl_minmax_int!(i32);
 impl_minmax_int!(u64);
 impl_minmax_int!(i64);
 
-macro_rules! myvec {
-    ($($ignore:tt : $value:expr),*) => {
-        vector![$($value),*]
-    };
+impl<T, const D: usize> MinMax for SVector<T, D>
+where
+    T: MinMax + Scalar,
+{
+    const MIN: Self = SVector::from_array_storage(ArrayStorage([[T::MIN; D]; 1]));
+    const MAX: Self = SVector::from_array_storage(ArrayStorage([[T::MAX; D]; 1]));
+
+    #[inline]
+    fn min_mut(&mut self, other: &Self) {
+        self.zip_apply(
+            other,
+            #[inline]
+            |l, r| l.min_mut(&r),
+        );
+    }
+
+    #[inline]
+    fn max_mut(&mut self, other: &Self) {
+        self.zip_apply(
+            other,
+            #[inline]
+            |l, r| l.max_mut(&r),
+        );
+    }
 }
-
-macro_rules! impl_minmax_vec {
-    ($t:ident, $($f:ident)*) => {
-        impl<T> MinMax for $t<T>
-        where
-            T: MinMax<Bool = bool> + Scalar,
-        {
-            const MIN: Self = myvec![$($f: T::MIN),*];
-            const MAX: Self = myvec![$($f: T::MAX),*];
-
-            #[inline]
-            fn min_mut(&mut self, other: &Self) {
-                $(
-                    self.$f.min_mut(&other.$f);
-                )*
-            }
-
-            #[inline]
-            fn max_mut(&mut self, other: &Self) {
-                $(
-                    self.$f.max_mut(&other.$f);
-                )*
-            }
-
-            type Bool = $t<bool>;
-
-            #[inline]
-            fn is_eq(&self, other: &Self) -> Self::Bool {
-                vector![
-                    $(
-                        self.$f.is_eq(&other.$f)
-                    ),*
-                ]
-            }
-
-            #[inline]
-            fn is_less(&self, other: &Self) -> Self::Bool {
-                vector![
-                    $(
-                        self.$f.is_less(&other.$f)
-                    ),*
-                ]
-            }
-
-            #[inline]
-            fn is_less_eq(&self, other: &Self) -> Self::Bool {
-                vector![
-                    $(
-                        self.$f.is_less_eq(&other.$f)
-                    ),*
-                ]
-            }
-
-            #[inline]
-            fn is_greater(&self, other: &Self) -> Self::Bool {
-                vector![
-                    $(
-                        self.$f.is_greater(&other.$f)
-                    ),*
-                ]
-            }
-
-            #[inline]
-            fn is_greater_eq(&self, other: &Self) -> Self::Bool {
-                vector![
-                    $(
-                        self.$f.is_greater_eq(&other.$f)
-                    ),*
-                ]
-            }
-        }
-    };
-}
-
-impl_minmax_vec!(Vector3, x y z);
-impl_minmax_vec!(Vector4, x y z w);
 
 /// Inclusive range between min and max.
 /// Describes the range of values found in some octree node and its subtree.
@@ -335,6 +115,7 @@ impl<T> ValueRange<T> {
     }
 }
 
+/// Attribute indexer that calculates the range of attribute values in each subtree.
 pub struct RangeIndex<AttributeValue>(PhantomData<AttributeValue>);
 
 impl<AttributeValue> Default for RangeIndex<AttributeValue> {
@@ -345,7 +126,7 @@ impl<AttributeValue> Default for RangeIndex<AttributeValue> {
 
 impl<AttributeValue> IndexFunction for RangeIndex<AttributeValue>
 where
-    AttributeValue: MinMax,
+    AttributeValue: MinMax + ComponentwiseCmp,
 {
     type NodeType = ValueRange<AttributeValue>;
     type AttributeValue = AttributeValue;

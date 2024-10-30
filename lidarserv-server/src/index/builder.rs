@@ -17,6 +17,7 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Octree> {
         priority_function,
         num_threads,
         point_layout,
+        mut attribute_indexes,
     } = settings;
 
     // metrics
@@ -32,6 +33,11 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Octree> {
     } else {
         None
     };
+
+    // attr idx
+    for attribute_index in &mut attribute_indexes {
+        attribute_index.path = data_path.join(&attribute_index.path);
+    }
 
     // build octree
     Octree::new(OctreeParams {
@@ -49,5 +55,6 @@ pub fn build(settings: IndexSettings, data_path: &Path) -> Result<Octree> {
         max_cache_size,
         priority_function,
         num_threads,
+        attribute_indexes,
     })
 }

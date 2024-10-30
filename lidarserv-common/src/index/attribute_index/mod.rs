@@ -1,8 +1,12 @@
+use config::IndexKind;
+use nalgebra::{Vector3, Vector4};
 use pasture_core::{
     containers::{BorrowedBufferExt, VectorBuffer},
-    layout::{PointAttributeDefinition, PrimitiveType},
+    layout::{PointAttributeDataType, PointAttributeDefinition, PrimitiveType},
 };
+use range_index::RangeIndex;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use sfc_index::SfcIndex;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fs::File,
@@ -21,7 +25,10 @@ use crate::{
     },
 };
 
+pub mod config;
 pub mod range_index;
+pub mod sfc_index;
+mod utils;
 
 pub trait IndexFunction {
     type AttributeValue;
@@ -87,6 +94,9 @@ pub enum AttributeIndexError {
 
     #[error("The node file {0} is corrupt.")]
     Corrupt(PathBuf),
+
+    #[error("The index config is invalid: {0}")]
+    Config(String),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -286,6 +296,154 @@ impl AttributeIndex {
         let by_attr = self.by_attribute.entry(attribute).or_default();
         by_attr.push(Box::new(NodeManager::load_or_create(index, path)?));
         Ok(())
+    }
+
+    pub fn add_index_from_config(
+        &mut self,
+        attribute: PointAttributeDefinition,
+        index: &IndexKind,
+        path: PathBuf,
+    ) -> Result<(), AttributeIndexError> {
+        macro_rules! add_index_common_attr_types {
+            ($addto:expr, $attribute:expr, $path:expr, $makeidx:expr) => {{
+                let attribute = $attribute;
+                let addto = $addto;
+                let path = $path;
+                match attribute.datatype() {
+                    PointAttributeDataType::U8 => {
+                        type T = u8;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::I8 => {
+                        type T = i8;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::U16 => {
+                        type T = u16;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::I16 => {
+                        type T = i16;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::U32 => {
+                        type T = u32;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::I32 => {
+                        type T = i32;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::U64 => {
+                        type T = u64;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::I64 => {
+                        type T = i64;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::F32 => {
+                        type T = f32;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::F64 => {
+                        type T = f64;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::Vec3u8 => {
+                        type T = Vector3<u8>;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::Vec3u16 => {
+                        type T = Vector3<u16>;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::Vec3f32 => {
+                        type T = Vector3<f32>;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::Vec3i32 => {
+                        type T = Vector3<i32>;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::Vec3f64 => {
+                        type T = Vector3<f64>;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::Vec4u8 => {
+                        type T = Vector4<u8>;
+                        addto.add_index(attribute, $makeidx, path)
+                    }
+                    PointAttributeDataType::ByteArray(_) => Err(AttributeIndexError::Config(
+                        "Byte arrays are not supported.".to_string(),
+                    )),
+                    PointAttributeDataType::Custom { .. } => Err(AttributeIndexError::Config(
+                        "Custom datatype is not supported.".to_string(),
+                    )),
+                }
+            }};
+        }
+
+        match index {
+            IndexKind::RangeIndex => {
+                add_index_common_attr_types!(self, attribute, path, RangeIndex::<T>::default())
+            }
+            IndexKind::SfcIndex(sfc_options) => {
+                fn add_sfc_index<const BINS: usize>(
+                    add_to: &mut AttributeIndex,
+                    attribute: PointAttributeDefinition,
+                    path: PathBuf,
+                ) -> Result<(), AttributeIndexError> {
+                    add_index_common_attr_types!(
+                        add_to,
+                        attribute,
+                        path,
+                        SfcIndex::<T, BINS>::new()
+                    )
+                }
+
+                match sfc_options.nr_bins {
+                    0 => Err(AttributeIndexError::Config(
+                        "SfcIndex must have at least one bin.".to_string(),
+                    )),
+                    1 => add_sfc_index::<1>(self, attribute, path),
+                    2 => add_sfc_index::<2>(self, attribute, path),
+                    3 => add_sfc_index::<3>(self, attribute, path),
+                    4 => add_sfc_index::<4>(self, attribute, path),
+                    5 => add_sfc_index::<5>(self, attribute, path),
+                    6 => add_sfc_index::<6>(self, attribute, path),
+                    7 => add_sfc_index::<7>(self, attribute, path),
+                    8 => add_sfc_index::<8>(self, attribute, path),
+                    9 => add_sfc_index::<9>(self, attribute, path),
+                    10 => add_sfc_index::<10>(self, attribute, path),
+                    11 => add_sfc_index::<11>(self, attribute, path),
+                    12 => add_sfc_index::<12>(self, attribute, path),
+                    13 => add_sfc_index::<13>(self, attribute, path),
+                    14 => add_sfc_index::<14>(self, attribute, path),
+                    15 => add_sfc_index::<15>(self, attribute, path),
+                    16 => add_sfc_index::<16>(self, attribute, path),
+                    17 => add_sfc_index::<17>(self, attribute, path),
+                    18 => add_sfc_index::<18>(self, attribute, path),
+                    19 => add_sfc_index::<19>(self, attribute, path),
+                    20 => add_sfc_index::<20>(self, attribute, path),
+                    21 => add_sfc_index::<21>(self, attribute, path),
+                    22 => add_sfc_index::<22>(self, attribute, path),
+                    23 => add_sfc_index::<23>(self, attribute, path),
+                    24 => add_sfc_index::<24>(self, attribute, path),
+                    25 => add_sfc_index::<25>(self, attribute, path),
+                    26 => add_sfc_index::<26>(self, attribute, path),
+                    27 => add_sfc_index::<27>(self, attribute, path),
+                    28 => add_sfc_index::<28>(self, attribute, path),
+                    29 => add_sfc_index::<29>(self, attribute, path),
+                    30 => add_sfc_index::<30>(self, attribute, path),
+                    31 => add_sfc_index::<31>(self, attribute, path),
+                    32 => add_sfc_index::<32>(self, attribute, path),
+                    _ => Err(AttributeIndexError::Config(
+                        "SfcIndex only supports up to 32 bins.".to_string(),
+                    )),
+                }
+            }
+        }
     }
 
     pub fn index(&self, cell: LeveledGridCell, points: &VectorBuffer) {

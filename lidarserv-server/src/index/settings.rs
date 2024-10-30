@@ -1,6 +1,7 @@
 use crate::common::geometry::grid::LodLevel;
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::geometry::grid::GridHierarchy;
+use lidarserv_common::index::attribute_index::config::AttributeIndexConfig;
 use lidarserv_common::index::priority_function::TaskPriorityFunction;
 use pasture_core::layout::PointLayout;
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,7 @@ pub struct IndexSettings {
     pub priority_function: TaskPriorityFunction,
     pub num_threads: u16,
     pub point_layout: PointLayout,
+    pub attribute_indexes: Vec<AttributeIndexConfig>,
 }
 
 #[derive(Error, Debug)]

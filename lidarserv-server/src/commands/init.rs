@@ -10,7 +10,10 @@ use lidarserv_common::{
         grid::{GridHierarchy, LodLevel},
         position::{PositionComponentType, WithComponentTypeOnce, POSITION_ATTRIBUTE_NAME},
     },
-    index::priority_function::TaskPriorityFunction,
+    index::{
+        attribute_index::config::{AttributeIndexConfig, IndexKind, SfcIndexOptions},
+        priority_function::TaskPriorityFunction,
+    },
 };
 use lidarserv_server::index::settings::IndexSettings;
 use nalgebra::vector;
@@ -31,7 +34,7 @@ use pasture_io::{
     },
     las_rs::point::Format,
 };
-use std::{borrow::Cow, collections::HashSet, num::NonZero, ops::RangeInclusive};
+use std::{borrow::Cow, collections::HashSet, num::NonZero, ops::RangeInclusive, path::PathBuf};
 
 fn las_attributes(point_format: u8, exact_binary_repr: bool) -> Vec<PointAttributeDefinition> {
     let format = Format::new(point_format).unwrap();
@@ -285,6 +288,85 @@ fn remove_attribute(theme: &dyn Theme, attributes: &mut Vec<PointAttributeDefini
             .collect();
         break;
     }
+}
+
+fn attribute_indexes_interactive(
+    theme: &dyn Theme,
+    attrs: &[PointAttributeDefinition],
+) -> Vec<AttributeIndexConfig> {
+    let mut result = Vec::new();
+    loop {
+        let add_attribute_indexes_prompt = if result.is_empty() {
+            "Would you like to add any attribute indexes?"
+        } else {
+            "Would you like to add more attribute indexes?"
+        };
+        let add_attribute_indexes = Confirm::with_theme(theme)
+            .with_prompt(add_attribute_indexes_prompt)
+            .default(false)
+            .interact()
+            .unwrap();
+        if !add_attribute_indexes {
+            break;
+        }
+
+        let selected_attrs = MultiSelect::with_theme(theme)
+            .with_prompt("Which attributes would you like to index?")
+            .items(attrs)
+            .interact()
+            .unwrap();
+
+        let s = Select::with_theme(theme)
+            .with_prompt("Index type:")
+            .item("Range Index")
+            .item("Space Filling Curve index")
+            .item("(Cancel)")
+            .default(0)
+            .interact()
+            .unwrap();
+        let idx = match s {
+            0 => IndexKind::RangeIndex,
+            1 => {
+                let nr_bins = Input::with_theme(theme)
+                    .with_prompt("Number of bins:")
+                    .default(10)
+                    .validate_with(|inp: &usize| {
+                        if *inp < 1 {
+                            Err("Must be at least 1")
+                        } else if *inp > 32 {
+                            Err("More than 32 bins are not supported.")
+                        } else {
+                            Ok(())
+                        }
+                    })
+                    .interact()
+                    .unwrap();
+                IndexKind::SfcIndex(SfcIndexOptions { nr_bins })
+            }
+            2 => continue,
+            _ => unreachable!(),
+        };
+        for attr_idx in selected_attrs {
+            result.push(AttributeIndexConfig {
+                attribute: attrs[attr_idx].clone(),
+                path: PathBuf::new(),
+                index: idx,
+            });
+        }
+    }
+
+    // set unique filenames
+    for (i, index) in result.iter_mut().enumerate() {
+        let name_base = index
+            .attribute
+            .name()
+            .to_lowercase()
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .collect::<String>();
+        index.path = PathBuf::from(format!("attribute_index_{}_{}.bin", i, name_base));
+    }
+    result
 }
 
 fn coordinate_system_interactive(
@@ -543,9 +625,9 @@ pub fn run(init_options: InitOptions) -> Result<()> {
     // indexer settings
     print_header("Indexing");
     let index_params = indexer_settings_interactive(&theme);
+    let attribute_indexes = attribute_indexes_interactive(&theme, &attrs);
 
     // Remaining stuff
-
     let settings = IndexSettings {
         node_hierarchy: octree_params.node_hierarchy,
         point_hierarchy: octree_params.point_hierarchy,
@@ -559,6 +641,7 @@ pub fn run(init_options: InitOptions) -> Result<()> {
         max_bogus_leaf: index_params.bogus_leaf,
         use_metrics: index_params.use_metrics,
         enable_compression,
+        attribute_indexes,
     };
 
     // create the directory and write settings json

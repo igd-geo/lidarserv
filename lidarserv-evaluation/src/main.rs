@@ -14,7 +14,7 @@ use lidarserv_common::{
     },
     index::{Octree, OctreeParams},
 };
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use nalgebra::vector;
 use pasture_io::{base::SeekToPoint, las::LASReader};
 use query_performance::measure_one_query;
@@ -225,6 +225,15 @@ fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, any
             MissingAttributesStrategy::ZeroInitializeAndWarn,
         )?;
 
+        let attribute_indexes = if index_config.enable_attribute_index {
+            base_config.attribute_indexes()
+        } else {
+            vec![]
+        };
+        if index_config.enable_attribute_index && attribute_indexes.is_empty() {
+            warn!("Attribute indexing is enabled, but no indexed attributes are configured.");
+        }
+
         // Create index
         let mut index = Octree::new(OctreeParams {
             directory_file: base_config.index_folder_absolute().join("directory.bin"),
@@ -241,6 +250,7 @@ fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, any
             max_cache_size: index_config.cache_size,
             priority_function: index_config.priority_function,
             num_threads: index_config.num_threads,
+            attribute_indexes,
         })?;
 
         // measure insertion rate
@@ -322,6 +332,7 @@ pub fn prettyprint_index_run(multi: &MultiIndex, index: &SingleIndex) {
         compression,
         num_threads,
         nr_bogus_points,
-        max_lod
+        max_lod,
+        enable_attribute_index
     );
 }

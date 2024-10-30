@@ -9,6 +9,13 @@ attributes = "LasPointFormat6"
 coordinate_system.scale = [0.001, 0.001, 0.001]
 coordinate_system.offset = [0.0, 0.0, 0.0]
 
+[indexed_attributes]
+intensity = ["RangeIndex"]
+classification = [
+    "RangeIndex", 
+    {"SfcIndex" = {"nr_bins" = 16}}
+]
+
 [queries]
 full-point-cloud = "full"
 root-nodes = "lod(0)"
@@ -24,7 +31,7 @@ cache_size = 5000
 compression = false
 nr_bogus_points = [500, 500]
 max_lod = 10
-
+enable_attribute_index = false
 
 [runs.example]
 cache_size = [

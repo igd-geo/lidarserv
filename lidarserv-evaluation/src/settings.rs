@@ -3,7 +3,9 @@ use indexmap::IndexMap;
 use itertools::iproduct;
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::geometry::position::POSITION_ATTRIBUTE_NAME;
+use lidarserv_common::index::attribute_index::config::{AttributeIndexConfig, IndexKind};
 use lidarserv_common::index::priority_function::TaskPriorityFunction;
+use log::warn;
 use nalgebra::vector;
 use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PointLayout};
 use pasture_io::las::point_layout_from_las_point_format;
@@ -87,6 +89,9 @@ pub struct Base {
 
     #[serde(default = "coordinate_system_default")]
     pub coordinate_system: CoordinateSystem,
+
+    #[serde(default)]
+    pub indexed_attributes: HashMap<String, Vec<IndexKind>>,
 }
 
 fn coordinate_system_default() -> CoordinateSystem {
@@ -195,6 +200,30 @@ impl Base {
     pub fn is_output_filename_indexed(&self) -> bool {
         self.output_file_pattern.contains("%i")
     }
+
+    pub fn attribute_indexes(&self) -> Vec<AttributeIndexConfig> {
+        let mut result = Vec::new();
+        let attributes = self.attributes.attributes();
+        for (attr_name, indexes) in self.indexed_attributes.iter() {
+            let Some(attr) = attributes
+                .iter()
+                .find(|a| a.name().to_lowercase() == attr_name.to_lowercase())
+            else {
+                warn!("Attribute {} does not exist. (Ignoring)", attr_name);
+                continue;
+            };
+            for index in indexes {
+                let i = result.len();
+                let path = self.base_folder.join(format!("attribute-index-{}.bin", i));
+                result.push(AttributeIndexConfig {
+                    attribute: attr.clone(),
+                    path,
+                    index: *index,
+                });
+            }
+        }
+        result
+    }
 }
 
 fn output_file_pattern_default() -> String {
@@ -216,15 +245,7 @@ pub struct SingleIndex {
     pub compression: bool,
     pub nr_bogus_points: (usize, usize),
     pub max_lod: u8,
-    // pub enable_attribute_index: bool,
-    // pub enable_histogram_acceleration: bool,
-    // pub bin_count_intensity: usize,
-    // pub bin_count_return_number: usize,
-    // pub bin_count_classification: usize,
-    // pub bin_count_scan_angle_rank: usize,
-    // pub bin_count_user_data: usize,
-    // pub bin_count_point_source_id: usize,
-    // pub bin_count_color: usize,
+    pub enable_attribute_index: bool,
 }
 
 impl Default for SingleIndex {
@@ -255,6 +276,7 @@ impl Default for SingleIndex {
             compression: parse_key(&defaults, "compression"),
             nr_bogus_points: parse_key(&defaults, "nr_bogus_points"),
             max_lod: parse_key(&defaults, "max_lod"),
+            enable_attribute_index: parse_key(&defaults, "enable_attribute_index"),
         }
     }
 }
@@ -270,15 +292,7 @@ pub struct MultiIndex {
     pub compression: Option<Vec<bool>>,
     pub nr_bogus_points: Option<Vec<(usize, usize)>>,
     pub max_lod: Option<Vec<u8>>,
-    // pub enable_attribute_index: Option<Vec<bool>>,
-    // pub enable_histogram_acceleration: Option<Vec<bool>>,
-    // pub bin_count_intensity: Option<Vec<usize>>,
-    // pub bin_count_return_number: Option<Vec<usize>>,
-    // pub bin_count_classification: Option<Vec<usize>>,
-    // pub bin_count_scan_angle_rank: Option<Vec<usize>>,
-    // pub bin_count_user_data: Option<Vec<usize>>,
-    // pub bin_count_point_source_id: Option<Vec<usize>>,
-    // pub bin_count_color: Option<Vec<usize>>,
+    pub enable_attribute_index: Option<Vec<bool>>,
 }
 
 macro_rules! apply_default_vec {
@@ -303,6 +317,7 @@ impl MultiIndex {
         apply_default_vec!(self.num_threads <- defaults);
         apply_default_vec!(self.nr_bogus_points <- defaults);
         apply_default_vec!(self.max_lod <- defaults);
+        apply_default_vec!(self.enable_attribute_index <- defaults);
         //apply_default_vec!(self.enable_attribute_index <- defaults);
         //apply_default_vec!(self.enable_histogram_acceleration <- defaults);
         //apply_default_vec!(self.bin_count_intensity <- defaults);
@@ -329,6 +344,7 @@ impl<'a> IntoIterator for &'a MultiIndex {
             expect(&self.compression),
             expect(&self.nr_bogus_points),
             expect(&self.max_lod),
+            expect(&self.enable_attribute_index),
         )
         .map(
             |(
@@ -340,6 +356,7 @@ impl<'a> IntoIterator for &'a MultiIndex {
                 &compression,
                 &nr_bogus_points,
                 &max_lod,
+                &enable_attribute_index,
             )| SingleIndex {
                 node_hierarchy,
                 point_hierarchy,
@@ -349,6 +366,7 @@ impl<'a> IntoIterator for &'a MultiIndex {
                 compression,
                 nr_bogus_points,
                 max_lod,
+                enable_attribute_index,
             },
         );
 
