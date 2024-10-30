@@ -2,16 +2,17 @@ WHITESPACE   = _{ " " | "\t" | "\n" }
 digit        =  { '0'..'9' }
 integer      = @{ digit+ }
 number       = @{ digit+ ~ ("." ~ digit+)? }
-coordinate   =  { "[" ~ number ~ "," ~ number ~ "," ~ number ~ "]" }
 coordinate2  =  { "[" ~ number ~ "," ~ number ~ "]" }
+coordinate3   =  { "[" ~ number ~ "," ~ number ~ "," ~ number ~ "]" }
+coordinate4   =  { "[" ~ number ~ "," ~ number ~ "," ~ number ~ "," ~ number ~ "]" }
 empty        =  { "empty" }
 full         =  { "full" }
 lod          =  { "lod" ~ "(" ~ integer ~ ")" }
-aabb         =  { "aabb" ~ "(" ~ coordinate ~ "," ~ coordinate ~ ")" }
+aabb         =  { "aabb" ~ "(" ~ coordinate3 ~ "," ~ coordinate3 ~ ")" }
 view_frustum_arg = _{
-    ("camera_pos" ~ ":" ~ #cp=coordinate) 
-    | ("camera_dir" ~ ":" ~ #cd=coordinate) 
-    | ("camera_up" ~ ":" ~ #cu=coordinate) 
+    ("camera_pos" ~ ":" ~ #cp=coordinate3) 
+    | ("camera_dir" ~ ":" ~ #cd=coordinate3) 
+    | ("camera_up" ~ ":" ~ #cu=coordinate3) 
     | ("fov_y" ~ ":" ~ #fov=number) 
     | ("z_near" ~ ":" ~ #zn=number) 
     | ("z_far" ~ ":" ~ #zf=number) 
@@ -19,8 +20,22 @@ view_frustum_arg = _{
     | ("max_distance" ~ ":" ~ #md=number)
 }
 view_frustum =  {"view_frustum" ~ "(" ~ view_frustum_arg ~ ("," ~ view_frustum_arg)* ~ ")"}
+attribute_query = {"attr" ~ "(" ~ cmp ~ ")"}
+cmp = _{cmp_eq | cmp_ne | cmp_lt | cmp_le | cmp_gt | cmp_ge | cmp_range_excl | cmp_range_lincl | cmp_range_rincl | cmp_range_incl}
+cmp_eq = {attr_name ~ "==" ~ attr_val}
+cmp_ne = {attr_name ~ "!=" ~ attr_val}
+cmp_lt = {attr_name ~ "<" ~ attr_val}
+cmp_le = {attr_name ~ "<=" ~ attr_val}
+cmp_gt = {attr_name ~ ">" ~ attr_val}
+cmp_ge = {attr_name ~ ">=" ~ attr_val}
+cmp_range_excl = {attr_val ~ "<" ~ attr_name ~ "<" ~ attr_val}
+cmp_range_lincl = {attr_val ~ "<=" ~ attr_name ~ "<" ~ attr_val}
+cmp_range_rincl = {attr_val ~ "<" ~ attr_name ~ "<=" ~ attr_val}
+cmp_range_incl = {attr_val ~ "<=" ~ attr_name ~ "<=" ~ attr_val}
+attr_name = @{ ('a'..'z' | 'A'..'Z') ~ ('a'..'z' | 'A'..'Z' | '0'..'9')*}
+attr_val = _{ coordinate4 | coordinate3 | number }
 bracket      =  { "(" ~ query ~ ")" }
-atom         = _{ empty | full | lod | aabb | view_frustum | bracket }
+atom         = _{ empty | full | lod | aabb | view_frustum | attribute_query | bracket }
 not          =  { "!" ~ atom }
 not_query    = _{ not | atom }
 and          =  { not_query ~ ("and" ~ not_query)+ }

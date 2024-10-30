@@ -1,6 +1,8 @@
 //! # ToDo
 //!
 //!  - Unit tests!
+use std::convert::Infallible;
+
 use super::{ExecutableQuery, NodeQueryResult, Query};
 use crate::{
     geometry::{
@@ -67,8 +69,9 @@ pub struct ViewFrustomQueryExecutable {
 
 impl Query for ViewFrustumQuery {
     type Executable = ViewFrustomQueryExecutable;
+    type Error = Infallible;
 
-    fn prepare(self, ctx: &QueryContext) -> Self::Executable {
+    fn prepare(self, ctx: &QueryContext) -> Result<Self::Executable, Self::Error> {
         let target = self.camera_pos + self.camera_dir;
         let aspect = self.window_size.x / self.window_size.y;
         let view_transform = Isometry3::look_at_rh(&self.camera_pos, &target, &self.camera_up);
@@ -105,7 +108,7 @@ impl Query for ViewFrustumQuery {
         .map(|clip_v| view_projection_matrix_inv.transform_point(&clip_v));
         let frustum_planes = frustum_vertices.planes();
 
-        ViewFrustomQueryExecutable {
+        Ok(ViewFrustomQueryExecutable {
             component_type: ctx.component_type,
             coordinate_system: ctx.coordinate_system,
             node_hierarchy: ctx.node_hierarchy,
@@ -115,7 +118,7 @@ impl Query for ViewFrustumQuery {
             lod0_point_distance,
             frustum_vertices,
             frustum_planes,
-        }
+        })
     }
 }
 

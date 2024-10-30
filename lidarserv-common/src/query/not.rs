@@ -11,9 +11,10 @@ where
     T: Query,
 {
     type Executable = NotQuery<T::Executable>;
+    type Error = T::Error;
 
-    fn prepare(self, ctx: &super::QueryContext) -> Self::Executable {
-        NotQuery(self.0.prepare(ctx))
+    fn prepare(self, ctx: &super::QueryContext) -> Result<Self::Executable, Self::Error> {
+        Ok(NotQuery(self.0.prepare(ctx)?))
     }
 }
 

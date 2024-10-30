@@ -12,9 +12,15 @@ where
     Q: Query,
 {
     type Executable = OrQuery<Q::Executable>;
+    type Error = Q::Error;
 
-    fn prepare(self, ctx: &super::QueryContext) -> Self::Executable {
-        OrQuery(self.0.into_iter().map(|q| q.prepare(ctx)).collect())
+    fn prepare(self, ctx: &super::QueryContext) -> Result<Self::Executable, Self::Error> {
+        Ok(OrQuery(
+            self.0
+                .into_iter()
+                .map(|q| q.prepare(ctx))
+                .collect::<Result<_, _>>()?,
+        ))
     }
 }
 

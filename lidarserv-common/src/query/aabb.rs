@@ -1,6 +1,6 @@
 use pasture_core::containers::BorrowedBufferExt;
 use serde::{Deserialize, Serialize};
-use std::mem;
+use std::{convert::Infallible, mem};
 
 use crate::{
     geometry::{
@@ -30,10 +30,11 @@ struct AabbQueryExecutable<C: Component> {
 
 impl Query for AabbQuery {
     type Executable = Box<dyn ExecutableQuery>;
+    type Error = Infallible;
 
-    fn prepare(self, ctx: &super::QueryContext) -> Box<dyn ExecutableQuery> {
+    fn prepare(self, ctx: &super::QueryContext) -> Result<Self::Executable, Self::Error> {
         if self.0.is_empty() {
-            return Box::new(EmptyQuery) as Box<dyn ExecutableQuery>;
+            return Ok(Box::new(EmptyQuery) as Box<dyn ExecutableQuery>);
         }
 
         struct Wct {
@@ -75,12 +76,12 @@ impl Query for AabbQuery {
             }
         }
 
-        Wct {
+        Ok(Wct {
             aabb_global: self.0,
             coordinate_system: ctx.coordinate_system,
             node_hierarchy: ctx.node_hierarchy,
         }
-        .for_component_type_once(ctx.component_type)
+        .for_component_type_once(ctx.component_type))
     }
 }
 
@@ -114,8 +115,10 @@ impl<C: Component> ExecutableQuery for AabbQueryExecutable<C> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use nalgebra::{point, vector};
-    use pasture_core::containers::VectorBuffer;
+    use pasture_core::{containers::VectorBuffer, layout::PointLayout};
 
     use crate::{
         geometry::{
@@ -125,6 +128,7 @@ mod tests {
             position::PositionComponentType,
             test::{F64Point, I32Point},
         },
+        index::attribute_index::AttributeIndex,
         query::{ExecutableQuery, NodeQueryResult, Query, QueryContext},
     };
 
@@ -145,6 +149,8 @@ mod tests {
                 vector![0.0, 0.0, 0.0],
             ),
             component_type: PositionComponentType::F64,
+            attribute_index: Arc::new(AttributeIndex::new()),
+            point_layout: PointLayout::from_attributes(&[]),
         };
         assert_eq!(
             // This assert is not really part of the test.
@@ -162,7 +168,7 @@ mod tests {
             )
         );
 
-        let q = query.prepare(&ctx);
+        let Ok(q) = query.prepare(&ctx);
         assert_eq!(
             q.matches_node(LeveledGridCell {
                 lod: LodLevel::from_level(0),
@@ -208,9 +214,11 @@ mod tests {
                 vector![0.0, 0.0, 0.0],
             ),
             component_type: PositionComponentType::F64,
+            attribute_index: Arc::new(AttributeIndex::new()),
+            point_layout: PointLayout::from_attributes(&[]),
         };
 
-        let q = query.prepare(&ctx);
+        let Ok(q) = query.prepare(&ctx);
         let points: VectorBuffer = [
             F64Point {
                 position: vector![500.0, 500.0, 500.0],
@@ -257,6 +265,8 @@ mod tests {
                 vector![0.0, 0.0, 0.0],
             ),
             component_type: PositionComponentType::I32,
+            attribute_index: Arc::new(AttributeIndex::new()),
+            point_layout: PointLayout::from_attributes(&[]),
         };
         assert_eq!(
             // This assert is not really part of the test.
@@ -271,7 +281,7 @@ mod tests {
             Aabb::new(point![0, 0, 0], point![1023, 1023, 1023])
         );
 
-        let q = query.prepare(&ctx);
+        let Ok(q) = query.prepare(&ctx);
         assert_eq!(
             q.matches_node(LeveledGridCell {
                 lod: LodLevel::from_level(0),
@@ -317,9 +327,11 @@ mod tests {
                 vector![0.0, 0.0, 0.0],
             ),
             component_type: PositionComponentType::I32,
+            attribute_index: Arc::new(AttributeIndex::new()),
+            point_layout: PointLayout::from_attributes(&[]),
         };
 
-        let q = query.prepare(&ctx);
+        let Ok(q) = query.prepare(&ctx);
 
         let points: VectorBuffer = [
             I32Point {

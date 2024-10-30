@@ -113,7 +113,7 @@ async fn query_thread(
                     .points_received
                     .fetch_add(update.points.len() as u64, Ordering::Relaxed);
                 status.nodes_received.fetch_add(1, Ordering::Relaxed);
-                points_tx.send(update.points).await.unwrap()
+                points_tx.send(update.points).await?
             }
             PartialResult::Complete => break,
         }

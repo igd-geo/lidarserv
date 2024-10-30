@@ -12,9 +12,15 @@ where
     Q: Query,
 {
     type Executable = AndQuery<Q::Executable>;
+    type Error = Q::Error;
 
-    fn prepare(self, ctx: &super::QueryContext) -> Self::Executable {
-        AndQuery(self.0.into_iter().map(|q| q.prepare(ctx)).collect())
+    fn prepare(self, ctx: &super::QueryContext) -> Result<Self::Executable, Self::Error> {
+        Ok(AndQuery(
+            self.0
+                .into_iter()
+                .map(|q| q.prepare(ctx))
+                .collect::<Result<_, _>>()?,
+        ))
     }
 }
 

@@ -39,7 +39,7 @@ struct FrontierElement {
 impl OctreeReader {
     /// Creates a new reader for the given octree and query.
     /// All root nodes of the octree are added to the reader.
-    pub(super) fn new(inner: Arc<Inner>, query: impl Query) -> Self {
+    pub(super) fn new<Q: Query>(inner: Arc<Inner>, query: Q) -> Result<Self, Q::Error> {
         // add subscription to changes
         let changed_nodes_receiver = {
             let (changed_nodes_sender, changed_nodes_receiver) = crossbeam_channel::unbounded();
@@ -54,8 +54,10 @@ impl OctreeReader {
             point_hierarchy: inner.point_hierarchy,
             coordinate_system: inner.coordinate_system,
             component_type: PositionComponentType::from_layout(&inner.point_layout),
+            attribute_index: Arc::clone(&inner.attribute_index),
+            point_layout: inner.point_layout.clone(),
         };
-        let query = Box::new(query.prepare(&ctx));
+        let query = Box::new(query.prepare(&ctx)?);
 
         let mut reader = OctreeReader {
             inner,
@@ -74,7 +76,7 @@ impl OctreeReader {
         for root_node in root_nodes {
             reader.add_root(root_node);
         }
-        reader
+        Ok(reader)
     }
 
     /// Adds a new root node to the readers frontier and list of known root nodes.
@@ -262,13 +264,14 @@ impl OctreeReader {
     }
 
     /// Sets the query
-    pub fn set_query(&mut self, q: impl Query, point_filtering: bool) {
+    pub fn set_query<Q: Query>(&mut self, q: Q, point_filtering: bool) -> Result<(), Q::Error> {
         let _span = span!("OctreeReader::set_query");
         debug!("Setting new query: {q:?}");
-        let query = q.prepare(&self.query_context);
+        let query = q.prepare(&self.query_context)?;
         self.query = Box::new(query);
         self.point_filtering = point_filtering;
         self.update_new_query();
+        Ok(())
     }
 
     /// Reloads a node from the reload queue and removes it from the queue.

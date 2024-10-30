@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use super::{ExecutableQuery, NodeQueryResult, Query};
 use crate::geometry::grid::LodLevel;
 use pasture_core::containers::BorrowedBuffer;
@@ -9,9 +11,10 @@ pub struct LodQuery(pub LodLevel);
 
 impl Query for LodQuery {
     type Executable = Self;
+    type Error = Infallible;
 
-    fn prepare(self, _ctx: &super::QueryContext) -> Self::Executable {
-        self
+    fn prepare(self, _ctx: &super::QueryContext) -> Result<Self::Executable, Self::Error> {
+        Ok(self)
     }
 }
 

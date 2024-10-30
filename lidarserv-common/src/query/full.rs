@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use pasture_core::containers::BorrowedBuffer;
 use serde::{Deserialize, Serialize};
 
@@ -11,9 +13,10 @@ pub struct FullQuery;
 
 impl Query for FullQuery {
     type Executable = Self;
+    type Error = Infallible;
 
-    fn prepare(self, _ctx: &super::QueryContext) -> Self::Executable {
-        self
+    fn prepare(self, _ctx: &super::QueryContext) -> Result<Self::Executable, Self::Error> {
+        Ok(self)
     }
 }
 

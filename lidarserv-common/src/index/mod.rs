@@ -82,9 +82,7 @@ struct Inner {
     max_bogus_leaf: usize,
     metrics: Arc<LiveMetricsCollector>,
     coordinate_system: CoordinateSystem,
-    attribute_index: AttributeIndex,
-    //enable_histogram_acceleration: bool,
-    //histogram_settings: HistogramSettings,
+    attribute_index: Arc<AttributeIndex>,
 }
 
 impl Octree {
@@ -128,7 +126,7 @@ impl Octree {
                 priority_function: config.priority_function,
                 num_threads: config.num_threads,
                 coordinate_system: config.coordinate_system,
-                attribute_index,
+                attribute_index: Arc::new(attribute_index),
             }),
         })
     }
@@ -167,7 +165,7 @@ impl Octree {
         OctreeWriter::new(Arc::clone(&self.inner))
     }
 
-    pub fn reader(&self, initial_query: impl Query) -> OctreeReader {
+    pub fn reader<Q: Query>(&self, initial_query: Q) -> Result<OctreeReader, Q::Error> {
         OctreeReader::new(Arc::clone(&self.inner), initial_query)
     }
 }

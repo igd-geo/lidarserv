@@ -28,7 +28,7 @@ use crate::{
 pub mod config;
 pub mod range_index;
 pub mod sfc_index;
-mod utils;
+pub mod utils;
 
 pub trait IndexFunction {
     type AttributeValue;

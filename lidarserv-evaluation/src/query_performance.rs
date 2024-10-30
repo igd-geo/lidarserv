@@ -21,7 +21,14 @@ pub fn measure_one_query(index: &mut Octree, query_str: &str) -> serde_json::val
 
     debug!("Executing query");
     let time_start = Instant::now();
-    let mut r = index.reader(query);
+    let mut r = match index.reader(query) {
+        Ok(r) => r,
+        Err(e) => {
+            return json!({
+                "error": format!("{e}")
+            })
+        }
+    };
 
     let mut nodes_sizes = Vec::new();
     while let Some((_node_id, node)) = r.load_one() {

@@ -1,11 +1,14 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
-use crate::geometry::{
-    coordinate_system::CoordinateSystem,
-    grid::{GridHierarchy, LeveledGridCell, LodLevel},
-    position::PositionComponentType,
+use crate::{
+    geometry::{
+        coordinate_system::CoordinateSystem,
+        grid::{GridHierarchy, LeveledGridCell, LodLevel},
+        position::PositionComponentType,
+    },
+    index::attribute_index::AttributeIndex,
 };
-use pasture_core::containers::VectorBuffer;
+use pasture_core::{containers::VectorBuffer, layout::PointLayout};
 
 pub mod aabb;
 pub mod and;
@@ -19,14 +22,14 @@ pub mod view_frustum;
 
 /// Execution Context for queries.
 /// Contains everything the query might need to determine its result. E.g. details about the coordinate system.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct QueryContext {
     pub node_hierarchy: GridHierarchy,
     pub point_hierarchy: GridHierarchy,
     pub coordinate_system: CoordinateSystem,
     pub component_type: PositionComponentType,
-    // todo
-    //  - attribute index
+    pub attribute_index: Arc<AttributeIndex>,
+    pub point_layout: PointLayout,
 }
 
 /// Describes, how an octree node matches a query.
@@ -59,6 +62,7 @@ pub enum LoadKind {
 pub trait Query: Send + Sync + Debug + 'static {
     /// The type returned by build.
     type Executable: ExecutableQuery;
+    type Error;
 
     /// Prepares the query for execution.
     ///
@@ -67,7 +71,7 @@ pub trait Query: Send + Sync + Debug + 'static {
     ///  - open external index files
     ///  - ...
     ///    )
-    fn prepare(self, ctx: &QueryContext) -> Self::Executable;
+    fn prepare(self, ctx: &QueryContext) -> Result<Self::Executable, Self::Error>;
 }
 
 /// Filter the point cloud based on some criterion.
@@ -88,8 +92,9 @@ where
     T: Query,
 {
     type Executable = T::Executable;
+    type Error = T::Error;
 
-    fn prepare(self, ctx: &QueryContext) -> Self::Executable {
+    fn prepare(self, ctx: &QueryContext) -> Result<Self::Executable, Self::Error> {
         (*self).prepare(ctx)
     }
 }

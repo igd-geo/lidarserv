@@ -1,14 +1,23 @@
-use std::str::FromStr;
+use std::{convert::Infallible, str::FromStr};
 
 use lidarserv_common::{
     geometry::{bounding_box::Aabb, grid::LodLevel},
     query::{
-        aabb::AabbQuery, and::AndQuery, empty::EmptyQuery, full::FullQuery, lod::LodQuery,
-        not::NotQuery, or::OrQuery, view_frustum::ViewFrustumQuery, ExecutableQuery,
-        Query as QueryTrait,
+        aabb::AabbQuery,
+        and::AndQuery,
+        attribute::{AttributeQuery, AttriuteQueryError, FilterableAttributeType, TestFunction},
+        empty::EmptyQuery,
+        full::FullQuery,
+        lod::LodQuery,
+        not::NotQuery,
+        or::OrQuery,
+        view_frustum::ViewFrustumQuery,
+        ExecutableQuery, Query as QueryTrait, QueryContext,
     },
 };
-use serde::{Deserialize, Serialize};
+use nalgebra::{vector, Vector3, Vector4};
+use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition};
+use serde::{de::Visitor, Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum Query {
@@ -20,23 +29,334 @@ pub enum Query {
     Aabb(Aabb<f64>),
     Lod(LodLevel),
     ViewFrustum(ViewFrustumQuery),
+    Attribute {
+        attribute_name: String,
+        test: TestFunction<AttributeValue>,
+    },
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum AttributeValueScalar {
+    Int(i128),
+    Float(f64),
+}
+
+impl Serialize for AttributeValueScalar {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            AttributeValueScalar::Int(i) => serializer.serialize_i128(*i),
+            AttributeValueScalar::Float(f) => serializer.serialize_f64(*f),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AttributeValueScalar {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct ScalarVisitor;
+
+        impl<'de2> Visitor<'de2> for ScalarVisitor {
+            type Value = AttributeValueScalar;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(formatter, "Scalar value")
+            }
+
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(AttributeValueScalar::Int(v as i128))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(AttributeValueScalar::Int(v as i128))
+            }
+
+            fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(AttributeValueScalar::Int(v))
+            }
+
+            fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(AttributeValueScalar::Float(v))
+            }
+        }
+
+        deserializer.deserialize_any(ScalarVisitor)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq)]
+#[serde(untagged)]
+pub enum AttributeValue {
+    Scalar(AttributeValueScalar),
+    Vec3(Vector3<AttributeValueScalar>),
+    Vec4(Vector4<AttributeValueScalar>),
+}
+
+trait ConvertAttributeScalar: Sized {
+    fn from_int(v: i128) -> Result<Self, &'static str>;
+    fn from_float(v: f64) -> Result<Self, &'static str>;
+
+    fn from_scalar_value(v: AttributeValueScalar) -> Result<Self, &'static str> {
+        match v {
+            AttributeValueScalar::Int(i) => Self::from_int(i),
+            AttributeValueScalar::Float(f) => Self::from_float(f),
+        }
+    }
+}
+trait ConvertAttributeValue: Sized {
+    fn from_scalar(v: AttributeValueScalar) -> Result<Self, &'static str>;
+    fn from_vec3(v: Vector3<AttributeValueScalar>) -> Result<Self, &'static str>;
+    fn from_vec4(v: Vector4<AttributeValueScalar>) -> Result<Self, &'static str>;
+
+    fn from_value(v: AttributeValue) -> Result<Self, &'static str> {
+        match v {
+            AttributeValue::Scalar(s) => Self::from_scalar(s),
+            AttributeValue::Vec3(vec3) => Self::from_vec3(vec3),
+            AttributeValue::Vec4(vec4) => Self::from_vec4(vec4),
+        }
+    }
+}
+
+macro_rules! impl_convert_int {
+    ($t:ty) => {
+        impl ConvertAttributeScalar for $t {
+            fn from_int(v: i128) -> Result<Self, &'static str> {
+                if v >= <$t>::MIN as i128 && v <= <$t>::MAX as i128 {
+                    Ok(v as $t)
+                } else {
+                    Err("attribute value is out of range.")
+                }
+            }
+
+            fn from_float(_: f64) -> Result<Self, &'static str> {
+                Err("expected integer, found float.")
+            }
+        }
+
+        impl ConvertAttributeValue for $t {
+            fn from_scalar(v: AttributeValueScalar) -> Result<Self, &'static str> {
+                <$t>::from_scalar_value(v)
+            }
+
+            fn from_vec3(_: Vector3<AttributeValueScalar>) -> Result<Self, &'static str> {
+                Err("expected a scalar value, found vector.")
+            }
+
+            fn from_vec4(_: Vector4<AttributeValueScalar>) -> Result<Self, &'static str> {
+                Err("expected a scalar value, found vector.")
+            }
+        }
+    };
+}
+
+impl_convert_int!(u8);
+impl_convert_int!(u16);
+impl_convert_int!(u32);
+impl_convert_int!(u64);
+impl_convert_int!(i8);
+impl_convert_int!(i16);
+impl_convert_int!(i32);
+impl_convert_int!(i64);
+
+macro_rules! impl_convert_float {
+    ($t:ty) => {
+        impl ConvertAttributeScalar for $t {
+            fn from_int(v: i128) -> Result<Self, &'static str> {
+                Ok(v as $t)
+            }
+
+            fn from_float(v: f64) -> Result<Self, &'static str> {
+                Ok(v as $t)
+            }
+        }
+        impl ConvertAttributeValue for $t {
+            fn from_scalar(v: AttributeValueScalar) -> Result<Self, &'static str> {
+                <$t>::from_scalar_value(v)
+            }
+
+            fn from_vec3(_: Vector3<AttributeValueScalar>) -> Result<Self, &'static str> {
+                Err("expected a scalar value, found vector.")
+            }
+
+            fn from_vec4(_: Vector4<AttributeValueScalar>) -> Result<Self, &'static str> {
+                Err("expected a scalar value, found vector.")
+            }
+        }
+    };
+}
+
+impl_convert_float!(f32);
+impl_convert_float!(f64);
+
+impl<T> ConvertAttributeValue for Vector3<T>
+where
+    T: ConvertAttributeScalar,
+{
+    fn from_scalar(_: AttributeValueScalar) -> Result<Self, &'static str> {
+        Err("expected a vector, found scalar value.")
+    }
+
+    fn from_vec3(v: Vector3<AttributeValueScalar>) -> Result<Self, &'static str> {
+        Ok(vector![
+            T::from_scalar_value(v[0])?,
+            T::from_scalar_value(v[1])?,
+            T::from_scalar_value(v[2])?,
+        ])
+    }
+
+    fn from_vec4(_: Vector4<AttributeValueScalar>) -> Result<Self, &'static str> {
+        Err("expected a 3d vector, found 4d vector.")
+    }
+}
+
+impl<T> ConvertAttributeValue for Vector4<T>
+where
+    T: ConvertAttributeScalar,
+{
+    fn from_scalar(_: AttributeValueScalar) -> Result<Self, &'static str> {
+        Err("expected a vector, found scalar value.")
+    }
+
+    fn from_vec3(_: Vector3<AttributeValueScalar>) -> Result<Self, &'static str> {
+        Err("expected a 4d vector, found 3d vector.")
+    }
+
+    fn from_vec4(v: Vector4<AttributeValueScalar>) -> Result<Self, &'static str> {
+        Ok(vector![
+            T::from_scalar_value(v[0])?,
+            T::from_scalar_value(v[1])?,
+            T::from_scalar_value(v[2])?,
+            T::from_scalar_value(v[3])?,
+        ])
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
+pub enum QueryError {
+    #[error("The attribute {0} does not exist in this point cloud. (Attribute names are case sensitive.)")]
+    AttributeNotFound(String),
+
+    #[error("Invalid type for attribute {0}: {1}")]
+    TypeError(PointAttributeDefinition, &'static str),
+}
+
+impl From<Infallible> for QueryError {
+    fn from(value: Infallible) -> Self {
+        match value {}
+    }
 }
 
 impl QueryTrait for Query {
     type Executable = Box<dyn ExecutableQuery>;
+    type Error = QueryError;
 
-    fn prepare(self, ctx: &lidarserv_common::query::QueryContext) -> Self::Executable {
-        match self {
-            Query::Empty => Box::new(EmptyQuery.prepare(ctx)),
-            Query::Full => Box::new(FullQuery.prepare(ctx)),
-            Query::Not(inner) => Box::new(NotQuery(*inner).prepare(ctx)),
-            Query::And(inner) => Box::new(AndQuery(inner).prepare(ctx)),
-            Query::Or(inner) => Box::new(OrQuery(inner).prepare(ctx)),
-            Query::Aabb(bounds) => Box::new(AabbQuery(bounds).prepare(ctx)),
-            Query::ViewFrustum(q) => Box::new(q.prepare(ctx)),
-            Query::Lod(lod) => Box::new(LodQuery(lod).prepare(ctx)),
-        }
+    fn prepare(
+        self,
+        ctx: &lidarserv_common::query::QueryContext,
+    ) -> Result<Self::Executable, Self::Error> {
+        let prepared: Box<dyn ExecutableQuery> = match self {
+            Query::Empty => Box::new(EmptyQuery.prepare(ctx)?),
+            Query::Full => Box::new(FullQuery.prepare(ctx)?),
+            Query::Not(inner) => Box::new(NotQuery(*inner).prepare(ctx)?),
+            Query::And(inner) => Box::new(AndQuery(inner).prepare(ctx)?),
+            Query::Or(inner) => Box::new(OrQuery(inner).prepare(ctx)?),
+            Query::Aabb(bounds) => Box::new(AabbQuery(bounds).prepare(ctx)?),
+            Query::ViewFrustum(q) => Box::new(q.prepare(ctx)?),
+            Query::Lod(lod) => Box::new(LodQuery(lod).prepare(ctx)?),
+            Query::Attribute {
+                attribute_name,
+                test,
+            } => {
+                let attr = match ctx.point_layout.get_attribute_by_name(&attribute_name) {
+                    Some(a) => a.attribute_definition().clone(),
+                    None => return Err(QueryError::AttributeNotFound(attribute_name)),
+                };
+                match attr.datatype() {
+                    PointAttributeDataType::U8 => prepare_attribute_query::<u8>(attr, test, ctx)?,
+                    PointAttributeDataType::I8 => prepare_attribute_query::<i8>(attr, test, ctx)?,
+                    PointAttributeDataType::U16 => prepare_attribute_query::<u16>(attr, test, ctx)?,
+                    PointAttributeDataType::I16 => prepare_attribute_query::<i16>(attr, test, ctx)?,
+                    PointAttributeDataType::U32 => prepare_attribute_query::<u32>(attr, test, ctx)?,
+                    PointAttributeDataType::I32 => prepare_attribute_query::<i32>(attr, test, ctx)?,
+                    PointAttributeDataType::U64 => prepare_attribute_query::<u64>(attr, test, ctx)?,
+                    PointAttributeDataType::I64 => prepare_attribute_query::<i64>(attr, test, ctx)?,
+                    PointAttributeDataType::F32 => prepare_attribute_query::<f32>(attr, test, ctx)?,
+                    PointAttributeDataType::F64 => prepare_attribute_query::<f64>(attr, test, ctx)?,
+                    PointAttributeDataType::Vec3u8 => {
+                        prepare_attribute_query::<Vector3<u8>>(attr, test, ctx)?
+                    }
+                    PointAttributeDataType::Vec3u16 => {
+                        prepare_attribute_query::<Vector3<u16>>(attr, test, ctx)?
+                    }
+                    PointAttributeDataType::Vec3f32 => {
+                        prepare_attribute_query::<Vector3<f32>>(attr, test, ctx)?
+                    }
+                    PointAttributeDataType::Vec3i32 => {
+                        prepare_attribute_query::<Vector3<i32>>(attr, test, ctx)?
+                    }
+                    PointAttributeDataType::Vec3f64 => {
+                        prepare_attribute_query::<Vector3<f64>>(attr, test, ctx)?
+                    }
+                    PointAttributeDataType::Vec4u8 => {
+                        prepare_attribute_query::<Vector4<u8>>(attr, test, ctx)?
+                    }
+                    PointAttributeDataType::ByteArray(_) => {
+                        return Err(QueryError::TypeError(
+                            attr,
+                            "byte array attributes can't be queried",
+                        ))
+                    }
+                    PointAttributeDataType::Custom { .. } => {
+                        return Err(QueryError::TypeError(
+                            attr,
+                            "custom datatypes can't be queried",
+                        ))
+                    }
+                }
+            }
+        };
+        Ok(prepared)
     }
+}
+
+fn prepare_attribute_query<T>(
+    attr: PointAttributeDefinition,
+    test: TestFunction<AttributeValue>,
+    ctx: &QueryContext,
+) -> Result<Box<dyn ExecutableQuery>, QueryError>
+where
+    T: ConvertAttributeValue + FilterableAttributeType,
+{
+    let test = test
+        .map(|a| T::from_value(*a))
+        .result()
+        .map_err(|e| QueryError::TypeError(attr.clone(), e))?;
+    let query = AttributeQuery {
+        attribute: attr,
+        test,
+    };
+    let prepared = match query.prepare(ctx) {
+        Ok(o) => o,
+        Err(AttriuteQueryError::AttributeType) => unreachable!(),
+    };
+
+    Ok(Box::new(prepared))
 }
 
 impl Query {
@@ -58,11 +378,13 @@ mod query_language {
     use anyhow::{anyhow, Result};
     use lidarserv_common::{
         geometry::{bounding_box::Aabb, grid::LodLevel},
-        query::view_frustum::ViewFrustumQuery,
+        query::{attribute::TestFunction, view_frustum::ViewFrustumQuery},
     };
-    use nalgebra::{Point3, Vector2, Vector3};
+    use nalgebra::{Point3, Vector2, Vector3, Vector4};
     use pest::{iterators::Pair, Parser};
     use pest_derive::Parser;
+
+    use super::{AttributeValue, AttributeValueScalar};
 
     #[derive(Parser)]
     #[grammar = "index//query_grammar.pest"]
@@ -84,6 +406,7 @@ mod query_language {
             Rule::not => parse_not(pair),
             Rule::and => parse_and(pair),
             Rule::or => parse_or(pair),
+            Rule::attribute_query => parse_attribute_query(pair),
             _ => unreachable!(),
         }
     }
@@ -145,8 +468,144 @@ mod query_language {
         Ok(Query::Aabb(aabb))
     }
 
+    fn parse_attribute_query(pair: Pair<Rule>) -> Result<Query> {
+        assert_eq!(pair.as_rule(), Rule::attribute_query);
+        let inner = pair.into_inner().unwrap_1();
+        match inner.as_rule() {
+            Rule::cmp_eq => {
+                let cmp = parse_cmp2(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::Eq(cmp.operand),
+                })
+            }
+            Rule::cmp_lt => {
+                let cmp = parse_cmp2(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::Less(cmp.operand),
+                })
+            }
+            Rule::cmp_le => {
+                let cmp = parse_cmp2(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::LessEq(cmp.operand),
+                })
+            }
+            Rule::cmp_gt => {
+                let cmp = parse_cmp2(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::Greater(cmp.operand),
+                })
+            }
+            Rule::cmp_ge => {
+                let cmp = parse_cmp2(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::GreaterEq(cmp.operand),
+                })
+            }
+            Rule::cmp_ne => {
+                let cmp = parse_cmp2(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::Neq(cmp.operand),
+                })
+            }
+            Rule::cmp_range_excl => {
+                let cmp = parse_cmp3(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::RangeExclusive(cmp.operand_l, cmp.operand_r),
+                })
+            }
+            Rule::cmp_range_lincl => {
+                let cmp = parse_cmp3(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::RangeLeftInclusive(cmp.operand_l, cmp.operand_r),
+                })
+            }
+            Rule::cmp_range_rincl => {
+                let cmp = parse_cmp3(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::RangeRightInclusive(cmp.operand_l, cmp.operand_r),
+                })
+            }
+            Rule::cmp_range_incl => {
+                let cmp = parse_cmp3(inner)?;
+                Ok(Query::Attribute {
+                    attribute_name: cmp.attribute_name,
+                    test: TestFunction::RangeAllInclusive(cmp.operand_l, cmp.operand_r),
+                })
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    struct Cmp2 {
+        attribute_name: String,
+        operand: AttributeValue,
+    }
+
+    struct Cmp3 {
+        operand_l: AttributeValue,
+        attribute_name: String,
+        operand_r: AttributeValue,
+    }
+
+    fn parse_attribute_value(pair: Pair<Rule>) -> Result<AttributeValue> {
+        match pair.as_rule() {
+            Rule::coordinate3 => Ok(AttributeValue::Vec3(parse_attr_value_vec3(pair)?)),
+            Rule::coordinate4 => Ok(AttributeValue::Vec4(parse_attr_value_vec4(pair)?)),
+            Rule::number => Ok(AttributeValue::Scalar(parse_attr_value_scalar(pair)?)),
+            _ => unreachable!(),
+        }
+    }
+
+    fn parse_cmp2(pair: Pair<Rule>) -> Result<Cmp2> {
+        let (a, b) = pair.into_inner().unwrap_2();
+        Ok(Cmp2 {
+            attribute_name: a.as_str().to_string(),
+            operand: parse_attribute_value(b)?,
+        })
+    }
+
+    fn parse_cmp3(pair: Pair<Rule>) -> Result<Cmp3> {
+        let (a, b, c) = pair.into_inner().unwrap_3();
+        Ok(Cmp3 {
+            operand_l: parse_attribute_value(a)?,
+            attribute_name: b.as_str().to_string(),
+            operand_r: parse_attribute_value(c)?,
+        })
+    }
+
+    fn parse_attr_value_scalar(pair: Pair<Rule>) -> Result<AttributeValueScalar> {
+        let string = pair.as_str();
+        if string.contains('.') {
+            Ok(AttributeValueScalar::Float(string.parse::<f64>()?))
+        } else {
+            Ok(AttributeValueScalar::Int(string.parse::<i128>()?))
+        }
+    }
+
+    fn parse_attr_value_vec3(pair: Pair<Rule>) -> Result<Vector3<AttributeValueScalar>> {
+        assert_eq!(pair.as_rule(), Rule::coordinate3);
+        let (x, y, z) = pair.into_inner().map(parse_attr_value_scalar).unwrap_3();
+        Ok(Vector3::new(x?, y?, z?))
+    }
+
+    fn parse_attr_value_vec4(pair: Pair<Rule>) -> Result<Vector4<AttributeValueScalar>> {
+        assert_eq!(pair.as_rule(), Rule::coordinate4);
+        let (x, y, z, w) = pair.into_inner().map(parse_attr_value_scalar).unwrap_4();
+        Ok(Vector4::new(x?, y?, z?, w?))
+    }
+
     fn parse_coordinate(pair: Pair<Rule>) -> Result<Vector3<f64>> {
-        assert_eq!(pair.as_rule(), Rule::coordinate);
+        assert_eq!(pair.as_rule(), Rule::coordinate3);
         let (x, y, z) = pair.into_inner().map(parse_number).unwrap_3();
         Ok(Vector3::new(x?, y?, z?))
     }
@@ -250,6 +709,15 @@ mod query_language {
             self.unwrap_done();
             (item1, item2, item3)
         }
+
+        fn unwrap_4(mut self) -> (Self::Item, Self::Item, Self::Item, Self::Item) {
+            let item1 = self.unwrap_next();
+            let item2 = self.unwrap_next();
+            let item3 = self.unwrap_next();
+            let item4 = self.unwrap_next();
+            self.unwrap_done();
+            (item1, item2, item3, item4)
+        }
     }
 
     impl<T> IteratorExt for T where T: Iterator {}
@@ -259,17 +727,19 @@ mod query_language {
 mod test {
     use std::f64::consts::FRAC_PI_2;
 
-    use super::Query;
+    use super::{AttributeValue, AttributeValueScalar, Query};
     use lidarserv_common::{
         geometry::{bounding_box::Aabb, grid::LodLevel},
-        query::view_frustum::ViewFrustumQuery,
+        query::{attribute::TestFunction, view_frustum::ViewFrustumQuery},
     };
-    use nalgebra::{point, vector};
+    use nalgebra::{point, vector, Vector3, Vector4};
     use serde_json::json;
 
     fn query_test_json(q: Query, expected_json: serde_json::Value) {
-        let actual_json = serde_json::to_value(q).unwrap();
-        assert_eq!(expected_json, actual_json)
+        let actual_json = serde_json::to_value(&q).unwrap();
+        assert_eq!(expected_json, actual_json);
+        let read_back = serde_json::from_value::<Query>(actual_json).unwrap();
+        assert_eq!(q, read_back);
     }
 
     fn query_test_parse(input: &str, query: Query) {
@@ -357,7 +827,67 @@ mod test {
                     "max_distance": 5.0,
                 }
             }),
-        )
+        );
+        query_test_json(
+            Query::Attribute {
+                attribute_name: "intensity".to_string(),
+                test: TestFunction::Eq(AttributeValue::Scalar(AttributeValueScalar::Int(55))),
+            },
+            json!({
+                "Attribute": {
+                    "attribute_name": "intensity",
+                    "test": {
+                        "Eq": 55
+                    }
+                }
+            }),
+        );
+        query_test_json(
+            Query::Attribute {
+                attribute_name: "gpstime".to_string(),
+                test: TestFunction::Eq(AttributeValue::Scalar(AttributeValueScalar::Float(3.1))),
+            },
+            json!({
+                "Attribute": {
+                    "attribute_name": "gpstime",
+                    "test": {
+                        "Eq": 3.1
+                    }
+                }
+            }),
+        );
+        query_test_json(
+            Query::Attribute {
+                attribute_name: "gpstime".to_string(),
+                test: TestFunction::Eq(AttributeValue::Scalar(AttributeValueScalar::Float(3.0))),
+            },
+            json!({
+                "Attribute": {
+                    "attribute_name": "gpstime",
+                    "test": {
+                        "Eq": 3.0
+                    }
+                }
+            }),
+        );
+        query_test_json(
+            Query::Attribute {
+                attribute_name: "normal".to_string(),
+                test: TestFunction::Eq(AttributeValue::Vec3(Vector3::new(
+                    AttributeValueScalar::Float(3.5),
+                    AttributeValueScalar::Int(4),
+                    AttributeValueScalar::Float(5.0),
+                ))),
+            },
+            json!({
+                "Attribute": {
+                    "attribute_name": "normal",
+                    "test": {
+                        "Eq": [3.5, 4, 5.0]
+                    }
+                }
+            }),
+        );
     }
 
     #[test]
@@ -440,6 +970,75 @@ mod test {
                 Query::Lod(LodLevel::from_level(2)),
                 Query::Lod(LodLevel::from_level(3)),
             ]),
+        );
+        query_test_parse(
+            "attr(classification == 4)",
+            Query::Attribute {
+                attribute_name: "classification".to_string(),
+                test: TestFunction::Eq(AttributeValue::Scalar(AttributeValueScalar::Int(4))),
+            },
+        );
+        query_test_parse(
+            "attr(classification != 4)",
+            Query::Attribute {
+                attribute_name: "classification".to_string(),
+                test: TestFunction::Neq(AttributeValue::Scalar(AttributeValueScalar::Int(4))),
+            },
+        );
+        query_test_parse(
+            "attr(intensity < 120)",
+            Query::Attribute {
+                attribute_name: "intensity".to_string(),
+                test: TestFunction::Less(AttributeValue::Scalar(AttributeValueScalar::Int(120))),
+            },
+        );
+        query_test_parse(
+            "attr(intensity <= 120)",
+            Query::Attribute {
+                attribute_name: "intensity".to_string(),
+                test: TestFunction::LessEq(AttributeValue::Scalar(AttributeValueScalar::Int(120))),
+            },
+        );
+        query_test_parse(
+            "attr(gpstime > 31.4)",
+            Query::Attribute {
+                attribute_name: "gpstime".to_string(),
+                test: TestFunction::Greater(AttributeValue::Scalar(AttributeValueScalar::Float(
+                    31.4,
+                ))),
+            },
+        );
+        query_test_parse(
+            "attr(gpstime >= 31.4)",
+            Query::Attribute {
+                attribute_name: "gpstime".to_string(),
+                test: TestFunction::GreaterEq(AttributeValue::Scalar(AttributeValueScalar::Float(
+                    31.4,
+                ))),
+            },
+        );
+        query_test_parse(
+            "attr(normal <= [0.1, 0.2, 5])",
+            Query::Attribute {
+                attribute_name: "normal".to_string(),
+                test: TestFunction::LessEq(AttributeValue::Vec3(Vector3::new(
+                    AttributeValueScalar::Float(0.1),
+                    AttributeValueScalar::Float(0.2),
+                    AttributeValueScalar::Int(5),
+                ))),
+            },
+        );
+        query_test_parse(
+            "attr(foo <= [0.1, 0.2, 5, 6])",
+            Query::Attribute {
+                attribute_name: "foo".to_string(),
+                test: TestFunction::LessEq(AttributeValue::Vec4(Vector4::new(
+                    AttributeValueScalar::Float(0.1),
+                    AttributeValueScalar::Float(0.2),
+                    AttributeValueScalar::Int(5),
+                    AttributeValueScalar::Int(6),
+                ))),
+            },
         );
     }
 }

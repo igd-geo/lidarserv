@@ -168,7 +168,7 @@ async fn viewer_mode(
         };
         let mut query_done = true;
 
-        let mut reader = index.reader(EmptyQuery);
+        let Ok(mut reader) = index.reader(EmptyQuery);
         let queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
         let mut at_least_one_update = true;
 
@@ -190,7 +190,16 @@ async fn viewer_mode(
                     query_done = false;
                     query_config = c;
                     reader.update();
-                    reader.set_query(q, query_config.point_filtering)
+                    let query_str = format!("{q:?}");
+                    let r = reader.set_query(q, query_config.point_filtering);
+                    match r {
+                        Ok(()) => (),
+                        Err(e) => {
+                            return Err(LidarServerError::Client(format!(
+                                "Invalid query {query_str}: {e}"
+                            )))
+                        }
+                    }
                 }
                 Some(Err(RecvError)) => return Ok(()),
                 None => (),

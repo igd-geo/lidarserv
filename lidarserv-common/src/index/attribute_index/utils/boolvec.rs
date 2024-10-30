@@ -10,6 +10,9 @@ pub trait BoolVec {
     /// Component-wise logical or
     fn or(&self, other: &Self) -> Self;
 
+    /// Component-wise not
+    fn not(&self) -> Self;
+
     /// Returns true, if at least one component is true.
     fn any(&self) -> bool;
 
@@ -26,6 +29,11 @@ impl BoolVec for bool {
     #[inline]
     fn all(&self) -> bool {
         *self
+    }
+
+    #[inline]
+    fn not(&self) -> Self {
+        !self
     }
 
     #[inline]
@@ -73,6 +81,14 @@ impl<const D: usize> BoolVec for SVector<bool, D> {
             other,
             #[inline]
             |l, r| l || r,
+        )
+    }
+
+    #[inline]
+    fn not(&self) -> Self {
+        self.map(
+            #[inline]
+            |c| !c,
         )
     }
 }
