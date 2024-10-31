@@ -1546,18 +1546,15 @@ def plot_insertion_speed_comparison(test_runs, filename):
 # Plot insertion speeds compared by attribute index states
 def plot_insertion_speed_comparison_pg(lidarserv_runs, pg_runs, num_points, filename):
     (width, height) = figsize
-    fig, ax = plt.subplots(figsize=(width, height/1.5))
+    fig, ax = plt.subplots(figsize=(width/1.5, height/1.5))
     bar_width = 1 / 5
     colors = ['#E69F00', '#0072B2', '#E69F00', '#0072B2']
     runs = [
         'uncompressed_attribute_index',
-        'compressed_attribute_index',
     ]
     custom_legend_labels = [
-        'Lidarserv\nNo Compression',
-        'pgPointCloud\nNo Compression',
-        'Lidarserv\nCompression',
-        'pgPointCloud\nCompression',
+        'Our Tool',
+        'pgPointCloud',
     ]  # Custom legend labels
     index = []
 
@@ -1566,7 +1563,7 @@ def plot_insertion_speed_comparison_pg(lidarserv_runs, pg_runs, num_points, file
     plt.axhline(y=1.92, color='#D55E00', linestyle=':', linewidth=2, label='Insertion Rate Goal (1.92 M Points/s)')
 
     # Add annotation
-    plt.annotate('Scanner Speed', xy=(0.8, 1.92), xytext=(0.75, 1.9), horizontalalignment='center', verticalalignment='top', color='#D55E00')
+    plt.annotate('Scanner Speed: 1.92M', xy=(0.15, 1.92), xytext=(0.15, 1.9), horizontalalignment='left', verticalalignment='top', color='#D55E00')
 
     for i in range(len(runs)):
         lidarserv_insertion_rate = lidarserv_runs[runs[i]][0]["results"]["insertion_rate"]["insertion_rate_points_per_sec"] / 1e6
