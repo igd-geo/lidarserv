@@ -8,7 +8,7 @@ use lidarserv_common::index::priority_function::TaskPriorityFunction;
 use log::warn;
 use nalgebra::vector;
 use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PointLayout};
-use pasture_io::las::point_layout_from_las_point_format;
+use pasture_io::las::{point_layout_from_las_point_format, ATTRIBUTE_LOCAL_LAS_POSITION};
 use pasture_io::las_rs::point::Format;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -113,17 +113,43 @@ pub enum AttributesPreset {
     LasPointFormat8,
     LasPointFormat9,
     LasPointFormat10,
+    LasPointFormat0Raw,
+    LasPointFormat1Raw,
+    LasPointFormat2Raw,
+    LasPointFormat3Raw,
+    LasPointFormat4Raw,
+    LasPointFormat5Raw,
+    LasPointFormat6Raw,
+    LasPointFormat7Raw,
+    LasPointFormat8Raw,
+    LasPointFormat9Raw,
+    LasPointFormat10Raw,
 }
 
 impl AttributesPreset {
     pub fn attributes(self) -> Vec<PointAttributeDefinition> {
-        fn las_attributes(point_format: u8) -> Vec<PointAttributeDefinition> {
+        fn las_attributes(
+            point_format: u8,
+            exact_binary_repr: bool,
+        ) -> Vec<PointAttributeDefinition> {
             let format = Format::new(point_format).unwrap();
-            let layout = point_layout_from_las_point_format(&format, false).unwrap();
-            layout
+            let layout = point_layout_from_las_point_format(&format, exact_binary_repr).unwrap();
+            let mut attrs = layout
                 .attributes()
                 .map(|a| a.attribute_definition().clone())
-                .collect()
+                .collect::<Vec<_>>();
+
+            // rename the position attribute to "our" position attribute.
+            for attr in &mut attrs {
+                if attr.name() == ATTRIBUTE_LOCAL_LAS_POSITION.name() {
+                    *attr = PointAttributeDefinition::custom(
+                        Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
+                        attr.datatype(),
+                    );
+                }
+            }
+
+            attrs
         }
 
         match self {
@@ -135,17 +161,28 @@ impl AttributesPreset {
                 Cow::Borrowed(POSITION_ATTRIBUTE_NAME),
                 PointAttributeDataType::Vec3i32,
             )],
-            AttributesPreset::LasPointFormat0 => las_attributes(0),
-            AttributesPreset::LasPointFormat1 => las_attributes(1),
-            AttributesPreset::LasPointFormat2 => las_attributes(2),
-            AttributesPreset::LasPointFormat3 => las_attributes(3),
-            AttributesPreset::LasPointFormat4 => las_attributes(4),
-            AttributesPreset::LasPointFormat5 => las_attributes(5),
-            AttributesPreset::LasPointFormat6 => las_attributes(6),
-            AttributesPreset::LasPointFormat7 => las_attributes(7),
-            AttributesPreset::LasPointFormat8 => las_attributes(8),
-            AttributesPreset::LasPointFormat9 => las_attributes(9),
-            AttributesPreset::LasPointFormat10 => las_attributes(10),
+            AttributesPreset::LasPointFormat0 => las_attributes(0, false),
+            AttributesPreset::LasPointFormat1 => las_attributes(1, false),
+            AttributesPreset::LasPointFormat2 => las_attributes(2, false),
+            AttributesPreset::LasPointFormat3 => las_attributes(3, false),
+            AttributesPreset::LasPointFormat4 => las_attributes(4, false),
+            AttributesPreset::LasPointFormat5 => las_attributes(5, false),
+            AttributesPreset::LasPointFormat6 => las_attributes(6, false),
+            AttributesPreset::LasPointFormat7 => las_attributes(7, false),
+            AttributesPreset::LasPointFormat8 => las_attributes(8, false),
+            AttributesPreset::LasPointFormat9 => las_attributes(9, false),
+            AttributesPreset::LasPointFormat10 => las_attributes(10, false),
+            AttributesPreset::LasPointFormat0Raw => las_attributes(0, true),
+            AttributesPreset::LasPointFormat1Raw => las_attributes(1, true),
+            AttributesPreset::LasPointFormat2Raw => las_attributes(2, true),
+            AttributesPreset::LasPointFormat3Raw => las_attributes(3, true),
+            AttributesPreset::LasPointFormat4Raw => las_attributes(4, true),
+            AttributesPreset::LasPointFormat5Raw => las_attributes(5, true),
+            AttributesPreset::LasPointFormat6Raw => las_attributes(6, true),
+            AttributesPreset::LasPointFormat7Raw => las_attributes(7, true),
+            AttributesPreset::LasPointFormat8Raw => las_attributes(8, true),
+            AttributesPreset::LasPointFormat9Raw => las_attributes(9, true),
+            AttributesPreset::LasPointFormat10Raw => las_attributes(10, true),
         }
     }
 }
