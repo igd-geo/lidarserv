@@ -1,6 +1,5 @@
-use nalgebra::{SVector, Scalar};
-
 use super::boolvec::BoolVec;
+use nalgebra::{SVector, Scalar};
 
 pub trait ComponentwiseCmp {
     /// Result type for the (component-wise) comparison operations below.

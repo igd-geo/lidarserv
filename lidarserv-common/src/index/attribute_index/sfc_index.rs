@@ -1,16 +1,11 @@
+use super::{boolvec::BoolVec, cmp::ComponentwiseCmp, IndexFunction};
+use crate::query::NodeQueryResult;
 use nalgebra::{SVector, Scalar};
 use num_traits::PrimInt;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::{max, Ordering},
     marker::PhantomData,
-};
-
-use crate::{index::attribute_index::utils::boolvec::BoolVec, query::NodeQueryResult};
-
-use super::{
-    utils::{cmp::ComponentwiseCmp, fixedvec::FixedVec},
-    IndexFunction,
 };
 
 /// Attribute type, that can be located on some space filling curve.
@@ -196,19 +191,20 @@ where
 
 /// Used as the node type by the histogram attribute index to accelerate queries.
 #[derive(Clone, Serialize, Deserialize)]
-pub struct SfcIndexNode<R, const BINS: usize> {
+pub struct SfcIndexNode<R> {
     /// By how many bits have the values in bins been shifted.
     shift: u8,
 
     /// List of sfc values that covers all attribute values.
-    bins: FixedVec<R, BINS>,
+    bins: Vec<R>,
 }
 
 /// Implementation of the space filling curve index.
 ///
 /// Approximates the attribute values in each node using
 /// a set of ranges on a space filling curve.
-pub struct SfcIndex<Attr, const BINS: usize> {
+pub struct SfcIndex<Attr> {
+    bins: usize,
     _phantom: PhantomData<Attr>,
 }
 
@@ -221,28 +217,23 @@ fn query_result(pos: bool, neg: bool) -> NodeQueryResult {
     }
 }
 
-impl<Attr, const BINS: usize> SfcIndex<Attr, BINS> {
-    pub fn new() -> Self {
+impl<Attr> SfcIndex<Attr> {
+    pub fn new(bins: usize) -> Self {
         SfcIndex {
+            bins,
             _phantom: PhantomData,
         }
     }
 }
 
-impl<Attr, const BINS: usize> Default for SfcIndex<Attr, BINS> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<Attr, const BINS: usize> IndexFunction for SfcIndex<Attr, BINS>
+impl<Attr> IndexFunction for SfcIndex<Attr>
 where
     Attr: SfcAttribute,
     Attr::Sfc: Eq + ComponentwiseCmp,
 {
     type AttributeValue = Attr;
 
-    type NodeType = SfcIndexNode<Attr::Sfc, BINS>;
+    type NodeType = SfcIndexNode<Attr::Sfc>;
 
     fn index(
         &self,
@@ -257,7 +248,7 @@ where
 
         // collect into a node.
         let mut shift = 0;
-        let mut node_buf = FixedVec::<Attr::Sfc, BINS>::new();
+        let mut node_buf = Vec::<Attr::Sfc>::with_capacity(self.bins);
         'bin_loop: for bin_to_add in buf.into_iter() {
             // apply shift to the new bin
             let mut bin_to_add = bin_to_add.shift(shift);
@@ -272,7 +263,7 @@ where
                 }
 
                 // make space by shifting
-                if !node_buf.is_full() {
+                if node_buf.len() < self.bins {
                     break 'shift_loop;
                 }
                 shift += 1;
@@ -301,9 +292,9 @@ where
         let mut node2_addshift = shift - node2.shift;
 
         // merge
-        let mut buf1 = node1.bins.as_ref();
-        let mut buf2 = node2.bins.as_ref();
-        let mut merge_buf = FixedVec::<Attr::Sfc, BINS>::new();
+        let mut buf1 = node1.bins.as_slice();
+        let mut buf2 = node2.bins.as_slice();
+        let mut merge_buf = Vec::<Attr::Sfc>::with_capacity(self.bins);
         'bin_loop: loop {
             // get a bin value from node1 or node2
             let s1 = buf1.split_first();
@@ -339,7 +330,7 @@ where
                 }
 
                 // make space by shifting
-                if !merge_buf.is_full() {
+                if merge_buf.len() < self.bins {
                     break 'shift_loop;
                 }
                 shift += 1;

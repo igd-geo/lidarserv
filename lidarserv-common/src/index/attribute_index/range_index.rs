@@ -1,7 +1,4 @@
-use super::{
-    utils::{boolvec::BoolVec, cmp::ComponentwiseCmp},
-    IndexFunction,
-};
+use super::{boolvec::BoolVec, cmp::ComponentwiseCmp, IndexFunction};
 use crate::query::NodeQueryResult;
 use nalgebra::{ArrayStorage, SVector, Scalar};
 use serde::{Deserialize, Serialize};

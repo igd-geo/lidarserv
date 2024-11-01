@@ -7,10 +7,7 @@ use pasture_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::index::attribute_index::{
-    utils::{boolvec::BoolVec, cmp::ComponentwiseCmp},
-    AttributeIndex,
-};
+use crate::index::attribute_index::{boolvec::BoolVec, cmp::ComponentwiseCmp, AttributeIndex};
 
 use super::{ExecutableQuery, Query};
 

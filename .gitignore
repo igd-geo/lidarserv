@@ -5,3 +5,4 @@
 /preconv.laz
 /lidarserv-common/test.json
 /.vscode/
+/evaluation/*/data
