@@ -62,7 +62,7 @@ pub struct ReplayOptions {
 
 #[derive(Debug, Parser)]
 pub struct SortOptions {
-    /// List of input las/laz files.
+    /// List or folder of input las/laz files.
     #[clap(required = true)]
     pub input_file: Vec<PathBuf>,
 

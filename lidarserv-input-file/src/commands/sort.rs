@@ -35,9 +35,27 @@ pub async fn sort(options: SortOptions) -> Result<()> {
         ));
     }
 
+    // check if input_file is a directory
+    // if it is, get all files in the directory
+    let mut files = Vec::new();
+    for path in options.input_file.iter() {
+        if path.is_dir() {
+            let dir = std::fs::read_dir(path)?;
+            for entry in dir {
+                let entry = entry?;
+                let path = entry.path();
+                if path.extension().map(|ext| ext.eq("las") || ext.eq("laz")).unwrap_or(false) {
+                    files.push(path);
+                }
+            }
+        } else {
+            files.push(path.to_path_buf());
+        }
+    }
+    info!("Input files: {:?}", files);
+
     // open input files
-    let readers = options
-        .input_file
+    let readers = files
         .iter()
         .map(|path| LASReader::from_path(path, true))
         .collect::<Result<Vec<_>>>()?;
@@ -49,8 +67,8 @@ pub async fn sort(options: SortOptions) -> Result<()> {
     }
 
     // compression must be same in all input files
-    let first_ext = options.input_file.first().unwrap().extension().unwrap();
-    if options.input_file.iter().map(|path| path.extension().unwrap()).any(|ext| ext != first_ext) {
+    let first_ext = files.first().unwrap().extension().unwrap();
+    if files.iter().map(|path| path.extension().unwrap()).any(|ext| ext != first_ext) {
         return Err(anyhow!("Extensions of input files must be the same for all files."));
     }
 
@@ -58,7 +76,7 @@ pub async fn sort(options: SortOptions) -> Result<()> {
     let layout = first.get_default_point_layout().clone();
     for (i, reader) in readers.iter().enumerate() {
         if *reader.get_default_point_layout() != layout {
-            let name = options.input_file[i].display();
+            let name = files[i].display();
             return Err(anyhow!(
                 "All input files must have identical point layouts. (at: {name})"
             ));
@@ -75,7 +93,7 @@ pub async fn sort(options: SortOptions) -> Result<()> {
     let transform = *header.transforms();
     for (i, reader) in readers.iter().enumerate() {
         if *reader.header().transforms() != transform {
-            let name = options.input_file[i].display();
+            let name = files[i].display();
             return Err(anyhow!(
                 "All input files must have identical offset/scale. (at: {name})"
             ));
@@ -86,7 +104,7 @@ pub async fn sort(options: SortOptions) -> Result<()> {
     let gps_time_type = header.gps_time_type();
     for (i, reader) in readers.iter().enumerate() {
         if reader.header().gps_time_type() != gps_time_type {
-            let name = options.input_file[i].display();
+            let name = files[i].display();
             return Err(anyhow!(
                 "All input files must have identical gps time type. (at: {name})"
             ));
