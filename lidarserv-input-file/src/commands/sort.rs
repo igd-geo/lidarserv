@@ -23,6 +23,7 @@ use std::{
     path::Path,
     slice,
 };
+use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
 pub async fn sort(options: SortOptions) -> Result<()> {
@@ -42,6 +43,16 @@ pub async fn sort(options: SortOptions) -> Result<()> {
         .collect::<Result<Vec<_>>>()?;
 
     let first = readers.first().expect("Input files may not be empty.");
+
+    if options.output_file.extension().unwrap().eq("laz") {
+        return Err(anyhow!("Only las output files are allowed"));
+    }
+
+    // compression must be same in all input files
+    let first_ext = options.input_file.first().unwrap().extension().unwrap();
+    if options.input_file.iter().map(|path| path.extension().unwrap()).any(|ext| ext != first_ext) {
+        return Err(anyhow!("Extensions of input files must be the same for all files."));
+    }
 
     // layouts need to match
     let layout = first.get_default_point_layout().clone();
@@ -92,7 +103,7 @@ pub async fn sort(options: SortOptions) -> Result<()> {
         layout: layout.clone(),
         chunk_size,
     };
-    let mut merger = Merger::new(layout);
+    let mut merger = Merger::new(layout, options.temp_dir);
     while let Some(chunk) = chunker.read()? {
         let sorted = sort_points_incore(chunk);
         merger.add_input(sorted)?;
@@ -188,19 +199,32 @@ impl PartialEq for FloatOrd {
 struct Merger {
     input: VecDeque<tempfile::TempPath>,
     layout: PointLayout,
+    temp_dir: Option<PathBuf>
 }
 
 impl Merger {
-    pub fn new(layout: PointLayout) -> Self {
+    pub fn new(layout: PointLayout, temp_dir: Option<PathBuf>) -> Self {
+        // create temp dir if it does not exist
+        if let Some(temp_dir) = &temp_dir {
+            if !temp_dir.exists() {
+                info!("Creating temp directory {}", temp_dir.display());
+                std::fs::create_dir_all(temp_dir).expect("Could not create temp directory");
+            }
+        }
         Merger {
             input: VecDeque::new(),
             layout,
+            temp_dir,
         }
     }
 
     pub fn add_input(&mut self, points: VectorBuffer) -> Result<()> {
-        assert!(*points.point_layout() == self.layout);
-        let mut file = NamedTempFile::new()?;
+        assert_eq!(*points.point_layout(), self.layout);
+        let mut file = if let Some(temp_dir) = &self.temp_dir {
+            NamedTempFile::new_in(temp_dir)?
+        } else {
+            NamedTempFile::new()?
+        };
         info!("Create chunk {}", file.path().display());
         let data = points.get_point_range_ref(0..points.len());
         file.write_all(data)?;

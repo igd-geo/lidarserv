@@ -67,6 +67,11 @@ pub struct SortOptions {
     pub input_file: Vec<PathBuf>,
 
     /// The name of the output file.
-    #[clap()]
+    #[clap(long)]
     pub output_file: PathBuf,
+
+    /// The directory for temporary files used during sorting.
+    /// If not set, the temporary files will be created in the systems temporary directory.
+    #[clap(long)]
+    pub temp_dir: Option<PathBuf>,
 }
