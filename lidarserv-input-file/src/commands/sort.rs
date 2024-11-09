@@ -267,7 +267,11 @@ impl Merger {
         f2_raw.seek(SeekFrom::Start(0))?;
         let nr_points = (f1_nr_bytes + f2_nr_bytes) / self.layout.size_of_point_entry();
 
-        let mut merged_raw = NamedTempFile::new()?;
+        let mut merged_raw = if self.temp_dir.is_some() {
+            NamedTempFile::new_in(self.temp_dir.as_ref().unwrap())?
+        } else {
+            NamedTempFile::new()?
+        };
         let merged_path = merged_raw.path().to_path_buf();
         info!(
             "Merging {} and {} into {}",
