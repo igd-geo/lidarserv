@@ -1,6 +1,7 @@
 use crate::cli::SortOptions;
 use anyhow::{anyhow, Result};
 use log::info;
+use rayon::prelude::ParallelSliceMut;
 use pasture_core::{
     containers::{
         BorrowedBuffer, BorrowedBufferExt, InterleavedBuffer, InterleavedBufferMut,
@@ -176,7 +177,7 @@ fn sort_points_incore(points: VectorBuffer) -> VectorBuffer {
         .collect();
 
     // sort
-    gps_times.sort_unstable_by_key(|(_, gps_time)| FloatOrd(*gps_time));
+    gps_times.par_sort_unstable_by_key(|(_, gps_time)| FloatOrd(*gps_time));
 
     // reorder points
     let mut result = VectorBuffer::with_capacity(points.len(), points.point_layout().clone());

@@ -18,3 +18,4 @@ bytemuck = "1.17"
 thiserror = "1.0"
 tempfile = "3.12"
 nalgebra.workspace = true
+rayon = "1.10.0"
