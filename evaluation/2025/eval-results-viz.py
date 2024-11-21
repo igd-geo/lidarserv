@@ -11,19 +11,8 @@ from mpl_toolkits import mplot3d
 import matplotlib.cm as cm
 from matplotlib.gridspec import SubplotSpec
 
-PROJECT_ROOT = join(dirname(__file__), "..")
+PROJECT_ROOT = dirname(__file__)
 
-INPUT_FILES_PARAMETER_OVERVIEW_V1 = [
-]
-
-INPUT_FILES_PARAMETER_OVERVIEW_V2 = [
-]
-
-INPUT_FILES_QUERY_PERFORMANCE = [
-]
-
-INPUT_FILES_INSERTION_SPEED = [
-]
 def main():
     # plot style
     # plt.style.use("seaborn-notebook")
@@ -33,6 +22,70 @@ def main():
     # regularly crashes the viewer...
     mpl.rcParams['pdf.fonttype'] = 42
 
+    INSERTION_SPEED_COMPARISON = get_json_files(join(PROJECT_ROOT, "insertion_speed_comparison"))
+    print(INSERTION_SPEED_COMPARISON)
+    for file in INSERTION_SPEED_COMPARISON:
+        with open(file, "r") as f:
+            data = json.load(f)
+
+        # ensure output folder exists
+        output_folder = f"{file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_overall_performance_by_sizes(
+            test_runs=data["runs"],
+            filename=join(output_folder, "nodesize-performance_node.pdf"),
+            nr_points=data["env"]["nr_points"],
+        )
+
+    file = join(PROJECT_ROOT, "overview_2024-11-14_1.json")
+    with open(file, "r") as f:
+        data = json.load(f)
+        output_folder = f"{file}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_rate_by_nr_threads(
+            test_runs=data["runs"]["num_threads"],
+            filename=join(output_folder, "insertion-rate-by-num-threads.pdf")
+        )
+
+        plot_insertion_rate_by_priority_function(
+            test_runs=data["runs"]["priority_functions"],
+            filename=join(output_folder, "insertion-rate-by-priority-function.pdf")
+        )
+
+        plot_insertion_rate_by_priority_function_bogus(
+            test_runs=data["runs"]["bogus_points"],
+            filename=join(output_folder, "insertion-rate-by-priority-function-bogus.pdf")
+        )
+
+        # get all runs where the name begins with "n1"
+        n1_runs = {k: v for k, v in data["runs"].items() if k.startswith("n1")}
+        plot_overall_performance_by_sizes(
+            test_runs=n1_runs,
+            filename=join(output_folder, "nodesize-performance_node.pdf"),
+            nr_points=data["env"]["nr_points"],
+        )
+
+
+
+def get_json_files(directory):
+    json_files = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".json"):
+                json_files.append(os.path.join(root, file))
+    return json_files
+
+def get_timeout_runs(test_runs, nr_points):
+    timeouted = []
+    for name, run in test_runs.items():
+        nr_points_run = run["results"]["insertion_rate"]["nr_points"]
+        if nr_points_run != nr_points:
+            timeouted.append(True)
+        else:
+                timeouted.append(False)
+    return timeouted
 
 def make_y_insertion_rate(ax, test_runs):
     ys = [i["results"]["insertion_rate"]["insertion_rate_points_per_sec"] for i in test_runs]
@@ -72,6 +125,7 @@ def make_x_priority_function(ax, test_runs):
     labels = [rename_tpf(i["index"]["priority_function"]) for i in test_runs]
     xs = list(range(len(labels)))
     ax.set_xticks(xs, labels)
+    ax.set_xticklabels(labels, rotation=90)
     ax.set_xlim(left=-.5, right=len(labels) - .5)
     return xs
 
@@ -79,9 +133,14 @@ def make_x_priority_function(ax, test_runs):
 def plot_insertion_rate_by_nr_threads(test_runs, filename, title=None):
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.subplots()
+    compression = [i["index"]["compression"] for i in test_runs]
+    colors = ['red' if c else 'blue' for c in compression]
     xs = make_x_nr_threads(ax, test_runs)
     ys = make_y_insertion_rate(ax, test_runs)
-    ax.scatter(xs, ys)
+    ax.scatter(xs, ys, c=colors)
+    ax.legend(handles=[Line2D([0], [0], marker='o', color='w', markerfacecolor='red', markersize=10, label='Compression'),
+                       Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=10, label='No Compression')])
+
     if title is not None:
         ax.set_title(title)
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
@@ -629,14 +688,19 @@ def plot_overall_performance_by_bogus(test_runs, filename, nr_points, title=None
 # Plots Insertion Speed, Query Time Speedup and Query Point Reduction according to the node and point hierarchy
 # IMPORTANT: Always use the same number of points for all runs (no timeout)
 # Else the query time speedup is not comparable (rest is probably fine)
-def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None, insertion_color_threshold=150000,
-                                      query_run="only_node_acc"):
+def plot_overall_performance_by_sizes(
+        test_runs,
+        filename,
+        nr_points,
+        title=None,
+        insertion_color_threshold=150000,
+        plot_point_reduction=False,
+        query_run="only_node_acc"):
     fig, ax1 = plt.subplots(figsize=[10, 6])
     ax2 = ax1.twinx()  # Create a twin Axes sharing the xaxis
 
     names = []
     node_values = []
-    sizes_of_roots = []
     insertion_speeds = []
     query_speeds = []
     point_reductions = []
@@ -652,10 +716,10 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
             node_values.append(node_hierarchy)
 
             # data calculation
-            sizes_of_roots.append(multi_run["results"]["index_info"]["root_cell_size"][0])
             insertion_speeds.append(multi_run["results"]["insertion_rate"]["insertion_rate_points_per_sec"])
             query_speeds.append(calculate_average_query_time_single_run(multi_run))
-            point_reductions.append(calculate_average_point_reduction_single_run(multi_run, query_run))
+            if plot_point_reduction:
+                point_reductions.append(calculate_average_point_reduction_single_run(multi_run, query_run))
 
             # check if timeouted
             nr_points_run = multi_run["results"]["insertion_rate"]["nr_points"]
@@ -663,12 +727,6 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
                 timeouted.append(True)
             else:
                 timeouted.append(False)
-
-    for i in range(len(names)):
-        # names[i] = names[i] + "\n" + str(sizes_of_roots[i]) + "m"
-        size = sizes_of_roots[i]
-        size = "{:.2f}".format(size)
-        names[i] = size + "m" + "\n" + str(node_values[i])
 
     # Convert timeouted to color list
     # Also check if insertion speed is below threshold and color it orange
@@ -682,16 +740,17 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
             colors.append("green")
 
     # flip all lists
-    names = names[::-1]
-    insertion_speeds = insertion_speeds[::-1]
-    query_speeds = query_speeds[::-1]
-    point_reductions = point_reductions[::-1]
-    colors = colors[::-1]
+    # names = names[::-1]
+    # insertion_speeds = insertion_speeds[::-1]
+    # query_speeds = query_speeds[::-1]
+    # point_reductions = point_reductions[::-1]
+    # colors = colors[::-1]
 
     # Plotting logic for Insertion Speed
     # plot insertion speed as bar plot with different colors for timeouted runs
     # ax1.bar(names, insertion_speeds, label='Insertion Rate | points/s', color=colors)
     ax1.plot(names, insertion_speeds, marker='o', label='Insertion Rate | Points/s', color='tab:blue')
+    ax1.set_xticklabels(names, rotation=90)
     ax1.set_xlabel('Node Sizes')
     ax1.set_ylabel('Insertion Rate | Points/s', color='tab:blue')
 
@@ -703,26 +762,27 @@ def plot_overall_performance_by_sizes(test_runs, filename, nr_points, title=None
     ax3 = ax1.twinx()
     ax3.spines['right'].set_position(('outward', 60))  # Adjust the position of the third y-axis
 
-    ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction | Percentage', color='tab:red')
-    ax3.set_ylabel('Average Point Reduction | Percentage', color='tab:red')
+    if plot_point_reduction:
+        ax3.plot(names, point_reductions, marker='x', label='Average Point Reduction | Percentage', color='tab:red')
+        ax3.set_ylabel('Average Point Reduction | Percentage', color='tab:red')
 
     # ax1.axhline(y=400000, color='grey', linestyle=':', label='Insertion Rate Goal (400000 Points/s)')
 
     # Combine legends from all axes
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    lines3, labels3 = ax3.get_legend_handles_labels()
-    print(lines, labels)
-
-    ax3.legend(lines + lines2 + lines3, labels + labels2 + labels3, loc='upper center', bbox_to_anchor=(0.5, -0.1))
+    if plot_point_reduction:
+        lines3, labels3 = ax3.get_legend_handles_labels()
+        ax3.legend(lines + lines2 + lines3, labels + labels2 + labels3, loc='upper center', bbox_to_anchor=(0.5, -0.1))
     # legend position below diagram:
     # ax3.legend(lines + lines2 + lines3, labels + labels2 + labels3, loc='upper center', bbox_to_anchor=(0.5, -0.2))
 
     ax1.tick_params(axis='y', labelcolor='tab:blue')
     ax2.tick_params(axis='y', labelcolor='tab:green')
-    ax3.tick_params(axis='y', labelcolor='tab:red')
+    if plot_point_reduction:
+        ax3.tick_params(axis='y', labelcolor='tab:red')
 
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(rotation=90)
     # plt.title(title if title else 'Overall Performance by Run')
     plt.tight_layout()
 
@@ -857,25 +917,13 @@ def calculate_average_query_time_single_run(run):
 
     query_names = \
         [
-            'time_range',
-            'ground_classification',
-            # 'no_cars_classification',
-            'normal_x_vertical',
-            'building_classification',
-            'high_intensity',
-            'low_intensity',
-            'one_return',
-            # 'one_return',
-            # 'mixed_ground_and_one_return',
-            'mixed_ground_and_time',
-            'mixed_ground_and_one_return',
-            # 'mixed_ground_normal_one_return'
-            'mixed_ground_normal_one_return'
+            'lod0',
+            'lod1',
         ]
 
     speedup_sum = 0
     for query in query_names:
-        speedup_sum += queries[query]["point_filtering_with_node_acc"]["query_time_seconds"]
+        speedup_sum += queries[query]["query_time_seconds"]
     if len(queries) > 0:
         return speedup_sum / len(queries)
     return -1

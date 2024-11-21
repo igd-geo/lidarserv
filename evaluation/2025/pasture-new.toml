@@ -1,4 +1,4 @@
-points_file = "../../data/AHN4_320M_sorted.las"
+points_file = "../../data/AHN4_138M.laz"
 index_folder = "../../data/evaluation"
 output_file = "pasture-new_%d_%i.json"
 use_existing_index = false

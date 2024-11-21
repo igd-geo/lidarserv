@@ -462,7 +462,7 @@
         }
       }
     ],
-    "cache_sizes": [
+    "num_threads": [
       {
         "index": {
           "cache_size": 10000,
