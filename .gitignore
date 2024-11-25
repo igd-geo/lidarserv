@@ -1,9 +1,9 @@
 /target
 /data/
-/.idea/
 /.env
 /preconv.laz
 /lidarserv-common/test.json
 /.vscode/
 /evaluation/*/data
 **/.idea/
+**/.DS_Store
