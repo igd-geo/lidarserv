@@ -6,3 +6,4 @@
 /lidarserv-common/test.json
 /.vscode/
 /evaluation/*/data
+**/.idea/
