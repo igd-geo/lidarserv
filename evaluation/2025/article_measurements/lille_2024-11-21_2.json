@@ -1,0 +1,88 @@
+{
+  "env": {
+    "config_file": "/home/hermann/IdeaProjects/lidarserv/evaluation/2025/article_measurements/lille.toml",
+    "duration:": 35,
+    "finished_at": "2024-11-21T15:40:28.279951112+00:00",
+    "hostname": "pc2681",
+    "nr_points": 120000000,
+    "started_at": "2024-11-21T15:39:53.191083605+00:00",
+    "version": "git:6c9c306-modified"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 5000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "max_lod": 10,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.168777709,
+            "duration_seconds": 34.871335926,
+            "insertion_rate_points_per_sec": 3424646.4280908434,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0
+          },
+          "query_performance": null
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat1Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/lille",
+    "indexed_attributes": {
+      "classification": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "color_rgb": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "gps_time": [
+        "RangeIndex"
+      ],
+      "intensity": [
+        "RangeIndex"
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "output_file": "lille_%d_%i.json",
+    "points_file": "../../../data/Lille_sorted.las",
+    "queries": {},
+    "target_point_pressure": 1000000,
+    "use_existing_index": false
+  }
+}
