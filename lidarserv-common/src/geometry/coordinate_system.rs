@@ -1,7 +1,7 @@
 use core::f64;
 use nalgebra::{vector, Vector3};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, mem};
+use std::{fmt::Debug, mem, ops::RangeInclusive};
 use thiserror::Error;
 
 use crate::f64_utils::{f64_next_down, f64_next_up};
@@ -159,6 +159,40 @@ impl CoordinateSystem {
         }
 
         result
+    }
+
+    pub fn bounds_distance<C: Component>(&self) -> RangeInclusive<f64> {
+        let scale = self.scale.x;
+
+        let a1 = C::MIN.to_f64();
+        let a2 = C::MAX.to_f64();
+
+        // apply scale
+        let mut b1 = a1 * scale;
+        let mut b2 = a2 * scale;
+
+        // make sure that the result is rounded into the correct direction
+        if b1 / scale < a1 {
+            if scale > 0.0 {
+                b1 = f64_next_up(b1);
+            } else {
+                b1 = f64_next_down(b1);
+            }
+        }
+        if b2 / scale > a2 {
+            if scale > 0.0 {
+                b2 = f64_next_down(b2);
+            } else {
+                b2 = f64_next_up(b2);
+            }
+        }
+
+        // if scale is negativ, the minimum becomes the maximum and vice-versa
+        if scale < 0.0 {
+            mem::swap(&mut b1, &mut b2)
+        }
+
+        b1..=b2
     }
 
     pub fn decode_distance<C: Component>(&self, distance: C) -> f64 {

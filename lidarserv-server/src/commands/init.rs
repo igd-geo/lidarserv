@@ -429,7 +429,7 @@ fn octree_interactive(
         theme: &dyn Theme,
         coordinate_system: &CoordinateSystem,
         layout: &PointLayout,
-    ) -> OctreeParams {
+    ) -> Result<OctreeParams, String> {
         let root_size_global: f64 = Input::with_theme(theme)
             .with_prompt("Largest node size in metres:")
             .default(100.0)
@@ -442,41 +442,91 @@ fn octree_interactive(
             .unwrap();
         let sampling_grid_size: u32 = Input::with_theme(theme)
             .with_prompt("Sampling grid size:")
-            .default(256)
+            .default(128)
             .interact()
             .unwrap();
 
-        struct Wct;
-        impl WithComponentTypeOnce for Wct {
-            type Output = RangeInclusive<i16>;
+        struct Wct<'a> {
+            coordinate_system: &'a CoordinateSystem,
+        }
+        impl<'a> WithComponentTypeOnce for Wct<'a> {
+            type Output = (RangeInclusive<i16>, RangeInclusive<f64>);
 
             fn run_once<C: lidarserv_common::geometry::position::Component>(self) -> Self::Output {
-                C::grid_get_level_minmax()
+                (
+                    C::grid_get_level_minmax(),
+                    self.coordinate_system.bounds_distance::<C>(),
+                )
             }
         }
-        let allowed_levels = Wct.for_layout_once(layout);
+        let (allowed_levels, allowed_dist) = Wct { coordinate_system }.for_layout_once(layout);
 
+        // node size
+        let shift = sampling_grid_size.ilog2() as i16;
+        let allowed_node_levels = (*allowed_levels.start() + shift)..=(*allowed_levels.end());
+        if allowed_node_levels.is_empty() {
+            let max_shift = allowed_levels.end() - allowed_levels.start();
+            let max_sampling_grid_size = if max_shift >= 32 {
+                u32::MAX
+            } else {
+                1_u32 << max_shift
+            };
+            return Err(format!("The 'Sampling grid size' value is too large. \nReduce 'Sampling grid size' to {max_sampling_grid_size} or less."));
+        }
+
+        // node level
+        if root_size_global <= 0.0 {
+            return Err("The 'Largest node size' value must be larger than 0.".to_string());
+        }
+        if !allowed_dist.contains(&root_size_global) {
+            return Err(format!("The 'Largest node size' value is larger than the size of the coordinate system. Reduce it to {} or less.", allowed_dist.end()));
+        }
         let root_size: f64 = coordinate_system.encode_distance(root_size_global).unwrap();
+        let node_level = root_size.log2().floor() as i16;
+        if node_level < *allowed_node_levels.start() {
+            let min_node_level = *allowed_node_levels.start();
+            let min_root_node_size_local = 2.0_f64.powi(min_node_level as i32);
+            let min_root_node_size = coordinate_system.decode_distance(min_root_node_size_local);
+            return Err(format!("The 'Largest node size' value is too small.\nYou need to increase the 'Largest node size' and/or decrease the 'Sampling grid size'.\nIf you want to keep the current 'Sampling grid size' of {sampling_grid_size}, then 'Largest node size' must be increased to {min_root_node_size} or above."));
+        }
+        if node_level > *allowed_node_levels.end() {
+            let max_node_level = *allowed_node_levels.end();
+            let max_root_node_size_local = 2.0_f64.powi(max_node_level as i32);
+            let max_root_node_size = coordinate_system.decode_distance(max_root_node_size_local);
+            return Err(format!("The 'Largest node size' value is too large.\nYou need to decrease the 'Largest node size' to {max_root_node_size} or below."));
+        }
+        assert!(allowed_levels.contains(&node_level));
+
+        // point level
+        let point_level = node_level - shift;
+        assert!(allowed_levels.contains(&point_level));
+
+        // max lod
+        if finest_grid_spacing_global <= 0.0 {
+            return Err("The 'Finest point spacing' value must be larger than 0.".to_string());
+        }
+        if !allowed_dist.contains(&finest_grid_spacing_global) {
+            return Err(format!("The 'Finest point spacing' value is larger than the size of the coordinate system. Reduce it to {} or less.", allowed_dist.end()));
+        }
         let finest_grid_spacing: f64 = coordinate_system
             .encode_distance(finest_grid_spacing_global)
             .unwrap();
-        let node_level =
-            (root_size.log2().floor() as i16).clamp(*allowed_levels.start(), *allowed_levels.end());
-        let shift = sampling_grid_size.ilog2() as i16;
-        let point_level = node_level - shift;
         let point_level_finest = finest_grid_spacing.log2().floor() as i16;
-
         let max_lod = if point_level_finest <= point_level {
             LodLevel::from_level((point_level - point_level_finest) as u8)
         } else {
-            LodLevel::base()
+            let max_point_level_finest = point_level;
+            let max_finest_grid_spacing_local = 2.0_f64.powi(max_point_level_finest as i32);
+            let max_finest_point_spacing =
+                coordinate_system.decode_distance(max_finest_grid_spacing_local);
+            return Err(format!("The 'Finest point spacing' value is too large. \nPlease reduce 'Finest point spacing', and/or increase 'Largest node size', and/or reduce 'Sampling grid size'. \nIf you want to keep the current 'Largest node size' of {root_size_global} and 'Sampling grid size' of {sampling_grid_size}, then 'Finest point spacing' must be {max_finest_point_spacing} or smaller."));
         };
 
-        OctreeParams {
+        Ok(OctreeParams {
             node_hierarchy: GridHierarchy::new(node_level),
             point_hierarchy: GridHierarchy::new(point_level),
             max_lod,
-        }
+        })
     }
 
     fn summary(params: &OctreeParams, coordinate_system: &CoordinateSystem) {
@@ -509,15 +559,19 @@ fn octree_interactive(
     }
 
     loop {
-        let params = auto_estimate_params(theme, coordinate_system, layout);
-        summary(&params, coordinate_system);
-        let is_ok = Confirm::with_theme(theme)
-            .with_prompt("Does this look acceptable to you?")
-            .default(true)
-            .interact()
-            .unwrap();
-        if is_ok {
-            return params;
+        match auto_estimate_params(theme, coordinate_system, layout) {
+            Ok(params) => {
+                summary(&params, coordinate_system);
+                let is_ok = Confirm::with_theme(theme)
+                    .with_prompt("Does this look acceptable to you?")
+                    .default(true)
+                    .interact()
+                    .unwrap();
+                if is_ok {
+                    return params;
+                }
+            }
+            Err(e) => println!("{e}"),
         }
     }
 }

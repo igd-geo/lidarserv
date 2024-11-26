@@ -5,9 +5,9 @@ resolver = "2"
 
 [workspace.dependencies]
 nalgebra = { version = "0.33", features = ["serde-serialize"] }
-pasture-core = {git = "https://github.com/Mortano/pasture.git", rev = "b575898a6baa861ca84a5ef2629b2e687bdf2d45", features = ["serde"]}
-pasture-derive = {git = "https://github.com/Mortano/pasture.git", rev = "b575898a6baa861ca84a5ef2629b2e687bdf2d45"}
-pasture-io = {git = "https://github.com/Mortano/pasture.git", rev = "b575898a6baa861ca84a5ef2629b2e687bdf2d45"}
+pasture-core = {git = "https://github.com/Mortano/pasture.git", rev = "a07cb20fc786580efc29d7fb97b6cbf496092453", features = ["serde"]}
+pasture-derive = {git = "https://github.com/Mortano/pasture.git", rev = "a07cb20fc786580efc29d7fb97b6cbf496092453"}
+pasture-io = {git = "https://github.com/Mortano/pasture.git", rev = "a07cb20fc786580efc29d7fb97b6cbf496092453"}
 
 [profile.dev]
 opt-level = 3
