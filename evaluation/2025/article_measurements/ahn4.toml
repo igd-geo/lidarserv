@@ -1,5 +1,5 @@
-points_file = "/media/hermann/Paul 500/ahn4.las"
-index_folder = "/media/hermann/Paul 1000/ahn4-eval"
+points_file = "../../../ahn4.las"
+index_folder = "../../../data/ahn4-eval"
 output_file = "ahn4_%d_%i.json"
 use_existing_index = false
 cooldown_seconds = 0
