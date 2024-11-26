@@ -1,4 +1,4 @@
-points_file = "../../data/AHN4_138M.laz"
+points_file = "../../data/AHN4_138M_sorted.las"
 index_folder = "../../data/evaluation"
 output_file = "pasture-new_%d_%i.json"
 use_existing_index = false
@@ -26,14 +26,14 @@ offset = [
 ]
 
 [defaults]
-node_hierarchy = 18
-point_hierarchy = 11
+node_hierarchy = 24
+point_hierarchy = 17
 priority_function = "NrPointsWeightedByTaskAge"
 num_threads = 32
 cache_size = 10000
-compression = false
+compression = true
 nr_bogus_points = [0, 0]
-max_lod = 5
+max_lod = 15
 enable_attribute_index = false
 
 [runs.example]

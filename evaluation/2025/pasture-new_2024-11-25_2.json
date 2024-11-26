@@ -1,0 +1,83 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/pasture-new.toml",
+    "duration:": 203,
+    "finished_at": "2024-11-25T14:58:23.168167817+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_points": 138654677,
+    "started_at": "2024-11-25T14:54:59.709112923+00:00",
+    "version": "git:6c9c306-modified"
+  },
+  "runs": {
+    "example": [
+      {
+        "index": {
+          "cache_size": 10000,
+          "compression": true,
+          "enable_attribute_index": false,
+          "max_lod": 15,
+          "node_hierarchy": 24,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 17,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.608531624,
+            "duration_seconds": 62.906358402,
+            "insertion_rate_points_per_sec": 2183026.3256890047,
+            "nr_points": 138654677,
+            "nr_times_to_slow": 0
+          },
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 0.000165497,
+              "nr_nodes": 131360,
+              "nr_non_empty_nodes": 131360,
+              "nr_points": 138654677,
+              "query_time_seconds": 118.98503994
+            },
+            "lod0": {
+              "load_time_seconds": 1.18e-7,
+              "nr_nodes": 4,
+              "nr_non_empty_nodes": 4,
+              "nr_points": 657,
+              "query_time_seconds": 0.000224401
+            }
+          }
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat6Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../data/evaluation",
+    "indexed_attributes": {},
+    "indexing_timeout_seconds": 1800,
+    "output_file": "pasture-new_%d_%i.json",
+    "points_file": "../../data/AHN4_138M_sorted.las",
+    "queries": {
+      "full-point-cloud": "full",
+      "lod0": "lod(0)"
+    },
+    "target_point_pressure": 1000000,
+    "use_existing_index": false
+  }
+}
