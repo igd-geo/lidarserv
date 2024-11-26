@@ -1,4 +1,4 @@
-points_file = "../../../ahn4.las"
+points_file = "../../../data/AHN4.las"
 index_folder = "../../../data/ahn4-eval"
 output_file = "ahn4_%d_%i.json"
 use_existing_index = false
@@ -30,8 +30,9 @@ intensity = ["RangeIndex"]
 gpstime = ["RangeIndex"]
 
 [defaults]
-node_hierarchy = 23
-point_hierarchy = 15
+node_hierarchy = 25
+point_hierarchy = 18
+max_lod = 15
 priority_function = "NrPointsWeightedByTaskAge"
 num_threads = 32
 cache_size = 10000
@@ -40,7 +41,6 @@ nr_bogus_points = [
     0,
     0,
 ]
-max_lod = 15
 enable_attribute_index = true
 
 [runs.main]
