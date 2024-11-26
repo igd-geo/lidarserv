@@ -30,8 +30,8 @@ intensity = ["RangeIndex"]
 gpstime = ["RangeIndex"]
 
 [defaults]
-node_hierarchy = 25
-point_hierarchy = 18
+node_hierarchy = 23
+point_hierarchy = 15
 max_lod = 15
 priority_function = "NrPointsWeightedByTaskAge"
 num_threads = 32
