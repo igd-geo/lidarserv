@@ -38,11 +38,13 @@ fn main(args: Args) {
     options.run(move |render_thread| {
         // create window
         let window = render_thread.open_window().unwrap();
+        // disable eye dome lighting for macos
+        let edl = !cfg!(target_os = "macos") && !args.disable_eye_dome_lighting;
         window
             .set_render_settings(BaseRenderSettings {
                 window_title: "LidarServ Viewer".to_string(),
                 grid: Some(Default::default()),
-                enable_edl: !args.disable_eye_dome_lighting,
+                enable_edl: edl,
                 ..Default::default()
             })
             .unwrap();
