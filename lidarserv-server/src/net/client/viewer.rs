@@ -20,6 +20,7 @@ use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::Mutex;
+use lidarserv_common::geometry::bounding_box::Aabb;
 
 struct Inner {
     connection: Connection<OwnedWriteHalf>,
@@ -35,6 +36,7 @@ pub struct ReadViewerClient {
     coordinate_system: CoordinateSystem,
     attributes: Vec<PointAttributeDefinition>,
     point_layout: PointLayout,
+    initial_bounding_box: Aabb<f64>,
 }
 
 #[derive(Clone)]
@@ -181,12 +183,13 @@ impl ViewerClient {
         // wait for the point cloud info.
         // (we don't need that info at the moment, so all we do with it is ignoring it...)
         let pc_info = connection.read_message(shutdown).await?;
-        let (coordinate_system, codec, attributes) = match pc_info.header {
+        let (coordinate_system, codec, attributes, current_bounding_box) = match pc_info.header {
             Header::PointCloudInfo {
                 coordinate_system,
                 codec,
                 attributes,
-            } => (coordinate_system, codec, attributes),
+                current_bounding_box,
+            } => (coordinate_system, codec, attributes, current_bounding_box),
             _ => {
                 return Err(LidarServerError::Protocol(
                     "Expected a `PointCloudInfo` message.".to_string(),
@@ -212,6 +215,7 @@ impl ViewerClient {
             coordinate_system,
             attributes,
             point_layout,
+            initial_bounding_box: current_bounding_box,
         };
 
         Ok(ViewerClient { read, write })
@@ -270,6 +274,8 @@ impl ReadViewerClient {
     pub fn attributes(&self) -> &[PointAttributeDefinition] {
         &self.attributes
     }
+
+    pub fn initial_bounding_box(&self) -> Aabb<f64> { self.initial_bounding_box }
 
     pub async fn receive_update_raw(
         &mut self,

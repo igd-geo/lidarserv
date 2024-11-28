@@ -5,7 +5,7 @@ use lidarserv_server::common::nalgebra::{Matrix4, Point3};
 use lidarserv_server::index::query::Query;
 use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use lidarserv_server::net::client::viewer::{PartialResult, QueryConfig, ViewerClient};
-use log::info;
+use log::{debug, info};
 use nalgebra::{point, vector};
 use pasture_core::containers::{BorrowedBuffer, BorrowedMutBufferExt, VectorBuffer};
 use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY, POSITION_3D};
@@ -26,6 +26,7 @@ use std::f64::consts::FRAC_PI_4;
 use std::thread;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::error::TryRecvError;
+use lidarserv_common::geometry::bounding_box::Aabb;
 
 mod cli;
 
@@ -77,6 +78,7 @@ fn main(args: Args) {
         let (tokio_camera_sender, tokio_camera_receiver) = tokio::sync::mpsc::channel(500);
         let (exit_sender, mut exit_receiver) = tokio::sync::broadcast::channel(1);
         let (updates_sender, updates_receiver) = crossbeam_channel::bounded(5);
+        let (bbox_sender, bbox_receiver) = crossbeam_channel::bounded(1);
 
         thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_multi_thread()
@@ -88,6 +90,7 @@ fn main(args: Args) {
                 &mut exit_receiver,
                 updates_sender,
                 tokio_camera_receiver,
+                bbox_sender,
             ))
             .unwrap();
         });
@@ -96,16 +99,29 @@ fn main(args: Args) {
             exit_sender.send(()).ok();
         });
 
-        // move to where the query is
-        // todo do not hardcode
-        window
-            .camera_movement()
-            .focus_on_bounding_box(PastureAABB::from_min_max(
+        // get initial bounding box
+        let initial_bounding_box = bbox_receiver.recv().unwrap();
+        let pasture_aabb = if !initial_bounding_box.is_empty() {
+            PastureAABB::from_min_max(
+                Point3::new(initial_bounding_box.min.x, initial_bounding_box.min.y, initial_bounding_box.min.z),
+                Point3::new(initial_bounding_box.max.x, initial_bounding_box.max.y, initial_bounding_box.max.z),
+            )
+        } else {
+            PastureAABB::from_min_max(
                 Point3::new(-50.0, -50.0, 0.0),
                 Point3::new(50.0, 50.0, 50.0),
-            ))
-            .execute()
-            .unwrap();
+            )
+        };
+
+        // move to initial bounding box
+        if !initial_bounding_box.is_empty() {
+            window
+                .camera_movement()
+                .focus_on_bounding_box(pasture_aabb)
+                .execute()
+                .unwrap();
+        }
+
 
         // keep applying updates
         let mut point_clouds = HashMap::new();
@@ -177,12 +193,16 @@ async fn network_thread(
     shutdown: &mut Receiver<()>,
     updates_sender: crossbeam_channel::Sender<PartialResult<VectorBuffer>>,
     mut camera_reciver: tokio::sync::mpsc::Receiver<Matrices>,
+    bbox_sender: crossbeam_channel::Sender<Aabb<f64>>,
 ) -> Result<()> {
     // connect
     let ViewerClient {
         read: mut client_read,
         write: client_write,
     } = ViewerClient::connect((args.host, args.port), shutdown).await?;
+
+    let inital_bounding_box = client_read.initial_bounding_box();
+    bbox_sender.send(inital_bounding_box)?;
 
     // task to send query to server
     tokio::spawn(async move {
@@ -251,6 +271,7 @@ async fn network_thread(
         info!("{:?}", update);
         updates_sender.send(update).unwrap();
     }
+
 }
 
 #[repr(C, packed)]

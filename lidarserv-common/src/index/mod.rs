@@ -1,16 +1,12 @@
 use self::attribute_index::AttributeIndex;
-use crate::{
-    geometry::{
-        coordinate_system::CoordinateSystem,
-        grid::{GridHierarchy, LeveledGridCell, LodLevel},
-    },
-    io::{
-        pasture::{Compression, PastureIo},
-        InMemoryPointCodec, PointIoError,
-    },
-    lru_cache::pager::PageManager,
-    query::Query,
-};
+use crate::{geometry, geometry::{
+    coordinate_system::CoordinateSystem,
+    grid::{GridHierarchy, LeveledGridCell, LodLevel},
+}, io::{
+    pasture::{Compression, PastureIo},
+    InMemoryPointCodec, PointIoError,
+}, lru_cache::pager::PageManager, query::Query};
+use geometry::bounding_box::Aabb;
 use attribute_index::config::AttributeIndexConfig;
 use grid_cell_directory::GridCellDirectory;
 use lazy_node::LazyNode;
@@ -163,6 +159,24 @@ impl Octree {
 
     pub fn writer(&self) -> OctreeWriter {
         OctreeWriter::new(Arc::clone(&self.inner))
+    }
+
+    pub fn current_aabb(&self) -> Aabb<f64> {
+        let mut aabb : Aabb<f64> = Aabb::empty();
+        let node_hierarchy = self.inner.node_hierarchy;
+        let root_nodes = self.inner.page_cache.directory().get_root_cells();
+        let scale = self.inner.coordinate_system.scale();
+        let offset = self.inner.coordinate_system.offset();
+        for node in root_nodes {
+            let mut bounds = node_hierarchy.get_leveled_cell_bounds(node);
+            for i in 0..3 {
+                bounds.min[i] = bounds.min[i] * scale[i] + offset[i];
+                bounds.max[i] = bounds.max[i] * scale[i] + offset[i];
+            }
+            debug!("Bounds: {:?}", bounds);
+            aabb.extend_aabb(&bounds);
+        }
+        aabb
     }
 
     pub fn reader<Q: Query>(&self, initial_query: Q) -> Result<OctreeReader, Q::Error> {

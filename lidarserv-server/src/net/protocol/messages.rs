@@ -5,7 +5,7 @@ use lidarserv_common::io::InMemoryPointCodec;
 use pasture_core::layout::PointAttributeDefinition;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-
+use lidarserv_common::geometry::bounding_box::Aabb;
 use crate::index::query::Query;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -21,6 +21,7 @@ pub enum Header {
         coordinate_system: CoordinateSystem,
         attributes: Vec<PointAttributeDefinition>,
         codec: PointDataCodec,
+        current_bounding_box: Aabb<f64>,
     },
 
     /// First command sent from the client to the server after exchanging the hello message.
