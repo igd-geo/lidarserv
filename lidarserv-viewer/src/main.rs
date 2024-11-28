@@ -3,21 +3,7 @@ use anyhow::Result;
 use bytemuck::{Pod, Zeroable};
 use lidarserv_server::common::nalgebra::{Matrix4, Point3};
 use lidarserv_server::index::query::Query;
-use lidarserv_common::{
-    geometry::{bounding_box::Aabb, grid::LodLevel},
-    query::{
-        aabb::AabbQuery,
-        and::AndQuery,
-        attribute::{AttributeQuery, AttriuteQueryError, FilterableAttributeType, TestFunction},
-        empty::EmptyQuery,
-        full::FullQuery,
-        lod::LodQuery,
-        not::NotQuery,
-        or::OrQuery,
-        view_frustum::ViewFrustumQuery,
-        ExecutableQuery, Query as QueryTrait, QueryContext,
-    },
-};
+use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use lidarserv_server::net::client::viewer::{PartialResult, QueryConfig, ViewerClient};
 use log::info;
 use nalgebra::{point, vector};
