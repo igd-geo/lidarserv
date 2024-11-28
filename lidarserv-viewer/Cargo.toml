@@ -10,6 +10,7 @@ structopt = { version = "0.3.23", features = ["paw", "wrap_help", "color", "sugg
 paw = "1.0.0"
 anyhow = "1.0.44"
 lidarserv-server = { path = "../lidarserv-server" }
+lidarserv-common.path = "../lidarserv-common"
 tokio = { version = "1.28.0", features = ["full"] }
 log = "0.4.14"
 simple_logger = "4.1.0"
@@ -19,3 +20,4 @@ pasture-derive.workspace = true
 nalgebra.workspace = true
 crossbeam-channel = "0.5.1"
 bytemuck = "1.16"
+serde_json = "1.0.133"

@@ -2,8 +2,22 @@ use crate::cli::{Args, PointColorArg};
 use anyhow::Result;
 use bytemuck::{Pod, Zeroable};
 use lidarserv_server::common::nalgebra::{Matrix4, Point3};
-use lidarserv_server::common::query::view_frustum::ViewFrustumQuery;
 use lidarserv_server::index::query::Query;
+use lidarserv_common::{
+    geometry::{bounding_box::Aabb, grid::LodLevel},
+    query::{
+        aabb::AabbQuery,
+        and::AndQuery,
+        attribute::{AttributeQuery, AttriuteQueryError, FilterableAttributeType, TestFunction},
+        empty::EmptyQuery,
+        full::FullQuery,
+        lod::LodQuery,
+        not::NotQuery,
+        or::OrQuery,
+        view_frustum::ViewFrustumQuery,
+        ExecutableQuery, Query as QueryTrait, QueryContext,
+    },
+};
 use lidarserv_server::net::client::viewer::{PartialResult, QueryConfig, ViewerClient};
 use log::info;
 use nalgebra::{point, vector};
@@ -101,8 +115,8 @@ fn main(args: Args) {
         window
             .camera_movement()
             .focus_on_bounding_box(PastureAABB::from_min_max(
-                Point3::new(-213.7, -282.33, 0.0),
-                Point3::new(213.7, 282.33, 50.0),
+                Point3::new(-50.0, -50.0, 0.0),
+                Point3::new(50.0, 50.0, 50.0),
             ))
             .execute()
             .unwrap();
@@ -214,20 +228,28 @@ async fn network_thread(
                 .transform_point(&point![0.0, 0.0, -1.0])
                 .z
                 .abs();
+            let cli_query = if args.json {
+                serde_json::from_str(&args.query).unwrap()
+            } else {
+                Query::parse(&args.query).unwrap()
+            };
             client_write
                 .query(
-                    Query::ViewFrustum(ViewFrustumQuery {
-                        camera_pos,
-                        camera_dir,
-                        camera_up: vector![0.0, 0.0, 1.0],
-                        fov_y: FRAC_PI_4,
-                        z_near,
-                        z_far,
-                        window_size: camera_matrix.window_size,
-                        max_distance: args.point_distance,
-                    }),
+                    Query::And(vec![
+                        Query::ViewFrustum(ViewFrustumQuery {
+                            camera_pos,
+                            camera_dir,
+                            camera_up: vector![0.0, 0.0, 1.0],
+                            fov_y: FRAC_PI_4,
+                            z_near,
+                            z_far,
+                            window_size: camera_matrix.window_size,
+                            max_distance: args.point_distance,
+                        }),
+                        cli_query,
+                    ]),
                     &QueryConfig {
-                        point_filtering: false,
+                        point_filtering: !args.disable_point_filtering,
                     },
                 )
                 .await
