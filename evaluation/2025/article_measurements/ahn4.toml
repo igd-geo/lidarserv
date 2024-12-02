@@ -30,9 +30,9 @@ intensity = ["RangeIndex"]
 gpstime = ["RangeIndex"]
 
 [defaults]
-node_hierarchy = 23
-point_hierarchy = 15
-max_lod = 15
+node_hierarchy = 25
+point_hierarchy = 17
+max_lod = 14
 priority_function = "NrPointsWeightedByTaskAge"
 num_threads = 32
 cache_size = 10000
@@ -44,3 +44,5 @@ nr_bogus_points = [
 enable_attribute_index = true
 
 [runs.main]
+compression = [true, false]
+
