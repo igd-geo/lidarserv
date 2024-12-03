@@ -1,0 +1,106 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/article_measurements/ahn4.toml",
+    "duration:": 13996,
+    "finished_at": "2024-12-02T13:16:14.484576452+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_points": 11524770195,
+    "started_at": "2024-12-02T09:22:57.768116307+00:00",
+    "version": "git:8c5438a"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 10000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "max_lod": 14,
+          "node_hierarchy": 25,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 17,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.186022922,
+            "duration_seconds": 7160.473898076,
+            "insertion_rate_points_per_sec": 1609456.4358802508,
+            "nr_points": 11524770195,
+            "nr_times_to_slow": 0
+          },
+          "query_performance": null
+        }
+      },
+      {
+        "index": {
+          "cache_size": 10000,
+          "compression": false,
+          "enable_attribute_index": true,
+          "max_lod": 14,
+          "node_hierarchy": 25,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 17,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.150194446,
+            "duration_seconds": 6546.710786773,
+            "insertion_rate_points_per_sec": 1760350.5295226437,
+            "nr_points": 11524770195,
+            "nr_times_to_slow": 0
+          },
+          "query_performance": null
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat1Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/ahn4-eval",
+    "indexed_attributes": {
+      "classification": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "gpstime": [
+        "RangeIndex"
+      ],
+      "intensity": [
+        "RangeIndex"
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "output_file": "ahn4_%d_%i.json",
+    "points_file": "../../../data/AHN4.las",
+    "queries": {},
+    "target_point_pressure": 1000000,
+    "use_existing_index": false
+  }
+}
