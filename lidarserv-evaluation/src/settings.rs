@@ -247,11 +247,12 @@ impl Base {
                 .find(|a| a.name().to_lowercase() == attr_name.to_lowercase())
             else {
                 warn!("Attribute {} does not exist. (Ignoring)", attr_name);
+                warn!("Available attributes: {:?}", attributes.iter().map(|a| a.name()).collect::<Vec<_>>());
                 continue;
             };
             for index in indexes {
                 let i = result.len();
-                let path = self.base_folder.join(format!("attribute-index-{}.bin", i));
+                let path = self.base_folder.join(self.index_folder.join(format!("attribute-index-{}.bin", i)));
                 result.push(AttributeIndexConfig {
                     attribute: attr.clone(),
                     path,

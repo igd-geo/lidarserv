@@ -93,6 +93,8 @@ pub struct Args {
     ///  - `q1 or q2`
     ///    (q1 and q2 are queries)
     ///    Matches the union of queries q1 and q2.
+    ///  - `attr(name comp value)`
+    ///   (name is a string, comp is a comparison operator, value is a floating point number)
     ///
     /// Json queries:
     /// With the `--json` parameter, you can write queries directly in json, which

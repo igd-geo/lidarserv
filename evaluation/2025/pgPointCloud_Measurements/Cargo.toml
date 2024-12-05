@@ -22,3 +22,5 @@ chrono = "0.4.38"
 gethostname = "0.4.3"
 indicatif = "0.17.8"
 async-process = "2.2.2"
+
+[workspace]

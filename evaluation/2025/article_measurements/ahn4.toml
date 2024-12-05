@@ -6,8 +6,28 @@ cooldown_seconds = 0
 indexing_timeout_seconds = 50000
 target_point_pressure = 1000000
 attributes = "LasPointFormat1Raw"
+# record length 34
+#min x y z:                  96750.700 493750.000 -7.079
+#max x y z:                  134999.999 512499.999 135.977
+# Min GPS Time: 269521185.6002241
+#Max GPS Time: 270204590.1666351
 
 [queries]
+full-point-cloud = "full"
+lod0 = "lod(0)"
+lod1 = "lod(1)"
+lod2 = "lod(2)"
+intensity_high = "attr(Intensity > 1400)"
+intensity_low = "attr(Intensity <= 20)"
+return_simple = "attr(NumberOfReturns == 1)"
+return_multiple = "attr(NumberOfReturns > 2)"
+classification_ground = "attr(Classification == 2)"
+classification_building = "attr(Classification == 6)"
+classification_vegetation = "attr(Classification == 1)"
+classification_bridges = "attr(Classification == 26)"
+time_1 = "attr(GpsTime < 270521185)"
+time_2 = "attr(GpsTime > 270204590) and attr(GpsTime < 270204900)"
+time_3 = "attr(GpsTime > 269521185) and attr(GpsTime < 269522000)"
 
 [coordinate_system]
 scale = [
