@@ -1,3 +1,4 @@
+use std::env;
 use std::error::Error;
 use std::io::Write;
 use async_process::Command;
@@ -7,10 +8,15 @@ use measurements::db::{connect_to_db, drop_table, PostGISConfig};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 3 {
+        eprintln!("Usage: {} <table> <input_file>", args[0]);
+        std::process::exit(1);
+    }
 
-    let table = "ahn4_138m";
-    let input_file = "AHN4_138M.laz";
-    let iterations : usize = 3;
+    let table = &args[1];
+    let input_file = &args[2];
+    let iterations: usize = 1;
 
     // connect to db
     let postgis_config = PostGISConfig {

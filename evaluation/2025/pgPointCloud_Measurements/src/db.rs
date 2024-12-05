@@ -1,19 +1,7 @@
-use std::fs::File;
-use std::io::Write;
-use std::ptr::null;
-use std::time::Instant;
 use anyhow::Result;
-use clap::{App, Arg};
-use las::{Read, Reader};
-use statrs::statistics::{Data, Median, Statistics};
 use tokio::task::JoinHandle;
 use tokio_postgres::{Client, NoTls};
-use log::{debug, error, info, trace, warn};
-use serde_json::json;
-use chrono::Utc;
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
-use crate::attribute_bounds::LasPointAttributeBounds;
-use crate::queries::*;
+use log::info;
 
 pub struct PostGISConfig {
     pub host: String,
