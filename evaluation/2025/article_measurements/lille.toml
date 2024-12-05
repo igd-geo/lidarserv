@@ -5,9 +5,19 @@ use_existing_index = false
 cooldown_seconds = 0
 indexing_timeout_seconds = 50000
 target_point_pressure = 1000000
-attributes = "LasPointFormat1Raw" # TODO WIRKLICH?
+attributes = "LasPointFormat1Raw"
+# min x y z:                  -944.485 -1053.599 16.298
+# max x y z:                  67.185 101.894 66.745
 
 [queries]
+full-point-cloud = "full"
+lod0 = "lod(0)"
+lod1 = "lod(1)"
+lod2 = "lod(2)"
+intensity_high = "attr(Intensity > 128)"
+intensity_low = "attr(Intensity <= 2)"
+time_1 = "attr(GpsTime > 4983)"
+time_2 = "attr(GpsTime < 9158) and attr(GpsTime > 9120)"
 
 [coordinate_system]
 scale = [
@@ -22,16 +32,8 @@ offset = [
 ]
 
 [indexed_attributes]
-classification = [
-    "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
-]
 intensity = ["RangeIndex"]
-gps_time = ["RangeIndex"]
-color_rgb = [ #TODO GEHT NICHT
-    "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
-]
+gpstime = ["RangeIndex"]
 
 [defaults]
 node_hierarchy = 19
@@ -44,7 +46,7 @@ nr_bogus_points = [
     0,
     0,
 ]
-max_lod = 10
+max_lod = 8
 enable_attribute_index = true
 
 [runs.main]
