@@ -1,0 +1,134 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/article_measurements/kitti.toml",
+    "duration:": 1,
+    "finished_at": "2024-12-05T15:07:19.861071985+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_points": 805552860,
+    "started_at": "2024-12-05T15:07:18.190120686+00:00",
+    "version": "git:bd8b52f"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": true,
+          "enable_attribute_index": true,
+          "max_lod": 11,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "details": "Corrupt(\n    \"evaluation/2025/article_measurements/attribute-index-1.bin\",\n)",
+          "error": "The node file evaluation/2025/article_measurements/attribute-index-1.bin is corrupt."
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": true,
+          "max_lod": 11,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "details": "Corrupt(\n    \"evaluation/2025/article_measurements/attribute-index-1.bin\",\n)",
+          "error": "The node file evaluation/2025/article_measurements/attribute-index-1.bin is corrupt."
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": {
+      "Classification": "U8",
+      "ColorRGB": "Vec3u16",
+      "GpsTime": "F64",
+      "Intensity": "U16",
+      "LASBasicFlags": "U8",
+      "PointSourceID": "U16",
+      "Position3D": "Vec3i32",
+      "ScanAngleRank": "I8",
+      "UserData": "U8",
+      "confidence": "U16",
+      "instance": "U16",
+      "semantic": "U16",
+      "visible": "U8"
+    },
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/kitti-eval",
+    "indexed_attributes": {
+      "colorrgb": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "instance": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "pointsourceid": [
+        "RangeIndex"
+      ],
+      "semantic": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "output_file": "kitti_%d_%i.json",
+    "points_file": "../../../data/kitti_sorted.las",
+    "queries": {
+      "attr_building": "attr(semantic == 11)",
+      "attr_gpstime1": "attr(GpsTime >= 199083995.09382153 and GpsTime <= 466372692.21052635)",
+      "attr_gpstime2": "attr(GpsTime >= 687577131.20366132 and GpsTime <= 805552832.00000000)",
+      "attr_ground": "attr(semantic <= 12)",
+      "attr_pointsourceid1": "attr(PointSourceID >= 35 and PointSourceID <= 64)",
+      "attr_pointsourceid2": "attr(PointSourceID >= 208 and PointSourceID <= 248)",
+      "attr_rgb": "attr(ColorRGB <= 10)",
+      "attr_visible": "attr(visible < 0.5)",
+      "full-point-cloud": "full",
+      "lod0": "lod(0)",
+      "lod1": "lod(1)",
+      "lod2": "lod(2)"
+    },
+    "target_point_pressure": 1000000,
+    "use_existing_index": false
+  }
+}
