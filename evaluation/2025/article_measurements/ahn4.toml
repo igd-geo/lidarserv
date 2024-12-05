@@ -9,6 +9,8 @@ attributes = "LasPointFormat1Raw"
 # record length 34
 #min x y z:                  96750.700 493750.000 -7.079
 #max x y z:                  134999.999 512499.999 135.977
+# Min GPS Time: 269521185.6002241
+#Max GPS Time: 270204590.1666351
 
 [queries]
 full-point-cloud = "full"
@@ -23,7 +25,9 @@ classification_ground = "attr(Classification == 2)"
 classification_building = "attr(Classification == 6)"
 classification_vegetation = "attr(Classification == 1)"
 classification_bridges = "attr(Classification == 26)"
-# todo time
+time_1 = "attr(GpsTime < 270521185)"
+time_2 = "attr(GpsTime > 270204590) and attr(GpsTime < 270204900)"
+time_3 = "attr(GpsTime > 269521185) and attr(GpsTime < 269522000)"
 
 [coordinate_system]
 scale = [
