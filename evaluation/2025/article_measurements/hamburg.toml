@@ -44,3 +44,4 @@ max_lod = 15
 enable_attribute_index = true
 
 [runs.main]
+compression = [true, false]
