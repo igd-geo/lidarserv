@@ -32,6 +32,8 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+extern crate fs_extra;
+use fs_extra::dir::get_size;
 
 mod cli;
 mod converter;
@@ -296,9 +298,14 @@ fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, any
             serde_json::Value::Null
         };
 
+        // measure index folder size
+        let index_folder = base_config.base_folder.join(&base_config.index_folder);
+        let index_folder_size = get_size(index_folder).unwrap();
+
         Ok(json!({
             //"index_info": index_info, // TODO
             //"latency": results_latency,   // TODO
+            "index_folder_size": index_folder_size,
             "insertion_rate": result_insertion_rate,
             "query_performance": result_query_perf
         }))
