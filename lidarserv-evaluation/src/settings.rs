@@ -252,7 +252,7 @@ impl Base {
             };
             for index in indexes {
                 let i = result.len();
-                let path = self.base_folder.join(format!("attribute-index-{}.bin", i));
+                let path = self.base_folder.join(self.index_folder.join(format!("attribute-index-{}.bin", i)));
                 result.push(AttributeIndexConfig {
                     attribute: attr.clone(),
                     path,
