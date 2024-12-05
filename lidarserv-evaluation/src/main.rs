@@ -107,6 +107,14 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
     let mut config: EvaluationScript = toml::from_str(&config_toml)?;
     config.base.base_folder = args.input_file.parent().unwrap_or(Path::new("")).to_owned();
 
+    // check if input file exists
+    if !config.base.points_file_absolute().exists() {
+        return Err(anyhow!(
+            "Input pointcloud file {} does not exist.",
+            config.base.points_file_absolute().display()
+        ));
+    }
+
     // check number of points
     let nr_points = {
         let input_file = LASReader::from_path(config.base.points_file_absolute(), true)?;
