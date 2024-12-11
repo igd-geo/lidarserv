@@ -1,11 +1,12 @@
 use crate::cli::{Args, PointColorArg};
 use anyhow::Result;
 use bytemuck::{Pod, Zeroable};
+use lidarserv_common::geometry::bounding_box::Aabb;
+use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use lidarserv_server::common::nalgebra::{Matrix4, Point3};
 use lidarserv_server::index::query::Query;
-use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use lidarserv_server::net::client::viewer::{PartialResult, QueryConfig, ViewerClient};
-use log::{debug, info};
+use log::info;
 use nalgebra::{point, vector};
 use pasture_core::containers::{BorrowedBuffer, BorrowedMutBufferExt, VectorBuffer};
 use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY, POSITION_3D};
@@ -26,7 +27,6 @@ use std::f64::consts::FRAC_PI_4;
 use std::thread;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::error::TryRecvError;
-use lidarserv_common::geometry::bounding_box::Aabb;
 
 mod cli;
 
@@ -103,8 +103,16 @@ fn main(args: Args) {
         let initial_bounding_box = bbox_receiver.recv().unwrap();
         let pasture_aabb = if !initial_bounding_box.is_empty() {
             PastureAABB::from_min_max(
-                Point3::new(initial_bounding_box.min.x, initial_bounding_box.min.y, initial_bounding_box.min.z),
-                Point3::new(initial_bounding_box.max.x, initial_bounding_box.max.y, initial_bounding_box.max.z),
+                Point3::new(
+                    initial_bounding_box.min.x,
+                    initial_bounding_box.min.y,
+                    initial_bounding_box.min.z,
+                ),
+                Point3::new(
+                    initial_bounding_box.max.x,
+                    initial_bounding_box.max.y,
+                    initial_bounding_box.max.z,
+                ),
             )
         } else {
             PastureAABB::from_min_max(
@@ -121,7 +129,6 @@ fn main(args: Args) {
                 .execute()
                 .unwrap();
         }
-
 
         // keep applying updates
         let mut point_clouds = HashMap::new();
@@ -271,7 +278,6 @@ async fn network_thread(
         info!("{:?}", update);
         updates_sender.send(update).unwrap();
     }
-
 }
 
 #[repr(C, packed)]

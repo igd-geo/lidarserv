@@ -1,13 +1,20 @@
 use self::attribute_index::AttributeIndex;
-use crate::{geometry, geometry::{
-    coordinate_system::CoordinateSystem,
-    grid::{GridHierarchy, LeveledGridCell, LodLevel},
-}, io::{
-    pasture::{Compression, PastureIo},
-    InMemoryPointCodec, PointIoError,
-}, lru_cache::pager::PageManager, query::Query};
-use geometry::bounding_box::Aabb;
+use crate::{
+    geometry::{
+        self,
+        coordinate_system::CoordinateSystem,
+        grid::{GridHierarchy, LeveledGridCell, LodLevel},
+        position::WithComponentTypeOnce,
+    },
+    io::{
+        pasture::{Compression, PastureIo},
+        InMemoryPointCodec, PointIoError,
+    },
+    lru_cache::pager::PageManager,
+    query::Query,
+};
 use attribute_index::config::AttributeIndexConfig;
+use geometry::bounding_box::Aabb;
 use grid_cell_directory::GridCellDirectory;
 use lazy_node::LazyNode;
 use live_metrics_collector::LiveMetricsCollector;
@@ -162,21 +169,30 @@ impl Octree {
     }
 
     pub fn current_aabb(&self) -> Aabb<f64> {
-        let mut aabb : Aabb<f64> = Aabb::empty();
-        let node_hierarchy = self.inner.node_hierarchy;
-        let root_nodes = self.inner.page_cache.directory().get_root_cells();
-        let scale = self.inner.coordinate_system.scale();
-        let offset = self.inner.coordinate_system.offset();
-        for node in root_nodes {
-            let mut bounds = node_hierarchy.get_leveled_cell_bounds(node);
-            for i in 0..3 {
-                bounds.min[i] = bounds.min[i] * scale[i] + offset[i];
-                bounds.max[i] = bounds.max[i] * scale[i] + offset[i];
-            }
-            debug!("Bounds: {:?}", bounds);
-            aabb.extend_aabb(&bounds);
+        struct Wct<'a> {
+            octree: &'a Octree,
         }
-        aabb
+
+        impl WithComponentTypeOnce for Wct<'_> {
+            type Output = Aabb<f64>;
+
+            fn run_once<C: geometry::position::Component>(self) -> Self::Output {
+                let mut aabb: Aabb<f64> = Aabb::empty();
+                let node_hierarchy = self.octree.inner.node_hierarchy;
+                let root_nodes = self.octree.inner.page_cache.directory().get_root_cells();
+                let coordinate_system = self.octree.inner.coordinate_system;
+                for node in root_nodes {
+                    let bounds_local = node_hierarchy.get_leveled_cell_bounds::<C>(node);
+                    let bounds_global_1 = coordinate_system.decode_position(bounds_local.min);
+                    let bounds_global_2 = coordinate_system.decode_position(bounds_local.max);
+                    aabb.extend(bounds_global_1);
+                    aabb.extend(bounds_global_2);
+                }
+                aabb
+            }
+        }
+
+        Wct { octree: self }.for_layout_once(&self.inner.point_layout)
     }
 
     pub fn reader<Q: Query>(&self, initial_query: Q) -> Result<OctreeReader, Q::Error> {
