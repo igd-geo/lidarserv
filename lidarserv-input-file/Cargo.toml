@@ -15,7 +15,7 @@ tokio = { version = "1.28", features = ["full"] }
 lidarserv-server = { path = "../lidarserv-server" }
 lidarserv-common = { path = "../lidarserv-common" }
 bytemuck = "1.17"
-thiserror = "1.0"
+thiserror = "2.0"
 tempfile = "3.12"
 nalgebra.workspace = true
 rayon = "1.10.0"

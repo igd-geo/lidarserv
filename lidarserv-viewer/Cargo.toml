@@ -13,7 +13,7 @@ lidarserv-server = { path = "../lidarserv-server" }
 lidarserv-common.path = "../lidarserv-common"
 tokio = { version = "1.28.0", features = ["full"] }
 log = "0.4.14"
-simple_logger = "4.1.0"
+simple_logger = "5.0"
 point-cloud-viewer = { path = "../point-cloud-viewer" }
 pasture-core.workspace = true
 pasture-derive.workspace = true

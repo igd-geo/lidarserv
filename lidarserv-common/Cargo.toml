@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 nalgebra.workspace = true
 num-traits = "0.2.14"
-thiserror = "1.0.30"
-tracy-client = { version = "0.17.3", default-features=false }
+thiserror = "2.0"
+tracy-client = { version = "0.17.3, <0.17.5", default-features=false }  # current version 0.17.5 is broken. I made a PR with a fix. Currently waiting for it to be merged.
 crossbeam-channel = "0.5.1"
 serde = { version = "1.0.126", features = ["derive"] }
 ciborium = "0.2.1"
