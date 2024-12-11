@@ -449,7 +449,7 @@ fn octree_interactive(
         struct Wct<'a> {
             coordinate_system: &'a CoordinateSystem,
         }
-        impl<'a> WithComponentTypeOnce for Wct<'a> {
+        impl WithComponentTypeOnce for Wct<'_> {
             type Output = (RangeInclusive<i16>, RangeInclusive<f64>);
 
             fn run_once<C: lidarserv_common::geometry::position::Component>(self) -> Self::Output {

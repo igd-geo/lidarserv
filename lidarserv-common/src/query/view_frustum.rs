@@ -85,7 +85,7 @@ impl Query for ViewFrustumQuery {
         struct Wct<'a> {
             ctx: &'a QueryContext,
         }
-        impl<'a> WithComponentTypeOnce for Wct<'a> {
+        impl WithComponentTypeOnce for Wct<'_> {
             type Output = f64;
 
             fn run_once<C: Component>(self) -> Self::Output {
@@ -244,7 +244,7 @@ impl ExecutableQuery for ViewFrustomQueryExecutable {
             query: &'a ViewFrustomQueryExecutable,
             node: LeveledGridCell,
         }
-        impl<'a> WithComponentTypeOnce for Wct<'a> {
+        impl WithComponentTypeOnce for Wct<'_> {
             type Output = NodeQueryResult;
 
             fn run_once<C: Component>(self) -> Self::Output {
@@ -275,7 +275,7 @@ impl ExecutableQuery for ViewFrustomQueryExecutable {
             lod: LodLevel,
             points: &'a VectorBuffer,
         }
-        impl<'a> WithComponentTypeOnce for Wct<'a> {
+        impl WithComponentTypeOnce for Wct<'_> {
             type Output = Vec<bool>;
 
             fn run_once<C: Component>(self) -> Self::Output {

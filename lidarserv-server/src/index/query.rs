@@ -60,7 +60,7 @@ impl<'de> Deserialize<'de> for AttributeValueScalar {
     {
         struct ScalarVisitor;
 
-        impl<'de2> Visitor<'de2> for ScalarVisitor {
+        impl Visitor<'_> for ScalarVisitor {
             type Value = AttributeValueScalar;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

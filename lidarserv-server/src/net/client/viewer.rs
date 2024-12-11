@@ -4,6 +4,7 @@ use crate::net::protocol::messages::{
     DeviceType, Header, PointDataCodec, QueryConfig as QueryConfigMsg,
 };
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
+use lidarserv_common::geometry::bounding_box::Aabb;
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::geometry::grid::LeveledGridCell;
 use lidarserv_common::geometry::position::{WithComponentTypeOnce, POSITION_ATTRIBUTE_NAME};
@@ -20,7 +21,6 @@ use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::Mutex;
-use lidarserv_common::geometry::bounding_box::Aabb;
 
 struct Inner {
     connection: Connection<OwnedWriteHalf>,
@@ -275,7 +275,9 @@ impl ReadViewerClient {
         &self.attributes
     }
 
-    pub fn initial_bounding_box(&self) -> Aabb<f64> { self.initial_bounding_box }
+    pub fn initial_bounding_box(&self) -> Aabb<f64> {
+        self.initial_bounding_box
+    }
 
     pub async fn receive_update_raw(
         &mut self,
@@ -370,7 +372,7 @@ impl ReadViewerClient {
                             src_points: &'a VectorBuffer,
                             dst_points: &'a mut VectorBuffer,
                         }
-                        impl<'a> WithComponentTypeOnce for Wct<'a> {
+                        impl WithComponentTypeOnce for Wct<'_> {
                             type Output = ();
 
                             fn run_once<C: lidarserv_common::geometry::position::Component>(

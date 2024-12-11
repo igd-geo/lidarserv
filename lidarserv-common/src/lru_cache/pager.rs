@@ -555,7 +555,7 @@ impl<K, V, F, D> PageManagerInner<K, V, F, D> {
 
 pub struct DirectoryGuard<'a, K, V, E, D>(MutexGuard<'a, PageManagerInner<K, V, E, D>>);
 
-impl<'a, K, V, E, D> Deref for DirectoryGuard<'a, K, V, E, D> {
+impl<K, V, E, D> Deref for DirectoryGuard<'_, K, V, E, D> {
     type Target = D;
 
     fn deref(&self) -> &Self::Target {
@@ -563,7 +563,7 @@ impl<'a, K, V, E, D> Deref for DirectoryGuard<'a, K, V, E, D> {
     }
 }
 
-impl<'a, K, V, E, D> DerefMut for DirectoryGuard<'a, K, V, E, D> {
+impl<K, V, E, D> DerefMut for DirectoryGuard<'_, K, V, E, D> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0.directory
     }

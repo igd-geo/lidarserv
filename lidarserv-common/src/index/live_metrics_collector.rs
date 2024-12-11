@@ -58,7 +58,7 @@ where
     D: Deserializer<'de>,
 {
     struct F64DurationVisitor;
-    impl<'de> Visitor<'de> for F64DurationVisitor {
+    impl Visitor<'_> for F64DurationVisitor {
         type Value = Duration;
 
         fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {

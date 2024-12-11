@@ -394,7 +394,7 @@ impl OctreeWorkerThread {
             node_id: LeveledGridCell,
         }
 
-        impl<'a> WithComponentTypeOnce for Wct<'a> {
+        impl WithComponentTypeOnce for Wct<'_> {
             type Output = [(LeveledGridCell, VectorBuffer); 8];
 
             fn run_once<C: crate::geometry::position::Component>(self) -> Self::Output {
@@ -520,7 +520,7 @@ impl OctreeWriter {
             node_hierarchy: GridHierarchy,
         }
 
-        impl<'a> WithComponentTypeOnce for Wct<'a> {
+        impl WithComponentTypeOnce for Wct<'_> {
             type Output = HashMap<LeveledGridCell, VectorBuffer>;
 
             fn run_once<C: Component>(self) -> Self::Output {

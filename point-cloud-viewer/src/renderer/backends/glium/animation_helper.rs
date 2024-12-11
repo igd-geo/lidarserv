@@ -3,7 +3,6 @@ use pasture_core::nalgebra::{Matrix4, Rotation3, UnitQuaternion, Vector4};
 use std::time::Duration;
 
 /// Helper for creating smooth transitions between two sets of view/projection matrices.
-
 pub struct AnimationHelper {
     current: Option<Animation>,
 }

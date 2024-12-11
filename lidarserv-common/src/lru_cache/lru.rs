@@ -237,14 +237,14 @@ where
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        return match &self.next {
+        match &self.next {
             None => None,
             Some(next_key) => {
                 let (k, v) = self.lru.entries.get_key_value(next_key).unwrap();
                 self.next.clone_from(&v.next);
                 Some((k, &v.data))
             }
-        };
+        }
     }
 }
 
@@ -260,7 +260,7 @@ where
     type Item = (&'a K, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        return match &self.next {
+        match &self.next {
             None => None,
             Some(next_key) => {
                 let occupied_entry = match self.lru.entries.entry(next_key.clone()) {
@@ -296,7 +296,7 @@ where
                     Some((key_ref, data_ref))
                 }
             }
-        };
+        }
     }
 }
 

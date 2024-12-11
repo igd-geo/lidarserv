@@ -28,7 +28,10 @@ impl FixedPointRateSplitter {
 }
 
 impl PointSplitter for FixedPointRateSplitter {
-    type ChunkSplitter<'a, 'b> = FixedPointRateChunkSplitter<'a>where Self: 'a;
+    type ChunkSplitter<'a, 'b>
+        = FixedPointRateChunkSplitter<'a>
+    where
+        Self: 'a;
 
     fn next_chunk<'a, 'b>(&'a mut self, points: &'b VectorBuffer) -> Self::ChunkSplitter<'a, 'b> {
         self.nr_points += self.nr_points_chunk;
@@ -40,7 +43,7 @@ impl PointSplitter for FixedPointRateSplitter {
     }
 }
 
-impl<'a> PointSplitterChunk for FixedPointRateChunkSplitter<'a> {
+impl PointSplitterChunk for FixedPointRateChunkSplitter<'_> {
     fn next_point(&mut self) -> u64 {
         self.pos_in_chunk += 1;
         let point = self.state.nr_points + self.pos_in_chunk;

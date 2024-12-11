@@ -52,7 +52,7 @@ impl<'a> DynamicUniforms<'a> {
     }
 }
 
-impl<'b> Uniforms for DynamicUniforms<'b> {
+impl Uniforms for DynamicUniforms<'_> {
     fn visit_values<'a, F: FnMut(&str, UniformValue<'a>)>(&'a self, mut fun: F) {
         for &(name, value) in &self.uniforms {
             fun(name, value);

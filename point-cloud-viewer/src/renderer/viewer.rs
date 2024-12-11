@@ -130,7 +130,7 @@ pub struct Window<'a> {
     closed_notify_receiver: crossbeam_channel::Receiver<()>,
 }
 
-impl<'a> Window<'a> {
+impl Window<'_> {
     /// Closes the window.
     pub fn close(self) { /* Closing the window happens in the Drop impl. */
     }
@@ -355,7 +355,7 @@ pub struct CameraMovementBuilder<'a> {
     animation: Option<AnimationSettings>,
 }
 
-impl<'a> CameraMovementBuilder<'a> {
+impl CameraMovementBuilder<'_> {
     /// Positions the camera, such that all point clouds are visible.
     pub fn focus_on_all(self) -> Self {
         CameraMovementBuilder {

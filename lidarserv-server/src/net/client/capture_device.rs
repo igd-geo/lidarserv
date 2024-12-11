@@ -120,7 +120,7 @@ impl CaptureDeviceClient {
                     target_buffer: &'a mut VectorBuffer,
                     coordinate_system: CoordinateSystem,
                 }
-                impl<'a> WithComponentTypeOnce for Wct<'a> {
+                impl WithComponentTypeOnce for Wct<'_> {
                     type Output = Result<(), CoordinateSystemError>;
 
                     fn run_once<C: Component>(self) -> Self::Output {

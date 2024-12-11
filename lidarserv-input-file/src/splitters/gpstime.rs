@@ -38,7 +38,7 @@ impl GpsTimeSplitter {
 
 impl PointSplitter for GpsTimeSplitter {
     type ChunkSplitter<'a, 'b>
-    = GpsTimeChunkSplitter<'a, 'b>
+        = GpsTimeChunkSplitter<'a, 'b>
     where
         Self: 'a;
 
@@ -52,7 +52,7 @@ impl PointSplitter for GpsTimeSplitter {
     }
 }
 
-impl<'a, 'b> PointSplitterChunk for GpsTimeChunkSplitter<'a, 'b> {
+impl PointSplitterChunk for GpsTimeChunkSplitter<'_, '_> {
     fn next_point(&mut self) -> u64 {
         // read gps time of next point
         let mut gps_time = self.gps_time_attribute.at(self.pos);
