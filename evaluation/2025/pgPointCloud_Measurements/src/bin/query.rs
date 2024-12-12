@@ -1,4 +1,5 @@
 use std::fmt::Write;
+use std::fs::create_dir;
 use std::time::Instant;
 use anyhow::Result;
 use clap::{Parser};
@@ -18,6 +19,8 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
     let input_file = args.input_file;
+    let input_file_abs = std::fs::canonicalize(&input_file)?;
+    let base_folder = input_file_abs.parent().unwrap();
     let iterations = args.iterations as usize;
 
     // check, if input file exists
@@ -37,8 +40,8 @@ async fn main() -> Result<()> {
     let (client, _join_handle) = connect_to_db(&postgis_config).await?;
 
     // open json output file
-    let filename = format!("results/results_{}_{}.json", table, start_date.to_rfc3339());
-    std::fs::create_dir_all("results")?;
+    let filename = base_folder.join(format!("results_{}_{}.json", table, start_date.to_rfc3339()));
+    create_dir(filename.parent().unwrap())?;
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
     let mut json_query_result = json!({});

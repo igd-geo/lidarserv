@@ -13,6 +13,10 @@ use measurements::db::{connect_to_db, drop_table, PostGISConfig};
 struct Args {
     #[arg(short, long)]
     input_file: String,
+
+    // dimensional, none, lazperf
+    #[arg(short, long)]
+    compression: String,
 }
 
 #[tokio::main]
@@ -20,7 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     simple_logger::init_with_level(Debug)?;
     let args = Args::parse();
 
-    let input_file = args.input_file;
+    let input_file = &args.input_file;
     if !std::path::Path::new(&input_file).exists() {
         panic!("Input file {} does not exist", input_file);
     }
@@ -41,7 +45,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     let (client, _join_handle) = connect_to_db(&postgis_config).await?;
     let abs_input_file_string = abs_input_file.to_str().unwrap();
-
+    let compression = &args.compression;
     let pipeline_json = format!(
         r#"
 {{
@@ -58,7 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "type": "writers.pgpointcloud",
             "connection": "host='localhost' dbname='pointclouds' user='postgres' password='password' port='5432'",
             "table": "{table}",
-            "compression": "dimensional",
+            "compression": "{compression}",
             "pcid": "1"
         }}
     ]
@@ -75,6 +79,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     pipeline_writer.flush()?;
 
     let mut timestamps = Vec::new();
+    let mut sizes = Vec::new();
     for i in 0..iterations {
         info!("Running iteration {} of {}... ", i+1, iterations);
         drop_table(&client, table).await?;
@@ -92,6 +97,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let stdout = String::from_utf8_lossy(&output.stdout);
         info!("done in {} seconds with output {:?}, {:?}", duration, stderr, stdout);
 
+        let size = client.query("SELECT pg_database_size('pointclouds')", &[]).await?;
+        let size: i64 = size[0].get(0);
+
         timestamps.push(duration);
 
         info!("done in {} seconds", duration);
@@ -99,16 +107,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // calculate average duration
     let duration = timestamps.iter().sum::<f64>() / iterations as f64;
+    let size = sizes.iter().sum::<i64>() / iterations as i64;
 
     // write result to json file
     let start_date = Utc::now();
     std::fs::create_dir_all(base_dir.join("results"))?;
-    let filename = base_dir.join("results").join(format!("insertion_results_{}_{}.json", table, start_date.to_rfc3339()));
+    let filename = base_dir.join("results").join(format!("insertion_results_{}_{}_{}.json", table, compression, start_date.to_rfc3339()));
     debug!("Writing results to file {}", &filename.to_str().unwrap());
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
     let mut json_output : serde_json::Value = json!({});
     json_output[table] = json!({
+        "table": table,
+        "compression": compression,
+        "iterations": iterations,
+        "start_date": start_date.to_rfc3339(),
+        "end_date": Utc::now().to_rfc3339(),
+        "size": size,
         "duration": duration,
     });
     serde_json::to_writer_pretty(&mut output_writer, &json_output)?;
