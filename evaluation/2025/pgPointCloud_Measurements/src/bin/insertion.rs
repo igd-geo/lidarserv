@@ -40,6 +40,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         username: "postgres".parse()?
     };
     let (client, _join_handle) = connect_to_db(&postgis_config).await?;
+    let abs_input_file_string = abs_input_file.to_str().unwrap();
 
     let pipeline_json = format!(
         r#"
@@ -47,7 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     "pipeline": [
         {{
             "type": "readers.las",
-            "filename": "data/{input_file}"
+            "filename": "{abs_input_file_string}"
         }},
         {{
             "type": "filters.chipper",
