@@ -26,8 +26,8 @@ classification_building = "attr(Classification == 6)"
 classification_vegetation = "attr(Classification == 1)"
 classification_bridges = "attr(Classification == 26)"
 time_1 = "attr(GpsTime < 270521185)"
-time_2 = "attr(GpsTime > 270204590) and attr(GpsTime < 270204900)"
-time_3 = "attr(GpsTime > 269521185) and attr(GpsTime < 269522000)"
+time_2 = "attr(270204590 < GpsTime < 270204900)"
+time_3 = "attr(269521185 < GpsTime < 269522000)"
 
 [coordinate_system]
 scale = [
@@ -65,4 +65,4 @@ enable_attribute_index = true
 
 [runs.main]
 compression = [true, false]
-
+enable_attribute_index = [true, false]
