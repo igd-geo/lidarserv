@@ -1,0 +1,278 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/article_measurements/kitti.toml",
+    "duration:": 51301,
+    "finished_at": "2024-12-06T07:18:19.520522836+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_points": 805552860,
+    "started_at": "2024-12-05T17:03:17.797330295+00:00",
+    "version": "git:5037d0e"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": true,
+          "enable_attribute_index": true,
+          "max_lod": 11,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 10881544197,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.267094585,
+            "duration_seconds": 600.572411597,
+            "insertion_rate_points_per_sec": 1336264.215830606,
+            "nr_points": 805552860,
+            "nr_times_to_slow": 0
+          },
+          "query_performance": {
+            "attr_building": {
+              "load_time_seconds": 0.000057497,
+              "nr_nodes": 60122,
+              "nr_non_empty_nodes": 60118,
+              "nr_points": 97802750,
+              "query_time_seconds": 125.15237635
+            },
+            "attr_gpstime1": {
+              "detail": "Error {\n    variant: ParsingError {\n        positives: [\n            coordinate3,\n            coordinate4,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        16,\n    ),\n    line_col: Pos(\n        (\n            1,\n            17,\n        ),\n    ),\n    path: None,\n    line: \"attr(GpsTime >= 199083995.09382153 and GpsTime <= 466372692.21052635)\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+              "error": " --> 1:17\n  |\n1 | attr(GpsTime >= 199083995.09382153 and GpsTime <= 466372692.21052635)\n  |                 ^---\n  |\n  = expected coordinate3 or coordinate4"
+            },
+            "attr_gpstime2": {
+              "detail": "Error {\n    variant: ParsingError {\n        positives: [\n            coordinate3,\n            coordinate4,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        16,\n    ),\n    line_col: Pos(\n        (\n            1,\n            17,\n        ),\n    ),\n    path: None,\n    line: \"attr(GpsTime >= 687577131.20366132 and GpsTime <= 805552832.00000000)\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+              "error": " --> 1:17\n  |\n1 | attr(GpsTime >= 687577131.20366132 and GpsTime <= 805552832.00000000)\n  |                 ^---\n  |\n  = expected coordinate3 or coordinate4"
+            },
+            "attr_ground": {
+              "load_time_seconds": 0.001311175,
+              "nr_nodes": 643298,
+              "nr_non_empty_nodes": 643263,
+              "nr_points": 437793886,
+              "query_time_seconds": 4979.67679246
+            },
+            "attr_pointsourceid1": {
+              "detail": "Error {\n    variant: ParsingError {\n        positives: [\n            coordinate3,\n            coordinate4,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        22,\n    ),\n    line_col: Pos(\n        (\n            1,\n            23,\n        ),\n    ),\n    path: None,\n    line: \"attr(PointSourceID >= 35 and PointSourceID <= 64)\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+              "error": " --> 1:23\n  |\n1 | attr(PointSourceID >= 35 and PointSourceID <= 64)\n  |                       ^---\n  |\n  = expected coordinate3 or coordinate4"
+            },
+            "attr_pointsourceid2": {
+              "detail": "Error {\n    variant: ParsingError {\n        positives: [\n            coordinate3,\n            coordinate4,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        22,\n    ),\n    line_col: Pos(\n        (\n            1,\n            23,\n        ),\n    ),\n    path: None,\n    line: \"attr(PointSourceID >= 208 and PointSourceID <= 248)\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+              "error": " --> 1:23\n  |\n1 | attr(PointSourceID >= 208 and PointSourceID <= 248)\n  |                       ^---\n  |\n  = expected coordinate3 or coordinate4"
+            },
+            "attr_rgb": {
+              "error": "Invalid type for attribute [ColorRGB;Vec3<u16>]: expected a vector, found scalar value."
+            },
+            "attr_visible": {
+              "error": "Invalid type for attribute [visible;U8]: expected integer, found float."
+            },
+            "full-point-cloud": {
+              "load_time_seconds": 0.001857416,
+              "nr_nodes": 779023,
+              "nr_non_empty_nodes": 779023,
+              "nr_points": 805552860,
+              "query_time_seconds": 7169.897671951
+            },
+            "lod0": {
+              "load_time_seconds": 2.96e-7,
+              "nr_nodes": 54,
+              "nr_non_empty_nodes": 54,
+              "nr_points": 967976,
+              "query_time_seconds": 0.19462374
+            },
+            "lod1": {
+              "load_time_seconds": 5.64e-7,
+              "nr_nodes": 198,
+              "nr_non_empty_nodes": 198,
+              "nr_points": 4731298,
+              "query_time_seconds": 0.723743965
+            },
+            "lod2": {
+              "load_time_seconds": 1.011e-6,
+              "nr_nodes": 610,
+              "nr_non_empty_nodes": 610,
+              "nr_points": 18841146,
+              "query_time_seconds": 2.617266931
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": true,
+          "max_lod": 11,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 33530697871,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 2.812827376,
+            "duration_seconds": 839.098757937,
+            "insertion_rate_points_per_sec": 956814.0812559518,
+            "nr_points": 805552860,
+            "nr_times_to_slow": 0
+          },
+          "query_performance": {
+            "attr_building": {
+              "load_time_seconds": 0.000059777,
+              "nr_nodes": 60113,
+              "nr_non_empty_nodes": 60109,
+              "nr_points": 97802750,
+              "query_time_seconds": 403.840138759
+            },
+            "attr_gpstime1": {
+              "detail": "Error {\n    variant: ParsingError {\n        positives: [\n            coordinate3,\n            coordinate4,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        16,\n    ),\n    line_col: Pos(\n        (\n            1,\n            17,\n        ),\n    ),\n    path: None,\n    line: \"attr(GpsTime >= 199083995.09382153 and GpsTime <= 466372692.21052635)\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+              "error": " --> 1:17\n  |\n1 | attr(GpsTime >= 199083995.09382153 and GpsTime <= 466372692.21052635)\n  |                 ^---\n  |\n  = expected coordinate3 or coordinate4"
+            },
+            "attr_gpstime2": {
+              "detail": "Error {\n    variant: ParsingError {\n        positives: [\n            coordinate3,\n            coordinate4,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        16,\n    ),\n    line_col: Pos(\n        (\n            1,\n            17,\n        ),\n    ),\n    path: None,\n    line: \"attr(GpsTime >= 687577131.20366132 and GpsTime <= 805552832.00000000)\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+              "error": " --> 1:17\n  |\n1 | attr(GpsTime >= 687577131.20366132 and GpsTime <= 805552832.00000000)\n  |                 ^---\n  |\n  = expected coordinate3 or coordinate4"
+            },
+            "attr_ground": {
+              "load_time_seconds": 0.00109919,
+              "nr_nodes": 643139,
+              "nr_non_empty_nodes": 643108,
+              "nr_points": 437793886,
+              "query_time_seconds": 5852.730551001
+            },
+            "attr_pointsourceid1": {
+              "detail": "Error {\n    variant: ParsingError {\n        positives: [\n            coordinate3,\n            coordinate4,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        22,\n    ),\n    line_col: Pos(\n        (\n            1,\n            23,\n        ),\n    ),\n    path: None,\n    line: \"attr(PointSourceID >= 35 and PointSourceID <= 64)\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+              "error": " --> 1:23\n  |\n1 | attr(PointSourceID >= 35 and PointSourceID <= 64)\n  |                       ^---\n  |\n  = expected coordinate3 or coordinate4"
+            },
+            "attr_pointsourceid2": {
+              "detail": "Error {\n    variant: ParsingError {\n        positives: [\n            coordinate3,\n            coordinate4,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        22,\n    ),\n    line_col: Pos(\n        (\n            1,\n            23,\n        ),\n    ),\n    path: None,\n    line: \"attr(PointSourceID >= 208 and PointSourceID <= 248)\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+              "error": " --> 1:23\n  |\n1 | attr(PointSourceID >= 208 and PointSourceID <= 248)\n  |                       ^---\n  |\n  = expected coordinate3 or coordinate4"
+            },
+            "attr_rgb": {
+              "error": "Invalid type for attribute [ColorRGB;Vec3<u16>]: expected a vector, found scalar value."
+            },
+            "attr_visible": {
+              "error": "Invalid type for attribute [visible;U8]: expected integer, found float."
+            },
+            "full-point-cloud": {
+              "load_time_seconds": 0.002660354,
+              "nr_nodes": 778906,
+              "nr_non_empty_nodes": 778906,
+              "nr_points": 805552860,
+              "query_time_seconds": 7299.013708857
+            },
+            "lod0": {
+              "load_time_seconds": 6.47e-7,
+              "nr_nodes": 54,
+              "nr_non_empty_nodes": 54,
+              "nr_points": 967976,
+              "query_time_seconds": 0.625766261
+            },
+            "lod1": {
+              "load_time_seconds": 6.12e-7,
+              "nr_nodes": 198,
+              "nr_non_empty_nodes": 198,
+              "nr_points": 4731298,
+              "query_time_seconds": 3.28144707
+            },
+            "lod2": {
+              "load_time_seconds": 1.05e-6,
+              "nr_nodes": 610,
+              "nr_non_empty_nodes": 610,
+              "nr_points": 18841146,
+              "query_time_seconds": 11.573197803
+            }
+          }
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": {
+      "Classification": "U8",
+      "ColorRGB": "Vec3u16",
+      "GpsTime": "F64",
+      "Intensity": "U16",
+      "LASBasicFlags": "U8",
+      "PointSourceID": "U16",
+      "Position3D": "Vec3i32",
+      "ScanAngleRank": "I8",
+      "UserData": "U8",
+      "confidence": "U16",
+      "instance": "U16",
+      "semantic": "U16",
+      "visible": "U8"
+    },
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/kitti-eval",
+    "indexed_attributes": {
+      "colorrgb": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "instance": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "pointsourceid": [
+        "RangeIndex"
+      ],
+      "semantic": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "output_file": "kitti_%d_%i.json",
+    "points_file": "../../../data/kitti_sorted.las",
+    "queries": {
+      "attr_building": "attr(semantic == 11)",
+      "attr_gpstime1": "attr(GpsTime >= 199083995.09382153 and GpsTime <= 466372692.21052635)",
+      "attr_gpstime2": "attr(GpsTime >= 687577131.20366132 and GpsTime <= 805552832.00000000)",
+      "attr_ground": "attr(semantic <= 12)",
+      "attr_pointsourceid1": "attr(PointSourceID >= 35 and PointSourceID <= 64)",
+      "attr_pointsourceid2": "attr(PointSourceID >= 208 and PointSourceID <= 248)",
+      "attr_rgb": "attr(ColorRGB <= 10)",
+      "attr_visible": "attr(visible < 0.5)",
+      "full-point-cloud": "full",
+      "lod0": "lod(0)",
+      "lod1": "lod(1)",
+      "lod2": "lod(2)"
+    },
+    "target_point_pressure": 1000000,
+    "use_existing_index": false
+  }
+}

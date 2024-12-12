@@ -1,0 +1,223 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/article_measurements/lille.toml",
+    "duration:": 150,
+    "finished_at": "2024-12-05T17:03:02.908290776+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_points": 120000000,
+    "started_at": "2024-12-05T17:00:32.234673570+00:00",
+    "version": "git:5037d0e"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": true,
+          "enable_attribute_index": true,
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 1078322545,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.209484287,
+            "duration_seconds": 26.656579786,
+            "insertion_rate_points_per_sec": 4466601.42229759,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0
+          },
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 0.000029854,
+              "nr_nodes": 27005,
+              "nr_non_empty_nodes": 27005,
+              "nr_points": 120000000,
+              "query_time_seconds": 13.604220873
+            },
+            "intensity_high": {
+              "load_time_seconds": 1.328e-6,
+              "nr_nodes": 1092,
+              "nr_non_empty_nodes": 1022,
+              "nr_points": 131345,
+              "query_time_seconds": 3.145478845
+            },
+            "intensity_low": {
+              "load_time_seconds": 0.000016969,
+              "nr_nodes": 14702,
+              "nr_non_empty_nodes": 14686,
+              "nr_points": 6702129,
+              "query_time_seconds": 11.179995749
+            },
+            "lod0": {
+              "load_time_seconds": 1.28e-7,
+              "nr_nodes": 8,
+              "nr_non_empty_nodes": 8,
+              "nr_points": 40620,
+              "query_time_seconds": 0.003392737
+            },
+            "lod1": {
+              "load_time_seconds": 1.38e-7,
+              "nr_nodes": 20,
+              "nr_non_empty_nodes": 20,
+              "nr_points": 203319,
+              "query_time_seconds": 0.015888398
+            },
+            "lod2": {
+              "load_time_seconds": 1.73e-7,
+              "nr_nodes": 41,
+              "nr_non_empty_nodes": 41,
+              "nr_points": 845421,
+              "query_time_seconds": 0.063141429
+            },
+            "time_1": {
+              "load_time_seconds": 0.000028343,
+              "nr_nodes": 27005,
+              "nr_non_empty_nodes": 27005,
+              "nr_points": 120000000,
+              "query_time_seconds": 13.097661927
+            },
+            "time_2": {
+              "load_time_seconds": 7.9e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 0.000012762
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": true,
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 3367912988,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.105155001,
+            "duration_seconds": 22.401548974,
+            "insertion_rate_points_per_sec": 5331744.716298468,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0
+          },
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 0.00002938,
+              "nr_nodes": 27002,
+              "nr_non_empty_nodes": 27002,
+              "nr_points": 120000000,
+              "query_time_seconds": 11.076882197
+            },
+            "intensity_high": {
+              "load_time_seconds": 1.284e-6,
+              "nr_nodes": 1093,
+              "nr_non_empty_nodes": 1023,
+              "nr_points": 131345,
+              "query_time_seconds": 2.259476283
+            },
+            "intensity_low": {
+              "load_time_seconds": 0.000016938,
+              "nr_nodes": 14704,
+              "nr_non_empty_nodes": 14688,
+              "nr_points": 6702129,
+              "query_time_seconds": 8.321311968
+            },
+            "lod0": {
+              "load_time_seconds": 1.14e-7,
+              "nr_nodes": 8,
+              "nr_non_empty_nodes": 8,
+              "nr_points": 40620,
+              "query_time_seconds": 0.002399229
+            },
+            "lod1": {
+              "load_time_seconds": 2.69e-7,
+              "nr_nodes": 20,
+              "nr_non_empty_nodes": 20,
+              "nr_points": 203319,
+              "query_time_seconds": 0.011131083
+            },
+            "lod2": {
+              "load_time_seconds": 2.24e-7,
+              "nr_nodes": 41,
+              "nr_non_empty_nodes": 41,
+              "nr_points": 845421,
+              "query_time_seconds": 0.044009407
+            },
+            "time_1": {
+              "load_time_seconds": 0.00002825,
+              "nr_nodes": 27002,
+              "nr_non_empty_nodes": 27002,
+              "nr_points": 120000000,
+              "query_time_seconds": 10.298044071
+            },
+            "time_2": {
+              "load_time_seconds": 8.5e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 0.000014342
+            }
+          }
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat1Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/lille-eval",
+    "indexed_attributes": {
+      "gpstime": [
+        "RangeIndex"
+      ],
+      "intensity": [
+        "RangeIndex"
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "output_file": "lille_%d_%i.json",
+    "points_file": "../../../data/Lille_sorted.las",
+    "queries": {
+      "full-point-cloud": "full",
+      "intensity_high": "attr(Intensity > 128)",
+      "intensity_low": "attr(Intensity <= 2)",
+      "lod0": "lod(0)",
+      "lod1": "lod(1)",
+      "lod2": "lod(2)",
+      "time_1": "attr(GpsTime > 4983)",
+      "time_2": "attr(GpsTime < 9158) and attr(GpsTime > 9120)"
+    },
+    "target_point_pressure": 1000000,
+    "use_existing_index": false
+  }
+}
