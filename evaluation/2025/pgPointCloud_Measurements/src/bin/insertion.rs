@@ -24,7 +24,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if !std::path::Path::new(&input_file).exists() {
         panic!("Input file {} does not exist", input_file);
     }
-    let base_dir = std::path::Path::new(&input_file).parent().unwrap();
+    let abs_input_file = std::fs::canonicalize(&input_file)?;
+    debug!("Absolute input file path is {:?}", abs_input_file);
+    let base_dir = abs_input_file.parent().unwrap();
+    debug!("Base directory is {:?}", base_dir);
     let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap();
     let iterations: usize = 1;
     info!("Running insertion with input file {} and table {}", input_file, table);
@@ -62,8 +65,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "#
     );
     // write pipeline to json file
-    std::fs::create_dir_all(base_dir.join("data"))?;
-    let pipeline_filename = base_dir.join("data").join(format!("pipeline_{}.json", table));
+    std::fs::create_dir_all(base_dir.join("pipelines"))?;
+    let pipeline_filename = base_dir.join("pipelines").join(format!("pipeline_{}.json", table));
     debug!("Writing pipeline to file {}", pipeline_filename.to_str().unwrap());
     let pipeline_file = std::fs::File::create(&pipeline_filename)?;
     let mut pipeline_writer = std::io::BufWriter::new(pipeline_file);
