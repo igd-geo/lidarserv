@@ -1,3 +1,4 @@
+use std::env::ArgsOs;
 use std::fs::File;
 use std::fmt::Write;
 use std::io::Write as IoWrite;
@@ -25,134 +26,79 @@ async fn run_query(
     client: &Client,
     iterations: usize,
 ) -> serde_json::Value {
-    info!("Running query {:?} with {:?} iterations", point_query, iterations);
+    info!("[QUERY] Running query {:?} with {:?} iterations", point_query, iterations);
 
-    // let patch_filter = format!("SELECT pc_astext(PC_Explode(pa)) FROM {} WHERE {};", dataset, patch_query);
-    // let patch_filter_patch_count = format!("SELECT Count(*) FROM {} WHERE {};", dataset, patch_query);
-    // let total_patch_count = format!("SELECT Count(*) FROM {};", dataset);
-    // let point_filter = format!("SELECT pc_astext(PC_Explode({})) FROM {};", point_query, dataset);
-    // let patch_and_point_filter = format!("SELECT pc_astext(PC_Explode({})) FROM {} WHERE {}", point_query, dataset, patch_query);
-
-    // pc_uncompress(pa) instead of pc_astext(pc_explode(pa))
-    let patch_filter = format!("SELECT PC_Uncompress(pa)) FROM {} WHERE {};", dataset, patch_query);
-    let patch_filter_patch_count = format!("SELECT Count(*) FROM {} WHERE {};", dataset, patch_query);
-    let total_patch_count = format!("SELECT Count(*) FROM {};", dataset);
-    let point_filter = format!("SELECT PC_Uncompress({})) FROM {};", point_query, dataset);
-    let patch_and_point_filter = format!("SELECT PC_Uncompress({})) FROM {} WHERE {}", point_query, dataset, patch_query);
-
-    // load all timing
-    let mut timings = vec![];
-    let mut num_rows = 0;
-    for _ in 0..iterations {
-        let t_start = Instant::now();
-        let load_query = format!("SELECT pc_astext(pc_explode(pa)) FROM {};", dataset);
-        let rows = client.query(&load_query, &[]).await.unwrap();
-        num_rows = rows.len();
-        timings.push(t_start.elapsed().as_secs_f64());
-        pb.inc(1);
-    }
-    let load_median = Data::new(timings.clone()).median();
-    let load_stddev = (&timings).std_dev();
-    let load_mean = (&timings).mean();
     // get total patch count
-    let rows = client.query(total_patch_count.as_str(), &[]).await.unwrap();
-    info!("test {:?}", rows);
+    let total_patch_count_query = format!("SELECT Count(*) FROM {};", dataset);
+    let rows = client.query(total_patch_count_query.as_str(), &[]).await.unwrap();
     let total_patch_count: i64 = rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0);
 
-    // patch filtering measurements
-    let mut timings = vec![];
-    let mut patch_num_rows = 0;
-    for _ in 0..iterations {
-        let t_start = Instant::now();
-        debug!("Running patch filter: {:?}", patch_filter);
-        let rows = client.query(&patch_filter, &[]).await.unwrap();
-        patch_num_rows = rows.len();
-        timings.push(t_start.elapsed().as_secs_f64());
-        pb.inc(1);
-    }
-    let patch_median = Data::new(timings.clone()).median();
-    let patch_stddev = (&timings).std_dev();
-    let patch_mean = (&timings).mean();
     // get node count after patch filtering
-    let rows = client.query(patch_filter_patch_count.as_str(), &[]).await.unwrap();
+    let patch_filter_patch_count_query = format!("SELECT Count(*) FROM {} WHERE {};", dataset, patch_query);
+    let rows = client.query(patch_filter_patch_count_query.as_str(), &[]).await.unwrap();
     let filtered_patch_count: i64 = rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0);
 
+    let queries = vec![
+        ("raw_spatial", format!("SELECT pc_astext(pc_explode(pa)) FROM {};", dataset)),
+        ("only_node_acc", format!("SELECT PC_Uncompress(pa)) FROM {} WHERE {};", dataset, patch_query)),
+        ("raw_point_filtering", format!("SELECT PC_Uncompress({})) FROM {};", point_query, dataset)),
+        ("point_filtering_with_node_acc", format!("SELECT PC_Uncompress({})) FROM {} WHERE {}", point_query, dataset, patch_query)),
+    ];
 
-    // point filtering measurements
-    timings.clear();
-    let mut point_num_rows = 0;
-    for _ in 0..iterations {
-        let t_start = Instant::now();
-        debug!("Running point filter: {:?}", point_filter);
-        let rows = client.query(&point_filter, &[]).await.unwrap();
-        point_num_rows = rows.len();
-        timings.push(t_start.elapsed().as_secs_f64());
-        pb.inc(1);
-    }
-    let point_median = Data::new(timings.clone()).median();
-    let point_stddev = (&timings).std_dev();
-    let point_mean = (&timings).mean();
-
-    // patch and point filtering measurements
-    timings.clear();
-    let mut point_patch_num_rows = 0;
-    for _ in 0..iterations {
-        let t_start = Instant::now();
-        debug!("Running patch and point filter: {:?}", patch_and_point_filter);
-        let rows = client.query(&patch_and_point_filter, &[]).await.unwrap();
-        point_patch_num_rows = rows.len();
-        timings.push(t_start.elapsed().as_secs_f64());
-        pb.inc(1);
-    }
-    let point_patch_median = Data::new(timings.clone()).median();
-    let point_patch_stddev = (&timings).std_dev();
-    let point_patch_mean = (&timings).mean();
-
-    json!({
-        "raw_spatial": {
-            "median": load_median,
-            "stddev": load_stddev,
-            "mean": load_mean,
+    let mut json = json!({});
+    for (name, query) in queries {
+        let mut timings = vec![];
+        let mut num_rows = 0;
+        for _ in 0..iterations {
+            info!("Sending {}", name);
+            let t_start = Instant::now();
+            let rows = client.query(&query, &[]).await.unwrap();
+            num_rows = rows.len();
+            timings.push(t_start.elapsed().as_secs_f64());
+            pb.inc(1);
+        }
+        let median = Data::new(timings.clone()).median();
+        let stddev = (&timings).std_dev();
+        let mean = (&timings).mean();
+        json[name] = json!({
+            "median": median,
+            "stddev": stddev,
+            "mean": mean,
             "num_points": num_rows,
-            "num_patches": total_patch_count,
-            "pps": num_rows as f64 / load_mean,
-        },
-        "only_node_acc": {
-            "median": patch_median,
-            "stddev": patch_stddev,
-            "mean": patch_mean,
-            "num_points": patch_num_rows,
             "num_patches": filtered_patch_count,
-            "pps": patch_num_rows as f64 / patch_mean,
-        },
-        "point_filtering_with_node_acc": {
-            "median": point_patch_median,
-            "stddev": point_patch_stddev,
-            "mean": point_patch_mean,
-            "num_points": point_patch_num_rows,
-            "num_patches": filtered_patch_count,
-            "pps": point_patch_num_rows as f64 / point_patch_mean,
-        },
-        "raw_point_filtering": {
-            "median": point_median,
-            "stddev": point_stddev,
-            "mean": point_mean,
-            "num_points": point_num_rows,
-            "num_patches": filtered_patch_count,
-            "pps": point_num_rows as f64 / point_mean,
-        },
-    })
+            "pps": num_rows as f64 / mean,
+        });
+    }
+
+    json
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main(args_os: ArgsOs) -> Result<()> {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
     let start_date = Utc::now();
 
-    // config
-    let table = "ahn4_200t";
-    let input_file = "data/ahn4_200t.las";
-    let iterations : usize = 1;
+    let args = App::new("query")
+        .arg(Arg::with_name("input_file")
+            .short("i")
+            .long("input_file")
+            .value_name("INPUT_FILE")
+            .help("Input file")
+            .required(true)
+            .takes_value(true))
+        .arg(Arg::with_name("iterations")
+            .short("n")
+            .long("iterations")
+            .value_name("ITERATIONS")
+            .help("Number of iterations")
+            .required(false)
+            .default_value("1")
+            .takes_value(true))
+        .get_matches_from(args_os);
+
+    let input_file = args.value_of("input_file").unwrap();
+    let iterations = args.value_of("iterations").unwrap().parse::<usize>()?;
+    let table = std::path::Path::new(input_file).file_stem().unwrap().to_str().unwrap();
 
     // connect to db
     let postgis_config = PostGISConfig {
@@ -167,7 +113,7 @@ async fn main() -> Result<()> {
     let filename = format!("results/results_{}_{}.json", table, start_date.to_rfc3339());
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
-    let mut json_output : serde_json::Value = json!({});
+    let json_output : serde_json::Value = json!({});
     let mut json_query_result = json!({});
 
     // Progress bar
@@ -177,16 +123,54 @@ async fn main() -> Result<()> {
         .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
         .progress_chars("#>-"));
     // run queries
+
     info!("Running queries on dataset {}", table);
-    json_query_result["time_range"] = run_query(&pb, time_range_patchwise(), time_range_pointwise(), table, &client, iterations).await;
-    json_query_result["ground_classification"] = run_query(&pb, ground_classification_patchwise(), ground_classification_pointwise(), table, &client, iterations).await;
-    json_query_result["building_classification"] = run_query(&pb, building_classification_patchwise(), building_classification_pointwise(), table, &client, iterations).await;
-    json_query_result["vegetation_classification"] = run_query(&pb, vegetation_classification_patchwise(), vegetation_classification_pointwise(), table, &client, iterations).await;
-    json_query_result["high_intensity"] = run_query(&pb, high_intensity_patchwise(), high_intensity_pointwise(), table, &client, iterations).await;
-    json_query_result["low_intensity"] = run_query(&pb, low_intensity_patchwise(), low_intensity_pointwise(), table, &client, iterations).await;
-    json_query_result["normal_x_vertical"] = run_query(&pb, normal_x_vertical_patchwise(), normal_x_vertical_pointwise(), table, &client, iterations).await;
-    json_query_result["one_return"] = run_query(&pb, one_return_patchwise(), one_return_pointwise(), table, &client, iterations).await;
-    json_query_result["mixed_ground_and_time"] = run_query(&pb, mixed_ground_and_time_patchwise(), mixed_ground_and_time_pointwise(), table, &client, iterations).await;
+    let queries_ahn4 = vec![
+        ("intensity_high","pc_patchmin(pa, 'Intensity') >= 1400","PC_FilterBetween(pa, 'Intensity', 1400, 1000000)"),
+        ("intensity_low","pc_patchmax(pa, 'Intensity') <= 20","PC_FilterBetween(pa, 'Intensity', 0, 20)"),
+        ("return_simple","pc_patchmin(pa, 'NumberOfReturns') >= 1 AND pc_patchmax(pa, 'NumberOfReturns') <= 1","PC_FilterEquals(pa, 'NumberOfReturns', 1)"),
+        ("return_multiple","pc_patchmin(pa, 'NumberOfReturns') >= 2","PC_FilterBetween(pa, 'NumberOfReturns', 2, 100)"),
+        ("classification_ground","pc_patchmin(pa, 'Classification') >= 2 AND pc_patchmax(pa, 'Classification') <= 2","PC_FilterEquals(pa, 'Classification', 2)"),
+        ("classification_building","pc_patchmin(pa, 'Classification') >= 6 AND pc_patchmax(pa, 'Classification') <= 6","PC_FilterEquals(pa, 'Classification', 6)"),
+        ("classification_vegetation","pc_patchmin(pa, 'Classification') >= 1 AND pc_patchmax(pa, 'Classification') <= 1","PC_FilterEquals(pa, 'Classification', 1)"),
+        ("classification_bridges","pc_patchmin(pa, 'Classification') >= 26 AND pc_patchmax(pa, 'Classification') <= 26","PC_FilterEquals(pa, 'Classification', 26)"),
+        ("time1","pc_patchmax(pa, 'GpsTime') < 270521185","PC_FilterBetween(pa, 'GpsTime', 0, 270521185)"),
+        ("time2","pc_patchmin(pa, 'GpsTime') >= 270204590 AND pc_patchmax(pa, 'GpsTime') <= 270204900","PC_FilterBetween(pa, 'GpsTime', 270204590, 270204900)"),
+        ("time3","pc_patchmin(pa, 'GpsTime') >= 269521185 AND pc_patchmax(pa, 'GpsTime') <= 269522000","PC_FilterBetween(pa, 'GpsTime', 269521185, 269522000)"),
+    ];
+    let queries_lille = vec![
+        ("intensity_high", "pc_patchmin(pa, 'Intensity') > 128","PC_FilterBetween(pa, 'Intensity', 129, 1000000)"),
+        ("intensity_low", "pc_patchmax(pa, 'Intensity') <= 2","PC_FilterBetween(pa, 'Intensity', 0, 2)"),
+        ("time1", "pc_patchmin(pa, 'GpsTime') >= 4983","PC_FilterBetween(pa, 'GpsTime', 4983, 10000000)"),
+        ("time2", "pc_patchmin(pa, 'GpsTime') >= 9120 AND pc_patchmax(pa, 'GpsTime') <= 9158","PC_FilterBetween(pa, 'GpsTime', 9120, 9158)"),
+    ];
+    let queries_kitti = vec![
+        ("classification_ground", "pc_patchmax(pa, 'semantic') <= 12","PC_FilterBetween(pa, 'semantic', 0, 12)"),
+        ("classification_building", "pc_patchmin(pa, 'semantic') >= 11 AND pc_patchmax(pa, 'semantic') <= 11","PC_FilterEquals(pa, 'semantic', 11)"),
+        ("pointsource1", "pc_patchmin(pa, 'PointSourceID') >= 35 AND pc_patchmax(pa, 'PointSourceID') <= 64","PC_FilterBetween(pa, 'PointSourceID', 35, 64)"),
+        ("pointsource2", "pc_patchmin(pa, 'PointSourceID') >= 208 AND pc_patchmax(pa, 'PointSourceID') <= 248","PC_FilterBetween(pa, 'PointSourceID', 208, 248)"),
+        ("time1", "pc_patchmin(pa, 'GpsTime') >= 199083995.09382153 AND pc_patchmax(pa, 'GpsTime') <= 466372692.21052635","PC_FilterBetween(pa, 'GpsTime', 199083995.09382153, 466372692.21052635)"),
+        ("time2", "pc_patchmin(pa, 'GpsTime') >= 687577131.20366132 AND pc_patchmax(pa, 'GpsTime') <= 805552832.00000000","PC_FilterBetween(pa, 'GpsTime', 687577131.20366132, 805552832.00000000)"),
+        ("visible", "pc_patchmax(pa, 'visible') <= 1","PC_FilterBetween(pa, 'visible', 0, 1)"),
+        ("rgb", "pc_patchmax(pa, 'red') <= 10","PC_FilterBetween(pa, 'red', 0, 10)"), // todo change to rgb
+    ];
+    let queries_hamburg = vec![
+        // todo
+    ];
+
+    let selected_query_set = match input_file {
+        "AHN4.las" => queries_ahn4,
+        "Lille_sorted.las" => queries_lille,
+        "kitti_sorted.las" => queries_kitti,
+        "Hamburg.las" => queries_hamburg,
+        _ => panic!("No queries defined for dataset {}", input_file),
+    };
+    info!("Running queries on dataset {}", input_file);
+
+    for (name, query_patch, query_point) in selected_query_set {
+        json_query_result[name] = run_query(&pb, query_patch, query_point, table, &client, iterations).await;
+    }
+
     pb.finish();
 
     // write json to output file
