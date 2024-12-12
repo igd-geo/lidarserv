@@ -21,6 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if !std::path::Path::new(&input_file).exists() {
         panic!("Input file {} does not exist", input_file);
     }
+    let base_dir = std::path::Path::new(&input_file).parent().unwrap();
     let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap();
     let iterations: usize = 1;
 
@@ -57,12 +58,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "#
     );
     // write pipeline to json file
-    std::fs::create_dir_all("data")?;
-    let filename = format!("data/pipeline_{}.json", table);
-    let output_file = std::fs::File::create(filename)?;
-    let mut output_writer = std::io::BufWriter::new(output_file);
-    output_writer.write_all(pipeline_json.as_bytes())?;
-    output_writer.flush()?;
+    std::fs::create_dir_all(base_dir.join("data"))?;
+    let pipeline_filename = base_dir.join("data").join(format!("pipeline_{}.json", table));
+    let pipeline_file = std::fs::File::create(&pipeline_filename)?;
+    let mut pipeline_writer = std::io::BufWriter::new(pipeline_file);
+    pipeline_writer.write_all(pipeline_json.as_bytes())?;
+    pipeline_writer.flush()?;
 
     let mut timestamps = Vec::new();
     for i in 0..iterations {
@@ -73,14 +74,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // .arg("-v 4")
             .arg("pipeline")
             .arg("--input")
-            .arg(format!("data/pipeline_{}.json", table))
+            .arg(&pipeline_filename.to_str().unwrap())
             .output()
             .await?;
 
-        // let output = Command::new("pwd").output().await?;
-
         let duration = t_start.elapsed().as_secs_f64();
-        // convert output.stderr to string
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
         println!("done in {} seconds with output {:?}, {:?}", duration, stderr, stdout);
@@ -95,8 +93,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // write result to json file
     let start_date = Utc::now();
-    std::fs::create_dir_all("results")?;
-    let filename = format!("results/insertion_results_{}_{}.json", table, start_date.to_rfc3339());
+    std::fs::create_dir_all(base_dir.join("results"))?;
+    let filename = base_dir.join("results").join(format!("insertion_results_{}_{}.json", table, start_date.to_rfc3339()));
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
     let mut json_output : serde_json::Value = json!({});
