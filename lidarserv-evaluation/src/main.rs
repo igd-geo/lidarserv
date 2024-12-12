@@ -178,6 +178,7 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
             "hostname": hostname,
             "config_file": input_file_str,
             "nr_points": nr_points,
+            "nr_bytes": config.base.points_file_absolute().metadata()?.len(),
             "started_at": start_date,
             "finished_at": end_date,
             "duration:": duration,

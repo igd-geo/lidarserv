@@ -195,6 +195,7 @@ async fn main() -> Result<()> {
     let num_points_query_str = format!("SELECT Sum(PC_NumPoints(pa)) FROM {};", table);
     let num_points_query_result = client.query(num_points_query_str.as_str(), &[]).await?;
     let num_points : i64 = num_points_query_result[0].get(0);
+    let num_bytes = std::fs::metadata(input_file)?.len();
     let num_patches_query_str = format!("SELECT Count(*) FROM {};", table);
     let num_patches_query_result = client.query(num_patches_query_str.as_str(), &[]).await?;
     let num_patches : i64 = num_patches_query_result[0].get(0);
@@ -206,6 +207,7 @@ async fn main() -> Result<()> {
             "table": table,
             "num_patches": num_patches,
             "num_points": num_points,
+            "num_bytes": num_bytes,
             "iterations": iterations,
             "started_at": start_date.to_rfc3339(),
             "finished_at": end_date.to_rfc3339(),
