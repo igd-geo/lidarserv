@@ -85,6 +85,11 @@ async fn main() -> Result<()> {
     let input_file = args.input_file;
     let iterations = args.iterations as usize;
 
+    // check, if input file exists
+    if !std::path::Path::new(&input_file).exists() {
+        panic!("Input file {} does not exist", input_file);
+    }
+
     let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap();
 
     // connect to db
@@ -98,6 +103,7 @@ async fn main() -> Result<()> {
 
     // open json output file
     let filename = format!("results/results_{}_{}.json", table, start_date.to_rfc3339());
+    std::fs::create_dir_all("results")?;
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
     let mut json_query_result = json!({});
