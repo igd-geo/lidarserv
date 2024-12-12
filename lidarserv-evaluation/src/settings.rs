@@ -20,14 +20,17 @@ use toml::map::Map;
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct EvaluationScript {
+    /// Settings that are the same for the complete evaluation.
+    /// E.g. the path of the data folder.
     #[serde(flatten)]
     pub base: Base,
 
+    /// Default settings all non-constant settings
     #[serde(default)]
-    pub defaults: SingleIndex,
+    pub defaults: EvaluationRunDefaults,
 
     #[serde(default)]
-    pub runs: HashMap<String, MultiIndex>,
+    pub runs: HashMap<String, ElevationRun>,
 }
 
 impl Default for EvaluationScript {
@@ -69,9 +72,6 @@ pub struct Base {
     pub output_file_pattern: String,
 
     #[serde(default)]
-    pub use_existing_index: bool,
-
-    #[serde(default)]
     pub cooldown_seconds: u64,
 
     #[serde(default)]
@@ -92,10 +92,24 @@ pub struct Base {
 
     #[serde(default)]
     pub indexed_attributes: HashMap<String, Vec<IndexKind>>,
+
+    #[serde(default = "latency_replay_pps_default")]
+    pub latency_replay_pps: usize,
+
+    #[serde(default = "latency_sample_pps_default")]
+    pub latency_sample_pps: usize,
 }
 
 fn coordinate_system_default() -> CoordinateSystem {
     CoordinateSystem::from_las_transform(vector![0.001, 0.001, 0.001], vector![0.0, 0.0, 0.0])
+}
+
+fn latency_replay_pps_default() -> usize {
+    1_000_000
+}
+
+fn latency_sample_pps_default() -> usize {
+    1_000
 }
 
 #[derive(Debug, Serialize, Deserialize, Copy, Clone, Eq, PartialEq)]
@@ -247,12 +261,17 @@ impl Base {
                 .find(|a| a.name().to_lowercase() == attr_name.to_lowercase())
             else {
                 warn!("Attribute {} does not exist. (Ignoring)", attr_name);
-                warn!("Available attributes: {:?}", attributes.iter().map(|a| a.name()).collect::<Vec<_>>());
+                warn!(
+                    "Available attributes: {:?}",
+                    attributes.iter().map(|a| a.name()).collect::<Vec<_>>()
+                );
                 continue;
             };
             for index in indexes {
                 let i = result.len();
-                let path = self.base_folder.join(self.index_folder.join(format!("attribute-index-{}.bin", i)));
+                let path = self
+                    .base_folder
+                    .join(self.index_folder.join(format!("attribute-index-{}.bin", i)));
                 result.push(AttributeIndexConfig {
                     attribute: attr.clone(),
                     path,
@@ -270,6 +289,68 @@ fn output_file_pattern_default() -> String {
 
 fn target_point_pressure_default() -> usize {
     EvaluationScript::default().base.target_point_pressure
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct EvaluationSettings {
+    pub measure_index_speed: bool,
+    pub measure_query_speed: bool,
+    pub measure_query_latency: bool,
+}
+
+impl Default for EvaluationSettings {
+    fn default() -> Self {
+        EvaluationSettings {
+            measure_query_latency: false,
+            measure_index_speed: true,
+            measure_query_speed: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default, deny_unknown_fields)]
+pub struct EvaluationSettingsOverride {
+    pub measure_index_speed: Option<bool>,
+    pub measure_query_speed: Option<bool>,
+    pub measure_query_latency: Option<bool>,
+}
+
+impl EvaluationSettingsOverride {
+    pub fn apply_defaults(&self, defaults: &EvaluationSettings) -> EvaluationSettings {
+        EvaluationSettings {
+            measure_index_speed: self
+                .measure_index_speed
+                .unwrap_or(defaults.measure_index_speed),
+            measure_query_speed: self
+                .measure_query_speed
+                .unwrap_or(defaults.measure_query_speed),
+            measure_query_latency: self
+                .measure_query_latency
+                .unwrap_or(defaults.measure_query_latency),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default, deny_unknown_fields)]
+pub struct ElevationRun {
+    #[serde(flatten)]
+    pub settings: EvaluationSettingsOverride,
+
+    #[serde(flatten)]
+    pub index: MultiIndex,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default, deny_unknown_fields)]
+pub struct EvaluationRunDefaults {
+    #[serde(flatten)]
+    pub settings: EvaluationSettings,
+
+    #[serde(flatten)]
+    pub index: SingleIndex,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

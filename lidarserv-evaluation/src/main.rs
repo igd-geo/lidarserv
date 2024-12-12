@@ -7,6 +7,7 @@ use git_version::git_version;
 use indicatif::MultiProgress;
 use indicatif_log_bridge::LogWrapper;
 use insertion_rate::measure_insertion_rate;
+use latency::measure_latency;
 use lidarserv_common::{
     geometry::{
         coordinate_system::CoordinateSystem,
@@ -14,12 +15,16 @@ use lidarserv_common::{
     },
     index::{Octree, OctreeParams},
 };
+use lidarserv_server::index::query::Query;
 use log::{debug, error, info, warn};
 use nalgebra::vector;
-use pasture_io::{base::SeekToPoint, las::LASReader};
+use pasture_io::{
+    base::{PointReader, SeekToPoint},
+    las::LASReader,
+};
 use query_performance::measure_one_query;
 use serde_json::{json, Value};
-use settings::{Base, EvaluationScript, MultiIndex, SingleIndex};
+use settings::{Base, EvaluationScript, EvaluationSettings, MultiIndex, SingleIndex};
 use simple_logger::SimpleLogger;
 use std::{
     collections::HashMap,
@@ -38,6 +43,7 @@ use fs_extra::dir::get_size;
 mod cli;
 mod converter;
 mod insertion_rate;
+mod latency;
 mod query_performance;
 mod settings;
 
@@ -134,14 +140,15 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
     for (name, run) in &config.runs {
         info!("=== {} ===", name);
         let mut run = run.clone();
-        run.apply_defaults(&config.defaults);
+        run.index.apply_defaults(&config.defaults.index);
+        let settings = run.settings.apply_defaults(&config.defaults.settings);
         debug!("Applied defaults: {:?}", run);
         let mut run_results = Vec::new();
         let mut current_run = 1;
-        for index in &run {
+        for index in &run.index {
             info!("--- {name} run {current_run} ---");
-            prettyprint_index_run(&run, &index);
-            let result = match evaluate(&index, &config.base) {
+            prettyprint_index_run(&run.index, &index);
+            let result = match evaluate(&index, &config.base, settings.clone()) {
                 Ok(o) => o,
                 Err(e) => {
                     error!("Evaluation run finished with an error: {e}");
@@ -212,63 +219,74 @@ pub fn processor_cooldown(base_config: &Base) {
     }
 }
 
-fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, anyhow::Error> {
+fn open_input_file(base_config: &Base) -> Result<impl PointReader + SeekToPoint, anyhow::Error> {
+    // open input file
+    let raw_input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
+    let trans = raw_input_file.header().transforms();
+    let src_coordinate_system = CoordinateSystem::from_las_transform(
+        vector![trans.x.scale, trans.y.scale, trans.z.scale],
+        vector![trans.x.offset, trans.y.offset, trans.z.offset],
+    );
+    let point_layout = base_config.attributes.point_layout();
+    let coordinate_system = base_config.coordinate_system;
+    let input_file = ConvertingPointReader::new(
+        raw_input_file,
+        src_coordinate_system,
+        point_layout.clone(),
+        coordinate_system,
+        MissingAttributesStrategy::ZeroInitializeAndWarn,
+    )?;
+    Ok(input_file)
+}
+
+fn create_index(index_config: &SingleIndex, base_config: &Base) -> Result<Octree, anyhow::Error> {
+    let point_layout = base_config.attributes.point_layout();
+    let coordinate_system = base_config.coordinate_system;
+    let attribute_indexes = if index_config.enable_attribute_index {
+        base_config.attribute_indexes()
+    } else {
+        vec![]
+    };
+    if index_config.enable_attribute_index && attribute_indexes.is_empty() {
+        warn!("Attribute indexing is enabled, but no indexed attributes are configured.");
+    }
+
+    // Create index
+    let index = Octree::new(OctreeParams {
+        directory_file: base_config.index_folder_absolute().join("directory.bin"),
+        point_data_folder: base_config.index_folder_absolute(),
+        metrics_file: None,
+        point_layout,
+        node_hierarchy: GridHierarchy::new(index_config.node_hierarchy),
+        point_hierarchy: GridHierarchy::new(index_config.point_hierarchy),
+        coordinate_system,
+        max_lod: LodLevel::from_level(index_config.max_lod),
+        max_bogus_inner: index_config.nr_bogus_points.0,
+        max_bogus_leaf: index_config.nr_bogus_points.1,
+        enable_compression: index_config.compression,
+        max_cache_size: index_config.cache_size,
+        priority_function: index_config.priority_function,
+        num_threads: index_config.num_threads,
+        attribute_indexes,
+    })?;
+
+    Ok(index)
+}
+
+fn evaluate(
+    index_config: &SingleIndex,
+    base_config: &Base,
+    settings: EvaluationSettings,
+) -> Result<Value, anyhow::Error> {
     let unwind_result = catch_unwind(|| {
-        // reset data folder if necessary
-        if !base_config.use_existing_index {
-            reset_data_folder(base_config)?;
-        }
-
-        // open input file
-        let raw_input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
-        let trans = raw_input_file.header().transforms();
-        let src_coordinate_system = CoordinateSystem::from_las_transform(
-            vector![trans.x.scale, trans.y.scale, trans.z.scale],
-            vector![trans.x.offset, trans.y.offset, trans.z.offset],
-        );
-        let point_layout = base_config.attributes.point_layout();
-        let coordinate_system = base_config.coordinate_system;
-        let mut input_file = ConvertingPointReader::new(
-            raw_input_file,
-            src_coordinate_system,
-            point_layout.clone(),
-            coordinate_system,
-            MissingAttributesStrategy::ZeroInitializeAndWarn,
-        )?;
-
-        let attribute_indexes = if index_config.enable_attribute_index {
-            base_config.attribute_indexes()
-        } else {
-            vec![]
-        };
-        if index_config.enable_attribute_index && attribute_indexes.is_empty() {
-            warn!("Attribute indexing is enabled, but no indexed attributes are configured.");
-        }
-
-        // Create index
-        let mut index = Octree::new(OctreeParams {
-            directory_file: base_config.index_folder_absolute().join("directory.bin"),
-            point_data_folder: base_config.index_folder_absolute(),
-            metrics_file: None,
-            point_layout,
-            node_hierarchy: GridHierarchy::new(index_config.node_hierarchy),
-            point_hierarchy: GridHierarchy::new(index_config.point_hierarchy),
-            coordinate_system,
-            max_lod: LodLevel::from_level(index_config.max_lod),
-            max_bogus_inner: index_config.nr_bogus_points.0,
-            max_bogus_leaf: index_config.nr_bogus_points.1,
-            enable_compression: index_config.compression,
-            max_cache_size: index_config.cache_size,
-            priority_function: index_config.priority_function,
-            num_threads: index_config.num_threads,
-            attribute_indexes,
-        })?;
-
         // measure insertion rate
         let mut result_insertion_rate = serde_json::Value::Null;
-        if !base_config.use_existing_index {
+        if settings.measure_index_speed {
+            reset_data_folder(base_config)?;
             processor_cooldown(base_config);
             info!("Measuring insertion rate...");
+            let mut index = create_index(index_config, base_config)?;
+            let mut input_file = open_input_file(base_config)?;
             input_file.seek_point(SeekFrom::Start(0))?;
             let inner_result_insertion_rate = measure_insertion_rate(
                 &mut index,
@@ -282,22 +300,76 @@ fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, any
             result_insertion_rate = inner_result_insertion_rate;
         }
 
-        // measure query performance
-        let mut query_perf_results = HashMap::new();
-        for (query_name, query) in &base_config.queries {
-            processor_cooldown(base_config);
-            info!("Measuring query perf: {query_name}: {query}");
-            let sensorpos_query_perf = measure_one_query(&mut index, query);
-            query_perf_results.insert(query_name.clone(), sensorpos_query_perf);
+        // measure latency
+        let mut result_latency = serde_json::Value::Null;
+        if settings.measure_query_latency {
+            if base_config.queries.is_empty() {
+                warn!("Query latency measurements are enabled, but no queries are defined.");
+            }
+            let mut result_latency_inner = HashMap::new();
+            for (query_name, query_str) in &base_config.queries {
+                reset_data_folder(base_config)?;
+                processor_cooldown(base_config);
+                info!("Measuring query latency... [{query_name}]");
+                let query = Query::parse(query_str)?;
+                let mut index = create_index(index_config, base_config)?;
+                let mut input_file = open_input_file(base_config)?;
+                input_file.seek_point(SeekFrom::Start(0))?;
+                let result = measure_latency(
+                    &mut index,
+                    &mut input_file,
+                    query,
+                    base_config.latency_replay_pps,
+                    base_config.latency_sample_pps,
+                )?;
+                info!("Results {query_name}: {}", &result);
+                result_latency_inner.insert(query_name, result);
+            }
+
+            result_latency = serde_json::to_value(result_latency_inner)?;
         }
-        let result_query_perf = if !query_perf_results.is_empty() {
+
+        // measure query performance
+        let mut result_query_perf = serde_json::Value::Null;
+        if settings.measure_query_speed {
+            if !settings.measure_index_speed
+                && (!settings.measure_query_latency || base_config.queries.is_empty())
+            {
+                let directory_file = base_config.index_folder_absolute().join("directory.bin");
+                if directory_file.exists() {
+                    warn!(
+                        "The query performance test is running with an already-existing index. \
+                        There is no guarantee that this index was created with the same settings \
+                        as specified in the toml file. This might lead to unexpected results, \
+                        or even crashes in some cases. If you want a new index to be \
+                        created automatically, set `measure_index_speed` to `true` in the toml file."
+                    )
+                } else {
+                    warn!(
+                        "The query performance test is running without creating an index first. \
+                        Make sure there is a valid index at `{}`. \
+                        If you want an index to be created automatically, set \
+                        `measure_index_speed` to `true` in the toml file.",
+                        base_config.index_folder_absolute().display()
+                    );
+                    return Err(anyhow!(
+                        "Missing index at `{}`.",
+                        base_config.index_folder_absolute().display()
+                    ));
+                }
+            }
+            let mut index = create_index(index_config, base_config)?;
+            let mut query_perf_results = HashMap::new();
+            for (query_name, query) in &base_config.queries {
+                processor_cooldown(base_config);
+                info!("Measuring query perf: {query_name}: {query}");
+                let sensorpos_query_perf = measure_one_query(&mut index, query);
+                query_perf_results.insert(query_name.clone(), sensorpos_query_perf);
+            }
             let result = json!(query_perf_results);
             info!("Results: {}", &result);
-            result
-        } else {
-            drop(index);
-            serde_json::Value::Null
-        };
+            result_query_perf = result;
+        }
 
         // measure index folder size
         let index_folder = base_config.base_folder.join(&base_config.index_folder);
@@ -305,8 +377,8 @@ fn evaluate(index_config: &SingleIndex, base_config: &Base) -> Result<Value, any
 
         Ok(json!({
             //"index_info": index_info, // TODO
-            //"latency": results_latency,   // TODO
             "index_folder_size": index_folder_size,
+            "latency": result_latency,
             "insertion_rate": result_insertion_rate,
             "query_performance": result_query_perf
         }))

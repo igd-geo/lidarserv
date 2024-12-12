@@ -27,3 +27,5 @@ indicatif = "0.17"
 indicatif-log-bridge = "0.2"
 indexmap = { version = "2.6", features = ["serde"]}
 itertools = "0.13"
+rand = "0.8"
+crossbeam-channel = "0.5"
