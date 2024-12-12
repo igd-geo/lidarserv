@@ -8,77 +8,12 @@ use log::{info};
 use serde_json::json;
 use chrono::Utc;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use log::Level::Debug;
 use measurements::db::*;
-
-async fn run_query(
-    pb: &ProgressBar,
-    patch_query: &str,
-    point_query: &str,
-    dataset: &str,
-    client: &Client,
-    iterations: usize,
-) -> serde_json::Value {
-    info!("[QUERY] Running query {:?} with {:?} iterations", point_query, iterations);
-
-    // get total patch count
-    let total_patch_count_query = format!("SELECT Count(*) FROM {};", dataset);
-    let rows = client.query(total_patch_count_query.as_str(), &[]).await.unwrap();
-    let total_patch_count: i64 = rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0);
-
-    // get node count after patch filtering
-    let patch_filter_patch_count_query = format!("SELECT Count(*) FROM {} WHERE {};", dataset, patch_query);
-    let rows = client.query(patch_filter_patch_count_query.as_str(), &[]).await.unwrap();
-    let filtered_patch_count: i64 = rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0);
-
-    let queries = vec![
-        ("raw_spatial", format!("SELECT pc_astext(pc_explode(pa)) FROM {};", dataset)),
-        ("only_node_acc", format!("SELECT PC_Uncompress(pa)) FROM {} WHERE {};", dataset, patch_query)),
-        ("raw_point_filtering", format!("SELECT PC_Uncompress({})) FROM {};", point_query, dataset)),
-        ("point_filtering_with_node_acc", format!("SELECT PC_Uncompress({})) FROM {} WHERE {}", point_query, dataset, patch_query)),
-    ];
-
-    let mut json = json!({});
-    for (name, query) in queries {
-        let mut timings = vec![];
-        let mut num_rows = 0;
-        for _ in 0..iterations {
-            info!("Sending {}", name);
-            let t_start = Instant::now();
-            let rows = client.query(&query, &[]).await.unwrap();
-            num_rows = rows.len();
-            timings.push(t_start.elapsed().as_secs_f64());
-            pb.inc(1);
-        }
-        let median = Data::new(timings.clone()).median();
-        let stddev = (&timings).std_dev();
-        let mean = (&timings).mean();
-        json[name] = json!({
-            "median": median,
-            "stddev": stddev,
-            "mean": mean,
-            "num_points": num_rows,
-            "num_patches": filtered_patch_count,
-            "pps": num_rows as f64 / mean,
-            "total_patches": total_patch_count,
-        });
-    }
-
-    json
-}
-
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    #[arg(short, long)]
-    input_file: String,
-
-    #[arg(long, default_value_t = 1)]
-    iterations: u8,
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    simple_logger::init_with_level(log::Level::Debug).unwrap();
+    simple_logger::init_with_level(Debug)?;
     let start_date = Utc::now();
 
     let args = Args::parse();
@@ -195,4 +130,70 @@ async fn main() -> Result<()> {
     serde_json::to_writer_pretty(&mut output_writer, &output)?;
 
     Ok(())
+}
+
+async fn run_query(
+    pb: &ProgressBar,
+    patch_query: &str,
+    point_query: &str,
+    dataset: &str,
+    client: &Client,
+    iterations: usize,
+) -> serde_json::Value {
+    info!("[QUERY] Running query {:?} with {:?} iterations", point_query, iterations);
+
+    // get total patch count
+    let total_patch_count_query = format!("SELECT Count(*) FROM {};", dataset);
+    let rows = client.query(total_patch_count_query.as_str(), &[]).await.unwrap();
+    let total_patch_count: i64 = rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0);
+
+    // get node count after patch filtering
+    let patch_filter_patch_count_query = format!("SELECT Count(*) FROM {} WHERE {};", dataset, patch_query);
+    let rows = client.query(patch_filter_patch_count_query.as_str(), &[]).await.unwrap();
+    let filtered_patch_count: i64 = rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0);
+
+    let queries = vec![
+        ("raw_spatial", format!("SELECT pc_astext(pc_explode(pa)) FROM {};", dataset)),
+        ("only_node_acc", format!("SELECT PC_Uncompress(pa)) FROM {} WHERE {};", dataset, patch_query)),
+        ("raw_point_filtering", format!("SELECT PC_Uncompress({})) FROM {};", point_query, dataset)),
+        ("point_filtering_with_node_acc", format!("SELECT PC_Uncompress({})) FROM {} WHERE {}", point_query, dataset, patch_query)),
+    ];
+
+    let mut json = json!({});
+    for (name, query) in queries {
+        let mut timings = vec![];
+        let mut num_rows = 0;
+        for _ in 0..iterations {
+            info!("Sending {}", name);
+            let t_start = Instant::now();
+            let rows = client.query(&query, &[]).await.unwrap();
+            num_rows = rows.len();
+            timings.push(t_start.elapsed().as_secs_f64());
+            pb.inc(1);
+        }
+        let median = Data::new(timings.clone()).median();
+        let stddev = (&timings).std_dev();
+        let mean = (&timings).mean();
+        json[name] = json!({
+            "median": median,
+            "stddev": stddev,
+            "mean": mean,
+            "num_points": num_rows,
+            "num_patches": filtered_patch_count,
+            "pps": num_rows as f64 / mean,
+            "total_patches": total_patch_count,
+        });
+    }
+
+    json
+}
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    input_file: String,
+
+    #[arg(long, default_value_t = 1)]
+    iterations: u8,
 }
