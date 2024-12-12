@@ -1,21 +1,27 @@
-use std::env;
 use std::error::Error;
 use std::io::Write;
 use async_process::Command;
 use chrono::Utc;
+use clap::Parser;
 use serde_json::json;
 use measurements::db::{connect_to_db, drop_table, PostGISConfig};
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    input_file: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
-        eprintln!("Usage: {} <table> <input_file>", args[0]);
-        std::process::exit(1);
-    }
+    let args = Args::parse();
 
-    let table = &args[1];
-    let input_file = &args[2];
+    let input_file = args.input_file;
+    if !std::path::Path::new(&input_file).exists() {
+        panic!("Input file {} does not exist", input_file);
+    }
+    let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap();
     let iterations: usize = 1;
 
     // connect to db
@@ -51,6 +57,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "#
     );
     // write pipeline to json file
+    std::fs::create_dir_all("data")?;
     let filename = format!("data/pipeline_{}.json", table);
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
@@ -88,6 +95,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // write result to json file
     let start_date = Utc::now();
+    std::fs::create_dir_all("results")?;
     let filename = format!("results/insertion_results_{}_{}.json", table, start_date.to_rfc3339());
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
