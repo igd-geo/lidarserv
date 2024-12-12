@@ -150,7 +150,8 @@ async fn main() -> Result<()> {
         // todo
     ];
 
-    let selected_query_set = match input_file.as_str() {
+    let filename = input_file.split("/").last().unwrap();
+    let selected_query_set = match filename {
         "AHN4.las" => queries_ahn4,
         "Lille_sorted.las" => queries_lille,
         "kitti_sorted.las" => queries_kitti,
