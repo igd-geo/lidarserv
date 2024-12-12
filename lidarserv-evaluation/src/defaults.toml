@@ -1,7 +1,6 @@
 points_file = "./points.las"
 index_folder = "./data"
 output_file = "evaluation_%d_%i.json"
-use_existing_index = false
 cooldown_seconds = 0
 target_point_pressure = 1_000_000
 indexing_timeout_seconds = 600
@@ -32,6 +31,9 @@ compression = false
 nr_bogus_points = [500, 500]
 max_lod = 10
 enable_attribute_index = false
+measure_index_speed = true
+measure_query_speed = true
+measure_query_latency = false
 
 [runs.example]
 cache_size = [
