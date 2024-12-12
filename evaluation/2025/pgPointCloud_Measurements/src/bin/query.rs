@@ -72,7 +72,7 @@ struct Args {
     #[arg(short, long)]
     input_file: String,
 
-    #[arg(short, long, default_value_t = 1)]
+    #[arg(long, default_value_t = 1)]
     iterations: u8,
 }
 
