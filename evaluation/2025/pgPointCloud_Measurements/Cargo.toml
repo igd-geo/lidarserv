@@ -10,16 +10,13 @@ tokio = {version = "1.6.0", features = ["full"] }
 tokio-postgres = {version = "0.7.2", features = ["runtime", "with-chrono-0_4", "with-geo-types-0_7"] }
 serde = { version = "1.0.116", features = ["derive"] }
 serde_json = "1.0.72"
-postgres-types = {version = "0.2.1", features = ["derive"] }
-postgis = "0.8.0"
 anyhow = "1.0.86"
-clap = "2.33.3"
-statrs = "0.14.0"
+clap = { version = "4.5.23", features = ["derive"] }
+statrs = "0.18.0"
 log = "0.4.21"
 simple_logger = "5.0.0"
-las = { version = "0.7.5", features = ["laz"] }
 chrono = "0.4.38"
-gethostname = "0.4.3"
+gethostname = "0.5.0"
 indicatif = "0.17.8"
 async-process = "2.2.2"
 

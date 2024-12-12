@@ -1,21 +1,13 @@
-use std::env::ArgsOs;
-use std::fs::File;
 use std::fmt::Write;
-use std::io::Write as IoWrite;
-use std::ptr::null;
 use std::time::Instant;
 use anyhow::Result;
-use clap::{App, Arg};
-use las::{Read, Reader};
+use clap::{Parser};
 use statrs::statistics::{Data, Median, Statistics};
-use tokio::task::JoinHandle;
-use tokio_postgres::{Client, NoTls};
-use log::{debug, error, info, trace, warn};
+use tokio_postgres::{Client};
+use log::{info};
 use serde_json::json;
 use chrono::Utc;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
-use measurements::attribute_bounds::LasPointAttributeBounds;
-use measurements::queries::*;
 use measurements::db::*;
 
 async fn run_query(
@@ -67,38 +59,33 @@ async fn run_query(
             "num_points": num_rows,
             "num_patches": filtered_patch_count,
             "pps": num_rows as f64 / mean,
+            "total_patches": total_patch_count,
         });
     }
 
     json
 }
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    input_file: String,
+
+    #[arg(short, long, default_value_t = 1)]
+    iterations: u8,
+}
+
 #[tokio::main]
-async fn main(args_os: ArgsOs) -> Result<()> {
+async fn main() -> Result<()> {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
     let start_date = Utc::now();
 
-    let args = App::new("query")
-        .arg(Arg::with_name("input_file")
-            .short("i")
-            .long("input_file")
-            .value_name("INPUT_FILE")
-            .help("Input file")
-            .required(true)
-            .takes_value(true))
-        .arg(Arg::with_name("iterations")
-            .short("n")
-            .long("iterations")
-            .value_name("ITERATIONS")
-            .help("Number of iterations")
-            .required(false)
-            .default_value("1")
-            .takes_value(true))
-        .get_matches_from(args_os);
+    let args = Args::parse();
+    let input_file = args.input_file;
+    let iterations = args.iterations as usize;
 
-    let input_file = args.value_of("input_file").unwrap();
-    let iterations = args.value_of("iterations").unwrap().parse::<usize>()?;
-    let table = std::path::Path::new(input_file).file_stem().unwrap().to_str().unwrap();
+    let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap();
 
     // connect to db
     let postgis_config = PostGISConfig {
@@ -113,7 +100,6 @@ async fn main(args_os: ArgsOs) -> Result<()> {
     let filename = format!("results/results_{}_{}.json", table, start_date.to_rfc3339());
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
-    let json_output : serde_json::Value = json!({});
     let mut json_query_result = json!({});
 
     // Progress bar
@@ -158,7 +144,7 @@ async fn main(args_os: ArgsOs) -> Result<()> {
         // todo
     ];
 
-    let selected_query_set = match input_file {
+    let selected_query_set = match input_file.as_str() {
         "AHN4.las" => queries_ahn4,
         "Lille_sorted.las" => queries_lille,
         "kitti_sorted.las" => queries_kitti,
@@ -179,7 +165,7 @@ async fn main(args_os: ArgsOs) -> Result<()> {
     let num_points_query_str = format!("SELECT Sum(PC_NumPoints(pa)) FROM {};", table);
     let num_points_query_result = client.query(num_points_query_str.as_str(), &[]).await?;
     let num_points : i64 = num_points_query_result[0].get(0);
-    let num_bytes = std::fs::metadata(input_file)?.len();
+    let num_bytes = std::fs::metadata(input_file.clone())?.len();
     let num_patches_query_str = format!("SELECT Count(*) FROM {};", table);
     let num_patches_query_result = client.query(num_patches_query_str.as_str(), &[]).await?;
     let num_patches : i64 = num_patches_query_result[0].get(0);
