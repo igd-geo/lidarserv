@@ -1,7 +1,6 @@
 points_file = "../../../data/kitti_sorted.las"
 index_folder = "../../../data/kitti-eval"
 output_file = "kitti_%d_%i.json"
-use_existing_index = false
 cooldown_seconds = 0
 indexing_timeout_seconds = 50000
 target_point_pressure = 1000000

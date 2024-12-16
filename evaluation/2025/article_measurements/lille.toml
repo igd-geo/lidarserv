@@ -52,3 +52,4 @@ enable_attribute_index = true
 [runs.main]
 compression = [true, false]
 enable_attribute_index = [true, false]
+measure_query_latency = true
