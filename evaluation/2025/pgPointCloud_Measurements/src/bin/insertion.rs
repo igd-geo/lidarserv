@@ -109,12 +109,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let duration = timestamps.iter().sum::<f64>() / iterations as f64;
     let size = sizes.iter().sum::<i64>() / iterations as i64;
 
+    // query number of inserted points
+    debug!("Querying number of points in table {}", table);
+    let num_points_query = client.query(format!("SELECT PC_NumPoints(pa) FROM {} LIMIT 1;", table).as_str(), &[]).await?;
+    let num_points: i64 = num_points_query[0].get(0);
+
     // write result to json file
     let start_date = Utc::now();
     std::fs::create_dir_all(base_dir.join("results"))?;
     let filename = base_dir.join("results").join(format!("insertion_results_{}_{}_{}.json", table, compression, start_date.to_rfc3339()));
     debug!("Writing results to file {}", &filename.to_str().unwrap());
-    let output_file = std::fs::File::create(filename)?;
+    let output_file = std::fs::File::create(&filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
     let mut json_output : serde_json::Value = json!({});
     json_output[table] = json!({
@@ -124,9 +129,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "start_date": start_date.to_rfc3339(),
         "end_date": Utc::now().to_rfc3339(),
         "size": size,
+        "num_points", num_points,
         "duration": duration,
     });
     serde_json::to_writer_pretty(&mut output_writer, &json_output)?;
+    info!("Wrote results to file {}", &filename.to_str().unwrap());
 
     info!("Pipeline executed in average {} seconds", duration);
 
