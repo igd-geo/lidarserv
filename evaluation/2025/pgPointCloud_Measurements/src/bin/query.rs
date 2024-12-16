@@ -38,10 +38,13 @@ async fn main() -> Result<()> {
         username: "postgres".parse()?
     };
     let (client, _join_handle) = connect_to_db(&postgis_config).await?;
+    info!("Existing tables: {:?}", list_tables(&client).await?);
 
     // open json output file
     let filename = base_folder.join(format!("results_{}_{}.json", table, start_date.to_rfc3339()));
-    create_dir(filename.parent().unwrap())?;
+    if !filename.exists() {
+        create_dir(filename.parent().unwrap())?;
+    }
     let output_file = std::fs::File::create(filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);
     let mut json_query_result = json!({});

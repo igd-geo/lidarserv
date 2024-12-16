@@ -6,7 +6,7 @@ use clap::Parser;
 use log::{debug, info};
 use log::Level::Debug;
 use serde_json::json;
-use measurements::db::{connect_to_db, drop_table, PostGISConfig};
+use measurements::db::{connect_to_db, drop_table, list_tables, PostGISConfig};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -133,8 +133,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "duration": duration,
     });
     serde_json::to_writer_pretty(&mut output_writer, &json_output)?;
-    info!("Wrote results to file {}", &filename.to_str().unwrap());
 
+    debug!("Existing tables: {:?}", list_tables(&client).await?);
+    info!("Wrote results to file {}", &filename.to_str().unwrap());
     info!("Pipeline executed in average {} seconds", duration);
 
     Ok(())

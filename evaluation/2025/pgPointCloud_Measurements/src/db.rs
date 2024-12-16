@@ -37,3 +37,13 @@ pub async fn drop_table(client: &Client, table: &str) -> Result<()> {
     client.execute(drop_query.as_str(), &[]).await?;
     Ok(())
 }
+
+pub async fn list_tables(client: &Client) -> Result<Vec<String>> {
+    let rows = client.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';", &[]).await?;
+    let mut tables = Vec::new();
+    for row in rows {
+        let table_name: String = row.get(0);
+        tables.push(table_name);
+    }
+    Ok(tables)
+}
