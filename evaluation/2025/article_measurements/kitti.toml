@@ -63,6 +63,9 @@ colorrgb = [
 ]
 
 [defaults]
+measure_index_speed = true
+measure_query_speed = true
+measure_query_latency = true
 node_hierarchy = 19
 point_hierarchy = 11
 priority_function = "NrPointsWeightedByTaskAge"

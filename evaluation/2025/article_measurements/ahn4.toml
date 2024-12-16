@@ -49,6 +49,9 @@ intensity = ["RangeIndex"]
 gpstime = ["RangeIndex"]
 
 [defaults]
+measure_index_speed = true
+measure_query_speed = true
+measure_query_latency = true
 node_hierarchy = 25
 point_hierarchy = 17
 max_lod = 14
