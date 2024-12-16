@@ -63,7 +63,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "connection": "host='localhost' dbname='pointclouds' user='postgres' password='password' port='5432'",
             "table": "{table}",
             "compression": "{compression}",
-            "pcid": "1"
         }}
     ]
 }}
@@ -104,6 +103,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         info!("done in {} seconds", duration);
     }
+    debug!("Existing tables: {:?}", list_tables(&client).await?);
 
     // calculate average duration
     let duration = timestamps.iter().sum::<f64>() / iterations as f64;
@@ -134,7 +134,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
     serde_json::to_writer_pretty(&mut output_writer, &json_output)?;
 
-    debug!("Existing tables: {:?}", list_tables(&client).await?);
     info!("Wrote results to file {}", &filename.to_str().unwrap());
     info!("Pipeline executed in average {} seconds", duration);
 
