@@ -129,7 +129,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "start_date": start_date.to_rfc3339(),
         "end_date": Utc::now().to_rfc3339(),
         "size": size,
-        "num_points", num_points,
+        "num_points": num_points,
         "duration": duration,
     });
     serde_json::to_writer_pretty(&mut output_writer, &json_output)?;
