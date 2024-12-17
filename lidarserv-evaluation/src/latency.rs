@@ -217,7 +217,10 @@ fn analyze_node(
     }
 }
 
-fn calculate_stats(mut durations: Vec<Duration>) -> Stats {
+fn calculate_stats(mut durations: Vec<Duration>) -> Option<Stats> {
+    if durations.is_empty() {
+        return None;
+    }
     let sum = durations.iter().map(|d| d.as_secs_f64()).sum::<f64>();
     let mean = sum / durations.len() as f64;
     durations.sort();
@@ -240,9 +243,9 @@ fn calculate_stats(mut durations: Vec<Duration>) -> Stats {
         })
         .collect();
 
-    Stats {
+    Some(Stats {
         nr_points: durations.len(),
         mean,
         percentiles,
-    }
+    })
 }
