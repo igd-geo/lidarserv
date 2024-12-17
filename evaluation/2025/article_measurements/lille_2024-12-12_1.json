@@ -1,0 +1,397 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/article_measurements/lille.toml",
+    "duration:": 108,
+    "finished_at": "2024-12-12T16:57:14.270811581+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_bytes": 3360000227,
+    "nr_points": 120000000,
+    "started_at": "2024-12-12T16:55:25.873723580+00:00",
+    "version": "git:79aafab-modified"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": true,
+          "enable_attribute_index": true,
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 1040006147,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.110860146,
+            "duration_seconds": 27.245489602,
+            "insertion_rate_points_per_sec": 4386550.14669028,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0
+          },
+          "latency": null,
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 2.63e-7,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 9.934e-6
+            },
+            "intensity_high": {
+              "load_time_seconds": 3.86e-7,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 4.673e-6
+            },
+            "intensity_low": {
+              "load_time_seconds": 2.1e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 8.23e-7
+            },
+            "lod0": {
+              "load_time_seconds": 3.6e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.194e-6
+            },
+            "lod1": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 7.79e-7
+            },
+            "lod2": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 6.74e-7
+            },
+            "time_1": {
+              "load_time_seconds": 3.4e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.667e-6
+            },
+            "time_2": {
+              "load_time_seconds": 2.7e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 9.97e-7
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": true,
+          "enable_attribute_index": false,
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 1039565502,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.098662151,
+            "duration_seconds": 26.132392613,
+            "insertion_rate_points_per_sec": 4574730.260740041,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0
+          },
+          "latency": null,
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 9.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 3.218e-6
+            },
+            "intensity_high": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.781e-6
+            },
+            "intensity_low": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 7.81e-7
+            },
+            "lod0": {
+              "load_time_seconds": 2.1e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 5.02e-7
+            },
+            "lod1": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 2.81e-7
+            },
+            "lod2": {
+              "load_time_seconds": 2.1e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 4.36e-7
+            },
+            "time_1": {
+              "load_time_seconds": 2.3e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 6.076e-6
+            },
+            "time_2": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.26e-6
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": true,
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 3253313926,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.132338296,
+            "duration_seconds": 26.014075225,
+            "insertion_rate_points_per_sec": 4589539.590338831,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0
+          },
+          "latency": null,
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 1.25e-7,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 4.488e-6
+            },
+            "intensity_high": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.4e-6
+            },
+            "intensity_low": {
+              "load_time_seconds": 2.1e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 8.89e-7
+            },
+            "lod0": {
+              "load_time_seconds": 2.7e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 5.11e-7
+            },
+            "lod1": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 5.35e-7
+            },
+            "lod2": {
+              "load_time_seconds": 2.4e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 3.26e-7
+            },
+            "time_1": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.321e-6
+            },
+            "time_2": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.518e-6
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": false,
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 3253483989,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.130009898,
+            "duration_seconds": 24.204284163,
+            "insertion_rate_points_per_sec": 4931312.151451361,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0
+          },
+          "latency": null,
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 9.8e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 4.268e-6
+            },
+            "intensity_high": {
+              "load_time_seconds": 2.7e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 4.914e-6
+            },
+            "intensity_low": {
+              "load_time_seconds": 2.1e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 8.97e-7
+            },
+            "lod0": {
+              "load_time_seconds": 3.5e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 3.91e-7
+            },
+            "lod1": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 5.32e-7
+            },
+            "lod2": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.221e-6
+            },
+            "time_1": {
+              "load_time_seconds": 2.1e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 2.002e-6
+            },
+            "time_2": {
+              "load_time_seconds": 2.2e-8,
+              "nr_nodes": 0,
+              "nr_non_empty_nodes": 0,
+              "nr_points": 0,
+              "query_time_seconds": 1.227e-6
+            }
+          }
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat1Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/lille-eval",
+    "indexed_attributes": {
+      "gpstime": [
+        "RangeIndex"
+      ],
+      "intensity": [
+        "RangeIndex"
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "latency_replay_pps": 1000000,
+    "latency_sample_pps": 1000,
+    "output_file": "lille_%d_%i.json",
+    "points_file": "../../../data/Lille_sorted.las",
+    "queries": {
+      "full-point-cloud": "full",
+      "intensity_high": "attr(Intensity > 128)",
+      "intensity_low": "attr(Intensity <= 2)",
+      "lod0": "lod(0)",
+      "lod1": "lod(1)",
+      "lod2": "lod(2)",
+      "time_1": "attr(GpsTime > 4983)",
+      "time_2": "attr(GpsTime < 9158) and attr(GpsTime > 9120)"
+    },
+    "target_point_pressure": 1000000
+  }
+}
