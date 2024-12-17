@@ -147,7 +147,6 @@ pub fn measure_latency(
 
     // Finalize
     drop(writer);
-    index.flush()?;
 
     // stop querying
     exit_tx.send(()).ok();

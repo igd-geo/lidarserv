@@ -296,6 +296,8 @@ fn evaluate(
                     .indexing_timeout_seconds
                     .map(Duration::from_secs),
             )?;
+            info!("Flush...");
+            index.flush()?;
             info!("Results: {}", &inner_result_insertion_rate);
             result_insertion_rate = inner_result_insertion_rate;
         }
@@ -322,6 +324,8 @@ fn evaluate(
                     base_config.latency_replay_pps,
                     base_config.latency_sample_pps,
                 )?;
+                info!("Flush...");
+                index.flush()?;
                 info!("Results {query_name}: {}", &result);
                 result_latency_inner.insert(query_name, result);
             }
