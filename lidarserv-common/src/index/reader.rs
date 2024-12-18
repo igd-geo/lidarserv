@@ -287,6 +287,7 @@ impl OctreeReader {
         self.reload_queue.remove(&reload);
         self.loaded.insert(reload, load_kind);
         let node = self.inner.page_cache.load_or_default(&reload).unwrap();
+        self.inner.page_cache.cleanup_one_no_write();
         let mut points = node
             .get_points(&*self.inner.codec, &self.inner.point_layout)
             .unwrap();
@@ -336,6 +337,7 @@ impl OctreeReader {
 
         // load and return node data
         let node = self.inner.page_cache.load_or_default(&load).unwrap();
+        self.inner.page_cache.cleanup_one_no_write();
         let mut points = node
             .get_points(&*self.inner.codec, &self.inner.point_layout)
             .unwrap();
