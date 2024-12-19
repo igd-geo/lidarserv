@@ -175,9 +175,9 @@ async fn run_query(
 
     let queries = vec![
         ("raw_spatial", format!("SELECT pc_astext(pc_explode(pa)) FROM {};", dataset)),
-        ("only_node_acc", format!("SELECT pa FROM {} WHERE {};", dataset, patch_query)),
-        ("raw_point_filtering", format!("SELECT {} FROM {};", point_query, dataset)),
-        ("point_filtering_with_node_acc", format!("SELECT {} FROM {} WHERE {}", point_query, dataset, patch_query)),
+        ("only_node_acc", format!("SELECT PC_Uncompress(pa) FROM {} WHERE {};", dataset, patch_query)),
+        ("raw_point_filtering", format!("SELECT PC_Uncompress({}) FROM {};", point_query, dataset)),
+        ("point_filtering_with_node_acc", format!("SELECT PC_Uncompress({}) FROM {} WHERE {}", point_query, dataset, patch_query)),
     ];
 
     let mut json = json!({});
@@ -195,7 +195,7 @@ async fn run_query(
                 }
                 Err(e) => {
                     let error_json = json!({ "error": format!("Failed to execute query {}: {}", name, e) });
-                    return error_json;
+                    json[name] = error_json;
                 }
             }
         }
