@@ -155,13 +155,23 @@ async fn run_query(
 
     // get total patch count
     let total_patch_count_query = format!("SELECT Count(*) FROM {};", dataset);
-    let rows = client.query(total_patch_count_query.as_str(), &[]).await.unwrap();
-    let total_patch_count: i64 = rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0);
+    let total_patch_count: i64 = match client.query(total_patch_count_query.as_str(), &[]).await {
+        Ok(rows) => rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0),
+        Err(e) => {
+            let error_json = json!({ "error": format!("Failed to get total patch count: {}", e) });
+            return error_json;
+        }
+    };
 
     // get node count after patch filtering
     let patch_filter_patch_count_query = format!("SELECT Count(*) FROM {} WHERE {};", dataset, patch_query);
-    let rows = client.query(patch_filter_patch_count_query.as_str(), &[]).await.unwrap();
-    let filtered_patch_count: i64 = rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0);
+    let filtered_patch_count: i64 = match client.query(patch_filter_patch_count_query.as_str(), &[]).await {
+        Ok(rows) => rows[0].get::<_, Option<i64>>(0).unwrap_or_else(|| 0),
+        Err(e) => {
+            let error_json = json!({ "error": format!("Failed to get filtered patch count: {}", e) });
+            return error_json;
+        }
+    };
 
     let queries = vec![
         ("raw_spatial", format!("SELECT pc_astext(pc_explode(pa)) FROM {};", dataset)),
@@ -177,10 +187,17 @@ async fn run_query(
         for _ in 0..iterations {
             info!("Sending {}", name);
             let t_start = Instant::now();
-            let rows = client.query(&query, &[]).await.unwrap();
-            num_rows = rows.len();
-            timings.push(t_start.elapsed().as_secs_f64());
-            pb.inc(1);
+            match client.query(&query, &[]).await {
+                Ok(rows) => {
+                    num_rows = rows.len();
+                    timings.push(t_start.elapsed().as_secs_f64());
+                    pb.inc(1);
+                }
+                Err(e) => {
+                    let error_json = json!({ "error": format!("Failed to execute query {}: {}", name, e) });
+                    return error_json;
+                }
+            }
         }
         let median = Data::new(timings.clone()).median();
         let stddev = (&timings).std_dev();
