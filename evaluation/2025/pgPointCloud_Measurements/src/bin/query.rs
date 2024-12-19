@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::{Parser};
 use statrs::statistics::{Data, Median, Statistics};
 use tokio_postgres::{Client};
-use log::{info};
+use log::{debug, info};
 use serde_json::json;
 use chrono::Utc;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
@@ -42,7 +42,8 @@ async fn main() -> Result<()> {
 
     // open json output file
     let filename = base_folder.join(format!("results_{}_{}.json", table, start_date.to_rfc3339()));
-    if !filename.exists() {
+    if !filename.parent().unwrap().exists() {
+        debug!("Creating output file folder");
         create_dir(filename.parent().unwrap())?;
     }
     let output_file = std::fs::File::create(filename)?;
@@ -135,6 +136,10 @@ async fn main() -> Result<()> {
     });
     serde_json::to_writer_pretty(&mut output_writer, &output)?;
 
+    if args.drop_table {
+        drop_table(&client, table).await?;
+    }
+
     Ok(())
 }
 
@@ -202,4 +207,7 @@ struct Args {
 
     #[arg(long, default_value_t = 1)]
     iterations: u8,
+
+    #[arg(long)]
+    drop_table: bool,
 }
