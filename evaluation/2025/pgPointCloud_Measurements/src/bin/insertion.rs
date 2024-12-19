@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("Absolute input file path is {:?}", abs_input_file);
     let base_dir = abs_input_file.parent().unwrap();
     debug!("Base directory is {:?}", base_dir);
-    let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap();
+    let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap().to_lowercase();
     let iterations: usize = 1;
     info!("Running insertion with input file {} and table {}", input_file, table);
 
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut sizes = Vec::new();
     for i in 0..iterations {
         info!("Running iteration {} of {}... ", i+1, iterations);
-        drop_table(&client, table).await?;
+        drop_table(&client, &table).await?;
         let t_start = std::time::Instant::now();
         let output = Command::new("pdal")
             // .arg("-v 4")
@@ -94,14 +94,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let duration = t_start.elapsed().as_secs_f64();
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
+        timestamps.push(duration);
         info!("done in {} seconds with output {:?}, {:?}", duration, stderr, stdout);
+
+        // check if table exists
+        let table_exists = list_tables(&client).await?.contains(&table);
+        if !table_exists {
+            debug!("Existing tables: {:?}", list_tables(&client).await?);
+            panic!("Table {} does not exist", table);
+        }
 
         debug!("Querying database size...");
         let size = client.query(format!("SELECT pg_total_relation_size('{}')", table).as_str(), &[]).await?;
         let size: i64 = size[0].get(0);
         sizes.push(size);
-
-        timestamps.push(duration);
 
         info!("done in {} seconds", duration);
     }
