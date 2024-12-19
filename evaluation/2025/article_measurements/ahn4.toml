@@ -18,8 +18,8 @@ lod1 = "lod(1)"
 lod2 = "lod(2)"
 intensity_high = "attr(Intensity > 1400)"
 intensity_low = "attr(Intensity <= 20)"
-return_simple = "attr(NumberOfReturns == 1)"
-return_multiple = "attr(NumberOfReturns >= 2)"
+return_simple = "attr(ReturnNumber == 1)"
+return_multiple = "attr(ReturnNumber >= 2)"
 classification_ground = "attr(Classification == 2)"
 classification_building = "attr(Classification == 6)"
 classification_vegetation = "attr(Classification == 1)"
@@ -51,7 +51,7 @@ gpstime = ["RangeIndex"]
 [defaults]
 measure_index_speed = true
 measure_query_speed = true
-measure_query_latency = true
+measure_query_latency = false
 node_hierarchy = 25
 point_hierarchy = 17
 max_lod = 14

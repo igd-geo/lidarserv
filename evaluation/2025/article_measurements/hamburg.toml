@@ -31,7 +31,7 @@ gpstime = ["RangeIndex"]
 [defaults]
 measure_index_speed = true
 measure_query_speed = true
-measure_query_latency = true
+measure_query_latency = false
 node_hierarchy = 23
 point_hierarchy = 15
 priority_function = "NrPointsWeightedByTaskAge"
