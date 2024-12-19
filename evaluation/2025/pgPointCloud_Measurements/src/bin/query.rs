@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
         panic!("Input file {} does not exist", input_file);
     }
 
-    let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap();
+    let table = std::path::Path::new(&input_file).file_stem().unwrap().to_str().unwrap().to_lowercase();
 
     // connect to db
     let postgis_config = PostGISConfig {
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     info!("Existing tables: {:?}", list_tables(&client).await?);
 
     // open json output file
-    let filename = base_folder.join(format!("results_{}_{}.json", table, start_date.to_rfc3339()));
+    let filename = base_folder.join(format!("results_{}_{}.json", &table, start_date.to_rfc3339()));
     if !filename.parent().unwrap().exists() {
         debug!("Creating output file folder");
         create_dir(filename.parent().unwrap())?;
@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
         .progress_chars("#>-"));
     // run queries
 
-    info!("Running queries on dataset {}", table);
+    info!("Running queries on dataset {}", &table);
     let queries_ahn4 = vec![
         ("intensity_high","pc_patchmin(pa, 'Intensity') >= 1400","PC_FilterBetween(pa, 'Intensity', 1400, 1000000)"),
         ("intensity_low","pc_patchmax(pa, 'Intensity') <= 20","PC_FilterBetween(pa, 'Intensity', 0, 20)"),
@@ -103,7 +103,7 @@ async fn main() -> Result<()> {
     info!("Running queries on dataset {}", input_file);
 
     for (name, query_patch, query_point) in selected_query_set {
-        json_query_result[name] = run_query(&pb, query_patch, query_point, table, &client, iterations).await;
+        json_query_result[name] = run_query(&pb, query_patch, query_point, &table, &client, iterations).await;
     }
 
     pb.finish();
@@ -111,11 +111,11 @@ async fn main() -> Result<()> {
     // write json to output file
     // write results to file
     info!("Writing results to file");
-    let num_points_query_str = format!("SELECT Sum(PC_NumPoints(pa)) FROM {};", table);
+    let num_points_query_str = format!("SELECT Sum(PC_NumPoints(pa)) FROM {};", &table);
     let num_points_query_result = client.query(num_points_query_str.as_str(), &[]).await?;
     let num_points : i64 = num_points_query_result[0].get(0);
     let num_bytes = std::fs::metadata(input_file.clone())?.len();
-    let num_patches_query_str = format!("SELECT Count(*) FROM {};", table);
+    let num_patches_query_str = format!("SELECT Count(*) FROM {};", &table);
     let num_patches_query_result = client.query(num_patches_query_str.as_str(), &[]).await?;
     let num_patches : i64 = num_patches_query_result[0].get(0);
     let hostname = gethostname::gethostname().to_string_lossy().into_owned();
@@ -123,7 +123,7 @@ async fn main() -> Result<()> {
     let output = json!({
         "env": {
             "hostname": hostname,
-            "table": table,
+            "table": &table,
             "num_patches": num_patches,
             "num_points": num_points,
             "num_bytes": num_bytes,
@@ -137,7 +137,7 @@ async fn main() -> Result<()> {
     serde_json::to_writer_pretty(&mut output_writer, &output)?;
 
     if args.drop_table {
-        drop_table(&client, table).await?;
+        drop_table(&client, &table).await?;
     }
 
     Ok(())
