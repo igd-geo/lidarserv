@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "type": "writers.pgpointcloud",
             "connection": "host='localhost' dbname='pointclouds' user='postgres' password='password' port='5432'",
             "table": "{table}",
-            "compression": "{compression}",
+            "compression": "{compression}"
         }}
     ]
 }}
@@ -96,8 +96,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let stdout = String::from_utf8_lossy(&output.stdout);
         info!("done in {} seconds with output {:?}, {:?}", duration, stderr, stdout);
 
-        let size = client.query("SELECT pg_database_size('pointclouds')", &[]).await?;
+        debug!("Querying database size...");
+        let size = client.query(format!("SELECT pg_total_relation_size('{}')", table).as_str(), &[]).await?;
         let size: i64 = size[0].get(0);
+        sizes.push(size);
 
         timestamps.push(duration);
 
@@ -111,7 +113,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // query number of inserted points
     debug!("Querying number of points in table {}", table);
-    let num_points_query = client.query(format!("SELECT PC_NumPoints(pa) FROM {} LIMIT 1;", table).as_str(), &[]).await?;
+    let num_points_query = client.query(format!("SELECT SUM(PC_NumPoints(pa)) FROM {} LIMIT 1;", table).as_str(), &[]).await?;
     let num_points: i64 = num_points_query[0].get(0);
 
     // write result to json file
