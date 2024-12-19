@@ -125,7 +125,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // write result to json file
     let start_date = Utc::now();
     std::fs::create_dir_all(base_dir.join("results"))?;
-    let filename = base_dir.join("results").join(format!("insertion_results_{}_{}_{}.json", table, compression, start_date.to_rfc3339()));
+    let filename = base_dir.join("results").join(format!("pg_insertion_results_{}_{}_{}.json", table, compression, start_date.to_rfc3339()));
     debug!("Writing results to file {}", &filename.to_str().unwrap());
     let output_file = std::fs::File::create(&filename)?;
     let mut output_writer = std::io::BufWriter::new(output_file);

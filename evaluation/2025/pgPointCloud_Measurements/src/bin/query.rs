@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     info!("Existing tables: {:?}", list_tables(&client).await?);
 
     // open json output file
-    let filename = base_folder.join(format!("results_{}_{}.json", &table, start_date.to_rfc3339()));
+    let filename = base_folder.join(format!("pg_query_results_{}_{}.json", &table, start_date.to_rfc3339()));
     if !filename.parent().unwrap().exists() {
         debug!("Creating output file folder");
         create_dir(filename.parent().unwrap())?;
@@ -175,9 +175,9 @@ async fn run_query(
 
     let queries = vec![
         ("raw_spatial", format!("SELECT pc_astext(pc_explode(pa)) FROM {};", dataset)),
-        ("only_node_acc", format!("SELECT PC_Uncompress(pa)) FROM {} WHERE {};", dataset, patch_query)),
-        ("raw_point_filtering", format!("SELECT PC_Uncompress({})) FROM {};", point_query, dataset)),
-        ("point_filtering_with_node_acc", format!("SELECT PC_Uncompress({})) FROM {} WHERE {}", point_query, dataset, patch_query)),
+        ("only_node_acc", format!("SELECT pa FROM {} WHERE {};", dataset, patch_query)),
+        ("raw_point_filtering", format!("SELECT {} FROM {};", point_query, dataset)),
+        ("point_filtering_with_node_acc", format!("SELECT {} FROM {} WHERE {}", point_query, dataset, patch_query)),
     ];
 
     let mut json = json!({});
