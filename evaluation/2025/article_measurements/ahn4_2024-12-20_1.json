@@ -1,0 +1,576 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/article_measurements/ahn4.toml",
+    "duration:": 155406,
+    "finished_at": "2024-12-21T19:00:23.073287871+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_bytes": 391842187005,
+    "nr_points": 11524770195,
+    "started_at": "2024-12-19T23:50:16.866918357+00:00",
+    "version": "git:25d583e"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 10000,
+          "compression": true,
+          "enable_attribute_index": true,
+          "max_lod": 14,
+          "node_hierarchy": 25,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 17,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 152419671229,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.459189186,
+            "duration_seconds": 5898.54729037,
+            "insertion_rate_points_per_sec": 1953679.8670998295,
+            "nr_points": 11524770195,
+            "nr_times_to_slow": 0
+          },
+          "latency": null,
+          "query_performance": {
+            "classification_bridges": {
+              "load_time_seconds": 0.00004434,
+              "nr_nodes": 48143,
+              "nr_non_empty_nodes": 47929,
+              "nr_points": 13556318,
+              "query_time_seconds": 187.876374176
+            },
+            "classification_building": {
+              "load_time_seconds": 0.000400314,
+              "nr_nodes": 336878,
+              "nr_non_empty_nodes": 336683,
+              "nr_points": 493893685,
+              "query_time_seconds": 681.015843894
+            },
+            "classification_ground": {
+              "load_time_seconds": 0.006440699,
+              "nr_nodes": 2689647,
+              "nr_non_empty_nodes": 2689471,
+              "nr_points": 8974515216,
+              "query_time_seconds": 3860.331170153
+            },
+            "classification_vegetation": {
+              "load_time_seconds": 0.000971414,
+              "nr_nodes": 1024815,
+              "nr_non_empty_nodes": 1022977,
+              "nr_points": 1191705807,
+              "query_time_seconds": 2177.963943563
+            },
+            "full-point-cloud": {
+              "load_time_seconds": 0.003308398,
+              "nr_nodes": 3200134,
+              "nr_non_empty_nodes": 3200134,
+              "nr_points": 11524770195,
+              "query_time_seconds": 4504.206358924
+            },
+            "intensity_high": {
+              "load_time_seconds": 0.002381031,
+              "nr_nodes": 2443636,
+              "nr_non_empty_nodes": 2441835,
+              "nr_points": 5646198411,
+              "query_time_seconds": 3821.751857301
+            },
+            "intensity_low": {
+              "load_time_seconds": 1.91e-6,
+              "nr_nodes": 759,
+              "nr_non_empty_nodes": 175,
+              "nr_points": 182,
+              "query_time_seconds": 7.526625365
+            },
+            "lod0": {
+              "load_time_seconds": 1.45e-7,
+              "nr_nodes": 10,
+              "nr_non_empty_nodes": 10,
+              "nr_points": 46945,
+              "query_time_seconds": 0.013567824
+            },
+            "lod1": {
+              "load_time_seconds": 2.39e-7,
+              "nr_nodes": 24,
+              "nr_non_empty_nodes": 24,
+              "nr_points": 217055,
+              "query_time_seconds": 0.041853513
+            },
+            "lod2": {
+              "load_time_seconds": 1.74e-7,
+              "nr_nodes": 60,
+              "nr_non_empty_nodes": 60,
+              "nr_points": 847121,
+              "query_time_seconds": 0.122518159
+            },
+            "return_multiple": {
+              "error": "The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"
+            },
+            "return_simple": {
+              "error": "The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"
+            },
+            "time_1": {
+              "load_time_seconds": 0.002820653,
+              "nr_nodes": 3200134,
+              "nr_non_empty_nodes": 3200134,
+              "nr_points": 11524770195,
+              "query_time_seconds": 4344.565924854
+            },
+            "time_2": {
+              "load_time_seconds": 4.17e-7,
+              "nr_nodes": 32,
+              "nr_non_empty_nodes": 27,
+              "nr_points": 984,
+              "query_time_seconds": 0.040304729
+            },
+            "time_3": {
+              "load_time_seconds": 0.00026105,
+              "nr_nodes": 223050,
+              "nr_non_empty_nodes": 223015,
+              "nr_points": 502720135,
+              "query_time_seconds": 318.350475907
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 10000,
+          "compression": true,
+          "enable_attribute_index": false,
+          "max_lod": 14,
+          "node_hierarchy": 25,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 17,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 151885828121,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.136081127,
+            "duration_seconds": 4394.775354946,
+            "insertion_rate_points_per_sec": 2622298.6202647504,
+            "nr_points": 11524770195,
+            "nr_times_to_slow": 0
+          },
+          "latency": null,
+          "query_performance": {
+            "classification_bridges": {
+              "load_time_seconds": 0.003190344,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 47929,
+              "nr_points": 13556318,
+              "query_time_seconds": 4367.869112446
+            },
+            "classification_building": {
+              "load_time_seconds": 0.003247224,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 336682,
+              "nr_points": 493893685,
+              "query_time_seconds": 4367.176864468
+            },
+            "classification_ground": {
+              "load_time_seconds": 0.00369824,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 2689468,
+              "nr_points": 8974515216,
+              "query_time_seconds": 4485.589891603
+            },
+            "classification_vegetation": {
+              "load_time_seconds": 0.003303743,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 1022978,
+              "nr_points": 1191705807,
+              "query_time_seconds": 4387.991900458
+            },
+            "full-point-cloud": {
+              "load_time_seconds": 0.003937142,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 3200131,
+              "nr_points": 11524770195,
+              "query_time_seconds": 4420.758974173
+            },
+            "intensity_high": {
+              "load_time_seconds": 0.003235508,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 2441834,
+              "nr_points": 5646198411,
+              "query_time_seconds": 4493.887424461
+            },
+            "intensity_low": {
+              "load_time_seconds": 0.003186012,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 175,
+              "nr_points": 182,
+              "query_time_seconds": 4443.865234173
+            },
+            "lod0": {
+              "load_time_seconds": 2.07e-7,
+              "nr_nodes": 10,
+              "nr_non_empty_nodes": 10,
+              "nr_points": 46945,
+              "query_time_seconds": 0.014238102
+            },
+            "lod1": {
+              "load_time_seconds": 1.45e-7,
+              "nr_nodes": 24,
+              "nr_non_empty_nodes": 24,
+              "nr_points": 217055,
+              "query_time_seconds": 0.041704414
+            },
+            "lod2": {
+              "load_time_seconds": 3.88e-7,
+              "nr_nodes": 60,
+              "nr_non_empty_nodes": 60,
+              "nr_points": 847121,
+              "query_time_seconds": 0.124283449
+            },
+            "return_multiple": {
+              "error": "The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"
+            },
+            "return_simple": {
+              "error": "The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"
+            },
+            "time_1": {
+              "load_time_seconds": 0.003170631,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 3200131,
+              "nr_points": 11524770195,
+              "query_time_seconds": 4463.416518204
+            },
+            "time_2": {
+              "load_time_seconds": 0.003083011,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 27,
+              "nr_points": 984,
+              "query_time_seconds": 4352.245375776
+            },
+            "time_3": {
+              "load_time_seconds": 0.004240617,
+              "nr_nodes": 3200131,
+              "nr_non_empty_nodes": 223014,
+              "nr_points": 502720135,
+              "query_time_seconds": 4693.208357825
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 10000,
+          "compression": false,
+          "enable_attribute_index": true,
+          "max_lod": 14,
+          "node_hierarchy": 25,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 17,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 323927511092,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.279649563,
+            "duration_seconds": 5892.474722285,
+            "insertion_rate_points_per_sec": 1955752.686733109,
+            "nr_points": 11524770195,
+            "nr_times_to_slow": 0
+          },
+          "latency": null,
+          "query_performance": {
+            "classification_bridges": {
+              "load_time_seconds": 0.000064773,
+              "nr_nodes": 48143,
+              "nr_non_empty_nodes": 47929,
+              "nr_points": 13556318,
+              "query_time_seconds": 194.963049422
+            },
+            "classification_building": {
+              "load_time_seconds": 0.000348091,
+              "nr_nodes": 336878,
+              "nr_non_empty_nodes": 336683,
+              "nr_points": 493893685,
+              "query_time_seconds": 707.283086907
+            },
+            "classification_ground": {
+              "load_time_seconds": 0.002806465,
+              "nr_nodes": 2689641,
+              "nr_non_empty_nodes": 2689465,
+              "nr_points": 8974515216,
+              "query_time_seconds": 3984.14157259
+            },
+            "classification_vegetation": {
+              "load_time_seconds": 0.000928967,
+              "nr_nodes": 1024814,
+              "nr_non_empty_nodes": 1022976,
+              "nr_points": 1191705807,
+              "query_time_seconds": 2283.967182693
+            },
+            "full-point-cloud": {
+              "load_time_seconds": 0.003357475,
+              "nr_nodes": 3200127,
+              "nr_non_empty_nodes": 3200127,
+              "nr_points": 11524770195,
+              "query_time_seconds": 4870.352690129
+            },
+            "intensity_high": {
+              "load_time_seconds": 0.002875791,
+              "nr_nodes": 2443631,
+              "nr_non_empty_nodes": 2441830,
+              "nr_points": 5646198411,
+              "query_time_seconds": 4134.509988095
+            },
+            "intensity_low": {
+              "load_time_seconds": 8.02e-7,
+              "nr_nodes": 759,
+              "nr_non_empty_nodes": 175,
+              "nr_points": 182,
+              "query_time_seconds": 7.241632162
+            },
+            "lod0": {
+              "load_time_seconds": 1.35e-7,
+              "nr_nodes": 10,
+              "nr_non_empty_nodes": 10,
+              "nr_points": 46945,
+              "query_time_seconds": 0.013098278
+            },
+            "lod1": {
+              "load_time_seconds": 2.2e-7,
+              "nr_nodes": 24,
+              "nr_non_empty_nodes": 24,
+              "nr_points": 217055,
+              "query_time_seconds": 0.032672771
+            },
+            "lod2": {
+              "load_time_seconds": 2.93e-7,
+              "nr_nodes": 60,
+              "nr_non_empty_nodes": 60,
+              "nr_points": 847121,
+              "query_time_seconds": 0.112581112
+            },
+            "return_multiple": {
+              "error": "The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"
+            },
+            "return_simple": {
+              "error": "The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"
+            },
+            "time_1": {
+              "load_time_seconds": 0.003298208,
+              "nr_nodes": 3200127,
+              "nr_non_empty_nodes": 3200127,
+              "nr_points": 11524770195,
+              "query_time_seconds": 4536.118563381
+            },
+            "time_2": {
+              "load_time_seconds": 3.09e-7,
+              "nr_nodes": 32,
+              "nr_non_empty_nodes": 27,
+              "nr_points": 984,
+              "query_time_seconds": 0.044718171
+            },
+            "time_3": {
+              "load_time_seconds": 0.000219813,
+              "nr_nodes": 223050,
+              "nr_non_empty_nodes": 223015,
+              "nr_points": 502720135,
+              "query_time_seconds": 337.417779074
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 10000,
+          "compression": false,
+          "enable_attribute_index": false,
+          "max_lod": 14,
+          "node_hierarchy": 25,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 17,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 323388219164,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.275075209,
+            "duration_seconds": 6671.241360288,
+            "insertion_rate_points_per_sec": 1727458.8628277062,
+            "nr_points": 11524770195,
+            "nr_times_to_slow": 0
+          },
+          "latency": null,
+          "query_performance": {
+            "classification_bridges": {
+              "load_time_seconds": 0.003228299,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 47929,
+              "nr_points": 13556318,
+              "query_time_seconds": 4356.494396097
+            },
+            "classification_building": {
+              "load_time_seconds": 0.004158412,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 336683,
+              "nr_points": 493893685,
+              "query_time_seconds": 4372.040976989
+            },
+            "classification_ground": {
+              "load_time_seconds": 0.003063008,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 2689474,
+              "nr_points": 8974515216,
+              "query_time_seconds": 4447.175033385
+            },
+            "classification_vegetation": {
+              "load_time_seconds": 0.003234207,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 1022976,
+              "nr_points": 1191705807,
+              "query_time_seconds": 4384.535879082
+            },
+            "full-point-cloud": {
+              "load_time_seconds": 0.005096078,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 3200135,
+              "nr_points": 11524770195,
+              "query_time_seconds": 4447.472562207
+            },
+            "intensity_high": {
+              "load_time_seconds": 0.00323889,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 2441844,
+              "nr_points": 5646198411,
+              "query_time_seconds": 4522.117570667
+            },
+            "intensity_low": {
+              "load_time_seconds": 0.003648025,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 175,
+              "nr_points": 182,
+              "query_time_seconds": 4432.68588839
+            },
+            "lod0": {
+              "load_time_seconds": 3.49e-7,
+              "nr_nodes": 10,
+              "nr_non_empty_nodes": 10,
+              "nr_points": 46945,
+              "query_time_seconds": 0.014832311
+            },
+            "lod1": {
+              "load_time_seconds": 2.36e-7,
+              "nr_nodes": 24,
+              "nr_non_empty_nodes": 24,
+              "nr_points": 217055,
+              "query_time_seconds": 0.047794085
+            },
+            "lod2": {
+              "load_time_seconds": 3.02e-7,
+              "nr_nodes": 60,
+              "nr_non_empty_nodes": 60,
+              "nr_points": 847121,
+              "query_time_seconds": 0.148413195
+            },
+            "return_multiple": {
+              "error": "The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"
+            },
+            "return_simple": {
+              "error": "The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"
+            },
+            "time_1": {
+              "load_time_seconds": 0.002960791,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 3200135,
+              "nr_points": 11524770195,
+              "query_time_seconds": 4441.297557457
+            },
+            "time_2": {
+              "load_time_seconds": 0.003108829,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 27,
+              "nr_points": 984,
+              "query_time_seconds": 4375.833557072
+            },
+            "time_3": {
+              "load_time_seconds": 0.003050763,
+              "nr_nodes": 3200135,
+              "nr_non_empty_nodes": 223015,
+              "nr_points": 502720135,
+              "query_time_seconds": 4380.955287709
+            }
+          }
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat1Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/ahn4-eval",
+    "indexed_attributes": {
+      "classification": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "gpstime": [
+        "RangeIndex"
+      ],
+      "intensity": [
+        "RangeIndex"
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "latency_replay_pps": 1000000,
+    "latency_sample_pps": 1000,
+    "output_file": "ahn4_%d_%i.json",
+    "points_file": "../../../data/AHN4.las",
+    "queries": {
+      "classification_bridges": "attr(Classification == 26)",
+      "classification_building": "attr(Classification == 6)",
+      "classification_ground": "attr(Classification == 2)",
+      "classification_vegetation": "attr(Classification == 1)",
+      "full-point-cloud": "full",
+      "intensity_high": "attr(Intensity > 1400)",
+      "intensity_low": "attr(Intensity <= 20)",
+      "lod0": "lod(0)",
+      "lod1": "lod(1)",
+      "lod2": "lod(2)",
+      "return_multiple": "attr(ReturnNumber >= 2)",
+      "return_simple": "attr(ReturnNumber == 1)",
+      "time_1": "attr(GpsTime < 270521185)",
+      "time_2": "attr(270204590 < GpsTime < 270204900)",
+      "time_3": "attr(269521185 < GpsTime < 269522000)"
+    },
+    "target_point_pressure": 1000000
+  }
+}

@@ -1,29 +1,38 @@
 #!/usr/bin/env bash
 
 DATA="../../../data"
+POTREE="../../../../PotreeConverter/build"
+PG="../pgPointCloud_Measurements/"
 
-lidarserv-evaluation lille.toml > lidarserv_lille.out
-rm -rf $DATA/lille-eval
-lidarserv-evaluation kitti.toml > lidarserv_kitti.out
-rm -rf $DATA/kitti-eval
-lidarserv-evaluation ahn4.toml > lidarserv_ahn4.out
-rm -rf $DATA/ahn4-eval
-PotreeConverter $DATA/Lille_sorted.las $DATA/Lille_Potree -m poisson --encoding UNCOMPRESSED > lille_uncompressed.out
-du -s $DATA/Lille_sorted.las_converted >> lille_uncompressed.out
-rm -rf $DATA/Lille_sorted.las_converted
-PotreeConverter $DATA/Lille_sorted.las $DATA/Lille_Potree -m poisson --encoding BROTLI > lille_compressed.out
-du -s $DATA/Lille_sorted.las_converted >> lille_compressed.out
-rm -rf $DATA/Lille_sorted.las_converted
-PotreeConverter $DATA/kitti_sorted.las $DATA/Kitti_Potree -m poisson --encoding UNCOMPRESSED > kitti_uncompressed.out
-du -s $DATA/Kitti_sorted.las_converted >> kitti_uncompressed.out
-rm -rf $DATA/kitti_sorted.las_converted
-PotreeConverter $DATA/kitti_sorted.las $DATA/Kitti_Potree -m poisson --encoding BROTLI > kitti_compressed.out
-du -s $DATA/Kitti_sorted.las_converted >> kitti_compressed.out
-rm -rf $DATA/kitti_sorted.las_converted
-PotreeConverter $DATA/AHN4.las $DATA/AHN4_Potree -m poisson --encoding UNCOMPRESSED > ahn_uncompressed.out
-du -s $DATA/AHN4.las_converted >> ahn_uncompressed.out
-rm -rf $DATA/AHN4.las_converted
-PotreeConverter $DATA/AHN4.las data/AHN4_Potree -m poisson --encoding BROTLI > ahn_compressed.out
-du -s $DATA/AHN4_las_converted >> ahn_compressed.out
-rm -rf $DATA/AHN4.las_converted
+# lidarserv measurements
+echo "RUNNING LIDARSERV MEASUREMENTS"
+for input in lille kitti ahn4; do
+#for input in lille; do
+ echo Measuring $input
+ lidarserv-evaluation $input.toml > lidarserv_$input.out
+ rm -rf $DATA/$input-eval
+done
+
+# potree measurements
+echo "RUNNING POTREE MEASUREMENTS"
+for input in Lille_sorted.las kitti_sorted.las AHN4.las; do
+#for input in Lille_sorted.las; do
+ echo Measuring $input
+ $POTREE/PotreeConverter $DATA/$input $DATA/${input}_Potree -m poisson --encoding UNCOMPRESSED > ${input}_uncompressed.out
+ du -s $DATA/${input}_converted >> ${input}_uncompressed.out
+ rm -rf $DATA/${input}_converted
+ $POTREE/PotreeConverter $DATA/$input $DATA/${input}_Potree -m poisson --encoding BROTLI > ${input}_compressed.out
+ du -s $DATA/${input}_converted >> ${input}_compressed.out
+ rm -rf $DATA/${input}_converted
+done
+
+# pgpointcloud measurements
+echo "RUNNING PGPOINTCLOUD MEASUREMENTS"
+cd ../pgPointCloud_Measurements/
+for input in Lille_sorted.las kitti_sorted.las AHN4.las; do
+#for input in Lille_sorted.las; do
+ echo Measuring $input
+ cargo run --release --bin insertion -- --input-file $DATA/$input --compression none
+ cargo run --release --bin query -- --input-file $DATA/$input --drop-table
+done
 
