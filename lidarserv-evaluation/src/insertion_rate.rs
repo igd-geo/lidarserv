@@ -90,7 +90,6 @@ pub fn measure_insertion_rate(
     let finished_at = Instant::now();
     drop(writer);
     let finalize_duration = Instant::now().duration_since(finished_at);
-    index.flush()?;
     let nr_points = read_pos;
     let duration = finished_at.duration_since(time_start);
     let pps = nr_points as f64 / (duration + finalize_duration).as_secs_f64();

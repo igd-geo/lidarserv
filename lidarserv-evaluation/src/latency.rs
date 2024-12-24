@@ -88,6 +88,11 @@ pub fn measure_latency(
             info!("Too slow to replay points at {pps} points per second. Aborting.");
             break;
         }
+        let points_waiting = writer.nr_points_waiting();
+        if points_waiting > pps * 5 {
+            info!("Too slow to index points at {pps} points per second. Aborting.");
+            break;
+        }
 
         // read correct number of points
         let points_buffer = points.read::<VectorBuffer>(nr_points_insert)?;
