@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use crossbeam_channel::Receiver;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use lidarserv_common::geometry::grid::{LeveledGridCell, LodLevel};
@@ -159,7 +158,9 @@ pub fn measure_latency(
 
     // analyze result
     if read_pos != nr_points {
-        return Err(anyhow!("Too slow."));
+        return Ok(json!({
+            "error": "Too slow.",
+        }));
     }
     let mut durations_any_lod = vec![];
     let mut durations_by_lod: HashMap<LodLevel, Vec<Duration>> = HashMap::new();
