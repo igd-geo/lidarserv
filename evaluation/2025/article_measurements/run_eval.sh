@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DATA="../../../data"
+data="../../../data"
 POTREE="../../../../PotreeConverter/build"
 PG="../pgPointCloud_Measurements/"
 
@@ -9,7 +9,7 @@ echo "RUNNING LIDARSERV MEASUREMENTS"
 for input in lille kitti ahn4; do
 #for input in lille; do
  echo Measuring $input
- lidarserv-evaluation $input.toml > lidarserv_$input.out
+ lidarserv-evaluation $input.toml > lidarserv_$input.out 2>&1
  rm -rf $DATA/$input-eval
 done
 

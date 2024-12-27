@@ -1,0 +1,44 @@
+2024-12-26T21:52:48.510Z INFO  [lidarserv_evaluation] Running tests
+2024-12-26T21:52:48.510Z INFO  [lidarserv_evaluation] === main ===
+2024-12-26T21:52:48.511Z INFO  [lidarserv_evaluation] --- main run 1 ---
+2024-12-26T21:52:48.511Z INFO  [lidarserv_evaluation] --- compression = true
+2024-12-26T21:52:48.511Z INFO  [lidarserv_evaluation] --- enable_attribute_index = true
+2024-12-26T21:52:48.511Z INFO  [lidarserv_evaluation] Resetting data folder...
+2024-12-26T21:52:48.511Z INFO  [lidarserv_evaluation] Measuring insertion rate...
+2024-12-26T23:28:55.911Z INFO  [lidarserv_common::index::writer] Finishing up... 0 tasks remaining
+2024-12-26T23:28:56.281Z INFO  [lidarserv_evaluation] Flush...
+2024-12-26T23:39:15.979Z INFO  [lidarserv_evaluation] Results: {"duration_cleanup_seconds":0.370373613,"duration_seconds":5767.39370809,"insertion_rate_points_per_sec":1998134.8112971322,"nr_points":11524770195,"nr_times_to_slow":0}
+2024-12-26T23:46:31.210Z INFO  [lidarserv_evaluation] Measuring query perf: full-point-cloud: full
+2024-12-27T01:01:35.110Z INFO  [lidarserv_evaluation] Measuring query perf: lod0: lod(0)
+2024-12-27T01:01:35.563Z INFO  [lidarserv_evaluation] Measuring query perf: lod1: lod(1)
+2024-12-27T01:01:35.605Z INFO  [lidarserv_evaluation] Measuring query perf: lod2: lod(2)
+2024-12-27T01:01:35.740Z INFO  [lidarserv_evaluation] Measuring query perf: intensity_high: attr(Intensity > 1400)
+2024-12-27T02:07:20.461Z INFO  [lidarserv_evaluation] Measuring query perf: intensity_low: attr(Intensity <= 20)
+2024-12-27T02:07:28.589Z INFO  [lidarserv_evaluation] Measuring query perf: return_simple: attr(ReturnNumber == 1)
+2024-12-27T02:07:28.593Z INFO  [lidarserv_evaluation] Measuring query perf: return_multiple: attr(ReturnNumber >= 2)
+2024-12-27T02:07:28.593Z INFO  [lidarserv_evaluation] Measuring query perf: classification_ground: attr(Classification == 2)
+2024-12-27T03:13:42.521Z INFO  [lidarserv_evaluation] Measuring query perf: classification_building: attr(Classification == 6)
+2024-12-27T03:26:15.434Z INFO  [lidarserv_evaluation] Measuring query perf: classification_vegetation: attr(Classification == 1)
+2024-12-27T04:05:19.206Z INFO  [lidarserv_evaluation] Measuring query perf: classification_bridges: attr(Classification == 26)
+2024-12-27T04:08:41.773Z INFO  [lidarserv_evaluation] Measuring query perf: time_1: attr(GpsTime < 270521185)
+2024-12-27T05:22:32.511Z INFO  [lidarserv_evaluation] Measuring query perf: time_2: attr(270204590 < GpsTime < 270204900)
+2024-12-27T05:22:32.997Z INFO  [lidarserv_evaluation] Measuring query perf: time_3: attr(269521185 < GpsTime < 269522000)
+2024-12-27T05:28:03.254Z INFO  [lidarserv_evaluation] Results: {"classification_bridges":{"load_time_seconds":0.00006939,"nr_nodes":48143,"nr_non_empty_nodes":47929,"nr_points":13556318,"query_time_seconds":202.122393948},"classification_building":{"load_time_seconds":0.000415435,"nr_nodes":336877,"nr_non_empty_nodes":336682,"nr_points":493893685,"query_time_seconds":752.42479198},"classification_ground":{"load_time_seconds":0.003586796,"nr_nodes":2689652,"nr_non_empty_nodes":2689476,"nr_points":8974515216,"query_time_seconds":3973.860201323},"classification_vegetation":{"load_time_seconds":0.001040019,"nr_nodes":1024817,"nr_non_empty_nodes":1022979,"nr_points":1191705807,"query_time_seconds":2343.306384011},"full-point-cloud":{"load_time_seconds":0.004922785,"nr_nodes":3200140,"nr_non_empty_nodes":3200140,"nr_points":11524770195,"query_time_seconds":4503.828419254},"intensity_high":{"load_time_seconds":0.002446316,"nr_nodes":2443643,"nr_non_empty_nodes":2441842,"nr_points":5646198411,"query_time_seconds":3944.656945376},"intensity_low":{"load_time_seconds":1.329e-6,"nr_nodes":759,"nr_non_empty_nodes":175,"nr_points":182,"query_time_seconds":7.675466681},"lod0":{"load_time_seconds":2.86e-7,"nr_nodes":10,"nr_non_empty_nodes":10,"nr_points":46945,"query_time_seconds":0.016644576},"lod1":{"load_time_seconds":1.06e-7,"nr_nodes":24,"nr_non_empty_nodes":24,"nr_points":217055,"query_time_seconds":0.04259276},"lod2":{"load_time_seconds":2.21e-7,"nr_nodes":60,"nr_non_empty_nodes":60,"nr_points":847121,"query_time_seconds":0.134135588},"return_multiple":{"error":"The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"},"return_simple":{"error":"The attribute ReturnNumber does not exist in this point cloud. (Attribute names are case sensitive.)"},"time_1":{"load_time_seconds":0.002796633,"nr_nodes":3200140,"nr_non_empty_nodes":3200140,"nr_points":11524770195,"query_time_seconds":4430.218919045},"time_2":{"load_time_seconds":1.49e-7,"nr_nodes":32,"nr_non_empty_nodes":27,"nr_points":984,"query_time_seconds":0.038938739},"time_3":{"load_time_seconds":0.00019827,"nr_nodes":223048,"nr_non_empty_nodes":223013,"nr_points":502720135,"query_time_seconds":330.256112164}}
+2024-12-27T05:28:23.797Z INFO  [lidarserv_evaluation] --- main run 2 ---
+2024-12-27T05:28:23.797Z INFO  [lidarserv_evaluation] --- compression = true
+2024-12-27T05:28:23.797Z INFO  [lidarserv_evaluation] --- enable_attribute_index = false
+2024-12-27T05:28:23.797Z INFO  [lidarserv_evaluation] Resetting data folder...
+2024-12-27T05:31:18.507Z INFO  [lidarserv_evaluation] Measuring insertion rate...
+2024-12-27T06:41:08.317Z INFO  [lidarserv_common::index::writer] Finishing up... 0 tasks remaining
+2024-12-27T06:41:08.496Z INFO  [lidarserv_evaluation] Flush...
+2024-12-27T06:42:30.103Z INFO  [lidarserv_evaluation] Results: {"duration_cleanup_seconds":0.179151858,"duration_seconds":4189.798475495,"insertion_rate_points_per_sec":2750556.49933881,"nr_points":11524770195,"nr_times_to_slow":0}
+2024-12-27T06:43:11.804Z INFO  [lidarserv_evaluation] Measuring query perf: full-point-cloud: full
+2024-12-27T07:58:20.857Z INFO  [lidarserv_evaluation] Measuring query perf: lod0: lod(0)
+2024-12-27T07:58:21.325Z INFO  [lidarserv_evaluation] Measuring query perf: lod1: lod(1)
+2024-12-27T07:58:21.364Z INFO  [lidarserv_evaluation] Measuring query perf: lod2: lod(2)
+2024-12-27T07:58:21.513Z INFO  [lidarserv_evaluation] Measuring query perf: intensity_high: attr(Intensity > 1400)
+2024-12-27T09:15:06.174Z INFO  [lidarserv_evaluation] Measuring query perf: intensity_low: attr(Intensity <= 20)
+2024-12-27T10:31:08.540Z INFO  [lidarserv_evaluation] Measuring query perf: return_simple: attr(ReturnNumber == 1)
+2024-12-27T10:31:08.997Z INFO  [lidarserv_evaluation] Measuring query perf: return_multiple: attr(ReturnNumber >= 2)
+2024-12-27T10:31:08.997Z INFO  [lidarserv_evaluation] Measuring query perf: classification_ground: attr(Classification == 2)
+2024-12-27T11:47:38.391Z INFO  [lidarserv_evaluation] Measuring query perf: classification_building: attr(Classification == 6)
