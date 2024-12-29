@@ -1,0 +1,87 @@
+#threads: 16
+#paths: 1
+
+output attributes: 
+name                              offset    size
+================================================
+position                               0      12
+intensity                             12       2
+return number                         14       1
+number of returns                     15       1
+classification                        16       1
+scan angle rank                       17       1
+user data                             18       1
+point source id                       19       2
+gps-time                              21       8
+================================================
+                                              29
+================================================
+cubicAABB: {
+	"min": [-944.484863, -1053.599365, 16.298000],
+	"max": [211.008137, 101.893635, 1171.791000],
+	"size": [1155.493000, 1155.493000, 1155.493000]
+}
+#points: 120'000'000
+total file size: 3.1 GB
+target directory: '/home/localadmin/lidarserv/data/Lille_sorted.las_Potree'
+
+=======================================
+=== COUNTING                           
+=======================================
+tStartTaskAssembly: 0.000064s
+countPointsInCells: 0.961143s
+finished counting in 1s
+=======================================
+
+[33%, 1s], [COUNTING: 100%, duration: 1s, throughput: 126MPs][RAM: 1.3GB (highest 1.7GB), CPU: 77%]
+createLUT: 0.387927s
+
+=======================================
+=== CREATING CHUNKS                    
+=======================================
+distributePoints0: 0.000549s
+distributePoints1: 0.000554s
+[47%, 2s], [DISTRIBUTING: 40%, duration: 1s, throughput: 84MPs][RAM: 3.0GB (highest 3.0GB), CPU: 58%]
+finished creating chunks in 1s
+=======================================
+
+=======================================
+=== INDEXING                           
+=======================================
+[67%, 3s], [INDEXING: 0%, duration: 0s, throughput: -nanMPs][RAM: 4.3GB (highest 4.3GB), CPU: 89%]
+[67%, 4s], [INDEXING: 0%, duration: 0s, throughput: -nanMPs][RAM: 5.9GB (highest 5.9GB), CPU: 98%]
+[67%, 5s], [INDEXING: 2%, duration: 2s, throughput: 2MPs][RAM: 6.4GB (highest 6.5GB), CPU: 100%]
+[68%, 6s], [INDEXING: 3%, duration: 3s, throughput: 1MPs][RAM: 6.6GB (highest 6.6GB), CPU: 100%]
+[70%, 7s], [INDEXING: 11%, duration: 4s, throughput: 3MPs][RAM: 6.9GB (highest 6.9GB), CPU: 100%]
+[70%, 8s], [INDEXING: 11%, duration: 4s, throughput: 3MPs][RAM: 7.0GB (highest 7.1GB), CPU: 100%]
+[73%, 9s], [INDEXING: 20%, duration: 5s, throughput: 5MPs][RAM: 6.9GB (highest 7.1GB), CPU: 99%]
+[76%, 10s], [INDEXING: 29%, duration: 6s, throughput: 6MPs][RAM: 7.2GB (highest 7.2GB), CPU: 99%]
+[80%, 11s], [INDEXING: 41%, duration: 7s, throughput: 7MPs][RAM: 6.1GB (highest 7.2GB), CPU: 99%]
+[87%, 12s], [INDEXING: 60%, duration: 9s, throughput: 8MPs][RAM: 5.4GB (highest 7.2GB), CPU: 95%]
+[90%, 13s], [INDEXING: 71%, duration: 10s, throughput: 9MPs][RAM: 4.8GB (highest 7.2GB), CPU: 76%]
+[90%, 14s], [INDEXING: 71%, duration: 10s, throughput: 9MPs][RAM: 4.8GB (highest 7.2GB), CPU: 61%]
+[93%, 15s], [INDEXING: 79%, duration: 12s, throughput: 8MPs][RAM: 4.6GB (highest 7.2GB), CPU: 58%]
+[97%, 16s], [INDEXING: 92%, duration: 13s, throughput: 9MPs][RAM: 3.8GB (highest 7.2GB), CPU: 34%]
+[97%, 17s], [INDEXING: 92%, duration: 13s, throughput: 9MPs][RAM: 3.6GB (highest 7.2GB), CPU: 18%]
+sampling: 14.791212s
+flushing: 14.795381s
+metadata & hierarchy: 14.835658s
+deleting temporary files
+
+=======================================
+=== STATS                              
+=======================================
+#points:               120'000'000
+#input files:          1
+sampling method:       poisson
+chunk method:          LASZIP
+input file size:       3.1GB
+duration:              18.043s
+throughput (MB/s)      178MB
+throughput (points/s)  6.7M
+output location:       /home/localadmin/lidarserv/data/Lille_sorted.las_Potree
+duration(chunking-count): 	0.961
+duration(chunking-distribute): 	1.862
+duration(chunking-total): 	2.827
+duration(indexing): 	14.836
+3399552	../../../data/Lille_sorted.las_Potree
