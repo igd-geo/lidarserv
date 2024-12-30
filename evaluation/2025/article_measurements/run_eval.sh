@@ -16,27 +16,27 @@ PG="../pgPointCloud_Measurements/"
 # done
 
 # potree measurements
-echo "RUNNING POTREE MEASUREMENTS"
-for input in Lille_sorted.las kitti_sorted.las AHN4.las; do
-#for input in Lille_sorted.las; do
- echo Measuring $input
-
- $potree_converter $data/$input -o $data/${input}_Potree -m poisson --encoding UNCOMPRESSED > ${input}_uncompressed.out
- du -s $data/${input}_Potree >> ${input}_uncompressed.out
- rm -rf $data/${input}_Potree
-
- $potree_converter $data/$input -o $data/${input}_Potree -m poisson --encoding BROTLI > ${input}_compressed.out
- du -s $data/${input}_Potree >> ${input}_compressed.out
- rm -rf $data/${input}_Potree
-done
-
-# pgpointcloud measurements
-# echo "RUNNING PGPOINTCLOUD MEASUREMENTS"
-# cd ../pgPointCloud_Measurements/
+# echo "RUNNING POTREE MEASUREMENTS"
 # for input in Lille_sorted.las kitti_sorted.las AHN4.las; do
 # #for input in Lille_sorted.las; do
 #  echo Measuring $input
-#  cargo run --release --bin insertion -- --input-file $DATA/$input --compression none
-#  cargo run --release --bin query -- --input-file $DATA/$input --drop-table
+# 
+#  $potree_converter $data/$input -o $data/${input}_Potree -m poisson --encoding UNCOMPRESSED > ${input}_uncompressed.out
+#  du -s $data/${input}_Potree >> ${input}_uncompressed.out
+#  rm -rf $data/${input}_Potree
+# 
+#  $potree_converter $data/$input -o $data/${input}_Potree -m poisson --encoding BROTLI > ${input}_compressed.out
+#  du -s $data/${input}_Potree >> ${input}_compressed.out
+#  rm -rf $data/${input}_Potree
 # done
+
+# pgpointcloud measurements
+echo "RUNNING PGPOINTCLOUD MEASUREMENTS"
+cd ../pgPointCloud_Measurements/
+for input in Lille_sorted.las kitti_sorted.las AHN4.las; do
+#for input in Lille_sorted.las; do
+ echo Measuring $input
+ cargo run --release --bin insertion -- --input-file $data/$input --compression none > ${input}_pdal_insertion.out 2>&1
+ cargo run --release --bin query -- --input-file $data/$input --drop-table > ${input}_pdal_query.out 2>&1
+done
 
