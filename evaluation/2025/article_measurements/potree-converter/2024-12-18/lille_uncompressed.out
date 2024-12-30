@@ -1,0 +1,98 @@
+#threads: 16
+#paths: 1
+
+output attributes: 
+name                              offset    size
+================================================
+position                               0      12
+intensity                             12       2
+return number                         14       1
+number of returns                     15       1
+classification                        16       1
+scan angle rank                       17       1
+user data                             18       1
+point source id                       19       2
+gps-time                              21       8
+================================================
+                                              29
+================================================
+cubicAABB: {
+	"min": [-944.484863, -1053.599365, 16.298000],
+	"max": [211.008137, 101.893635, 1171.791000],
+	"size": [1155.493000, 1155.493000, 1155.493000]
+}
+#points: 120'000'000
+total file size: 3.1 GB
+target directory: '/home/localadmin/lidarserv/data/Lille_sorted.las_converted'
+
+=======================================
+=== COUNTING                           
+=======================================
+tStartTaskAssembly: 0.000067s
+
+[0%, 1s], [: 0%, duration: 0s, throughput: -nanMPs][RAM: 1.8GB (highest 1.8GB), CPU: 23%]
+[4%, 2s], [COUNTING: 13%, duration: 2s, throughput: 10MPs][RAM: 1.8GB (highest 1.8GB), CPU: 29%]
+[9%, 3s], [COUNTING: 28%, duration: 3s, throughput: 11MPs][RAM: 1.8GB (highest 1.8GB), CPU: 34%]
+[13%, 4s], [COUNTING: 39%, duration: 4s, throughput: 12MPs][RAM: 1.8GB (highest 1.8GB), CPU: 30%]
+[15%, 5s], [COUNTING: 45%, duration: 5s, throughput: 11MPs][RAM: 1.8GB (highest 1.8GB), CPU: 45%]
+[19%, 6s], [COUNTING: 57%, duration: 6s, throughput: 12MPs][RAM: 1.8GB (highest 1.8GB), CPU: 36%]
+[21%, 7s], [COUNTING: 64%, duration: 7s, throughput: 12MPs][RAM: 1.8GB (highest 1.8GB), CPU: 34%]
+[22%, 8s], [COUNTING: 67%, duration: 8s, throughput: 10MPs][RAM: 1.8GB (highest 1.8GB), CPU: 27%]
+[24%, 9s], [COUNTING: 72%, duration: 9s, throughput: 10MPs][RAM: 1.8GB (highest 1.8GB), CPU: 26%]
+[26%, 10s], [COUNTING: 79%, duration: 10s, throughput: 10MPs][RAM: 1.8GB (highest 1.8GB), CPU: 35%]
+[31%, 11s], [COUNTING: 92%, duration: 11s, throughput: 10MPs][RAM: 1.6GB (highest 1.8GB), CPU: 43%]
+countPointsInCells: 11.908888s
+finished counting in 12s
+=======================================
+[33%, 12s], [COUNTING: 100%, duration: 12s, throughput: 10MPs][RAM: 1.4GB (highest 1.8GB), CPU: 7%]
+createLUT: 0.417156s
+
+=======================================
+=== CREATING CHUNKS                    
+=======================================
+distributePoints0: 0.000561s
+distributePoints1: 0.000566s
+[47%, 13s], [DISTRIBUTING: 40%, duration: 1s, throughput: 86MPs][RAM: 3.0GB (highest 3.2GB), CPU: 62%]
+finished creating chunks in 1s
+=======================================
+
+=======================================
+=== INDEXING                           
+=======================================
+[67%, 14s], [INDEXING: 0%, duration: 0s, throughput: -nanMPs][RAM: 4.4GB (highest 4.4GB), CPU: 90%]
+[67%, 15s], [INDEXING: 0%, duration: 0s, throughput: -nanMPs][RAM: 5.8GB (highest 5.8GB), CPU: 95%]
+[67%, 16s], [INDEXING: 2%, duration: 1s, throughput: 2MPs][RAM: 6.4GB (highest 6.4GB), CPU: 99%]
+[68%, 17s], [INDEXING: 3%, duration: 3s, throughput: 1MPs][RAM: 6.6GB (highest 6.6GB), CPU: 99%]
+[71%, 18s], [INDEXING: 13%, duration: 4s, throughput: 4MPs][RAM: 6.6GB (highest 6.7GB), CPU: 99%]
+[73%, 19s], [INDEXING: 18%, duration: 5s, throughput: 4MPs][RAM: 7.0GB (highest 7.3GB), CPU: 99%]
+[76%, 20s], [INDEXING: 29%, duration: 6s, throughput: 6MPs][RAM: 6.9GB (highest 7.3GB), CPU: 99%]
+[77%, 21s], [INDEXING: 32%, duration: 7s, throughput: 5MPs][RAM: 6.9GB (highest 7.3GB), CPU: 99%]
+[83%, 22s], [INDEXING: 49%, duration: 8s, throughput: 7MPs][RAM: 6.3GB (highest 7.3GB), CPU: 99%]
+[87%, 23s], [INDEXING: 61%, duration: 9s, throughput: 8MPs][RAM: 5.6GB (highest 7.3GB), CPU: 98%]
+[90%, 24s], [INDEXING: 71%, duration: 10s, throughput: 8MPs][RAM: 4.9GB (highest 7.3GB), CPU: 85%]
+[90%, 25s], [INDEXING: 71%, duration: 10s, throughput: 8MPs][RAM: 4.8GB (highest 7.3GB), CPU: 65%]
+[93%, 26s], [INDEXING: 79%, duration: 12s, throughput: 8MPs][RAM: 4.6GB (highest 7.3GB), CPU: 64%]
+[93%, 27s], [INDEXING: 79%, duration: 12s, throughput: 8MPs][RAM: 3.9GB (highest 7.3GB), CPU: 39%]
+[98%, 28s], [INDEXING: 95%, duration: 14s, throughput: 8MPs][RAM: 3.8GB (highest 7.3GB), CPU: 20%]
+sampling: 15.127803s
+flushing: 15.140179s
+metadata & hierarchy: 15.183228s
+deleting temporary files
+[100%, 29s], [INDEXING: 100%, duration: 15s, throughput: 8MPs][RAM: 3.0GB (highest 7.3GB), CPU: 14%]
+
+=======================================
+=== STATS                              
+=======================================
+#points:               120'000'000
+#input files:          1
+sampling method:       poisson
+chunk method:          LASZIP
+input file size:       3.1GB
+duration:              30.042s
+throughput (MB/s)      107MB
+throughput (points/s)  4.0M
+output location:       /home/localadmin/lidarserv/data/Lille_sorted.las_converted
+duration(chunking-count): 	11.909
+duration(chunking-distribute): 	1.883
+duration(chunking-total): 	13.800
+duration(indexing): 	15.179
