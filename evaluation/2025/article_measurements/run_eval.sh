@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-data="../../../data"
+DATA="../../../data"
 POTREE="../../../../PotreeConverter/build"
 PG="../pgPointCloud_Measurements/"
 
@@ -35,4 +35,3 @@ for input in Lille_sorted.las kitti_sorted.las AHN4.las; do
  cargo run --release --bin insertion -- --input-file $DATA/$input --compression none
  cargo run --release --bin query -- --input-file $DATA/$input --drop-table
 done
-
