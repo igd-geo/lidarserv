@@ -1,2 +1,0 @@
-#threads: 16
-ERROR(main.cpp:77): file does not exist: /kitti_sorted.las
