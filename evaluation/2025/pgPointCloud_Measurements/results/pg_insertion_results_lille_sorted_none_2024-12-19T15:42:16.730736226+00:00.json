@@ -1,0 +1,12 @@
+{
+  "lille_sorted": {
+    "compression": "none",
+    "duration": 408.666732214,
+    "end_date": "2024-12-19T15:42:16.731023216+00:00",
+    "iterations": 1,
+    "num_points": 120000000,
+    "size": 6652600320,
+    "start_date": "2024-12-19T15:42:16.730736226+00:00",
+    "table": "lille_sorted"
+  }
+}
