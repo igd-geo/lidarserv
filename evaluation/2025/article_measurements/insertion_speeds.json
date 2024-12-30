@@ -1,0 +1,44 @@
+{
+    "lille": {
+      "lidarserv": {
+        "uncompressed": 22.9,
+        "compressed": 34.41
+      },
+      "potree_converter": {
+        "uncompressed": 18.04,
+        "compressed": 29.04
+      },
+      "pgpointcloud": {
+        "uncompressed": 460,
+        "compressed": -1
+      }
+    },
+    "kitti": {
+      "lidarserv": {
+        "uncompressed": 801.77,
+        "compressed": 597.09
+      },
+      "potree_converter": {
+        "uncompressed": 257.18,
+        "compressed": 341.50
+      },
+      "pgpointcloud": {
+        "uncompressed": -1,
+        "compressed": -1
+      }
+    },
+    "ahn4": {
+      "lidarserv": {
+        "uncompressed": 5043.79,
+        "compressed": 5767.39
+      },
+      "potree_converter": {
+        "uncompressed": 2611.27,
+        "compressed": 3009.08
+      },
+      "pgpointcloud": {
+        "uncompressed": -1,
+        "compressed": -1
+      }
+    }
+  }

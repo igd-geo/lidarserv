@@ -10,8 +10,8 @@ Input size (Gigabytes): 3.36
 - querying: TODO
 
 ## lidarserv
-- indexing time uncompressed: 22.40
-- indexing time compressed: 26.65
+- indexing time uncompressed: 22.90
+- indexing time compressed: 34.41
 - index size uncompressed (Gigabytes): 3.37
 - index size compressed (Gigabytes): 1.08
 - querying: done
@@ -32,10 +32,10 @@ Input size (Gigabytes): 3.36
 - out of memory
 
 ## lidarserv
-- indexing time uncompressed: 839.10
-- indexing time compressed: 600.57
-- index size uncompressed (Gigabytes): 33.53
-- index size compressed (Gigabytes): 10.880
+- indexing time uncompressed: 801.77s
+- indexing time compressed: 597.09s
+- index size uncompressed (Gigabytes): 33.25
+- index size compressed (Gigabytes): 10.61
 - querying: done
 - latency: done
 
@@ -56,7 +56,7 @@ Input size (Gigabytes): 3.36
 ## lidarserv
 - indexing time uncompressed: 5043.79s
 - indexing time compressed: 5767.39s
-- index size uncompressed (Gigabytes):  323.93
+- index size uncompressed (Gigabytes): 323.93
 - index size compressed (Gigabytes): 152.42
 - querying: done
 - latency: TODO
