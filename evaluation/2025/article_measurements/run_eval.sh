@@ -33,10 +33,13 @@ PG="../pgPointCloud_Measurements/"
 # pgpointcloud measurements
 echo "RUNNING PGPOINTCLOUD MEASUREMENTS"
 cd ../pgPointCloud_Measurements/
-for input in Lille_sorted.las kitti_sorted.las AHN4.las; do
-#for input in Lille_sorted.las; do
+#for input in Lille_sorted.las kitti_sorted.las AHN4.las; do
+for input in Lille_sorted.las; do
  echo Measuring $input
- cargo run --release --bin insertion -- --input-file $data/$input --compression none > ${input}_pdal_insertion.out 2>&1
- cargo run --release --bin query -- --input-file $data/$input --drop-table > ${input}_pdal_query.out 2>&1
+ cargo run --release --bin insertion -- --input-file $data/$input --compression none > ${input}_pdal_insertion_uncompressed.out 2>&1
+ cargo run --release --bin query -- --input-file $data/$input --drop-table > ${input}_pdal_query_uncompressed.out 2>&1
+
+ cargo run --release --bin insertion -- --input-file $data/$input --compression BROTLI > ${input}_pdal_insertion_brotli.out 2>&1
+ cargo run --release --bin query -- --input-file $data/$input --drop-table > ${input}_pdal_query_brotli.out 2>&1
 done
 
