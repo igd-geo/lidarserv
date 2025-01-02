@@ -1,0 +1,12 @@
+{
+  "lille_sorted": {
+    "compression": "BROTLI",
+    "duration": 405.431535992,
+    "end_date": "2024-12-30T14:53:25.133218497+00:00",
+    "iterations": 1,
+    "num_points": 120000000,
+    "size": 6652600320,
+    "start_date": "2024-12-30T14:53:25.133085833+00:00",
+    "table": "lille_sorted"
+  }
+}
