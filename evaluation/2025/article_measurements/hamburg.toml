@@ -48,3 +48,4 @@ enable_attribute_index = true
 [runs.main]
 compression = [true, false]
 enable_attribute_index = [true, false]
+enable_point_filtering = [true, false]

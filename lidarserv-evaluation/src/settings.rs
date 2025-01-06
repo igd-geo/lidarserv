@@ -365,6 +365,7 @@ pub struct SingleIndex {
     pub nr_bogus_points: (usize, usize),
     pub max_lod: u8,
     pub enable_attribute_index: bool,
+    pub enable_point_filtering: bool,
 }
 
 impl Default for SingleIndex {
@@ -396,6 +397,7 @@ impl Default for SingleIndex {
             nr_bogus_points: parse_key(&defaults, "nr_bogus_points"),
             max_lod: parse_key(&defaults, "max_lod"),
             enable_attribute_index: parse_key(&defaults, "enable_attribute_index"),
+            enable_point_filtering: parse_key(&defaults, "enable_point_filtering"),
         }
     }
 }
@@ -412,6 +414,7 @@ pub struct MultiIndex {
     pub nr_bogus_points: Option<Vec<(usize, usize)>>,
     pub max_lod: Option<Vec<u8>>,
     pub enable_attribute_index: Option<Vec<bool>>,
+    pub enable_point_filtering: Option<Vec<bool>>,
 }
 
 macro_rules! apply_default_vec {
@@ -437,6 +440,7 @@ impl MultiIndex {
         apply_default_vec!(self.nr_bogus_points <- defaults);
         apply_default_vec!(self.max_lod <- defaults);
         apply_default_vec!(self.enable_attribute_index <- defaults);
+        apply_default_vec!(self.enable_point_filtering <- defaults);
         //apply_default_vec!(self.enable_attribute_index <- defaults);
         //apply_default_vec!(self.enable_histogram_acceleration <- defaults);
         //apply_default_vec!(self.bin_count_intensity <- defaults);
@@ -464,6 +468,7 @@ impl<'a> IntoIterator for &'a MultiIndex {
             expect(&self.nr_bogus_points),
             expect(&self.max_lod),
             expect(&self.enable_attribute_index),
+            expect(&self.enable_point_filtering),
         )
         .map(
             |(
@@ -476,6 +481,7 @@ impl<'a> IntoIterator for &'a MultiIndex {
                 &nr_bogus_points,
                 &max_lod,
                 &enable_attribute_index,
+                &enable_point_filtering,
             )| SingleIndex {
                 node_hierarchy,
                 point_hierarchy,
@@ -486,6 +492,7 @@ impl<'a> IntoIterator for &'a MultiIndex {
                 nr_bogus_points,
                 max_lod,
                 enable_attribute_index,
+                enable_point_filtering,
             },
         );
 

@@ -5,7 +5,7 @@ use pasture_core::containers::BorrowedBuffer;
 use serde_json::json;
 use std::time::Instant;
 
-pub fn measure_one_query(index: &mut Octree, query_str: &str) -> serde_json::value::Value {
+pub fn measure_one_query(index: &mut Octree, query_str: &str, enable_point_filtering: bool) -> serde_json::value::Value {
     debug!("Flushing index");
     index.flush().unwrap();
 
@@ -21,7 +21,8 @@ pub fn measure_one_query(index: &mut Octree, query_str: &str) -> serde_json::val
 
     debug!("Executing query");
     let time_start = Instant::now();
-    let mut r = match index.reader(query) {
+    let init_query = Query::parse("empty").unwrap();
+    let mut r = match index.reader(init_query) {
         Ok(r) => r,
         Err(e) => {
             return json!({
@@ -29,6 +30,14 @@ pub fn measure_one_query(index: &mut Octree, query_str: &str) -> serde_json::val
             })
         }
     };
+    match r.set_query(query, enable_point_filtering) {
+        Ok(_) => {}
+        Err(e) => {
+            return json!({
+                "error": format!("{e}")
+            })
+        }
+    }
 
     let mut nodes_sizes = Vec::new();
     while let Some((_node_id, node)) = r.load_one() {

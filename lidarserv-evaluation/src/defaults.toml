@@ -31,6 +31,7 @@ compression = false
 nr_bogus_points = [500, 500]
 max_lod = 10
 enable_attribute_index = false
+enable_point_filtering = true
 measure_index_speed = true
 measure_query_speed = true
 measure_query_latency = false
