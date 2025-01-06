@@ -67,7 +67,8 @@ def main():
             nr_points=data["env"]["nr_points"],
         )
 
-    files = ["article_measurements/lidarserv/kitti_2024-12-05_3.json", "article_measurements/lidarserv/lille_2024-12-05_2.json"]
+    # ahn queries
+    files = ["article_measurements/lidarserv/ahn4_2024-12-26_1.json"]
     for file in files:
         path = join(PROJECT_ROOT, file)
         with open(path, "r") as f:
@@ -75,11 +76,116 @@ def main():
             output_folder = f"{path}.diagrams"
             os.makedirs(output_folder, exist_ok=True)
 
-            # plot_query_by_time(
-            #     test_runs=data["runs"]["main"],
-            #     filename=join(output_folder, "query-by-time.pdf"),
-            #     title="Query Time"
-            # )
+            # print_querys(data)
+
+            queries = [
+                "classification_bridges",
+                "classification_building",
+                "classification_ground",
+                "classification_vegetation",
+                "intensity_high",
+                "time_1",
+                "time_2",
+                "time_3"
+            ]
+
+            labels = [
+                "Classification\nBridges",
+                "Classification\nBuildings",
+                "Classification\nGround",
+                "Classification\nVegetation",
+                "Intensity\nHigh",
+                "Time\nBig Slice",
+                "Time\nSmall Slice",
+                "Time\nMedium Slice"
+            ]
+
+            plot_query_by_time(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-time.pdf"),
+                title="Query Time"
+            )
+
+    # kitti queries
+    files = ["article_measurements/lidarserv/kitti_2024-12-26_1.json"]
+    for file in files:
+        path = join(PROJECT_ROOT, file)
+        with open(path, "r") as f:
+            data = json.load(f)
+            output_folder = f"{path}.diagrams"
+            os.makedirs(output_folder, exist_ok=True)
+
+            # print_querys(data)
+
+            queries = [
+                "classification_building",
+                "classification_ground",
+                "lod0",
+                "lod1",
+                "lod2",
+                "pointsource1",
+                "pointsource2",
+                "rgb",
+                "time1",
+                "time2"
+            ]
+
+            labels = [
+                "Classification\nBuildings",
+                "Classification\nGround",
+                "LOD0",
+                "LOD1",
+                "LOD2",
+                "Pointsource1",
+                "Pointsource2",
+                "RGB",
+                "Time\nBig Slice",
+                "Time\nMedium Slice"
+            ]
+
+            plot_query_by_time(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-time.pdf"),
+                title="Query Time"
+            )
+
+    files = ["article_measurements/lidarserv/lille_2024-12-26_3.json"]
+    for file in files:
+        path = join(PROJECT_ROOT, file)
+        with open(path, "r") as f:
+            data = json.load(f)
+            output_folder = f"{path}.diagrams"
+            os.makedirs(output_folder, exist_ok=True)
+
+            # print_querys(data)
+
+            queries = [
+                "intensity_high",
+                "intensity_low",
+                "lod0",
+                "lod1",
+                "lod2",
+            ]
+
+            labels = [
+                "Intensity\nHigh",
+                "Intensity\nLow",
+                "LOD0",
+                "LOD1",
+                "LOD2"
+            ]
+
+            plot_query_by_time(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-time.pdf"),
+                title="Query Time"
+            )
 
     path = join(PROJECT_ROOT, "article_measurements/insertion_speeds.json")
     with open(path, "r") as f:
@@ -104,6 +210,22 @@ def main():
             os.makedirs(output_folder, exist_ok=True)
 
             plot_latency_comparison_violin(data, output_folder)
+
+
+def print_querys(data):
+    points_file = data["settings"]["points_file"].split("/")[-1]
+    total_points = data["env"]["nr_points"]
+    queries = data["runs"]["main"][0]["results"]["query_performance"]
+    query_statements = data["settings"]["queries"]
+
+    for query in queries:
+        query_statement = query_statements[query]
+        try:
+            nr_points = queries[query]["nr_points"]
+            selectivity = nr_points / total_points * 100
+            print(f"{points_file} & ${query_statement}$ & {selectivity:.2f}\% \\\\ \hline")
+        except:
+            continue
 
 def plot_latency_comparison_violin(data, output_folder):
     latency_query = data["runs"]["main"][0]["results"]["latency"]["full-point-cloud"]["stats_by_lod"]
@@ -399,51 +521,50 @@ def plot_duration_cleanup_by_priority_function_bogus(test_runs, filename, title=
     plt.close(fig)
 
 
-def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=None):
+def plot_query_by_time(data, filename, queries, labels, title=None):
+    test_runs = data["runs"]["main"]
+
+    times = {
+        "no_compression": [],
+        "compression": [],
+        "no_compression_attribute_index": [],
+        "compression_attribute_index": []
+    }
+
+    for test_run in test_runs:
+        compression = test_run["index"]["compression"]
+        attribute_index = test_run["index"]["enable_attribute_index"]
+
+        for query in queries:
+            query_time = test_run["results"]["query_performance"][query]["query_time_seconds"]
+            if compression and attribute_index:
+                times["compression_attribute_index"].append(query_time)
+            elif compression:
+                times["compression"].append(query_time)
+            elif attribute_index:
+                times["no_compression_attribute_index"].append(query_time)
+            else:
+                times["no_compression"].append(query_time)
+
     fig, ax = plt.subplots(figsize=[10, 6])
-
-    if queries is None:
-        queries = query_names()
-    if labels is None:
-        labels = query_pretty_names()
-    # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
-    #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
-    # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
-    #               "point_filtering_with_full_acc"]
-
-
-    bar_width = 1 / (len(subqueries) + 1)
     index = range(len(queries))
 
-    colors = ['#9637DB', '#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
+    bar_width = 0.3
 
     for run in test_runs:
         for p in range(len(queries)):
+            plt.bar([p + bar_width * 0.5], times["no_compression"][p], bar_width, color=colors[0])
+            plt.bar([p + bar_width * 1.5], times["no_compression_attribute_index"][p], bar_width, color=colors[1])
 
-            # number of points per subquery
-            for i, subquery in enumerate(subqueries):
-                # try catch, because raw_spatial_query is not always available
-                try:
-                    nr_points_subquery = [
-                        run["results"]["query_performance"][queries[p]][subquery]["query_time_seconds"]]
-                    plt.bar([p + i * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i])
-                except:
-                    pass
-
-        # plt.xlabel('Queries')
         plt.ylabel('Execution Time | Seconds')
-        # plt.title(title)
-        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90)
+        plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
 
         custom_legend_labels = [
-            'Spatial Query',
-            'Spatial Query + Point Filter',
-            'Spatial Query + Range Filter + Point Filter',
-            'Spatial Query + Range Filter + Histogram Filter + Point Filter',
-            # 'Bounds Filter',
-            # 'Bounds Filter\nHistogram Filter',
-        ]  # Custom legend labels
-        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+            'No Attribute Index',
+            'Attribute Index'
+        ]
+        custom_legend_colors = colors[:len(custom_legend_labels)]
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
@@ -1154,37 +1275,6 @@ def rename_tpf(tpf):
     if tpf in replacements:
         return replacements[tpf]
     return tpf
-
-
-def query_names():
-    return\
-        [
-        'time_range',
-        'ground_classification',
-        'building_classification',
-        'powerline_classification',
-        'vegetation_classification',
-        'normal_x_vertical',
-        'high_intensity',
-        'low_intensity',
-        'one_return',
-        'mixed_ground_and_time',
-    ]
-
-def query_pretty_names():
-    return [
-        'Time\nSmall Range',
-        'Classification\nGround',
-        'Classification\nBuilding',
-        'Classification\nPowerline',
-        'Classification\nVegetation',
-        'Normal\nVertical',
-        'Intensity\nHigh Value',
-        'Intensity\nLow Value',
-        'Number of Returns\nOne Return',
-        'Mixed\nGround and Time Range',
-    ]
-
 
 if __name__ == '__main__':
     main()
