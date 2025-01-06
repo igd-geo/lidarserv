@@ -1,6 +1,7 @@
 # Lille
-Input size (bytes): 3360000227
-Input size (Gigabytes): 3.36
+- Input size (bytes): 3360000227
+- Input size (Gigabytes): 3.36
+- Number of points: 120000000
 
 ## pgPointCloud
 - indexing time uncompressed: 460s
@@ -27,6 +28,7 @@ Input size (Gigabytes): 3.36
 # Kitti
 - Input size (bytes): 33027668137
 - Input size (Gigabytes): 33.03
+- Number of points: 805552860
 
 ## pgPointCloud
 - out of memory
@@ -49,6 +51,7 @@ Input size (Gigabytes): 3.36
 # AHN4
 - Input size (bytes): 391842187005
 - Input size (Gigabytes): 391.84
+- Number of points: 11524770195
 
 ## pgPointCloud 
 - out of memory

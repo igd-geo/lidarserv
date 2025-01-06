@@ -67,6 +67,186 @@ def main():
             nr_points=data["env"]["nr_points"],
         )
 
+    files = ["article_measurements/lidarserv/kitti_2024-12-05_3.json", "article_measurements/lidarserv/lille_2024-12-05_2.json"]
+    for file in files:
+        path = join(PROJECT_ROOT, file)
+        with open(path, "r") as f:
+            data = json.load(f)
+            output_folder = f"{path}.diagrams"
+            os.makedirs(output_folder, exist_ok=True)
+
+            # plot_query_by_time(
+            #     test_runs=data["runs"]["main"],
+            #     filename=join(output_folder, "query-by-time.pdf"),
+            #     title="Query Time"
+            # )
+
+    path = join(PROJECT_ROOT, "article_measurements/insertion_speeds.json")
+    with open(path, "r") as f:
+        data = json.load(f)
+        output_folder = f"{path}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_speed_comparison(data, output_folder)
+
+    path = join(PROJECT_ROOT, "article_measurements/index_sizes.json")
+    with open(path, "r") as f:
+        data = json.load(f)
+        output_folder = f"{path}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+        plot_index_size_comparison(data, output_folder)
+
+    files = "article_measurements/lidarserv/kitti_2024-12-26_1.json", "article_measurements/lidarserv/lille_2024-12-26_3.json"
+    for path in files:
+        with open(path, "r") as f:
+            data = json.load(f)
+            output_folder = f"{path}.diagrams"
+            os.makedirs(output_folder, exist_ok=True)
+
+            plot_latency_comparison_violin(data, output_folder)
+
+def plot_latency_comparison_violin(data, output_folder):
+    latency_query = data["runs"]["main"][0]["results"]["latency"]["full-point-cloud"]["stats_by_lod"]
+    lods = list(latency_query.keys())
+
+    # Prepare data for plotting
+    percentile_data = {query: [] for query in lods}
+    for lod in lods:
+        percentiles = latency_query[lod]["percentiles"]
+        for percentile in percentiles:
+            percentile_data[lod].append(percentile)
+
+    # remove queries with no data
+    lods = [lod for lod in lods if len(percentile_data[lod]) > 0]
+
+    # create arbitrary data to be able to plot a violin plot
+    simulation_data = []
+    for lod in lods:
+        data = []
+        for p in percentile_data[lod]:
+            percentile = p[0]
+            value = p[1]
+            data.extend([value*1000] * int(percentile))
+        simulation_data.append(data)
+
+    # plot the violin plot
+    fig, ax = plt.subplots(figsize=[10, 6])
+    parts = ax.violinplot(simulation_data, showmeans=False, showmedians=True, widths=0.9)
+    ax.set_xticks(np.arange(1, len(lods) + 1))
+    ax.set_xticklabels(lods)
+    plt.xticks(rotation=90)
+    ax.set_ylabel("Latency | ms")
+
+
+    plt.tight_layout()
+    plt.savefig(join(output_folder, "latency_comparison_violin.pdf"))
+    plt.close(fig)
+
+
+def plot_index_size_comparison(data, output_folder):
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+    dataset_names = {
+        "kitti": "KITTI",
+        "lille": "Lille",
+        "ahn4": "AHN4"
+    }
+
+    tool_names = {
+        "lidarserv": "Lidarserv",
+        "potree_converter": "PotreeConverter",
+        "pgpointcloud": "PgPointCloud"
+    }
+
+    for i, (dataset, dataset_data) in enumerate(data.items()):
+        ax = axs[i]
+        tools = dataset_data.keys()
+        tools = [tool for tool in tools if tool != 'input_size']
+        uncompressed = [dataset_data[tool]['uncompressed'] for tool in tools]
+        compressed = [dataset_data[tool]['compressed'] for tool in tools]
+
+        x = np.arange(len(uncompressed))
+        width = 0.35
+
+        ax.bar(x - width / 2, uncompressed, width, label='Uncompressed', color='#F4B400')
+        ax.bar(x + width / 2, compressed, width, label='Compressed', color='#4285F4')
+
+        # Add horizontal line for input size
+        input_size = dataset_data['input_size']
+        ax.axhline(y=input_size, color='r', linestyle='--', label='Input Size')
+
+        tools = [tool_names[tool] for tool in tools]
+        ax.set_title(dataset_names[dataset])
+        ax.set_xticks(x)
+        ax.set_xticklabels(tools)
+
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}GB"))
+        
+
+    axs[0].set_ylabel("Size of Index | Gigabytes")
+
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(join(output_folder, "index_size_comparison.pdf"))
+
+def plot_insertion_speed_comparison(data, output_folder):
+    dataset_names = {
+        "kitti": "KITTI",
+        "lille": "Lille",
+        "ahn4": "AHN4"
+    }
+
+    tool_names = {
+        "lidarserv": "Lidarserv",
+        "potree_converter": "PotreeConverter",
+        "pgpointcloud": "PgPointCloud"
+    }
+
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+    max_y_value = 0  # To track the maximum y-value across all datasets
+
+    # First pass to determine the maximum y-value
+    for dataset, dataset_data in data.items():
+        num_points = dataset_data['num_points']
+        tools = dataset_data.keys()
+        tools = [tool for tool in tools if tool != 'num_points']
+        uncompressed = [num_points / dataset_data[tool]['uncompressed'] for tool in tools]
+        compressed = [num_points / dataset_data[tool]['compressed'] for tool in tools]
+
+        # Update the maximum y-value
+        max_y_value = max(max_y_value, max(uncompressed + compressed)) * 1.01
+
+    # Second pass to create the plots with a consistent y-scale
+    for i, (dataset, dataset_data) in enumerate(data.items()):
+        num_points = dataset_data['num_points']
+        ax = axs[i]
+        tools = dataset_data.keys()
+        tools = [tool for tool in tools if tool != 'num_points']
+        uncompressed = [num_points / dataset_data[tool]['uncompressed'] for tool in tools]
+        compressed = [num_points / dataset_data[tool]['compressed'] for tool in tools]
+
+        x = np.arange(len(uncompressed))
+        width = 0.35
+
+        ax.bar(x - width / 2, uncompressed, width, label='Uncompressed', color='#F4B400')
+        ax.bar(x + width / 2, compressed, width, label='Compressed', color='#4285F4')
+
+        tools = [tool_names[tool] for tool in tools]
+        ax.set_title(dataset_names[dataset])
+        ax.set_xticks(x)
+        ax.set_xticklabels(tools)
+        ax.set_ylim(0, max_y_value)  # Set the y-axis limit
+
+        # Format y-axis labels with 'M' for millions
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.1f}M"))
+
+    # Add y-axis label to the leftmost plot
+    axs[0].set_ylabel("Insertion Rate | Points/s")
+
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(join(output_folder, "insertion_speed_comparison.pdf"))
+
 
 
 def get_json_files(directory):
@@ -228,8 +408,9 @@ def plot_query_by_time(test_runs, filename, title=None, queries=None, labels=Non
         labels = query_pretty_names()
     # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
     #               "point_filtering_with_full_acc", "only_node_acc", "only_full_acc"]
-    subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
-                  "point_filtering_with_full_acc"]
+    # subqueries = ["raw_spatial", "raw_point_filtering", "point_filtering_with_node_acc",
+    #               "point_filtering_with_full_acc"]
+
 
     bar_width = 1 / (len(subqueries) + 1)
     index = range(len(queries))
@@ -961,68 +1142,6 @@ def calculate_average_point_reduction_single_run(run, query_run="only_node_acc")
     if len(queries) > 0:
         return real_reduction_sum / max_possible_reduction_sum * 100
     return 0
-
-
-# Plot insertion speeds compared by attribute index states
-def plot_insertion_speed_comparison(test_runs, filename):
-    fig, ax = plt.subplots(figsize=[10, 6])
-    bar_width = 1 / (len(test_runs) + 1)
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#DB4437', '#F4B400', '#0F9D58']
-    runs = [
-        'uncompressed_no_attribute_index',
-        'uncompressed_attribute_index',
-        'uncompressed_histogram_index',
-        'compressed_no_attribute_index',
-        'compressed_attribute_index',
-        'compressed_histogram_index',
-    ]
-    custom_legend_labels = [
-        'No Attribute Index\nNo Compression',
-        'Bounds Index\nNo Compression',
-        'Histogram Index\nNo Compression',
-        'No Attribute Index\nCompression',
-        'Bounds Index\nCompression',
-        'Histogram Index\nCompression',
-    ]  # Custom legend labels
-    index = []
-
-    for i in range(len(runs)):
-        insertion_rate = test_runs[runs[i]][0]["results"]["insertion_rate"]["insertion_rate_points_per_sec"]
-
-        # Determine the x-coordinate for the bar
-        if i < 3:
-            x_coord = i * bar_width
-        else:
-            x_coord = i * bar_width + bar_width
-
-        # Create a bar for the insertion rate
-        plt.bar([x_coord], insertion_rate, bar_width, label=custom_legend_labels[i], color=colors[i])
-
-        # Place the insertion speed value inside the bar
-        plt.text(x_coord, insertion_rate, f"{insertion_rate:.2f}", va='bottom', ha='center', color='black')
-
-        # Store the x-coordinate for later use in setting tick labels
-        index.append(x_coord)
-
-    # Set labels, title, and tick labels
-    plt.xlabel('Insertion Settings')
-    plt.ylabel('Insertion Rate | Points/s')
-    # plt.title("Insertion Speed Comparison")
-    plt.xticks([p for p in index], custom_legend_labels, rotation=90)
-
-    # Create custom legend handles for the legend
-    custom_legend_colors = colors[:len(custom_legend_labels)]
-    custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                             zip(custom_legend_colors, custom_legend_labels)]
-
-    # Add the custom legend to the plot
-    # ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Attribute Index')
-
-    # Adjust layout and save the figure
-    plt.tight_layout()
-    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-    plt.close(fig)
-
 
 def rename_tpf(tpf):
     replacements = {

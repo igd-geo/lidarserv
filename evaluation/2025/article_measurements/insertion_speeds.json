@@ -1,5 +1,6 @@
 {
     "lille": {
+      "num_points":120000000,
       "lidarserv": {
         "uncompressed": 22.9,
         "compressed": 34.41
@@ -10,10 +11,11 @@
       },
       "pgpointcloud": {
         "uncompressed": 460,
-        "compressed": -1
+        "compressed": 1000
       }
     },
     "kitti": {
+      "num_points":805552860,
       "lidarserv": {
         "uncompressed": 801.77,
         "compressed": 597.09
@@ -21,13 +23,10 @@
       "potree_converter": {
         "uncompressed": 257.18,
         "compressed": 341.50
-      },
-      "pgpointcloud": {
-        "uncompressed": -1,
-        "compressed": -1
       }
     },
     "ahn4": {
+      "num_points":11524770195,
       "lidarserv": {
         "uncompressed": 5043.79,
         "compressed": 5767.39
@@ -35,10 +34,6 @@
       "potree_converter": {
         "uncompressed": 2611.27,
         "compressed": 3009.08
-      },
-      "pgpointcloud": {
-        "uncompressed": -1,
-        "compressed": -1
       }
     }
   }
