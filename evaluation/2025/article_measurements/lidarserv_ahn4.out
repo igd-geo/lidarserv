@@ -1,0 +1,8 @@
+2025-01-07T14:49:44.350Z INFO  [lidarserv_evaluation] Running tests
+2025-01-07T14:49:44.350Z INFO  [lidarserv_evaluation] === main ===
+2025-01-07T14:49:44.350Z INFO  [lidarserv_evaluation] --- main run 1 ---
+2025-01-07T14:49:44.350Z INFO  [lidarserv_evaluation] --- compression = true
+2025-01-07T14:49:44.350Z INFO  [lidarserv_evaluation] --- enable_attribute_index = true
+2025-01-07T14:49:44.350Z INFO  [lidarserv_evaluation] --- enable_point_filtering = true
+2025-01-07T14:49:44.350Z INFO  [lidarserv_evaluation] Resetting data folder...
+2025-01-07T14:51:49.929Z INFO  [lidarserv_evaluation] Measuring insertion rate...
