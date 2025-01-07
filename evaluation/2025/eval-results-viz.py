@@ -105,11 +105,13 @@ def main():
                 queries=queries,
                 labels=labels,
                 filename=join(output_folder, "query-by-time.pdf"),
-                title="Query Time"
+                title="Query Time - AHN4"
             )
 
+            # TODO add Point and Node Plots
+
     # kitti queries
-    files = ["article_measurements/lidarserv/kitti_2024-12-26_1.json"]
+    files = ["article_measurements/lidarserv/kitti_2025-01-06_1.json"]
     for file in files:
         path = join(PROJECT_ROOT, file)
         with open(path, "r") as f:
@@ -150,10 +152,26 @@ def main():
                 queries=queries,
                 labels=labels,
                 filename=join(output_folder, "query-by-time.pdf"),
-                title="Query Time"
+                title="Query Time - KITTI"
             )
 
-    files = ["article_measurements/lidarserv/lille_2024-12-26_3.json"]
+            plot_query_by_num_points(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-points.pdf"),
+                title="Query Points - KITTI"
+            )
+
+            plot_query_by_num_nodes(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-nodes.pdf"),
+                title="Query Nodes - KITTI"
+            )
+
+    files = ["article_measurements/lidarserv/lille_2025-01-06_1.json"]
     for file in files:
         path = join(PROJECT_ROOT, file)
         with open(path, "r") as f:
@@ -184,7 +202,23 @@ def main():
                 queries=queries,
                 labels=labels,
                 filename=join(output_folder, "query-by-time.pdf"),
-                title="Query Time"
+                title="Query Time - Lille"
+            )
+
+            plot_query_by_num_points(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-points.pdf"),
+                title="Query Points - Lille"
+            )
+
+            plot_query_by_num_nodes(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-nodes.pdf"),
+                title="Query Nodes - Lille"
             )
 
     path = join(PROJECT_ROOT, "article_measurements/insertion_speeds.json")
@@ -577,39 +611,57 @@ def plot_query_by_time(data, filename, queries, labels, title=None):
         plt.close(fig)
 
 
-def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, labels=None, title=None):
-    fig, ax = plt.subplots(figsize=[8, 4.8])
-    subqueries = ["only_node_acc", "only_full_acc", "raw_point_filtering"]
+def plot_query_by_num_points(data, filename, queries, labels, title=None):
+    test_runs = data["runs"]["main"]
 
-    bar_width = 0.15
+    points = {
+        "point_filtering_attribute_index": [],
+        "no_point_filtering_attribute_index": [],
+        "point_filtering_no_attribute_index": [],
+        "no_point_filtering_no_attribute_index": []
+    }
+
+    for test_run in test_runs:
+        point_filtering = test_run["index"]["enable_point_filtering"]
+        attribute_index = test_run["index"]["enable_attribute_index"]
+
+        for query in queries:
+            num_points = test_run["results"]["query_performance"][query]["nr_points"]
+            if point_filtering and attribute_index:
+                points["point_filtering_attribute_index"].append(num_points)
+            elif point_filtering and not attribute_index:
+                points["point_filtering_no_attribute_index"].append(num_points)
+            elif not point_filtering and attribute_index:
+                points["no_point_filtering_attribute_index"].append(num_points)
+            else:
+                points["no_point_filtering_no_attribute_index"].append(num_points)
+
+    fig, ax = plt.subplots(figsize=[10, 6])
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
+    bar_width = 0.3
 
     for run in test_runs:
-        insertion_rate_block = run["results"]["insertion_rate"]
-        if insertion_rate_block is not None:
-            nr_points = insertion_rate_block["nr_points"]
-
         for p in range(len(queries)):
-
-            # number of points per subquery
-            plt.bar(p, nr_points, bar_width, label="nr_points", color="#DB4437")
-            for i, subquery in enumerate(subqueries):
-                nr_points_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_points"]]
-                plt.bar([p + (i + 1) * bar_width], nr_points_subquery, bar_width, label=subquery, color=colors[i + 1])
-
-        # plt.xlabel('Queries')
+            div = 1000000
+            plt.bar([p + bar_width * 0.0], points["no_point_filtering_no_attribute_index"][p]/div, bar_width, color=colors[0])
+            plt.bar([p + bar_width * 1.0], points["no_point_filtering_attribute_index"][p]/div, bar_width, color=colors[1])
+            plt.bar([p + bar_width * 2.0], points["point_filtering_attribute_index"][p]/div, bar_width, color=colors[2])
+        
         plt.ylabel('Number of Points')
-        # plt.title(title)
-        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
+        plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}M"))
 
-        custom_legend_labels = ['All Points', 'Range Filter', 'Range Filter + Histogram Filter',
-                                'Point Filter']  # Custom legend labels
-        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_labels = [
+            'Spatial Index',
+            'Spatial Index + Attribute Index',
+            'Spatial Index + Attribute Index + Point Filtering'
+        ]
+        custom_legend_colors = colors[:len(custom_legend_labels)]
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.8), title='Subqueries')
+        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
 
         plt.tight_layout()
 
@@ -619,242 +671,52 @@ def plot_query_by_num_points(test_runs, nr_points, filename, queries=None, label
         plt.close(fig)
 
 
-def plot_query_by_num_nodes(test_runs, nr_nodes, filename, queries=None, labels=None, title=None):
-    fig, ax = plt.subplots(figsize=[10, 6])
-    subqueries = ["only_node_acc", "only_full_acc"]
+def plot_query_by_num_nodes(data, filename, queries, labels, title=None):
+    test_runs = data["runs"]["main"]
 
-    bar_width = 0.15
+    nodes = {
+        "point_filtering_attribute_index": [],
+        "no_point_filtering_attribute_index": [],
+        "point_filtering_no_attribute_index": [],
+        "no_point_filtering_no_attribute_index": []
+    }
+
+    for test_run in test_runs:
+        point_filtering = test_run["index"]["enable_point_filtering"]
+        attribute_index = test_run["index"]["enable_attribute_index"]
+
+        for query in queries:
+            num_nodes = test_run["results"]["query_performance"][query]["nr_non_empty_nodes"]
+            if point_filtering and attribute_index:
+                nodes["point_filtering_attribute_index"].append(num_nodes)
+            elif point_filtering and not attribute_index:
+                nodes["point_filtering_no_attribute_index"].append(num_nodes)
+            elif not point_filtering and attribute_index:
+                nodes["no_point_filtering_attribute_index"].append(num_nodes)
+            else:
+                nodes["no_point_filtering_no_attribute_index"].append(num_nodes)
+
+    fig, ax = plt.subplots(figsize=[10, 6])
     index = range(len(queries))
 
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
+    bar_width = 0.3
 
     for run in test_runs:
-        nr_nodes = run["results"]["index_info"]["directory_info"]["num_nodes"]
-
         for p in range(len(queries)):
-
-            # number of nodes per subquery
-            plt.bar(p, nr_nodes, bar_width, label="nr_nodes", color="#DB4437")
-            for i, subquery in enumerate(subqueries):
-                nr_nodes_subquery = [run["results"]["query_performance"][queries[p]][subquery]["nr_nodes"]]
-                plt.bar([p + (i + 1) * bar_width], nr_nodes_subquery, bar_width, label=subquery, color=colors[i + 1])
-
-            # check if nr_non_empty_nodes exist in json
-            if "nr_non_empty_nodes" in run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"]:
-                nr_non_empty_nodes = [run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
-                                          "nr_non_empty_nodes"]]
-                plt.bar([p + 3 * bar_width], nr_non_empty_nodes, bar_width, label="nr_non_empty_nodes",
-                        color=colors[i + 2])
-
-        # plt.xlabel('Queries')
+            div = 1000
+            plt.bar([p + bar_width * 0.5], nodes["no_point_filtering_no_attribute_index"][p]/div, bar_width, color=colors[0])
+            plt.bar([p + bar_width * 1.5], nodes["no_point_filtering_attribute_index"][p]/div, bar_width, color=colors[1])
+        
         plt.ylabel('Number of Nodes')
-        # plt.title(title)
-        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
+        plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}K"))
 
-        custom_legend_labels = ['All Nodes', 'Range Filter', 'Range Filter + Histogram Filter',
-                                'Nodes Containing Searched Points']  # Custom legend labels
-        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                                 zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
-
-        plt.tight_layout()
-
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
-
-
-def plot_query_by_num_points_stacked(test_runs, nr_points, filename, title=None):
-    fig, ax = plt.subplots(figsize=[10, 6])
-
-    queries = query_names()
-    subqueries = ["raw_point_filtering", "only_full_acc", "only_node_acc"]
-
-    bar_width = 0.6
-    index = range(len(queries))
-
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
-    colors = colors[::-1]
-
-    for run in test_runs:
-        # plt.axhline(y=nr_points, color='#DB4437', linestyle='-')
-        insertion_rate_block = run["results"]["insertion_rate"]
-        if insertion_rate_block is not None:
-            nr_points = insertion_rate_block["nr_points"]
-        for p in range(len(queries)):
-            bottom = 0
-            for i, subquery in enumerate(subqueries):
-                nr_points_subquery = run["results"]["query_performance"][queries[p]][subquery]["nr_points"]
-
-                plt.bar(
-                    p,
-                    nr_points_subquery - bottom,
-                    bar_width,
-                    bottom=bottom,
-                    label=subquery if i == 0 else "",
-                    color=colors[i],
-                )
-                bottom += nr_points_subquery - bottom
-            plt.bar(
-                p,
-                nr_points - bottom,
-                bar_width,
-                bottom=bottom,
-                label=subquery if i == 0 else "",
-                color=colors[i + 1],
-            )
-
-        plt.xlabel('Queries')
-        plt.ylabel('Number of Points')
-        # plt.title(title)
-        labels = query_pretty_names()
-        plt.xticks([p for p in index], labels, rotation=90, ha='right')
-
-        custom_legend_labels = ['Point Filter', 'Histogram Filter', 'Bounds Filter',
-                                'All Points']  # Custom legend labels
-        custom_legend_labels = custom_legend_labels[::-1]
-        colors = colors[::-1]
-        custom_legend_colors = colors[0:4]  # Use the same colors for custom legend
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                                 zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(1, 1), title='Subqueries')
-
-        plt.tight_layout()
-
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
-
-
-def plot_query_false_positive_rates(test_runs, filename, queries=None, labels=None, title=None):
-    fig, ax = plt.subplots(figsize=[10, 6])
-    subqueries = ["raw_spatial", "only_node_acc", "only_full_acc", "point_filtering_with_full_acc"]
-
-    bar_width = 0.15
-    index = range(len(queries))
-
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
-
-    for run in test_runs:
-        for p in range(len(queries)):
-            # total number of points
-            points_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_points"]
-            nodes_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_nodes"]
-
-            # number of points for node acceleration
-            points_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_points"]
-            nodes_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_nodes"]
-
-            # number of points for hist acceleration
-            points_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_points"]
-            nodes_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_nodes"]
-
-            # ground truth (minimum)
-            points_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
-                "nr_points"]
-            nodes_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
-                "nr_non_empty_nodes"]
-
-            # all not searched points (all negatives)
-            false_points = points_total - points_point_filtering
-            false_nodes = nodes_total - nodes_point_filtering
-
-            # all not searches points after node acceleration (false positives)
-            false_points_node = points_node_acc - points_point_filtering
-            false_nodes_node = nodes_node_acc - nodes_point_filtering
-
-            # all not searches points after hist acceleration (false positives)
-            false_points_full = points_full_acc - points_point_filtering
-            false_nodes_full = nodes_full_acc - nodes_point_filtering
-
-            # false positive percentage node acceleration
-            false_points_node_percentage = false_points_node / false_points * 100
-            false_nodes_node_percentage = false_nodes_node / false_nodes * 100
-
-            # false positive percentage hist acceleration
-            false_points_full_percentage = false_points_full / false_points * 100
-            false_nodes_full_percentage = false_nodes_full / false_nodes * 100
-
-            # plot it
-            plt.bar([p + 0 * bar_width], false_points_node_percentage, bar_width, color=colors[0])
-            plt.bar([p + 1 * bar_width], false_points_full_percentage, bar_width, color=colors[1])
-            plt.bar([p + 2.5 * bar_width], false_nodes_node_percentage, bar_width, color=colors[2])
-            plt.bar([p + 3.5 * bar_width], false_nodes_full_percentage, bar_width, color=colors[3])
-
-        # plt.xlabel('Queries')
-        plt.ylabel('False Positive Rate | Percentage')
-        # plt.title(title)
-        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
-
-        custom_legend_labels = ['False Positive Points - Range Filtering', 'False Positive Points - Histogram Filtering', 'False Positive Nodes - Range Filtering',
-                                'False Positive Nodes - Histogram Filtering']  # Custom legend labels
-        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                                 zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
-
-        plt.tight_layout()
-
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
-
-
-def plot_query_true_negative_rates(test_runs, filename, queries=None, labels=None, title=None):
-    fig, ax = plt.subplots(figsize=[10, 6])
-    subqueries = ["raw_spatial", "only_node_acc", "only_full_acc", "point_filtering_with_full_acc"]
-
-    bar_width = 0.15
-    index = range(len(queries))
-
-    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4']
-
-    for run in test_runs:
-        for p in range(len(queries)):
-            # total number of points
-            points_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_points"]
-            nodes_total = run["results"]["query_performance"][queries[p]]["raw_spatial"]["nr_nodes"]
-
-            # number of points for node acceleration
-            points_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_points"]
-            nodes_node_acc = run["results"]["query_performance"][queries[p]]["only_node_acc"]["nr_nodes"]
-
-            # number of points for hist acceleration
-            points_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_points"]
-            nodes_full_acc = run["results"]["query_performance"][queries[p]]["only_full_acc"]["nr_nodes"]
-
-            # ground truth (minimum)
-            points_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
-                "nr_points"]
-            nodes_point_filtering = run["results"]["query_performance"][queries[p]]["point_filtering_with_full_acc"][
-                "nr_non_empty_nodes"]
-
-            # true negative percentage node acceleration
-            true_points_node_percentage = (points_total - points_node_acc) / points_total * 100
-            true_nodes_node_percentage = (nodes_total - nodes_node_acc) / nodes_total * 100
-
-            # true negative percentage hist acceleration
-            true_points_full_percentage = (points_total - points_full_acc) / points_total * 100
-            true_nodes_full_percentage = (nodes_total - nodes_full_acc) / nodes_total * 100
-
-            # plot it
-            plt.bar([p + 0 * bar_width], true_points_node_percentage, bar_width, color=colors[0])
-            plt.bar([p + 1 * bar_width], true_points_full_percentage, bar_width, color=colors[1])
-            plt.bar([p + 2.5 * bar_width], true_nodes_node_percentage, bar_width, color=colors[2])
-            plt.bar([p + 3.5 * bar_width], true_nodes_full_percentage, bar_width, color=colors[3])
-
-        # plt.xlabel('Queries')
-        plt.ylabel('True Negative Rate | Percentage')
-        # plt.title(title)
-        plt.xticks([p + bar_width * 2 for p in index], labels, rotation=90, ha='right')
-
-        custom_legend_labels = ['True Negative Points - Range Filtering', 'True Negative Points - Histogram Filtering', 'True Negative Nodes - Range Filtering',
-                                'True Negative Nodes - Histogram Filtering']  # Custom legend labels
-        custom_legend_colors = colors[:len(custom_legend_labels)]  # Use the same colors for custom legend
+        custom_legend_labels = [
+            'Spatial Index',
+            'Spatial Index + Attribute Index',
+        ]
+        custom_legend_colors = colors[:len(custom_legend_labels)]
         custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                  zip(custom_legend_colors, custom_legend_labels)]
         ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
