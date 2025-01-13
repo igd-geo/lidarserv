@@ -80,7 +80,7 @@ def main():
             output_folder = f"{path}.diagrams"
             os.makedirs(output_folder, exist_ok=True)
 
-            # print_querys(data)
+            print_querys(data)
 
             queries = [
                 "classification_bridges",
@@ -130,7 +130,7 @@ def main():
             output_folder = f"{path}.diagrams"
             os.makedirs(output_folder, exist_ok=True)
 
-            # print_querys(data)
+            print_querys(data)
 
             queries = [
                 "classification_building",
@@ -197,7 +197,7 @@ def main():
             output_folder = f"{path}.diagrams"
             os.makedirs(output_folder, exist_ok=True)
 
-            # print_querys(data)
+            print_querys(data)
 
             queries = [
                 "intensity_high",
@@ -283,7 +283,7 @@ def print_querys(data):
         try:
             nr_points = queries[query]["nr_points"]
             selectivity = nr_points / total_points * 100
-            print(f"{points_file} & ${query_statement}$ & {selectivity:.2f}\% \\\\ \hline")
+            print(f"{points_file} & ${query_statement}$ & {selectivity:.2f}\% & {nr_points:.0f} \\\\ \hline")
         except:
             continue
 
@@ -400,6 +400,9 @@ def plot_latency_comparison_violin(data, output_folder):
 
     fig, ax = plt.subplots(figsize=[10, 6])
     violin_raw = ax.violin(vpstats, xs, widths=0.8, showmedians=True)
+    # print all medians for lods
+    for i, vpstat in enumerate(vpstats):
+        ax.text(i, vpstat["median"], f'{vpstat["median"]:.2f}', ha='center', va='bottom')
 
     plt.xticks(xs, lods)
     plt.ylabel("Latency | ms")
