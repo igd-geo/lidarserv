@@ -16,7 +16,7 @@ lod2 = "lod(2)"
 intensity_high = "attr(Intensity > 128)"
 intensity_low = "attr(Intensity <= 2)"
 time_1 = "attr(GpsTime < 20000)"
-time_2 = "attr(GpsTime < 9158) and attr(GpsTime > 9120)" # todo
+time_2 = "attr(GpsTime > 23000)"
 pointsource1 = "attr(PointSourceID >= 10)"
 pointsource2 = "attr(PointSourceID >= 5)"
 scananglerank1 = "attr(ScanAngleRank <= 45)"
