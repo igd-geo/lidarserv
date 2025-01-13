@@ -321,8 +321,12 @@ def estimate_probability_density(
         for i in range(nr_coords):
             coord = coords[i]
             vals[i] += stats.norm.pdf(coord, bucket_center, bucket_size) * probability_mass
+
+    # calculate mean
+    mean = sum([coord * val for coord, val in zip(coords, vals)]) / sum(vals)
+
     return {
-            "mean": 0.1,    # todo don't hardcode - use actual mean
+            "mean": mean,
             "median": [r for l,r in quantiles if l==50][0],
             "min": value_min,
             "max": value_max,
@@ -381,37 +385,27 @@ def plot_latency_comparison_violin(data, output_folder):
     lods = list(latency_query.keys())
 
     # Prepare data for plotting
-    percentile_data = {query: [] for query in lods}
+    quantiles = {query: [] for query in lods}
     for lod in lods:
         percentiles = latency_query[lod]["percentiles"]
+        percentiles = [(percentile[0], percentile[1] * 1000) for percentile in percentiles]
         for percentile in percentiles:
-            percentile_data[lod].append(percentile)
+            quantiles[lod].append(percentile)
 
     # remove queries with no data
-    lods = [lod for lod in lods if len(percentile_data[lod]) > 0]
+    lods = [lod for lod in lods if len(quantiles[lod]) > 0]
 
-    # create arbitrary data to be able to plot a violin plot
-    simulation_data = []
-    for lod in lods:
-        data = []
-        for p in percentile_data[lod]:
-            percentile = p[0]
-            value = p[1]
-            data.extend([value*1000] * int(percentile))
-        simulation_data.append(data)
+    xs = range(len(quantiles))
+    vpstats = [estimate_probability_density(quantiles[lod]) for lod in lods]
 
-    # plot the violin plot
     fig, ax = plt.subplots(figsize=[10, 6])
-    parts = ax.violinplot(simulation_data, showmeans=False, showmedians=True, widths=0.9)
-    ax.set_xticks(np.arange(1, len(lods) + 1))
-    ax.set_xticklabels(lods)
-    plt.xticks(rotation=90)
-    ax.set_ylabel("Latency | ms")
+    violin_raw = ax.violin(vpstats, xs, widths=0.8, showmedians=True)
 
-
+    plt.xticks(xs, lods)
+    plt.ylabel("Latency | ms")
     plt.tight_layout()
     plt.savefig(join(output_folder, "latency_comparison_violin.pdf"))
-    plt.close(fig)
+
 
 def plot_compression_rate_comparison(data, output_folder):
     fig, axs = plt.subplots(1, 3, figsize=(15, 5))
