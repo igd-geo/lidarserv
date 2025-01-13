@@ -5,11 +5,15 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 from matplotlib.lines import Line2D
-from labellines import labelLine, labelLines
+#from labellines import labelLine, labelLines
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits import mplot3d
 import matplotlib.cm as cm
 from matplotlib.gridspec import SubplotSpec
+from typing import List, Tuple
+from scipy import stats
+from math import ceil, floor
+from pprint import pprint
 
 PROJECT_ROOT = dirname(__file__)
 
@@ -104,8 +108,15 @@ def main():
                 data=data,
                 queries=queries,
                 labels=labels,
-                filename=join(output_folder, "query-by-time.pdf"),
-                title="Query Time - AHN4"
+                filename=join(output_folder, "query-by-time-ahn4.pdf"),
+                title="AHN4"
+            )
+
+            calculate_average_querying_speed(
+                data=data,
+                queries=queries,
+                filename=join(output_folder, "average-querying-speed-ahn4.pdf"),
+                title="AHN4"
             )
 
             # TODO add Point and Node Plots
@@ -151,24 +162,31 @@ def main():
                 data=data,
                 queries=queries,
                 labels=labels,
-                filename=join(output_folder, "query-by-time.pdf"),
-                title="Query Time - KITTI"
+                filename=join(output_folder, "query-by-time-kitti.pdf"),
+                title="KITTI"
             )
 
             plot_query_by_num_points(
                 data=data,
                 queries=queries,
                 labels=labels,
-                filename=join(output_folder, "query-by-points.pdf"),
-                title="Query Points - KITTI"
+                filename=join(output_folder, "query-by-points-kitti.pdf"),
+                title="KITTI"
             )
 
             plot_query_by_num_nodes(
                 data=data,
                 queries=queries,
                 labels=labels,
-                filename=join(output_folder, "query-by-nodes.pdf"),
-                title="Query Nodes - KITTI"
+                filename=join(output_folder, "query-by-nodes-kitti.pdf"),
+                title="KITTI"
+            )
+
+            calculate_average_querying_speed(
+                data=data,
+                queries=queries,
+                filename=join(output_folder, "average-querying-speed-kitti.pdf"),
+                title="KITTI"
             )
 
     files = ["article_measurements/lidarserv/lille_2025-01-06_1.json"]
@@ -201,24 +219,31 @@ def main():
                 data=data,
                 queries=queries,
                 labels=labels,
-                filename=join(output_folder, "query-by-time.pdf"),
-                title="Query Time - Lille"
+                filename=join(output_folder, "query-by-time-lille.pdf"),
+                title="Lille",
             )
 
             plot_query_by_num_points(
                 data=data,
                 queries=queries,
                 labels=labels,
-                filename=join(output_folder, "query-by-points.pdf"),
-                title="Query Points - Lille"
+                filename=join(output_folder, "query-by-points-lille.pdf"),
+                title="Lille"
             )
 
             plot_query_by_num_nodes(
                 data=data,
                 queries=queries,
                 labels=labels,
-                filename=join(output_folder, "query-by-nodes.pdf"),
-                title="Query Nodes - Lille"
+                filename=join(output_folder, "query-by-nodes-lille.pdf"),
+                title="Lille"
+            )
+
+            calculate_average_querying_speed(
+                data=data,
+                queries=queries,
+                filename=join(output_folder, "average-querying-speed-lille.pdf"),
+                title="Lille"
             )
 
     path = join(PROJECT_ROOT, "article_measurements/insertion_speeds.json")
@@ -235,6 +260,7 @@ def main():
         output_folder = f"{path}.diagrams"
         os.makedirs(output_folder, exist_ok=True)
         plot_index_size_comparison(data, output_folder)
+        plot_compression_rate_comparison(data, output_folder)
 
     files = "article_measurements/lidarserv/kitti_2024-12-26_1.json", "article_measurements/lidarserv/lille_2024-12-26_3.json"
     for path in files:
@@ -260,6 +286,95 @@ def print_querys(data):
             print(f"{points_file} & ${query_statement}$ & {selectivity:.2f}\% \\\\ \hline")
         except:
             continue
+
+def estimate_probability_density(
+        quantiles: List[Tuple[int, float]]
+) -> Tuple[List[float], List[float]]:
+    """
+    draws a smooth violin (in contrast to estimate_probability_density_raw)
+
+     - adjust `nr_buckets` for more/less details / smoothness
+     - adjust `nr_coords` for sampling frequency
+    """
+    value_min = min(r for l,r in quantiles)
+    value_max = max(r for l,r in quantiles)
+
+    nr_buckets = 100
+    bucket_size = (value_max - value_min) / nr_buckets
+    buckets = [0.0] * nr_buckets
+    for (l1, r1), (l2, r2) in zip(quantiles[:-1], quantiles[1:]):
+        for bucket in range(nr_buckets):
+            bucket_min = value_min + bucket * bucket_size
+            bucket_max = value_min + (bucket + 1) * bucket_size
+            if r1 < bucket_max and r2 > bucket_min:
+                factor = (min(bucket_max, r2) - max(bucket_min, r1)) / (r2 - r1)
+                buckets[bucket] += (l2 - l1) / 100 * factor
+
+    nr_coords = 500
+    coords = [
+        c / (nr_coords - 1) * (value_max - value_min) + value_min 
+        for c in range(nr_coords)
+    ]
+    vals = [0.0] * nr_coords
+    for bucket, probability_mass in enumerate(buckets):
+        bucket_center = value_min + (bucket + 0.5) * bucket_size
+        for i in range(nr_coords):
+            coord = coords[i]
+            vals[i] += stats.norm.pdf(coord, bucket_center, bucket_size) * probability_mass
+    return {
+            "mean": 0.1,    # todo don't hardcode - use actual mean
+            "median": [r for l,r in quantiles if l==50][0],
+            "min": value_min,
+            "max": value_max,
+
+            # y-position (latency values)
+            "coords": coords,
+
+            # violin width (probability density) at the y position given in "coords"
+            "vals": vals,
+
+    }
+
+def estimate_probability_density_raw(
+        quantiles: List[Tuple[int, float]]
+) -> Tuple[List[float], List[float]]:
+    """
+    draws the violins from the "raw" quantiles without gaussian smoothing
+
+     - adjust nr_buckets for sampling frequency
+    """
+    value_min = min(r for l,r in quantiles)
+    value_max = max(r for l,r in quantiles)
+
+    nr_buckets = 500
+    bucket_size = (value_max - value_min) / nr_buckets
+    buckets = [0.0] * nr_buckets
+    for (l1, r1), (l2, r2) in zip(quantiles[:-1], quantiles[1:]):
+        for bucket in range(nr_buckets):
+            bucket_min = value_min + bucket * bucket_size
+            bucket_max = value_min + (bucket + 1) * bucket_size
+            if r1 < bucket_max and r2 > bucket_min:
+                factor = (min(bucket_max, r2) - max(bucket_min, r1)) / (r2 - r1)
+                buckets[bucket] += (l2 - l1) / 100 * factor
+
+    coords = [
+        (c + 0.5) / nr_buckets * (value_max - value_min) + value_min 
+        for c in range(nr_buckets)
+    ]
+    return {
+            "mean": 0.1,    # todo don't hardcode - use actual mean
+            "median": [r for l,r in quantiles if l==50][0],
+            "min": value_min,
+            "max": value_max,
+
+            # y-position (latency values)
+            "coords": coords,
+
+            # violin width (probability density) at the y position given in "coords"
+            "vals": buckets,
+
+    }
+
 
 def plot_latency_comparison_violin(data, output_folder):
     latency_query = data["runs"]["main"][0]["results"]["latency"]["full-point-cloud"]["stats_by_lod"]
@@ -298,14 +413,63 @@ def plot_latency_comparison_violin(data, output_folder):
     plt.savefig(join(output_folder, "latency_comparison_violin.pdf"))
     plt.close(fig)
 
+def plot_compression_rate_comparison(data, output_folder):
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+    dataset_names = {
+        "ahn4": "AHN4",
+        "kitti": "KITTI",
+        "lille": "Lille",
+    }
+
+    tool_names = {
+        "lidarserv": "Lidarserv",
+        "potree_converter": "PotreeConverter",
+        "pgpointcloud": "PgPointCloud"
+    }
+
+    for i, (dataset, dataset_data) in enumerate(data.items()):
+        for tool, tool_data in dataset_data.items():
+            if tool == 'input_size':
+                continue
+            # calculate compression rate
+            uncompressed = dataset_data[tool]['uncompressed']
+            compressed = dataset_data[tool]['compressed']
+            compression_rate = (1 - compressed / uncompressed) * 100
+            dataset_data[tool]['compression_rate'] = compression_rate
+
+    for i, (dataset, dataset_data) in enumerate(data.items()):
+        ax = axs[i]
+        tools = dataset_data.keys()
+        tools = [tool for tool in tools if tool != 'input_size']
+        compression_rates = [dataset_data[tool]['compression_rate'] for tool in tools]
+
+        x = np.arange(len(compression_rates))
+
+        bars = ax.bar(x, compression_rates)
+
+        tools = [tool_names[tool] for tool in tools]
+        ax.set_title(dataset_names[dataset])
+        ax.set_xticks(x)
+        ax.set_xticklabels(tools)
+
+        for bar, rate in zip(bars, compression_rates):
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f'{rate:.2f}%', ha='center', va='bottom')
+
+    axs[0].set_ylabel("Compression Rate | %")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(join(output_folder, "compression_rate_comparison.pdf"))
+
+    
 
 def plot_index_size_comparison(data, output_folder):
     fig, axs = plt.subplots(1, 3, figsize=(15, 5))
 
     dataset_names = {
+        "ahn4": "AHN4",
         "kitti": "KITTI",
         "lille": "Lille",
-        "ahn4": "AHN4"
     }
 
     tool_names = {
@@ -347,9 +511,9 @@ def plot_index_size_comparison(data, output_folder):
 
 def plot_insertion_speed_comparison(data, output_folder):
     dataset_names = {
+        "ahn4": "AHN4",
         "kitti": "KITTI",
         "lille": "Lille",
-        "ahn4": "AHN4"
     }
 
     tool_names = {
@@ -365,7 +529,7 @@ def plot_insertion_speed_comparison(data, output_folder):
     for dataset, dataset_data in data.items():
         num_points = dataset_data['num_points']
         tools = dataset_data.keys()
-        tools = [tool for tool in tools if tool != 'num_points']
+        tools = [tool for tool in tools if tool != 'num_points' and tool != 'scanner_speed']
         uncompressed = [num_points / dataset_data[tool]['uncompressed'] for tool in tools]
         compressed = [num_points / dataset_data[tool]['compressed'] for tool in tools]
 
@@ -377,7 +541,7 @@ def plot_insertion_speed_comparison(data, output_folder):
         num_points = dataset_data['num_points']
         ax = axs[i]
         tools = dataset_data.keys()
-        tools = [tool for tool in tools if tool != 'num_points']
+        tools = [tool for tool in tools if tool != 'num_points' and tool != 'scanner_speed']
         uncompressed = [num_points / dataset_data[tool]['uncompressed'] for tool in tools]
         compressed = [num_points / dataset_data[tool]['compressed'] for tool in tools]
 
@@ -395,6 +559,11 @@ def plot_insertion_speed_comparison(data, output_folder):
 
         # Format y-axis labels with 'M' for millions
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.1f}M"))
+
+        try:
+            ax.axhline(y=dataset_data["scanner_speed"], color='r', linestyle='--', label='Scanner Speed')
+        except:
+            continue
 
     # Add y-axis label to the leftmost plot
     axs[0].set_ylabel("Insertion Rate | Points/s")
@@ -554,6 +723,46 @@ def plot_duration_cleanup_by_priority_function_bogus(test_runs, filename, title=
     fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
     plt.close(fig)
 
+def calculate_average_querying_speed(data, queries, filename, title=None):
+    test_runs = data["runs"]["main"]
+
+    times = {
+        "no_compression": [],
+        "compression": [],
+        "no_compression_attribute_index": [],
+        "compression_attribute_index": []
+    }
+
+    times_no_compression = []
+    times_compression = []
+    num_points_no_compression = []
+    num_points_compression = []
+
+    for test_run in test_runs:
+        compression = test_run["index"]["compression"]
+        attribute_index = test_run["index"]["enable_attribute_index"]
+        try:
+            point_filtering = test_run["index"]["enable_point_filtering"]
+        except:
+            point_filtering = True
+
+        for query in queries:
+            query_time = test_run["results"]["query_performance"][query]["query_time_seconds"]
+            num_points = test_run["results"]["query_performance"][query]["nr_points"]
+            if compression and attribute_index and point_filtering:
+                times_compression.append(query_time)
+                num_points_compression.append(num_points)
+            elif (not compression) and attribute_index and point_filtering:
+                times_no_compression.append(query_time)
+                num_points_no_compression.append(num_points)
+
+    pps_no_compression = sum(num_points_no_compression) / sum(times_no_compression)
+    pps_compression = sum(num_points_compression) / sum(times_compression)
+    print("Dataset: ", title)
+    print(f"Average querying speed without compression: {pps_no_compression:.2f} points/s")
+    print(f"Average querying speed with compression: {pps_compression:.2f} points/s")
+
+
 
 def plot_query_by_time(data, filename, queries, labels, title=None):
     test_runs = data["runs"]["main"]
@@ -586,29 +795,28 @@ def plot_query_by_time(data, filename, queries, labels, title=None):
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
     bar_width = 0.3
 
-    for run in test_runs:
-        for p in range(len(queries)):
-            plt.bar([p + bar_width * 0.5], times["no_compression"][p], bar_width, color=colors[0])
-            plt.bar([p + bar_width * 1.5], times["no_compression_attribute_index"][p], bar_width, color=colors[1])
+    for p in range(len(queries)):
+        plt.bar([p + bar_width * 0.5], times["no_compression"][p], bar_width, color=colors[0])
+        plt.bar([p + bar_width * 1.5], times["no_compression_attribute_index"][p], bar_width, color=colors[1])
 
-        plt.ylabel('Execution Time | Seconds')
-        plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
+    plt.ylabel('Execution Time | Seconds')
+    plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
 
-        custom_legend_labels = [
-            'No Attribute Index',
-            'Attribute Index'
-        ]
-        custom_legend_colors = colors[:len(custom_legend_labels)]
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                                 zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
+    custom_legend_labels = [
+        'No Attribute Index',
+        'Attribute Index'
+    ]
+    custom_legend_colors = colors[:len(custom_legend_labels)]
+    custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                zip(custom_legend_colors, custom_legend_labels)]
+    ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
 
-        plt.tight_layout()
+    plt.tight_layout()
 
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_query_by_num_points(data, filename, queries, labels, title=None):
@@ -642,33 +850,32 @@ def plot_query_by_num_points(data, filename, queries, labels, title=None):
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
     bar_width = 0.3
 
-    for run in test_runs:
-        for p in range(len(queries)):
-            div = 1000000
-            plt.bar([p + bar_width * 0.0], points["no_point_filtering_no_attribute_index"][p]/div, bar_width, color=colors[0])
-            plt.bar([p + bar_width * 1.0], points["no_point_filtering_attribute_index"][p]/div, bar_width, color=colors[1])
-            plt.bar([p + bar_width * 2.0], points["point_filtering_attribute_index"][p]/div, bar_width, color=colors[2])
-        
-        plt.ylabel('Number of Points')
-        plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}M"))
+    for p in range(len(queries)):
+        div = 1000000
+        plt.bar([p + bar_width * 0.0], points["no_point_filtering_no_attribute_index"][p]/div, bar_width, color=colors[0])
+        plt.bar([p + bar_width * 1.0], points["no_point_filtering_attribute_index"][p]/div, bar_width, color=colors[1])
+        plt.bar([p + bar_width * 2.0], points["point_filtering_attribute_index"][p]/div, bar_width, color=colors[2])
+    
+    plt.ylabel('Number of Points')
+    plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}M"))
 
-        custom_legend_labels = [
-            'Spatial Index',
-            'Spatial Index + Attribute Index',
-            'Spatial Index + Attribute Index + Point Filtering'
-        ]
-        custom_legend_colors = colors[:len(custom_legend_labels)]
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                                 zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
+    custom_legend_labels = [
+        'Spatial Index',
+        'Spatial Index + Attribute Index',
+        'Spatial Index + Attribute Index + Point Filtering'
+    ]
+    custom_legend_colors = colors[:len(custom_legend_labels)]
+    custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                zip(custom_legend_colors, custom_legend_labels)]
+    ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
 
-        plt.tight_layout()
+    plt.tight_layout()
 
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_query_by_num_nodes(data, filename, queries, labels, title=None):
@@ -702,31 +909,30 @@ def plot_query_by_num_nodes(data, filename, queries, labels, title=None):
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
     bar_width = 0.3
 
-    for run in test_runs:
-        for p in range(len(queries)):
-            div = 1000
-            plt.bar([p + bar_width * 0.5], nodes["no_point_filtering_no_attribute_index"][p]/div, bar_width, color=colors[0])
-            plt.bar([p + bar_width * 1.5], nodes["no_point_filtering_attribute_index"][p]/div, bar_width, color=colors[1])
-        
-        plt.ylabel('Number of Nodes')
-        plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}K"))
+    for p in range(len(queries)):
+        div = 1000
+        plt.bar([p + bar_width * 0.5], nodes["no_point_filtering_no_attribute_index"][p]/div, bar_width, color=colors[0])
+        plt.bar([p + bar_width * 1.5], nodes["no_point_filtering_attribute_index"][p]/div, bar_width, color=colors[1])
+    
+    plt.ylabel('Number of Nodes')
+    plt.xticks([p + bar_width * 1 for p in index], labels, rotation=90)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}K"))
 
-        custom_legend_labels = [
-            'Spatial Index',
-            'Spatial Index + Attribute Index',
-        ]
-        custom_legend_colors = colors[:len(custom_legend_labels)]
-        custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
-                                 zip(custom_legend_colors, custom_legend_labels)]
-        ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
+    custom_legend_labels = [
+        'Spatial Index',
+        'Spatial Index + Attribute Index',
+    ]
+    custom_legend_colors = colors[:len(custom_legend_labels)]
+    custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
+                                zip(custom_legend_colors, custom_legend_labels)]
+    ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
 
-        plt.tight_layout()
+    plt.tight_layout()
 
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 # Plots the number of nodes per level for each run
@@ -748,7 +954,7 @@ def plot_query_lod_nodes_by_runs(test_runs, filename, title=None):
     for lod_list in lod_lists:
         plt.plot(x, lod_list[1], label=lod_list[0])
     plt.grid(True)
-    labelLines(ax.get_lines(), zorder=2.5)
+    #labelLines(ax.get_lines(), zorder=2.5)
     plt.xlabel('LOD')
     plt.ylabel('Number of Nodes')
     # plt.title('Number of Nodes per LOD')
