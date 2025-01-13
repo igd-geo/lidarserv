@@ -458,7 +458,7 @@ def plot_compression_rate_comparison(data, output_folder):
     
 
 def plot_index_size_comparison(data, output_folder):
-    fig, axs = plt.subplots(1, 3, figsize=(10, 3.5))
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
 
     dataset_names = {
         "ahn4": "AHN4",
@@ -516,7 +516,7 @@ def plot_insertion_speed_comparison(data, output_folder):
         "pgpointcloud": "PgPointCloud"
     }
 
-    fig, axs = plt.subplots(1, 3, figsize=(10, 3.5))
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
     max_y_value = 0  # To track the maximum y-value across all datasets
 
     # First pass to determine the maximum y-value
