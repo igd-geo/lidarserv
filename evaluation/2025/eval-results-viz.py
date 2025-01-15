@@ -72,7 +72,7 @@ def main():
         )
 
     # ahn queries
-    files = ["article_measurements/lidarserv/ahn4_2024-12-26_1.json"]
+    files = ["article_measurements/lidarserv/ahn4_2025-01-07_1.json"]
     for file in files:
         path = join(PROJECT_ROOT, file)
         with open(path, "r") as f:
@@ -119,7 +119,21 @@ def main():
                 title="AHN4"
             )
 
-            # TODO add Point and Node Plots
+            plot_query_by_num_points(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-points-ahn4.pdf"),
+                title="AHN4"
+            )
+
+            plot_query_by_num_nodes(
+                data=data,
+                queries=queries,
+                labels=labels,
+                filename=join(output_folder, "query-by-nodes-ahn4.pdf"),
+                title="AHN4"
+            )
 
     # kitti queries
     files = ["article_measurements/lidarserv/kitti_2025-01-06_1.json"]

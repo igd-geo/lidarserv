@@ -1,30 +1,6 @@
 {
-    "ahn4": {
-      "num_points":11524770195,
-      "scanner_speed": 1218146,
-      "lidarserv": {
-        "uncompressed": 5043.79,
-        "compressed": 5767.39
-      },
-      "potree_converter": {
-        "uncompressed": 2611.27,
-        "compressed": 3009.08
-      }
-    },  
-    "kitti": {
-      "num_points":805552860,
-      "lidarserv": {
-        "uncompressed": 801.77,
-        "compressed": 597.09
-      },
-      "potree_converter": {
-        "uncompressed": 257.18,
-        "compressed": 341.50
-      }
-    },
     "lille": {
       "num_points":120000000,
-      "scanner_speed": 410000,
       "lidarserv": {
         "uncompressed": 22.9,
         "compressed": 34.41
@@ -37,5 +13,27 @@
         "uncompressed": 460,
         "compressed": 1000
       }
-    } 
+    },
+    "kitti": {
+      "num_points":805552860,
+      "lidarserv": {
+        "uncompressed": 801.77,
+        "compressed": 597.09
+      },
+      "potree_converter": {
+        "uncompressed": 257.18,
+        "compressed": 341.50
+      }
+    },
+    "ahn4": {
+      "num_points":11524770195,
+      "lidarserv": {
+        "uncompressed": 5043.79,
+        "compressed": 5767.39
+      },
+      "potree_converter": {
+        "uncompressed": 2611.27,
+        "compressed": 3009.08
+      }
+    }
   }

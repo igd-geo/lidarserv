@@ -1,0 +1,84 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/article_measurements/ahn4-latency.toml",
+    "duration:": 9830,
+    "finished_at": "2025-01-06T15:27:13.169966338+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_bytes": 391842187005,
+    "nr_points": 11524770195,
+    "started_at": "2025-01-06T12:43:22.456647879+00:00",
+    "version": "git:4ee711b"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 10000,
+          "compression": false,
+          "enable_attribute_index": true,
+          "max_lod": 14,
+          "node_hierarchy": 25,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 17,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 261994091909,
+          "insertion_rate": null,
+          "latency": {
+            "full-point-cloud": {
+              "error": "Too slow."
+            }
+          },
+          "query_performance": null
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat1Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/ahn4-eval",
+    "indexed_attributes": {
+      "classification": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "gpstime": [
+        "RangeIndex"
+      ],
+      "intensity": [
+        "RangeIndex"
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "latency_replay_pps": 1000000,
+    "latency_sample_pps": 1000,
+    "output_file": "ahn4_latency_%d_%i.json",
+    "points_file": "../../../data/AHN4.las",
+    "queries": {
+      "full-point-cloud": "full"
+    },
+    "target_point_pressure": 1000000
+  }
+}
