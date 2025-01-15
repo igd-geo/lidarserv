@@ -6,7 +6,7 @@ use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use lidarserv_server::common::nalgebra::{Matrix4, Point3};
 use lidarserv_server::index::query::Query;
 use lidarserv_server::net::client::viewer::{PartialResult, QueryConfig, ViewerClient};
-use log::info;
+use log::{debug, info};
 use nalgebra::{point, vector};
 use pasture_core::containers::{BorrowedBuffer, BorrowedMutBufferExt, VectorBuffer};
 use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY, POSITION_3D};
@@ -246,21 +246,25 @@ async fn network_thread(
             } else {
                 Query::parse(&args.query).unwrap()
             };
+            let query = Query::And(vec![
+                Query::ViewFrustum(ViewFrustumQuery {
+                    camera_pos,
+                    camera_dir,
+                    camera_up: vector![0.0, 0.0, 1.0],
+                    fov_y: FRAC_PI_4,
+                    z_near,
+                    z_far,
+                    window_size: camera_matrix.window_size,
+                    max_distance: args.point_distance,
+                }),
+                cli_query.clone(),
+            ]);
+            // convert query to toml and print it
+            let toml = toml::to_string(&query).unwrap();
+            debug!("Sending query to server: {:?}", toml);
             client_write
                 .query(
-                    Query::And(vec![
-                        Query::ViewFrustum(ViewFrustumQuery {
-                            camera_pos,
-                            camera_dir,
-                            camera_up: vector![0.0, 0.0, 1.0],
-                            fov_y: FRAC_PI_4,
-                            z_near,
-                            z_far,
-                            window_size: camera_matrix.window_size,
-                            max_distance: args.point_distance,
-                        }),
-                        cli_query,
-                    ]),
+                    query,
                     &QueryConfig {
                         point_filtering: !args.disable_point_filtering,
                     },

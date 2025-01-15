@@ -21,3 +21,4 @@ nalgebra.workspace = true
 crossbeam-channel = "0.5.1"
 bytemuck = "1.16"
 serde_json = "1.0.133"
+toml = "0.8.19"

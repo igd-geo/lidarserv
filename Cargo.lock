@@ -1492,6 +1492,7 @@ dependencies = [
  "simple_logger",
  "structopt",
  "tokio",
+ "toml",
 ]
 
 [[package]]
