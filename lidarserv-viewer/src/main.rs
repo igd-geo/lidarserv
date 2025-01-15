@@ -260,7 +260,6 @@ async fn network_thread(
                 cli_query.clone(),
             ]);
             // convert query to toml and print it
-            // let toml = toml::to_string(&query).unwrap();
             debug!("Sending query to server: {:?}", &query);
             client_write
                 .query(
