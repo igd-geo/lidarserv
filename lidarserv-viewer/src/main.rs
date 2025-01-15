@@ -260,8 +260,8 @@ async fn network_thread(
                 cli_query.clone(),
             ]);
             // convert query to toml and print it
-            let toml = toml::to_string(&query).unwrap();
-            debug!("Sending query to server: {:?}", toml);
+            // let toml = toml::to_string(&query).unwrap();
+            debug!("Sending query to server: {:?}", &query);
             client_write
                 .query(
                     query,
@@ -279,7 +279,7 @@ async fn network_thread(
         let update = client_read
             .receive_update_global_coordinates(shutdown)
             .await?;
-        info!("{:?}", update);
+        debug!("{:?}", update);
         updates_sender.send(update).unwrap();
     }
 }
