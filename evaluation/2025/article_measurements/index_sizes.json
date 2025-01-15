@@ -1,39 +1,36 @@
 {
-    "lille": {
-      "input_size": 3.36,
-      "lidarserv": {
-        "uncompressed": 3.37,
-        "compressed": 1.08
-      },
-      "potree_converter": {
-        "uncompressed": 3.4,
-        "compressed": 0.6
-      },
-      "pgpointcloud": {
-        "uncompressed": 6.2,
-        "compressed": 0
-      }
+  "ahn4": {
+    "input_size": 364.93,
+    "lidarserv": {
+      "uncompressed": 323.93,
+      "compressed": 152.42
     },
-    "kitti": {
-      "input_size": 33.03,
-      "lidarserv": {
-        "uncompressed": 33.25,
-        "compressed": 10.61
-      },
-      "potree_converter": {
-        "uncompressed": 33.05,
-        "compressed": 6.43
-      }
+    "potree_converter": {
+      "uncompressed": 326.53,
+      "compressed": 69.91
+    }
+  },
+  "kitti": {
+    "input_size": 33.03,
+    "lidarserv": {
+      "uncompressed": 33.25,
+      "compressed": 10.61
     },
-    "ahn4": {
-      "input_size": 364.93,
-      "lidarserv": {
-        "uncompressed": 323.93,
-        "compressed": 152.42
-      },
-      "potree_converter": {
-        "uncompressed": 326.53,
-        "compressed": 69.91
-      }
+    "potree_converter": {
+      "uncompressed": 33.05,
+      "compressed": 6.43
+    }
+  },
+  "lille": {
+    "input_size": 3.36,
+    "lidarserv": {
+      "uncompressed": 3.37,
+      "compressed": 1.08
+    },
+    "potree_converter": {
+      "uncompressed": 3.4,
+      "compressed": 0.6
     }
   }
+
+}

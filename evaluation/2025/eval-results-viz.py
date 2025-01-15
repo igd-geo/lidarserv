@@ -88,6 +88,7 @@ def main():
                 "classification_ground",
                 "classification_vegetation",
                 "intensity_high",
+                "intensity_low",
                 "time_1",
                 "time_2",
                 "time_3"
@@ -99,6 +100,7 @@ def main():
                 "Classification\nGround",
                 "Classification\nVegetation",
                 "Intensity\nHigh",
+                "Intensity\nLow",
                 "Time\nBig Slice",
                 "Time\nSmall Slice",
                 "Time\nMedium Slice"
@@ -149,9 +151,6 @@ def main():
             queries = [
                 "classification_building",
                 "classification_ground",
-                "lod0",
-                "lod1",
-                "lod2",
                 "pointsource1",
                 "pointsource2",
                 "rgb",
@@ -162,9 +161,6 @@ def main():
             labels = [
                 "Classification\nBuildings",
                 "Classification\nGround",
-                "LOD0",
-                "LOD1",
-                "LOD2",
                 "Pointsource1",
                 "Pointsource2",
                 "RGB",
@@ -216,17 +212,11 @@ def main():
             queries = [
                 "intensity_high",
                 "intensity_low",
-                "lod0",
-                "lod1",
-                "lod2",
             ]
 
             labels = [
                 "Intensity\nHigh",
                 "Intensity\nLow",
-                "LOD0",
-                "LOD1",
-                "LOD2"
             ]
 
             plot_query_by_time(
