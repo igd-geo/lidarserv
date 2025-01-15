@@ -1,13 +1,13 @@
 WHITESPACE   = _{ " " | "\t" | "\n" }
 digit        =  { '0'..'9' }
-integer      = @{ digit+ }
-number       = @{ digit+ ~ ("." ~ digit+)? }
+pos_integer = @{ digit+ }
+number       = @{ "-"? ~ digit+ ~ ("." ~ digit+)? }
 coordinate2  =  { "[" ~ number ~ "," ~ number ~ "]" }
 coordinate3   =  { "[" ~ number ~ "," ~ number ~ "," ~ number ~ "]" }
 coordinate4   =  { "[" ~ number ~ "," ~ number ~ "," ~ number ~ "," ~ number ~ "]" }
 empty        =  { "empty" }
 full         =  { "full" }
-lod          =  { "lod" ~ "(" ~ integer ~ ")" }
+lod          =  { "lod" ~ "(" ~ pos_integer ~ ")" }
 aabb         =  { "aabb" ~ "(" ~ coordinate3 ~ "," ~ coordinate3 ~ ")" }
 view_frustum_arg = _{
     ("camera_pos" ~ ":" ~ #cp=coordinate3) 

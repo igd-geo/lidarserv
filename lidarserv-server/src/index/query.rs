@@ -416,8 +416,8 @@ mod query_language {
         Ok(pair.as_str().parse::<f64>()?)
     }
 
-    fn parse_integer_u8(pair: Pair<Rule>) -> Result<u8> {
-        assert_eq!(pair.as_rule(), Rule::integer);
+    fn parse_positive_integer_u8(pair: Pair<Rule>) -> Result<u8> {
+        assert_eq!(pair.as_rule(), Rule::pos_integer);
         Ok(pair.as_str().parse::<u8>()?)
     }
 
@@ -455,7 +455,7 @@ mod query_language {
     fn parse_lod(pair: Pair<Rule>) -> Result<Query> {
         assert_eq!(pair.as_rule(), Rule::lod);
         let inner = pair.into_inner().unwrap_1();
-        let level = parse_integer_u8(inner)?;
+        let level = parse_positive_integer_u8(inner)?;
         Ok(Query::Lod(LodLevel::from_level(level)))
     }
 
@@ -1038,6 +1038,22 @@ mod test {
                     AttributeValueScalar::Int(5),
                     AttributeValueScalar::Int(6),
                 ))),
+            },
+        );
+        query_test_parse(
+            "attr(negative < -10.0)",
+            Query::Attribute {
+                attribute_name: "negative".to_string(),
+                test: TestFunction::Less(AttributeValue::Scalar(AttributeValueScalar::Float(
+                    -10.0,
+                ))),
+            },
+        );
+        query_test_parse(
+            "attr(negative < -10)",
+            Query::Attribute {
+                attribute_name: "negative".to_string(),
+                test: TestFunction::Less(AttributeValue::Scalar(AttributeValueScalar::Int(-10))),
             },
         );
     }
