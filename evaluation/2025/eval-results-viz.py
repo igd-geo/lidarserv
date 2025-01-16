@@ -199,7 +199,7 @@ def main():
                 title="KITTI"
             )
 
-    files = ["article_measurements/lidarserv/lille_2025-01-06_1.json"]
+    files = ["article_measurements/lidarserv/lille_2025-01-15_6.json"]
     for file in files:
         path = join(PROJECT_ROOT, file)
         with open(path, "r") as f:
@@ -212,11 +212,25 @@ def main():
             queries = [
                 "intensity_high",
                 "intensity_low",
+                "time_1",
+                "time_2",
+                "pointsource1",
+                "pointsource2",
+                "scananglerank1",
+                "scananglerank2",
+                "view_frustum1",
             ]
 
             labels = [
                 "Intensity\nHigh",
                 "Intensity\nLow",
+                "Time\nBig Slice",
+                "Time\nSmall Slice",
+                "PointsourceID\n>=10",
+                "PointsourceID\n>=5",
+                "ScanAngleRank\n<=45°",
+                "ScanAngleRank\n<=90°",
+                "View Frustum",
             ]
 
             plot_query_by_time(
@@ -273,7 +287,16 @@ def main():
             output_folder = f"{path}.diagrams"
             os.makedirs(output_folder, exist_ok=True)
 
-            plot_latency_comparison_violin(data, output_folder)
+            plot_latency_comparison_violin(data, output_folder, query="full-point-cloud")
+
+    # files = "article_measurements/lidarserv/lille_2025-01-15_6.json",
+    # for path in files:
+    #     with open(path, "r") as f:
+    #         data = json.load(f)
+    #         output_folder = f"{path}.diagrams"
+    #         os.makedirs(output_folder, exist_ok=True)
+    #
+    #         plot_latency_comparison_violin(data, output_folder, query="view_frustum1")
 
 
 def print_querys(data):
@@ -384,14 +407,21 @@ def estimate_probability_density_raw(
     }
 
 
-def plot_latency_comparison_violin(data, output_folder):
-    latency_query = data["runs"]["main"][0]["results"]["latency"]["full-point-cloud"]["stats_by_lod"]
-    lods = list(latency_query.keys())
+def plot_latency_comparison_violin(data, output_folder, query):
+    latency_query = data["runs"]["main"][0]["results"]["latency"][query]
+    stats_by_lod = latency_query["stats_by_lod"]
+    stats_full = latency_query["stats"]
+    lods = list(stats_by_lod.keys())
 
     # Prepare data for plotting
     quantiles = {query: [] for query in lods}
+
+    # add full point cloud stats
+    quantiles["full-point-cloud"] = [(percentile[0], percentile[1] * 1000) for percentile in stats_full["percentiles"]]
+
+    # add lod stats
     for lod in lods:
-        percentiles = latency_query[lod]["percentiles"]
+        percentiles = stats_by_lod[lod]["percentiles"]
         percentiles = [(percentile[0], percentile[1] * 1000) for percentile in percentiles]
         for percentile in percentiles:
             quantiles[lod].append(percentile)
@@ -400,14 +430,21 @@ def plot_latency_comparison_violin(data, output_folder):
     lods = [lod for lod in lods if len(quantiles[lod]) > 0]
 
     xs = range(len(quantiles))
-    vpstats = [estimate_probability_density(quantiles[lod]) for lod in lods]
+    vpstats = [estimate_probability_density(quantiles[key]) for key in quantiles.keys()]
 
     fig, ax = plt.subplots(figsize=[10, 6])
-    violin_raw = ax.violin(vpstats, xs, widths=0.8, showmedians=True)
-    # print all medians for lods
-    for i, vpstat in enumerate(vpstats):
-        ax.text(i, vpstat["median"], f'{vpstat["median"]:.2f}', ha='center', va='bottom')
+    violin_parts = ax.violin(vpstats, xs, widths=0.8, showmedians=True)
 
+    # Color the full-point-cloud red
+    for i, lod in enumerate(quantiles.keys()):
+        if lod == "full-point-cloud":
+            violin_parts['bodies'][i].set_facecolor('red')
+            violin_parts['bodies'][i].set_edgecolor('red')
+
+    # for i, vpstat in enumerate(vpstats):
+    #     ax.text(i, vpstat["median"], f'{vpstat["median"]:.2f}', ha='center', va='bottom')
+
+    lods.append("All LODs")
     plt.xticks(xs, lods)
     plt.ylabel("Latency | ms")
     plt.tight_layout()
@@ -457,12 +494,12 @@ def plot_compression_rate_comparison(data, output_folder):
         for bar, rate in zip(bars, compression_rates):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f'{rate:.2f}%', ha='center', va='bottom')
 
-    axs[0].set_ylabel("Compression Rate | %")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(join(output_folder, "compression_rate_comparison.pdf"))
+        axs[0].set_ylabel("Compression Rate | %")
+        handles, labels = axs[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.05), ncol=3)
 
-    
+        plt.tight_layout()
+        plt.savefig(join(output_folder, "compression_rate_comparison.pdf"))
 
 def plot_index_size_comparison(data, output_folder):
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
@@ -778,8 +815,11 @@ def plot_query_by_time(data, filename, queries, labels, title=None):
     for test_run in test_runs:
         compression = test_run["index"]["compression"]
         attribute_index = test_run["index"]["enable_attribute_index"]
+        point_filtering = test_run["index"]["enable_point_filtering"]
 
         for query in queries:
+            if not point_filtering:
+                continue
             query_time = test_run["results"]["query_performance"][query]["query_time_seconds"]
             if compression and attribute_index:
                 times["compression_attribute_index"].append(query_time)
