@@ -95,7 +95,7 @@ async fn query_thread(
         .query_oneshot(
             query,
             &QueryConfig {
-                point_filtering: true,
+                point_filtering: !args.disable_point_filtering,
             },
         )
         .await?;

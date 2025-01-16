@@ -109,4 +109,8 @@ pub struct AppOptions {
     /// best to quote the whole query.
     #[clap(verbatim_doc_comment)]
     pub query: String,
+
+    /// Disable the pointwise filtering and only filter out nodes
+    #[clap(long)]
+    pub disable_point_filtering: bool,
 }
