@@ -316,7 +316,7 @@ def print_querys(data):
 
 def estimate_probability_density(
         quantiles: List[Tuple[int, float]]
-) -> Tuple[List[float], List[float]]:
+) -> dict[str, float | list[float]]:
     """
     draws a smooth violin (in contrast to estimate_probability_density_raw)
 
@@ -355,6 +355,7 @@ def estimate_probability_density(
     return {
             "mean": mean,
             "median": [r for l,r in quantiles if l==50][0],
+            "quantiles": [r for l,r in quantiles if l==95],
             "min": value_min,
             "max": value_max,
 
@@ -433,7 +434,7 @@ def plot_latency_comparison_violin(data, output_folder, query):
     vpstats = [estimate_probability_density(quantiles[key]) for key in quantiles.keys()]
 
     fig, ax = plt.subplots(figsize=[10, 6])
-    violin_parts = ax.violin(vpstats, xs, widths=0.8, showmedians=True)
+    violin_parts = ax.violin(vpstats, xs, widths=0.8, showmedians=False)
 
     # Color the full-point-cloud red
     for i, lod in enumerate(quantiles.keys()):
