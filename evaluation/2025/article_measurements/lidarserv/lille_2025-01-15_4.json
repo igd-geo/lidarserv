@@ -1,0 +1,71 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025/article_measurements/lille copy.toml",
+    "duration:": 34,
+    "finished_at": "2025-01-15T13:39:39.478899113+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_bytes": 3360000227,
+    "nr_points": 120000000,
+    "started_at": "2025-01-15T13:39:04.589573264+00:00",
+    "version": "git:d26fcda-modified"
+  },
+  "runs": {
+    "main": [
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": true,
+          "enable_attribute_index": true,
+          "enable_point_filtering": true,
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "details": "Error {\n    variant: ParsingError {\n        positives: [\n            number,\n        ],\n        negatives: [],\n    },\n    location: Pos(\n        27,\n    ),\n    line_col: Pos(\n        (\n            1,\n            28,\n        ),\n    ),\n    path: None,\n    line: \"view_frustum( camera_pos: [-560.45, -584.87, 47.29], camera_dir: [0.75, 0.65, -0.12], camera_up: [0.0, 0.0, 1.0], fov_y: 0.78, z_near: 3.9, z_far: 3994169.6, window_size: [500.0, 500.0], max_distance: 10 )\",\n    continued_line: None,\n    parse_attempts: None,\n}",
+          "error": " --> 1:28\n  |\n1 | view_frustum( camera_pos: [-560.45, -584.87, 47.29], camera_dir: [0.75, 0.65, -0.12], camera_up: [0.0, 0.0, 1.0], fov_y: 0.78, z_near: 3.9, z_far: 3994169.6, window_size: [500.0, 500.0], max_distance: 10 )\n  |                            ^---\n  |\n  = expected number"
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat1Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/lille-eval",
+    "indexed_attributes": {
+      "gpstime": [
+        "RangeIndex"
+      ],
+      "intensity": [
+        "RangeIndex"
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "latency_replay_pps": 1000000,
+    "latency_sample_pps": 1000,
+    "output_file": "lille_%d_%i.json",
+    "points_file": "../../../data/Lille_sorted.las",
+    "queries": {
+      "view_frustum1": "view_frustum( camera_pos: [-560.45, -584.87, 47.29], camera_dir: [0.75, 0.65, -0.12], camera_up: [0.0, 0.0, 1.0], fov_y: 0.78, z_near: 3.9, z_far: 3994169.6, window_size: [500.0, 500.0], max_distance: 10 )"
+    },
+    "target_point_pressure": 1000000
+  }
+}
