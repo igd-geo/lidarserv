@@ -1,18 +1,17 @@
 #!/bin/bash
 
-OUTPUT_DIR="lille"
+OUTPUT_DIR="kitti"
 mkdir -p "$OUTPUT_DIR"
 
 QUERIES=(
-  "attr(Intensity > 128)"
-  "attr(Intensity <= 2)"
-  "attr(GpsTime < 20000)"
-  "attr(GpsTime > 23000)"
-  "attr(PointSourceID >= 10)"
-  "attr(PointSourceID >= 5)"
-  "attr(ScanAngleRank <= 45)"
-  "attr(ScanAngleRank <= 90)"
-  "view_frustum( camera_pos: [-560.45, -584.87, 47.29], camera_dir: [0.75, 0.65, -0.12], camera_up: [0.0, 0.0, 1.0], fov_y: 0.78, z_near: 3.9, z_far: 3994169.6, window_size: [500.0, 500.0], max_distance: 10.0 )"
+  "attr(semantic <= 12)"
+  "attr(semantic == 11)"
+  "attr(35 <= PointSourceID <= 64)"
+  "attr(208 <= PointSourceID <= 248)"
+  "attr(199083995.09382153 <= GpsTime <= 466372692.21052635)"
+  "attr(687577131.20366132 <= GpsTime <= 805552832.00000000)"
+  "attr(visible <= 1)"
+  "attr(ColorRGB <= [10,10,10])"
 )
 
 for QUERY in "${QUERIES[@]}"; do
