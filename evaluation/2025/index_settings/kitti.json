@@ -88,7 +88,7 @@
           "name": "GpsTime",
           "datatype": "F64"
         },
-        "offset": 20,
+        "offset": 24,
         "size": 8
       },
       {
@@ -96,7 +96,7 @@
           "name": "ColorRGB",
           "datatype": "Vec3u16"
         },
-        "offset": 28,
+        "offset": 32,
         "size": 6
       },
       {
@@ -104,7 +104,7 @@
           "name": "semantic",
           "datatype": "U16"
         },
-        "offset": 34,
+        "offset": 38,
         "size": 2
       },
       {
@@ -112,7 +112,7 @@
           "name": "instance",
           "datatype": "U16"
         },
-        "offset": 36,
+        "offset": 40,
         "size": 2
       },
       {
@@ -120,7 +120,7 @@
           "name": "visible",
           "datatype": "U8"
         },
-        "offset": 38,
+        "offset": 42,
         "size": 1
       },
       {
@@ -128,23 +128,83 @@
           "name": "confidence",
           "datatype": "U16"
         },
-        "offset": 39,
+        "offset": 44,
         "size": 2
       }
     ],
     "memory_layout": {
-      "size": 41,
-      "align": 4
+      "size": 48,
+      "align": 8
     }
   },
   "attribute_indexes": [
     {
       "attribute": {
+        "name": "PointSourceID",
+        "datatype": "U16"
+      },
+      "path": "attribute_index_0_pointsourceid.bin",
+      "index": "RangeIndex"
+    },
+    {
+      "attribute": {
+        "name": "ColorRGB",
+        "datatype": "Vec3u16"
+      },
+      "path": "attribute_index_1_colorrgb.bin",
+      "index": "RangeIndex"
+    },
+    {
+      "attribute": {
         "name": "semantic",
         "datatype": "U16"
       },
-      "path": "attribute_index_1_semantic.bin",
+      "path": "attribute_index_2_semantic.bin",
       "index": "RangeIndex"
+    },
+    {
+      "attribute": {
+        "name": "instance",
+        "datatype": "U16"
+      },
+      "path": "attribute_index_3_instance.bin",
+      "index": "RangeIndex"
+    },
+    {
+      "attribute": {
+        "name": "ColorRGB",
+        "datatype": "Vec3u16"
+      },
+      "path": "attribute_index_4_colorrgb.bin",
+      "index": {
+        "SfcIndex": {
+          "nr_bins": 16
+        }
+      }
+    },
+    {
+      "attribute": {
+        "name": "semantic",
+        "datatype": "U16"
+      },
+      "path": "attribute_index_5_semantic.bin",
+      "index": {
+        "SfcIndex": {
+          "nr_bins": 16
+        }
+      }
+    },
+    {
+      "attribute": {
+        "name": "instance",
+        "datatype": "U16"
+      },
+      "path": "attribute_index_6_instance.bin",
+      "index": {
+        "SfcIndex": {
+          "nr_bins": 16
+        }
+      }
     }
   ]
 }

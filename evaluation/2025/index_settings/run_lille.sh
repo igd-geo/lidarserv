@@ -37,7 +37,7 @@ nohup cargo run --release --bin lidarserv-input-file -- replay ../../../data/Lil
 sleep 5
 
 echo "Starting lidarserv-viewer..."
-nohup cargo run --release --bin lidarserv-viewer -- --query "$QUERY" --point-color none --point-size 5 --point-distance 5 > viewer.log 2>&1 &
+nohup cargo run --release --bin lidarserv-viewer -- --query "$QUERY" --point-color intensity --point-size 5 --point-distance 5 > viewer.log 2>&1 &
 
 # Wait for all background processes to complete
 echo "Waiting for all background processes to complete..."
