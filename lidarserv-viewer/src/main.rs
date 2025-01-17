@@ -6,7 +6,7 @@ use lidarserv_common::query::view_frustum::ViewFrustumQuery;
 use lidarserv_server::common::nalgebra::{Matrix4, Point3};
 use lidarserv_server::index::query::Query;
 use lidarserv_server::net::client::viewer::{PartialResult, QueryConfig, ViewerClient};
-use log::{debug, info};
+use log::debug;
 use nalgebra::{point, vector};
 use pasture_core::containers::{BorrowedBuffer, BorrowedMutBufferExt, VectorBuffer};
 use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY, POSITION_3D};
