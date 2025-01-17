@@ -42,6 +42,22 @@ def main():
             nr_points=data["env"]["nr_points"],
         )
 
+    path = join(PROJECT_ROOT, "article_measurements/insertion_speeds.json")
+    with open(path, "r") as f:
+        data = json.load(f)
+        output_folder = f"{path}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+
+        plot_insertion_speed_comparison(data, output_folder)
+
+    path = join(PROJECT_ROOT, "article_measurements/index_sizes.json")
+    with open(path, "r") as f:
+        data = json.load(f)
+        output_folder = f"{path}.diagrams"
+        os.makedirs(output_folder, exist_ok=True)
+        plot_index_size_comparison(data, output_folder)
+        plot_compression_rate_comparison(data, output_folder)
+
     file = join(PROJECT_ROOT, "overview_2024-11-14_1.json")
     with open(file, "r") as f:
         data = json.load(f)
@@ -226,10 +242,10 @@ def main():
                 "Intensity\nLow",
                 "Time\nBig Slice",
                 "Time\nSmall Slice",
-                "PointsourceID\n>=10",
-                "PointsourceID\n>=5",
-                "ScanAngleRank\n<=45°",
-                "ScanAngleRank\n<=90°",
+                "PointsourceID\n≥10",
+                "PointsourceID\n≥5",
+                "ScanAngleRank\n≤45°",
+                "ScanAngleRank\n≤90°",
                 "View Frustum",
             ]
 
@@ -263,22 +279,6 @@ def main():
                 filename=join(output_folder, "average-querying-speed-lille.pdf"),
                 title="Lille"
             )
-
-    path = join(PROJECT_ROOT, "article_measurements/insertion_speeds.json")
-    with open(path, "r") as f:
-        data = json.load(f)
-        output_folder = f"{path}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-
-        plot_insertion_speed_comparison(data, output_folder)
-
-    path = join(PROJECT_ROOT, "article_measurements/index_sizes.json")
-    with open(path, "r") as f:
-        data = json.load(f)
-        output_folder = f"{path}.diagrams"
-        os.makedirs(output_folder, exist_ok=True)
-        plot_index_size_comparison(data, output_folder)
-        plot_compression_rate_comparison(data, output_folder)
 
     files = "article_measurements/lidarserv/kitti_2024-12-26_1.json", "article_measurements/lidarserv/lille_2024-12-26_3.json"
     for path in files:
@@ -463,8 +463,9 @@ def plot_compression_rate_comparison(data, output_folder):
 
     tool_names = {
         "lidarserv": "Lidarserv",
-        "potree_converter": "PotreeConverter",
-        "pgpointcloud": "PgPointCloud"
+        "potree_converter": "PotreeConverter 2.0",
+        "pgpointcloud": "PgPointCloud",
+        "laz": "Las/Laz"
     }
 
     for i, (dataset, dataset_data) in enumerate(data.items()):
@@ -487,7 +488,7 @@ def plot_compression_rate_comparison(data, output_folder):
 
         bars = ax.bar(x, compression_rates)
 
-        tools = [tool_names[tool] for tool in tools]
+        tools = [tool_names.get(tool, tool) for tool in tools]
         ax.set_title(dataset_names[dataset])
         ax.set_xticks(x)
         ax.set_xticklabels(tools)
@@ -495,12 +496,12 @@ def plot_compression_rate_comparison(data, output_folder):
         for bar, rate in zip(bars, compression_rates):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f'{rate:.2f}%', ha='center', va='bottom')
 
-        axs[0].set_ylabel("Compression Rate | %")
-        handles, labels = axs[0].get_legend_handles_labels()
-        fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.05), ncol=3)
+    axs[0].set_ylabel("Compression Rate | %")
+    handles, labels = axs[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.05), ncol=3)
 
-        plt.tight_layout()
-        plt.savefig(join(output_folder, "compression_rate_comparison.pdf"))
+    plt.tight_layout()
+    plt.savefig(join(output_folder, "compression_rate_comparison.pdf"))
 
 def plot_index_size_comparison(data, output_folder):
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
@@ -513,26 +514,27 @@ def plot_index_size_comparison(data, output_folder):
 
     tool_names = {
         "lidarserv": "Lidarserv",
-        "potree_converter": "PotreeConverter",
-        "pgpointcloud": "PgPointCloud"
+        "potree_converter": "PotreeConverter 2.0",
+        "pgpointcloud": "PgPointCloud",
+        "laz": "Las/Laz"
     }
 
     for i, (dataset, dataset_data) in enumerate(data.items()):
         ax = axs[i]
         tools = dataset_data.keys()
         tools = [tool for tool in tools if tool != 'input_size']
-        uncompressed = [dataset_data[tool]['uncompressed'] for tool in tools]
-        compressed = [dataset_data[tool]['compressed'] for tool in tools]
+        uncompressed = [dataset_data[tool]['uncompressed'] / (1024 ** 3) for tool in tools]
+        compressed = [dataset_data[tool]['compressed'] / (1024 ** 3) for tool in tools]
 
         x = np.arange(len(uncompressed))
         width = 0.35
 
-        ax.bar(x - width / 2, uncompressed, width, label='Uncompressed', color='#F4B400')
-        ax.bar(x + width / 2, compressed, width, label='Compressed', color='#4285F4')
+        bars1 = ax.bar(x - width / 2, uncompressed, width, label='Uncompressed', color='#F4B400')
+        bars2 = ax.bar(x + width / 2, compressed, width, label='Compressed', color='#4285F4')
 
         # Add horizontal line for input size
-        input_size = dataset_data['input_size']
-        ax.axhline(y=input_size, color='r', linestyle='--', label='Input Size')
+        input_size = dataset_data['input_size'] / (1024 ** 3)
+        line = ax.axhline(y=input_size, color='r', linestyle='--', label='Input Size')
 
         tools = [tool_names[tool] for tool in tools]
         ax.set_title(dataset_names[dataset])
@@ -540,12 +542,11 @@ def plot_index_size_comparison(data, output_folder):
         ax.set_xticklabels(tools)
 
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}GB"))
-        
 
     axs[0].set_ylabel("Size of Index | Gigabytes")
 
-    plt.legend()
-    plt.tight_layout()
+    ax.legend()
+    fig.tight_layout()
     plt.savefig(join(output_folder, "index_size_comparison.pdf"))
 
 def plot_insertion_speed_comparison(data, output_folder):
@@ -557,7 +558,7 @@ def plot_insertion_speed_comparison(data, output_folder):
 
     tool_names = {
         "lidarserv": "Lidarserv",
-        "potree_converter": "PotreeConverter",
+        "potree_converter": "PotreeConverter 2.0",
         "pgpointcloud": "PgPointCloud"
     }
 
@@ -831,7 +832,7 @@ def plot_query_by_time(data, filename, queries, labels, title=None):
             else:
                 times["no_compression"].append(query_time)
 
-    fig, ax = plt.subplots(figsize=[10, 6])
+    fig, ax = plt.subplots(figsize=[10, 5.5])
     index = range(len(queries))
 
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
@@ -886,7 +887,7 @@ def plot_query_by_num_points(data, filename, queries, labels, title=None):
             else:
                 points["no_point_filtering_no_attribute_index"].append(num_points)
 
-    fig, ax = plt.subplots(figsize=[10, 6])
+    fig, ax = plt.subplots(figsize=[10, 5.5])
     index = range(len(queries))
 
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
@@ -903,9 +904,9 @@ def plot_query_by_num_points(data, filename, queries, labels, title=None):
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}M"))
 
     custom_legend_labels = [
-        'Spatial Index',
-        'Spatial Index + Attribute Index',
-        'Spatial Index + Attribute Index + Point Filtering'
+        'No Attribute Index',
+        'Attribute Index',
+        'Attribute Index + Sequential Filtering'
     ]
     custom_legend_colors = colors[:len(custom_legend_labels)]
     custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
@@ -945,7 +946,7 @@ def plot_query_by_num_nodes(data, filename, queries, labels, title=None):
             else:
                 nodes["no_point_filtering_no_attribute_index"].append(num_nodes)
 
-    fig, ax = plt.subplots(figsize=[10, 6])
+    fig, ax = plt.subplots(figsize=[10, 5.5])
     index = range(len(queries))
 
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
@@ -961,8 +962,8 @@ def plot_query_by_num_nodes(data, filename, queries, labels, title=None):
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}K"))
 
     custom_legend_labels = [
-        'Spatial Index',
-        'Spatial Index + Attribute Index',
+        'No Attribute Index',
+        'Attribute Index',
     ]
     custom_legend_colors = colors[:len(custom_legend_labels)]
     custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
