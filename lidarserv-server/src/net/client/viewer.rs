@@ -159,7 +159,7 @@ impl ViewerClient {
                 if protocol_version != PROTOCOL_VERSION {
                     return Err(LidarServerError::Protocol(format!(
                         "Protocol version mismatch (Server: {}, Client: {}).",
-                        protocol_version, protocol_version
+                        protocol_version, PROTOCOL_VERSION
                     )));
                 }
             }
