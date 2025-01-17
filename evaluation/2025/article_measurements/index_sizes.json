@@ -1,35 +1,47 @@
 {
   "ahn4": {
-    "input_size": 364.93,
+    "input_size": 391842187005,
     "lidarserv": {
-      "uncompressed": 323.93,
-      "compressed": 152.42
+      "uncompressed": 323927511101,
+      "compressed": 152427752414
     },
     "potree_converter": {
-      "uncompressed": 326.53,
-      "compressed": 69.91
+      "uncompressed": 334370811904,
+      "compressed": 71587942400
+    },
+    "laz": {
+      "uncompressed": 391842187005,
+      "compressed": 107765139353
     }
   },
   "kitti": {
-    "input_size": 33.03,
+    "input_size": 33027668317,
     "lidarserv": {
-      "uncompressed": 33.25,
-      "compressed": 10.61
+      "uncompressed": 33256538870,
+      "compressed": 10608311292
     },
     "potree_converter": {
-      "uncompressed": 33.05,
-      "compressed": 6.43
+      "uncompressed": 33844105216,
+      "compressed": 6580178944
+    },
+    "laz": {
+      "uncompressed": 33027668317,
+      "compressed": 4400413632
     }
   },
   "lille": {
-    "input_size": 3.36,
+    "input_size": 3360000227,
     "lidarserv": {
-      "uncompressed": 3.37,
-      "compressed": 1.08
+      "uncompressed": 3367912699,
+      "compressed": 1077822275
     },
     "potree_converter": {
-      "uncompressed": 3.4,
-      "compressed": 0.6
+      "uncompressed": 3481141248,
+      "compressed": 642736128
+    },
+    "laz": {
+      "uncompressed": 3360000227,
+      "compressed": 681865689
     }
   }
 

@@ -10,7 +10,6 @@ QUERIES=(
   "attr(208 <= PointSourceID <= 248)"
   "attr(199083995.09382153 <= GpsTime <= 466372692.21052635)"
   "attr(687577131.20366132 <= GpsTime <= 805552832.00000000)"
-  "attr(visible <= 1)"
   "attr(ColorRGB <= [10,10,10])"
 )
 
