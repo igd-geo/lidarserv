@@ -1359,7 +1359,7 @@ dependencies = [
 
 [[package]]
 name = "lidarserv-common"
-version = "0.1.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -1381,7 +1381,7 @@ dependencies = [
 
 [[package]]
 name = "lidarserv-evaluation"
-version = "0.1.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1412,7 +1412,7 @@ dependencies = [
 
 [[package]]
 name = "lidarserv-input-file"
-version = "0.1.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -1433,7 +1433,7 @@ dependencies = [
 
 [[package]]
 name = "lidarserv-query"
-version = "0.1.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "clap 4.5.23",
@@ -1450,7 +1450,7 @@ dependencies = [
 
 [[package]]
 name = "lidarserv-server"
-version = "0.1.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1475,7 +1475,7 @@ dependencies = [
 
 [[package]]
 name = "lidarserv-viewer"
-version = "0.1.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -2122,7 +2122,7 @@ dependencies = [
 
 [[package]]
 name = "point-cloud-viewer"
-version = "0.1.0"
+version = "2.0.0"
 dependencies = [
  "bytemuck",
  "crossbeam-channel",
