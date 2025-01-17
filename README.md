@@ -1,4 +1,4 @@
-# Lidar Serv
+# LidarServ
 
 LidarServ is a real time indexer for LiDAR point clouds. It can index, query and visualize point clouds live while it is being recorded.
 
@@ -60,7 +60,7 @@ cd data
 wget -O ahn.laz https://ns_hwh.fundaments.nl/hwh-ahn/AHN3/LAZ/C_25BZ2.LAZ
 ```
 
-The next step requires an uncompressed `las` file. You can use any tool of your liking to convert the `laz` file to `las`. The following command uses the `laszip` command from the LAStools([GitHub](https://github.com/LAStools/LAStools), [Homepage](https://lastools.github.io/), [Download](https://rapidlasso.de/downloads/)) suite: 
+The next step requires an uncompressed `las` file. You can use any tool of your liking to convert the `laz` file to `las`. The following command uses the `laszip` command from the LAStools ([GitHub](https://github.com/LAStools/LAStools), [Homepage](https://lastools.github.io/), [Download](https://rapidlasso.de/downloads/)) suite: 
 
 ```
 laszip -i ahn.laz -o ahn.las
@@ -222,7 +222,7 @@ lidarserv-viewer
 
 ## Publications
 
- - Hermann, Paul, Michel, Krämer, Tobias, Dorra, and Arjan, Kuĳper. "Min-Max Modifiable Nested Octrees M3NO: Indexing Point Clouds with Arbitrary Attributes in Real Time." . In Computer Graphics and Visual Computing (CGVC). The Eurographics Association, 2024. [https://doi.org/10.2312/cgvc.20241235]
- - Hermann, Paul. “Real-Time Indexing of Arbitrarily Attributed Point Clouds,” 2023. [https://publica.fraunhofer.de/handle/publica/458643]. [https://github.com/Pahegi/bachelor-thesis].
- - Bormann, Pascal, Tobias, Dorra, Bastian, Stahl, and Dieter W., Fellner. "Real-time Indexing of Point Cloud Data During LiDAR Capture." . In Computer Graphics and Visual Computing (CGVC). The Eurographics Association, 2022. [https://doi.org/10.2312/cgvc.20221173]
- - Dorra, Tobias. “Indexing of LiDAR Point Clouds during Capture,” 2022. [https://publica.fraunhofer.de/handle/publica/416643]. [https://github.com/tobias93/master-thesis].
+ - Hermann, Paul, Michel, Krämer, Tobias, Dorra, and Arjan, Kuĳper. "Min-Max Modifiable Nested Octrees M3NO: Indexing Point Clouds with Arbitrary Attributes in Real Time." . In Computer Graphics and Visual Computing (CGVC). The Eurographics Association, 2024. https://doi.org/10.2312/cgvc.20241235.
+ - Hermann, Paul. “Real-Time Indexing of Arbitrarily Attributed Point Clouds,” 2023. https://publica.fraunhofer.de/handle/publica/458643. https://github.com/Pahegi/bachelor-thesis.
+ - Bormann, Pascal, Tobias, Dorra, Bastian, Stahl, and Dieter W., Fellner. "Real-time Indexing of Point Cloud Data During LiDAR Capture." . In Computer Graphics and Visual Computing (CGVC). The Eurographics Association, 2022. https://doi.org/10.2312/cgvc.20221173.
+ - Dorra, Tobias. “Indexing of LiDAR Point Clouds during Capture,” 2022. https://publica.fraunhofer.de/handle/publica/416643. https://github.com/tobias93/master-thesis.
