@@ -220,6 +220,130 @@ While the replay command is still running, we can start the viewer to get a live
 lidarserv-viewer
 ```
 
+## Query language
+
+LidarServ comes with a query language that can be used to select a subset of the indexed point cloud based on some criteria. 
+
+It can for example be used with the `lidarserv-query` tool that executes the query and writes the query result to a `las` file. The following command will connect to the running LidarServ server, execute the query `full`, and write the result to `./query-result.las`. This will basically create a dump of the entire point cloud.
+
+```bash
+lidarserv-query --outfile ./query-result.las "full"
+```
+
+The following syntax elements can be used in the query language:
+
+ - `full`: Matches any point.
+ - `empty`: Matches no point.
+ - `lod(x)`: Matches any point from level of detail x or lower. (x is a positive integer)
+ - `aabb([xmin, ymin, zmin], [xmax, ymax, zmax])`: Matches any point within the given bounding box. (xmin, ymin, zmin, xmax, ymax, zmax are floating point numbers)
+ - Attribute queries select points based on the value of some point attribute. The following kinds of attribute queries exist:
+    - Select all points with the given attribute value:
+        ```
+        attr(attribute == val)
+        ``` 
+    - Select all points, where the attribute value is larger / smaller than the provided value:
+        ```
+        attr(attribute < val)
+        attr(attribute <= val)
+        attr(attribute > val)
+        attr(attribute >= val)
+        ```
+    - Select all points, where the attribute value is within the given range:
+        ```
+        attr(val1 < attribute < val2)
+        attr(val1 < attribute <= val2)
+        attr(val1 <= attribute < val2)
+        attr(val1 <= attribute <= val2)
+        ```
+    - Select all points that have a different attribute value:
+        ```
+        attr(attribute != val)
+        ``` 
+    In these examples, `attribute` is always the name of a point attribute, like `Intensity` or `Classification`. Note that attribute names are case sensitive. The placeholders `val`, `val1` and `val2` have to match the datatype of the queried attribute. For example, the classification is usually a positive integer, but the gps time can be a floating point number. Attributes with vector data types such as point colors or normals are written using square brackets: `attr(ColorRGB < [75, 75, 75])`
+
+ - View frustum queries take a set of camera parameters. They will only match points that are in the cameras view frustum. Points closer to the camera will have a higher level of detail, points further away will have a lower level of detail, so that after perspective projection, the given `max_distance` between points in pixels is upheld.
+
+    ```
+    view_frustum(
+        camera_pos: [x1, y1, z1],
+        camera_dir: [x2, y2, z2],
+        camera_up: [x3, y3, z3],
+        fov_y: f4,
+        z_near: f5,
+        z_far: f6,
+        window_size: [x7, y7] ,
+        max_distance: f8
+    )
+    ```
+    (x*, y*, z*, f* are all floating point numbers.)
+ - `(q)`: Brackets around a (sub)query can be used to override the order of operator precedence. The default operator precedence is: brackets > not > and > or.
+ - `!q`: Inverts the query q. Matches any point that is not matched by q and vice-versa.
+ - `q1 and q2`: Matches the intersection of queries q1 and q2.
+ - `q1 or q2`: Matches the union of queries q1 and q2.
+
+### Example queries
+
+The following example queries have been tested with the same point cloud that we also used in the tutorial above.
+
+Get an overview of the entire point cloud at a lower resolution:
+
+```
+lod(2)
+```
+
+Get a part of the point cloude in a small bounding box:
+
+```
+aabb(
+    [116027.90, 492946.03, -50.0],
+    [116396.33, 493259.96, 50.0]
+)
+```
+
+Get a part of the point cloud in a (larger) bounding box at a lower resolution:
+
+```
+lod(2) and aabb(
+    [115003.95, 491100.58, -50.0],
+    [119956.85, 493163.37, 50.0]
+)
+```
+
+Select all points with classification 26 (bridges). **Warning**: The tutorial above does not create attribute indexes, in which case this query takes really long to execute. You can make it faster by adding attribute indexes in the `lidarserv-server init` step.
+
+```
+attr(Classification == 26)
+```
+
+Select a single bridge at full resolution and the water surface at a lower resolution:
+
+```
+aabb(
+    [116036.137024, 493358.135986, -50.0],
+    [116304.460999, 493491.625000, 50.0]
+) and (
+    attr(Classification == 26)
+    or (
+        attr(Classification == 9) and lod(4)
+    )
+)
+```
+
+A camera view frustum query:
+
+```
+view_frustum(
+    camera_pos: [117876.57, 490596.26, 20.0],
+    camera_dir: [0.75, 0.65, -0.12],
+    camera_up: [0.0, 0.0, 1.0],
+    fov_y : 0.78,
+    z_near: 5.0,
+    z_far : 10000.0,
+    window_size: [500.0, 500.0],
+    max_distance: 10
+)
+```
+
 ## Publications
 
  - Hermann, Paul, Michel, Krämer, Tobias, Dorra, and Arjan, Kuĳper. "Min-Max Modifiable Nested Octrees M3NO: Indexing Point Clouds with Arbitrary Attributes in Real Time." . In Computer Graphics and Visual Computing (CGVC). The Eurographics Association, 2024. https://doi.org/10.2312/cgvc.20241235.
