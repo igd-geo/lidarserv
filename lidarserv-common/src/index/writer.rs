@@ -133,10 +133,7 @@ impl Inboxes {
             .max_by(|&(cell_a, a), &(cell_b, b)| self.priority_function.cmp(cell_a, a, cell_b, b))
             .map(|(&id, _)| id);
 
-        let node_id = match node_id {
-            None => return None,
-            Some(i) => i,
-        };
+        let node_id = node_id?;
         let task = self.tasks.remove(&node_id).unwrap();
         self.locked.insert(
             node_id,

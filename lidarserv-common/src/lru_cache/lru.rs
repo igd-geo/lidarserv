@@ -166,10 +166,7 @@ where
     /// reference to its value.
     pub fn touch(&mut self, key: &K) -> Option<&mut V> {
         // get the entry
-        let ref_entry = match self.entries.get_mut(key) {
-            None => return None,
-            Some(r) => r,
-        };
+        let ref_entry = self.entries.get_mut(key)?;
 
         unsafe {
             // remove from its old position in the linked list
@@ -189,10 +186,7 @@ where
     /// Removes the entry with the given key and returns the value, that it stored.
     pub fn remove(&mut self, key: &K) -> Option<V> {
         // remove from hashmap
-        let mut entry = match self.entries.remove(key) {
-            None => return None,
-            Some(e) => e,
-        };
+        let mut entry = self.entries.remove(key)?;
 
         // remove from linked list
         unsafe {
