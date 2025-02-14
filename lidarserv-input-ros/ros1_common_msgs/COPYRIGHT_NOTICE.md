@@ -2,11 +2,11 @@
 
 The contents of this folder are a copy of the common_msgs ROS package.
 
-Link: http://wiki.ros.org/common_msgs
+Link: http://wiki.ros.org/common_msgs  
 Link: https://github.com/ros/common_msgs/tree/1.13.1
 
-Maintainer: Michel Hidalgo
-Author: Tully Foote
+Maintainer: Michel Hidalgo  
+Author: Tully Foote  
 License: BSD
 
 # License text

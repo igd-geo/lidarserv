@@ -2,11 +2,11 @@
 
 The contents of this folder are a copy of the tf2_msgs ROS package.
 
-Link: http://wiki.ros.org/tf2_msgs
+Link: http://wiki.ros.org/tf2_msgs  
 Link: https://github.com/ros/geometry2/tree/0.7.7/tf2_msgs
 
-Maintainer: Tully Foote
-Author: Eitan Marder-Eppstein
+Maintainer: Tully Foote  
+Author: Eitan Marder-Eppstein  
 License: BSD
 
 # License text
