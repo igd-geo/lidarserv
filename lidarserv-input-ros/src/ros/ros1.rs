@@ -1,16 +1,15 @@
+use super::{Command, Endianess, Field, PointCloudMessage, Transform, Type};
 use crate::cli::AppOptions;
-
-use super::{Command, PointCloudFrame, Transform};
 use anyhow::{anyhow, Result};
-use log::info;
-use nalgebra::{vector, Quaternion};
+use log::{info, trace, warn};
+use nalgebra::{vector, Quaternion, UnitQuaternion};
 use std::{sync::mpsc, thread, time::Duration};
 
 pub fn ros_thread(
     args: AppOptions,
     commands_rx: mpsc::Receiver<Command>,
     transforms_tx: mpsc::Sender<Transform>,
-    points_tx: mpsc::Sender<PointCloudFrame>,
+    points_tx: mpsc::SyncSender<PointCloudMessage>,
 ) -> Result<()> {
     // ROS init
     info!("Connecting to ROS master...");
@@ -21,12 +20,20 @@ pub fn ros_thread(
 
     // Subscribe to tf
     info!(
-        "Subscribing to transform tree topic `{}` ...",
-        args.tf_topic
+        "Subscribing to transform tree topics `{}`, `{}` ...",
+        args.tf_topic, args.tf_static_topic
     );
+    let transforms_tx_clone = transforms_tx.clone();
     let tf_callback = move |msg: messages::tf2_msgs::TFMessage| {
-        for tf in parse_tf_message(msg) {
+        trace!("TF message: {msg:?}");
+        for tf in parse_tf_message(msg, false) {
             transforms_tx.send(tf).ok();
+        }
+    };
+    let tf_static_callback = move |msg: messages::tf2_msgs::TFMessage| {
+        trace!("TF static message: {msg:?}");
+        for tf in parse_tf_message(msg, true) {
+            transforms_tx_clone.send(tf).ok();
         }
     };
     let _tf_subscriber = match rosrust::subscribe(&args.tf_topic, 100, tf_callback) {
@@ -38,15 +45,26 @@ pub fn ros_thread(
             ))
         }
     };
-    info!("Subscribed to transform tree topic.");
+    let _tf_static_subscriber =
+        match rosrust::subscribe(&args.tf_static_topic, 100, tf_static_callback) {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(anyhow!(
+                    "Failed to subscribe to transform tree topic `{}`: {e}",
+                    args.tf_static_topic
+                ))
+            }
+        };
+    info!("Subscribed to transform tree topics.");
 
     // Subscribe to pointcloud
     info!(
         "Subscribing to point cloud topic `{}` ...",
         args.pointcloud_topic
     );
-    let pointcloud_callback = move |_msg: messages::sensor_msgs::PointCloud2| {
-        points_tx.send(PointCloudFrame {}).ok();
+    let pointcloud_callback = move |msg: messages::sensor_msgs::PointCloud2| {
+        trace!("PointCloud2 message: {} points", msg.width * msg.height);
+        points_tx.send(parse_pointcloud_message(msg)).ok();
     };
     let _pointcloud_subscriber =
         match rosrust::subscribe(&args.pointcloud_topic, 100, pointcloud_callback) {
@@ -69,27 +87,77 @@ pub fn ros_thread(
         }
     });
 
+    // ROS event loop
     rosrust::spin();
     Ok(())
 }
 
-fn parse_tf_message(msg: messages::tf2_msgs::TFMessage) -> impl Iterator<Item = Transform> {
-    msg.transforms.into_iter().map(|t| Transform {
+fn parse_tf_message(
+    msg: messages::tf2_msgs::TFMessage,
+    is_static: bool,
+) -> impl Iterator<Item = Transform> {
+    msg.transforms.into_iter().map(move |t| Transform {
         frame: t.child_frame_id,
         parent_frame: t.header.frame_id,
+        is_static,
         time_stamp: Duration::new(t.header.stamp.sec as u64, t.header.stamp.nsec),
         translation: vector![
             t.transform.translation.x,
             t.transform.translation.y,
             t.transform.translation.z
         ],
-        rotation: Quaternion::new(
+        rotation: UnitQuaternion::new_normalize(Quaternion::new(
             t.transform.rotation.w,
             t.transform.rotation.x,
             t.transform.rotation.y,
             t.transform.rotation.z,
-        ),
+        )),
     })
+}
+
+fn parse_pointcloud_message(msg: messages::sensor_msgs::PointCloud2) -> PointCloudMessage {
+    PointCloudMessage {
+        frame: msg.header.frame_id,
+        time_stamp: Duration::new(msg.header.stamp.sec as u64, msg.header.stamp.nsec),
+        endianess: if msg.is_bigendian {
+            Endianess::BigEndian
+        } else {
+            Endianess::LittleEndian
+        },
+        width: msg.width as usize,
+        height: msg.height as usize,
+        point_step: msg.point_step as usize,
+        row_step: msg.row_step as usize,
+        fields: msg
+            .fields
+            .into_iter()
+            .flat_map(|f| {
+                Some(Field {
+                    typ: match f.datatype {
+                        1 => Type::I8,
+                        2 => Type::U8,
+                        3 => Type::I16,
+                        4 => Type::U16,
+                        5 => Type::I32,
+                        6 => Type::U32,
+                        7 => Type::F32,
+                        8 => Type::F64,
+                        t => {
+                            warn!(
+                                "Unrecognized type {} for field {} in PointCloud2 message. Ignoring this field.",
+                                t, &f.name
+                            );
+                            return None;
+                        }
+                    },
+                    name: f.name,
+                    offset: f.offset as usize,
+                    count: f.count as usize,
+                })
+            })
+            .collect(),
+        data: msg.data,
+    }
 }
 
 mod messages {

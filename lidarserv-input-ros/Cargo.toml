@@ -12,10 +12,11 @@ pasture-core.workspace = true
 pasture-io.workspace = true
 anyhow = "1.0"
 nalgebra.workspace = true
-#tokio = { version = "1.28", features = ["full"] }
-#lidarserv-server = { path = "../lidarserv-server" }
-#lidarserv-common = { path = "../lidarserv-common" }
-#bytemuck = "1.17"
-#thiserror = "2.0"
+tokio = { version = "1.28", features = ["full"] }
+lidarserv-server = { path = "../lidarserv-server" }
+lidarserv-common = { path = "../lidarserv-common" }
+bytemuck = "1.17"
+thiserror = "2.0"
 rosrust = "0.9.12"
 ctrlc = "3.4.5"
+byteorder = "1.5"

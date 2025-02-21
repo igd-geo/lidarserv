@@ -15,7 +15,7 @@ use clap::Parser;
 ///     via environment variable: `ROS_NAMESPACE=my_namespace`
 ///  - The node name:
 ///     via command line: `__name:=lidarserv`
-#[derive(Debug, Parser)]
+#[derive(Debug, Parser, Clone)]
 #[command(verbatim_doc_comment)]
 pub struct AppOptions {
     /// Verbosity of the command line output.
@@ -30,4 +30,23 @@ pub struct AppOptions {
     /// Usually, the default value is already correct.
     #[clap(long, default_value = "/tf")]
     pub tf_topic: String,
+
+    /// The ros topic for the static transforms in the transform tree.
+    /// Usually, the default value is already correct.
+    #[clap(long, default_value = "/tf_static")]
+    pub tf_static_topic: String,
+
+    /// Name of the fixed coordinate frame that the lidar points will be
+    /// transformed to before sending to the lidarserv server.
+    // note: The default should probably be "map" according to REP-105 https://www.ros.org/reps/rep-0105.html
+    #[clap(long, default_value = "camera_init")]
+    pub world_frame: String,
+
+    /// Hostname of the lidarserv server
+    #[clap(long, default_value = "::0")]
+    pub host: String,
+
+    /// Port of the lidarserv server
+    #[clap(long, default_value = "4567")]
+    pub port: u16,
 }
