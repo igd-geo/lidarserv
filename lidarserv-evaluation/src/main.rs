@@ -367,7 +367,8 @@ fn evaluate(
             for (query_name, query) in &base_config.queries {
                 processor_cooldown(base_config);
                 info!("Measuring query perf: {query_name}: {query}");
-                let sensorpos_query_perf = measure_one_query(&mut index, query, index_config.enable_point_filtering);
+                let sensorpos_query_perf =
+                    measure_one_query(&mut index, query, index_config.enable_point_filtering);
                 query_perf_results.insert(query_name.clone(), sensorpos_query_perf);
             }
             let result = json!(query_perf_results);

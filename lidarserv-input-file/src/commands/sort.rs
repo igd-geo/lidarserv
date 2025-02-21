@@ -1,7 +1,6 @@
 use crate::cli::SortOptions;
 use anyhow::{anyhow, Result};
 use log::info;
-use rayon::prelude::ParallelSliceMut;
 use pasture_core::{
     containers::{
         BorrowedBuffer, BorrowedBufferExt, InterleavedBuffer, InterleavedBufferMut,
@@ -17,6 +16,8 @@ use pasture_io::{
     },
     las_rs::{Header, Point, Vlr},
 };
+use rayon::prelude::ParallelSliceMut;
+use std::path::PathBuf;
 use std::{
     collections::VecDeque,
     fs::File,
@@ -24,7 +25,6 @@ use std::{
     path::Path,
     slice,
 };
-use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
 pub async fn sort(options: SortOptions) -> Result<()> {
@@ -45,7 +45,11 @@ pub async fn sort(options: SortOptions) -> Result<()> {
             for entry in dir {
                 let entry = entry?;
                 let path = entry.path();
-                if path.extension().map(|ext| ext.eq("las") || ext.eq("laz")).unwrap_or(false) {
+                if path
+                    .extension()
+                    .map(|ext| ext.eq("las") || ext.eq("laz"))
+                    .unwrap_or(false)
+                {
                     files.push(path);
                 }
             }
@@ -69,8 +73,14 @@ pub async fn sort(options: SortOptions) -> Result<()> {
 
     // compression must be same in all input files
     let first_ext = files.first().unwrap().extension().unwrap();
-    if files.iter().map(|path| path.extension().unwrap()).any(|ext| ext != first_ext) {
-        return Err(anyhow!("Extensions of input files must be the same for all files."));
+    if files
+        .iter()
+        .map(|path| path.extension().unwrap())
+        .any(|ext| ext != first_ext)
+    {
+        return Err(anyhow!(
+            "Extensions of input files must be the same for all files."
+        ));
     }
 
     // layouts need to match
@@ -218,7 +228,7 @@ impl PartialEq for FloatOrd {
 struct Merger {
     input: VecDeque<tempfile::TempPath>,
     layout: PointLayout,
-    temp_dir: Option<PathBuf>
+    temp_dir: Option<PathBuf>,
 }
 
 impl Merger {
