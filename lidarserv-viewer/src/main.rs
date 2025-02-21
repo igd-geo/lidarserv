@@ -8,7 +8,9 @@ use lidarserv_server::index::query::Query;
 use lidarserv_server::net::client::viewer::{PartialResult, QueryConfig, ViewerClient};
 use log::debug;
 use nalgebra::{point, vector};
-use pasture_core::containers::{BorrowedBuffer, BorrowedMutBufferExt, VectorBuffer};
+use pasture_core::containers::{
+    BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, VectorBuffer,
+};
 use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY, POSITION_3D};
 use pasture_core::layout::conversion::BufferLayoutConverter;
 use pasture_core::layout::PointType;
@@ -80,13 +82,14 @@ fn main(args: Args) {
         let (updates_sender, updates_receiver) = crossbeam_channel::bounded(5);
         let (bbox_sender, bbox_receiver) = crossbeam_channel::bounded(1);
 
+        let args_clone = args.clone();
         thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
             rt.block_on(network_thread(
-                args,
+                args_clone,
                 &mut exit_receiver,
                 updates_sender,
                 tokio_camera_receiver,
@@ -130,6 +133,10 @@ fn main(args: Args) {
                 .unwrap();
         }
 
+        // keep track of largest and smallest intensity for coloration.
+        let mut min_intensity = u16::MAX;
+        let mut max_intensity = u16::MIN;
+
         // keep applying updates
         let mut point_clouds = HashMap::new();
         for update in updates_receiver.iter() {
@@ -139,6 +146,35 @@ fn main(args: Args) {
                     window.remove_point_cloud(point_cloud_id).unwrap();
                 }
                 PartialResult::UpdateNode(update) => {
+                    if update.points.point_layout().has_attribute(&INTENSITY) {
+                        for intensity in update.points.view_attribute::<u16>(&INTENSITY) {
+                            let mut changed = false;
+                            if intensity > max_intensity {
+                                max_intensity = intensity;
+                                changed = true;
+                            }
+                            if intensity < min_intensity {
+                                min_intensity = intensity;
+                                changed = true;
+                            }
+                            if changed && args.point_color == PointColorArg::Intensity {
+                                window
+                                    .set_default_point_cloud_settings(PointCloudRenderSettings {
+                                        point_color: PointColor::ScalarAttribute(
+                                            ScalarAttributeColoring {
+                                                attribute: INTENSITY,
+                                                color_map: ColorMap::fire(),
+                                                min: min_intensity as f32,
+                                                max: max_intensity as f32,
+                                            },
+                                        ),
+                                        point_shape: PointShape::Round,
+                                        point_size: PointSize::Fixed(args.point_size),
+                                    })
+                                    .unwrap();
+                            }
+                        }
+                    }
                     if let Some(point_cloud_id) = point_clouds.get(&update.node_id) {
                         // update
                         window
