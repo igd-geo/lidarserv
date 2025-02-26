@@ -1,8 +1,11 @@
 use anyhow::Result;
 use nalgebra::{matrix, Matrix4, UnitQuaternion, Vector3};
-use std::{sync::mpsc, time::Duration};
+use std::{
+    sync::{mpsc, Arc},
+    time::Duration,
+};
 
-use crate::cli::AppOptions;
+use crate::{cli::AppOptions, status::Status};
 
 mod ros1;
 
@@ -10,11 +13,12 @@ pub fn ros_thread(
     args: AppOptions,
     commands_rx: mpsc::Receiver<Command>,
     transforms_tx: mpsc::Sender<Transform>,
-    points_tx: mpsc::SyncSender<PointCloudMessage>,
+    points_tx: mpsc::Sender<PointCloudMessage>,
+    status: Arc<Status>,
 ) -> Result<()> {
     // in the future this could call either ros1 or ros2
     // (once we add support for ros2)
-    ros1::ros_thread(args, commands_rx, transforms_tx, points_tx)
+    ros1::ros_thread(args, commands_rx, transforms_tx, points_tx, status)
 }
 
 pub enum Command {

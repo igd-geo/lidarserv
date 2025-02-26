@@ -2,6 +2,7 @@ use crate::{
     cli::AppOptions,
     lidarserv::LidarservPointCloudInfo,
     ros::{Endianess, Field, PointCloudMessage, Transform},
+    status::Status,
     transform_tree::{LookupError, TransformTree},
 };
 use anyhow::anyhow;
@@ -17,19 +18,51 @@ use pasture_core::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    sync::mpsc,
+    sync::{
+        atomic::Ordering,
+        mpsc::{self, RecvTimeoutError},
+        Arc,
+    },
+    thread,
     time::{Duration, Instant},
 };
+const MAX_WAIT_TIME: Duration = Duration::from_secs(10);
+
+enum MsgOrExit {
+    Msg(PointCloudMessage),
+    Exit,
+}
 
 pub fn processing_thread(
     args: AppOptions,
     info_rx: mpsc::Receiver<LidarservPointCloudInfo>,
     ros_rx: mpsc::Receiver<PointCloudMessage>,
     transforms_rx: mpsc::Receiver<Transform>,
-    points_tx: tokio::sync::mpsc::Sender<VectorBuffer>,
+    points_tx: tokio::sync::mpsc::UnboundedSender<VectorBuffer>,
+    stop_process_rx: mpsc::Receiver<()>,
+    status: Arc<Status>,
 ) -> Result<(), anyhow::Error> {
     let info = info_rx.recv()?;
     drop(info_rx);
+
+    let (msg_or_exit_tx, msg_or_exit_rx) = mpsc::sync_channel(0);
+    {
+        let msg_or_exit_tx = msg_or_exit_tx.clone();
+        thread::spawn(move || {
+            for _ in stop_process_rx {
+                msg_or_exit_tx.send(MsgOrExit::Exit).ok();
+            }
+        });
+    }
+    {
+        let msg_or_exit_tx = msg_or_exit_tx.clone();
+        thread::spawn(move || {
+            for msg in ros_rx {
+                msg_or_exit_tx.send(MsgOrExit::Msg(msg)).ok();
+            }
+            msg_or_exit_tx.send(MsgOrExit::Exit).ok();
+        });
+    }
 
     // layout for positions in global space (always Vec4F64)
     let global_attributes: Vec<_> = info
@@ -54,7 +87,29 @@ pub fn processing_thread(
     // transform tree for transforming coordinates into the world frame
     let mut transform_tree = TransformTree::new();
 
-    for msg in ros_rx {
+    loop {
+        // keep maintaining the transform tree to avoid the
+        // transforms_rx channel to fill up too much.
+        let mut clean_before = None;
+        for transform in transforms_rx.try_iter() {
+            clean_before = Some(transform.time_stamp.saturating_sub(MAX_WAIT_TIME));
+            transform_tree.add(transform);
+        }
+        if let Some(time_stamp) = clean_before {
+            transform_tree.cleanup_before(time_stamp);
+        }
+
+        // receive next message
+        let msg = match msg_or_exit_rx.recv_timeout(Duration::from_secs(1)) {
+            Ok(MsgOrExit::Msg(m)) => m,
+            Ok(MsgOrExit::Exit) => break,
+            Err(RecvTimeoutError::Timeout) => continue,
+            Err(RecvTimeoutError::Disconnected) => break,
+        };
+
+        // update status
+        status.nr_process_in.fetch_add(1, Ordering::Relaxed);
+
         // init converters on first message
         let converters = converters.get_or_insert_with(|| {
             init_fields = msg.fields.clone();
@@ -81,16 +136,13 @@ pub fn processing_thread(
             converter.convert(&msg, &mut buffer);
         }
 
-        // update transform tree
-        for transform in transforms_rx.try_iter() {
-            transform_tree.add(transform);
-        }
-        transform_tree.cleanup_before(msg.time_stamp);
-
         // get transform to world frame
+        transform_tree.cleanup_before(msg.time_stamp);
         let wait_start = Instant::now();
-        const MAX_WAIT_TIME: Duration = Duration::from_secs(10);
         let transform = loop {
+            for transform in transforms_rx.try_iter() {
+                transform_tree.add(transform);
+            }
             match transform_tree.transform(msg.time_stamp, &msg.frame, &args.world_frame) {
                 Ok(t) => break t,
                 Err(LookupError::Wait) => {
@@ -121,13 +173,9 @@ pub fn processing_thread(
             position_attr.set_at(i, world_pos);
         }
 
-        // todo convert to coordinate system
-        // todo encode
-        // todo pause if sensor does not move
-        // todo pause with space key
-
         // send to lidarserv network thread
-        points_tx.blocking_send(buffer)?;
+        status.nr_process_out.fetch_add(1, Ordering::Relaxed);
+        points_tx.send(buffer)?;
     }
 
     Ok(())

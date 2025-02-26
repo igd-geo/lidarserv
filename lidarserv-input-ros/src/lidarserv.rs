@@ -1,10 +1,9 @@
-use std::sync::mpsc;
-
 use lidarserv_server::net::client::capture_device::CaptureDeviceClient;
 use pasture_core::{containers::VectorBuffer, layout::PointAttributeDefinition};
+use std::sync::{atomic::Ordering, mpsc, Arc};
 use tokio::select;
 
-use crate::cli::AppOptions;
+use crate::{cli::AppOptions, status::Status};
 
 pub struct LidarservPointCloudInfo {
     pub attributes: Vec<PointAttributeDefinition>,
@@ -16,7 +15,8 @@ pub async fn lidarserv_thread(
     args: AppOptions,
     info_tx: mpsc::Sender<LidarservPointCloudInfo>,
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
-    mut points_rx: tokio::sync::mpsc::Receiver<VectorBuffer>,
+    mut points_rx: tokio::sync::mpsc::UnboundedReceiver<VectorBuffer>,
+    status: Arc<Status>,
 ) -> Result<(), anyhow::Error> {
     // connect to lidarserv server
     let mut client =
@@ -39,6 +39,9 @@ pub async fn lidarserv_thread(
             },
             _ = shutdown_rx.recv() => break 'send_loop,
         };
+
+        // update status
+        status.nr_tx_msg.fetch_add(1, Ordering::Relaxed);
 
         // send
         // todo - do coordinate system transform and encoding on processing thread.

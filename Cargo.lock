@@ -1876,6 +1876,7 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "clap 4.5.30",
+ "console",
  "ctrlc",
  "human-panic",
  "lidarserv-common",

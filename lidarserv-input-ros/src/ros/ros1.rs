@@ -1,20 +1,25 @@
 use super::{Command, Endianess, Field, PointCloudMessage, Transform, Type};
-use crate::cli::AppOptions;
+use crate::{cli::AppOptions, status::Status};
 use anyhow::{anyhow, Result};
 use log::{info, trace, warn};
 use nalgebra::{vector, Quaternion, UnitQuaternion};
-use std::{sync::mpsc, thread, time::Duration};
+use std::{
+    sync::{atomic::Ordering, mpsc, Arc},
+    thread,
+    time::Duration,
+};
 
 pub fn ros_thread(
     args: AppOptions,
     commands_rx: mpsc::Receiver<Command>,
     transforms_tx: mpsc::Sender<Transform>,
-    points_tx: mpsc::SyncSender<PointCloudMessage>,
+    points_tx: mpsc::Sender<PointCloudMessage>,
+    status: Arc<Status>,
 ) -> Result<()> {
     // ROS init
     info!("Connecting to ROS master...");
-    if let Err(e) = rosrust::try_init_with_options("lidarserv", false) {
-        return Err(anyhow!("Failed to connect to ROS master: {e}"));
+    if rosrust::try_init_with_options("lidarserv", false).is_err() {
+        return Err(anyhow!("Failed to connect to ROS master."));
     }
     info!("Connected to ROS master.");
 
@@ -24,23 +29,27 @@ pub fn ros_thread(
         args.tf_topic, args.tf_static_topic
     );
     let transforms_tx_clone = transforms_tx.clone();
+    let status2 = Arc::clone(&status);
+    let status3 = Arc::clone(&status);
     let tf_callback = move |msg: messages::tf2_msgs::TFMessage| {
         trace!("TF message: {msg:?}");
+        status2.nr_rx_msg_tf.fetch_add(1, Ordering::Relaxed);
         for tf in parse_tf_message(msg, false) {
             transforms_tx.send(tf).ok();
         }
     };
     let tf_static_callback = move |msg: messages::tf2_msgs::TFMessage| {
         trace!("TF static message: {msg:?}");
+        status3.nr_rx_msg_tf.fetch_add(1, Ordering::Relaxed);
         for tf in parse_tf_message(msg, true) {
             transforms_tx_clone.send(tf).ok();
         }
     };
     let _tf_subscriber = match rosrust::subscribe(&args.tf_topic, 100, tf_callback) {
         Ok(s) => s,
-        Err(e) => {
+        Err(_) => {
             return Err(anyhow!(
-                "Failed to subscribe to transform tree topic `{}`: {e}",
+                "Failed to subscribe to transform tree topic `{}`.",
                 args.tf_topic
             ))
         }
@@ -48,9 +57,9 @@ pub fn ros_thread(
     let _tf_static_subscriber =
         match rosrust::subscribe(&args.tf_static_topic, 100, tf_static_callback) {
             Ok(s) => s,
-            Err(e) => {
+            Err(_) => {
                 return Err(anyhow!(
-                    "Failed to subscribe to transform tree topic `{}`: {e}",
+                    "Failed to subscribe to transform tree topic `{}`.",
                     args.tf_static_topic
                 ))
             }
@@ -62,16 +71,24 @@ pub fn ros_thread(
         "Subscribing to point cloud topic `{}` ...",
         args.pointcloud_topic
     );
+    let status4 = Arc::clone(&status);
     let pointcloud_callback = move |msg: messages::sensor_msgs::PointCloud2| {
         trace!("PointCloud2 message: {} points", msg.width * msg.height);
-        points_tx.send(parse_pointcloud_message(msg)).ok();
+        let paused = status.paused.load(Ordering::Relaxed);
+        if !paused {
+            status4.nr_rx_msg_pointcloud.fetch_add(1, Ordering::Relaxed);
+            status4
+                .nr_rx_points
+                .fetch_add(msg.width as u64 * msg.height as u64, Ordering::Relaxed);
+            points_tx.send(parse_pointcloud_message(msg)).ok();
+        }
     };
     let _pointcloud_subscriber =
         match rosrust::subscribe(&args.pointcloud_topic, 100, pointcloud_callback) {
             Ok(s) => s,
-            Err(e) => {
+            Err(_) => {
                 return Err(anyhow!(
-                    "Failed to subscribe to point cloud topic `{}`: {e}",
+                    "Failed to subscribe to point cloud topic `{}`.",
                     args.pointcloud_topic
                 ))
             }
