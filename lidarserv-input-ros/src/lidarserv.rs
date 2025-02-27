@@ -1,5 +1,8 @@
-use lidarserv_server::net::client::capture_device::CaptureDeviceClient;
-use pasture_core::{containers::VectorBuffer, layout::PointAttributeDefinition};
+use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
+use lidarserv_server::net::{
+    client::capture_device::CaptureDeviceClient, protocol::messages::PointDataCodec,
+};
+use pasture_core::layout::PointAttributeDefinition;
 use std::sync::{atomic::Ordering, mpsc, Arc};
 use tokio::select;
 
@@ -7,7 +10,8 @@ use crate::{cli::AppOptions, status::Status};
 
 pub struct LidarservPointCloudInfo {
     pub attributes: Vec<PointAttributeDefinition>,
-    //pub coordinate_system: CoordinateSystem,
+    pub coordinate_system: CoordinateSystem,
+    pub codec: PointDataCodec,
 }
 
 #[tokio::main]
@@ -15,7 +19,7 @@ pub async fn lidarserv_thread(
     args: AppOptions,
     info_tx: mpsc::Sender<LidarservPointCloudInfo>,
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
-    mut points_rx: tokio::sync::mpsc::UnboundedReceiver<VectorBuffer>,
+    mut points_rx: tokio::sync::mpsc::UnboundedReceiver<Vec<u8>>,
     status: Arc<Status>,
 ) -> Result<(), anyhow::Error> {
     // connect to lidarserv server
@@ -26,7 +30,8 @@ pub async fn lidarserv_thread(
     info_tx
         .send(LidarservPointCloudInfo {
             attributes: client.attributes().to_vec(),
-            //coordinate_system: client.coordinate_system(),
+            coordinate_system: client.coordinate_system(),
+            codec: client.codec(),
         })
         .ok();
 
@@ -44,8 +49,7 @@ pub async fn lidarserv_thread(
         status.nr_tx_msg.fetch_add(1, Ordering::Relaxed);
 
         // send
-        // todo - do coordinate system transform and encoding on processing thread.
-        client.insert_points_global_coordinates(&points).await?;
+        client.insert_raw_point_data(&points).await?;
     }
 
     Ok(())

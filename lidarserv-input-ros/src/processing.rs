@@ -7,13 +7,19 @@ use crate::{
 };
 use anyhow::anyhow;
 use conversions::{ConverterDyn, DstType};
+use lidarserv_common::geometry::{
+    coordinate_system::CoordinateSystem, position::WithComponentTypeOnce,
+};
 use log::{info, warn};
 use nalgebra::Point3;
 use pasture_core::{
-    containers::{BorrowedMutBufferExt, OwningBuffer, VectorBuffer},
+    containers::{
+        BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, InterleavedBuffer,
+        InterleavedBufferMut, OwningBuffer, VectorBuffer,
+    },
     layout::{
         attributes::{COLOR_RGB, POSITION_3D},
-        PointAttributeMember, PointLayout,
+        PointAttributeDefinition, PointAttributeMember, PointLayout,
     },
 };
 use std::{
@@ -38,7 +44,7 @@ pub fn processing_thread(
     info_rx: mpsc::Receiver<LidarservPointCloudInfo>,
     ros_rx: mpsc::Receiver<PointCloudMessage>,
     transforms_rx: mpsc::Receiver<Transform>,
-    points_tx: tokio::sync::mpsc::UnboundedSender<VectorBuffer>,
+    points_tx: tokio::sync::mpsc::UnboundedSender<Vec<u8>>,
     stop_process_rx: mpsc::Receiver<()>,
     status: Arc<Status>,
 ) -> Result<(), anyhow::Error> {
@@ -78,6 +84,7 @@ pub fn processing_thread(
         })
         .collect();
     let global_layout = PointLayout::from_attributes_packed(&global_attributes, 1);
+    let lidarserv_layout = PointLayout::from_attributes_packed(&info.attributes, 1);
 
     // Number converters
     let mut init_fields = Vec::new();
@@ -173,9 +180,97 @@ pub fn processing_thread(
             position_attr.set_at(i, world_pos);
         }
 
+        // flip axis
+        if let Some(flip) = args.transform_flip {
+            let flip_index = match flip {
+                crate::cli::Axis::X => 0,
+                crate::cli::Axis::Y => 1,
+                crate::cli::Axis::Z => 2,
+            };
+            let mut positions = buffer.view_attribute_mut::<Point3<f64>>(&POSITION_3D);
+            for pid in 0..nr_points {
+                let mut pos = positions.at(pid);
+                pos[flip_index] *= -1.0;
+                positions.set_at(pid, pos);
+            }
+        }
+
+        // transform to lidarserv coordinate system
+        let mut lidarserv_buffer = VectorBuffer::with_capacity(nr_points, lidarserv_layout.clone());
+        lidarserv_buffer.resize(nr_points);
+        for dst_attr in lidarserv_layout.attributes() {
+            if dst_attr.name() == POSITION_3D.name() {
+                struct Wct<'a> {
+                    src_buffer: &'a VectorBuffer,
+                    dst_buffer: &'a mut VectorBuffer,
+                    dst_attr: PointAttributeDefinition,
+                    coordinate_system: CoordinateSystem,
+                }
+
+                impl WithComponentTypeOnce for Wct<'_> {
+                    type Output = ();
+
+                    fn run_once<C: lidarserv_common::geometry::position::Component>(
+                        self,
+                    ) -> Self::Output {
+                        let src_positions =
+                            self.src_buffer.view_attribute::<Point3<f64>>(&POSITION_3D);
+                        let mut dst_positions = self
+                            .dst_buffer
+                            .view_attribute_mut::<C::PasturePrimitive>(&self.dst_attr);
+                        let mut error_count = 0;
+                        for pid in 0..self.src_buffer.len() {
+                            let position_global = src_positions.at(pid);
+                            let position_lidarserv = match self
+                                .coordinate_system
+                                .encode_position::<C>(position_global)
+                            {
+                                Ok(p) => p,
+                                Err(_) => {
+                                    error_count += 1;
+                                    Point3::<C>::new(C::zero(), C::zero(), C::zero())
+                                }
+                            };
+                            dst_positions.set_at(pid, C::position_to_pasture(position_lidarserv));
+                        }
+                        if error_count > 0 {
+                            warn!("Received {error_count} point(s) outside the coordinate system. These points were set to zero.");
+                        }
+                    }
+                }
+
+                Wct {
+                    src_buffer: &buffer,
+                    dst_buffer: &mut lidarserv_buffer,
+                    dst_attr: dst_attr.attribute_definition().clone(),
+                    coordinate_system: info.coordinate_system,
+                }
+                .for_layout_once(&lidarserv_layout);
+            } else {
+                let src_attr = global_layout
+                    .get_attribute(dst_attr.attribute_definition())
+                    .expect("Missing attribute");
+                let src_range = src_attr.byte_range_within_point();
+                let dst_range = dst_attr.byte_range_within_point();
+                for pid in 0..nr_points {
+                    let src_point = buffer.get_point_ref(pid);
+                    let dst_point = lidarserv_buffer.get_point_mut(pid);
+                    let src = &src_point[src_range.clone()];
+                    let dst = &mut dst_point[dst_range.clone()];
+                    dst.copy_from_slice(src);
+                }
+            }
+        }
+
+        // encode bytes
+        let mut data_buffer = Vec::new();
+        info.codec
+            .instance()
+            .write_points(&lidarserv_buffer, &mut data_buffer)?;
+
         // send to lidarserv network thread
         status.nr_process_out.fetch_add(1, Ordering::Relaxed);
-        points_tx.send(buffer)?;
+        points_tx.send(data_buffer)?;
     }
 
     Ok(())

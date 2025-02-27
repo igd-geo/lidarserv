@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use anyhow::anyhow;
 use clap::Parser;
 
 /// Connector that forwards point clouds from ROS into lidarserv.
@@ -42,6 +45,10 @@ pub struct AppOptions {
     #[clap(long, default_value = "camera_init")]
     pub world_frame: String,
 
+    /// If set, the coordinates are flipped along the given axis.
+    #[clap(long)]
+    pub transform_flip: Option<Axis>,
+
     /// Hostname of the lidarserv server
     #[clap(long, default_value = "::0")]
     pub host: String,
@@ -49,4 +56,26 @@ pub struct AppOptions {
     /// Port of the lidarserv server
     #[clap(long, default_value = "4567")]
     pub port: u16,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum Axis {
+    X,
+    Y,
+    Z,
+}
+
+impl FromStr for Axis {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "x" | "X" => Ok(Axis::X),
+            "y" | "Y" => Ok(Axis::Y),
+            "z" | "Z" => Ok(Axis::Z),
+            _ => Err(anyhow!(
+                "'{s}' is not a valid axis. Must be 'x', 'y' or 'z'."
+            )),
+        }
+    }
 }
