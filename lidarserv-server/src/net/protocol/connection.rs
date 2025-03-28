@@ -110,11 +110,11 @@ where
 
         // treat any message of type [Message::Error] as an error.
         trace!("{}: Receive message: {:?}", &self.peer_addr, &message);
-        if let Ok(Header::Error { message }) = message {
+        match message { Ok(Header::Error { message }) => {
             Some(Err(LidarServerError::PeerError(message)))
-        } else {
+        } _ => {
             Some(message.map(|m| Message { header: m, payload }))
-        }
+        }}
     }
 
     /// cancel safe
@@ -152,14 +152,14 @@ where
         &mut self,
         shutdown: &mut Receiver<()>,
     ) -> Result<Message, LidarServerError> {
-        if let Some(msg) = self.read_message_or_eof(shutdown).await? {
+        match self.read_message_or_eof(shutdown).await? { Some(msg) => {
             Ok(msg)
-        } else {
+        } _ => {
             Err(LidarServerError::Protocol(format!(
                 "{}",
                 ConnectionClosedError
             )))
-        }
+        }}
     }
 }
 

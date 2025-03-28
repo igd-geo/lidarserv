@@ -24,11 +24,11 @@ fn main() -> ExitCode {
         Command::Init(options) => commands::init::run(options),
         Command::Serve(options) => commands::serve::run(options),
     };
-    if let Err(e) = result {
+    match result { Err(e) => {
         error!("{e}");
         debug!("{e:?}");
         ExitCode::FAILURE
-    } else {
+    } _ => {
         ExitCode::SUCCESS
-    }
+    }}
 }

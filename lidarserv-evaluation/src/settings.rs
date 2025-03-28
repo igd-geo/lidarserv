@@ -418,7 +418,7 @@ pub struct MultiIndex {
 }
 
 macro_rules! apply_default_vec {
-    ($self:ident.$i:ident <- $def:expr) => {
+    ($self:ident.$i:ident <- $def:expr_2021) => {
         if $self.$i.is_none() {
             $self.$i = Some(vec![$def.$i])
         }

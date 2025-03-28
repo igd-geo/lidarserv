@@ -211,7 +211,7 @@ where
         let test = test.convert_to::<Idx::AttributeValue>();
 
         let nodes = self.nodes.read().unwrap();
-        if let Some(node) = nodes.get(cell) {
+        match nodes.get(cell) { Some(node) => {
             let node_lock = node.lock().unwrap();
 
             match test {
@@ -238,9 +238,9 @@ where
                     .test_greater_eq(&node_lock, o)
                     .and(self.index.test_less_eq(&node_lock, p)),
             }
-        } else {
+        } _ => {
             NodeQueryResult::Negative
-        }
+        }}
     }
 
     fn flush(&self) -> Result<(), AttributeIndexError> {
@@ -306,7 +306,7 @@ impl AttributeIndex {
         path: PathBuf,
     ) -> Result<(), AttributeIndexError> {
         macro_rules! add_index_common_attr_types {
-            ($attribute:expr, $path:expr, $makeidx:expr) => {{
+            ($attribute:expr_2021, $path:expr_2021, $makeidx:expr_2021) => {{
                 let attribute = $attribute;
                 let path = $path;
                 match attribute.datatype() {

@@ -1,7 +1,7 @@
 [package]
 name = "lidarserv-input-file"
 version = "2.0.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 human-panic = "2.0"

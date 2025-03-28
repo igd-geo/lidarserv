@@ -23,11 +23,11 @@ async fn main() -> ExitCode {
         Command::Replay(options) => replay(options).await,
         Command::Sort(options) => sort(options).await,
     };
-    if let Err(e) = result {
+    match result { Err(e) => {
         error!("{e}");
         debug!("{e:?}");
         ExitCode::FAILURE
-    } else {
+    } _ => {
         ExitCode::SUCCESS
-    }
+    }}
 }

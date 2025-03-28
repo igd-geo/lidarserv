@@ -53,7 +53,7 @@ where
     ///     More concretely, the fields entry.next and entry.prev both must
     ///     point to the entry itself.
     ///  - The insert_before key refer to an entry, that exist in self.entries.
-    unsafe fn raw_list_insert(&mut self, ptr_entry: *mut Entry<K, V>, insert_before: Option<&K>) {
+    unsafe fn raw_list_insert(&mut self, ptr_entry: *mut Entry<K, V>, insert_before: Option<&K>) { unsafe {
         let Self {
             entries,
             first,
@@ -79,7 +79,7 @@ where
         // insert into list
         ptr::swap(ptr_entry_next, ptr_prev_next);
         ptr::swap(ptr_entry_prev, ptr_next_prev);
-    }
+    }}
 
     /// Removes an element from the linked list of entries.
     /// Safety / Invariants:
@@ -93,7 +93,7 @@ where
     ///    to be removed afterwards, or re-inserted into the linked list using raw_list_insert.
     ///  - The next / previous keys of the pointed-to entry need to refer
     ///    to existing items in self.entries.
-    unsafe fn raw_list_remove(&mut self, ptr_entry: *mut Entry<K, V>) {
+    unsafe fn raw_list_remove(&mut self, ptr_entry: *mut Entry<K, V>) { unsafe {
         // need to use pointers / unsafe, because we hold multiple mutable references
         // into the entries hashmap.
         // This is safe though, because we do not
@@ -111,7 +111,7 @@ where
         };
         ptr::swap(ptr_entry_next, ptr_prev_next);
         ptr::swap(ptr_entry_prev, ptr_next_prev);
-    }
+    }}
 
     /// Inserts a new item into the Lru.
     /// The inserted entry will be placed at the end of the LRU list.

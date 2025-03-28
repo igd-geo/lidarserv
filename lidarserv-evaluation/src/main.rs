@@ -219,7 +219,7 @@ pub fn processor_cooldown(base_config: &Base) {
     }
 }
 
-fn open_input_file(base_config: &Base) -> Result<impl PointReader + SeekToPoint, anyhow::Error> {
+fn open_input_file(base_config: &Base) -> Result<impl PointReader + SeekToPoint + use<>, anyhow::Error> {
     // open input file
     let raw_input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
     let trans = raw_input_file.header().transforms();
@@ -391,13 +391,13 @@ fn evaluate(
     match unwind_result {
         Ok(o) => o,
         Err(e) => {
-            if let Some(e) = e.downcast_ref::<String>() {
+            match e.downcast_ref::<String>() { Some(e) => {
                 Err(anyhow!("Panick! ({e})"))
-            } else if let Some(e) = e.downcast_ref::<&str>() {
+            } _ => { match e.downcast_ref::<&str>() { Some(e) => {
                 Err(anyhow!("Panick! ({e})"))
-            } else {
+            } _ => {
                 Err(anyhow!("Panick!"))
-            }
+            }}}}
         }
     }
 }
