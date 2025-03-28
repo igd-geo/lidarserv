@@ -22,10 +22,10 @@ lidarserv-common = { path = "../lidarserv-common" }
 lidarserv-server = { path = "../lidarserv-server" }
 git-version = "0.3"
 chrono = "0.4"
-gethostname = "0.5"
+gethostname = "1.0.1"
 indicatif = "0.17"
 indicatif-log-bridge = "0.2"
 indexmap = { version = "2.6", features = ["serde"]}
-itertools = "0.13"
-rand = "0.8"
+itertools = "0.14.0"
+rand = "0.9.0"
 crossbeam-channel = "0.5"

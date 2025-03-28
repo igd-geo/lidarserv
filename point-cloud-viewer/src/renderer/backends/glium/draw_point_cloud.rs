@@ -1009,13 +1009,17 @@ impl PointCloudsRenderer {
                         tex_color_resolved: Box::new(tex_color_resolved),
                         tex_depth_resolved: Box::new(tex_depth_resolved),
                         frame_buffer_builder: |color, depth| {
-                            SimpleFrameBuffer::with_depth_buffer(display, color, depth)
+                            SimpleFrameBuffer::with_depth_buffer(
+                                display,
+                                color.as_ref(),
+                                depth.as_ref(),
+                            )
                         },
                         frame_buffer_resolve_builder: |color_resolved, depth_resolved| {
                             SimpleFrameBuffer::with_depth_buffer(
                                 display,
-                                color_resolved,
-                                depth_resolved,
+                                color_resolved.as_ref(),
+                                depth_resolved.as_ref(),
                             )
                         },
                     }

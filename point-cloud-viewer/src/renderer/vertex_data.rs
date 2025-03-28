@@ -1,10 +1,9 @@
 use crate::renderer::error::{RendererError, RendererResult};
 use crate::renderer::viewer::private::RenderThreadHandle;
-use derivative::Derivative;
 use pasture_core::containers::{BorrowedBuffer, BorrowedBufferExt};
 use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PrimitiveType};
 use pasture_core::nalgebra::Vector3;
-use std::fmt::Formatter;
+use std::fmt::{Debug, Formatter};
 
 /// Extracts the data for one point attribute from the point buffer
 /// and converts it to the vertex data of an appropriate type for the attribute type, that is
@@ -162,20 +161,37 @@ pub enum VertexDataType {
 
 /// Contains the data for a vertex buffer.
 /// The enum variants correspond to the different values of [VertexDataType].
-#[derive(Clone, Derivative)]
-#[derivative(Debug)]
+#[derive(Clone)]
 pub enum VertexData {
-    F32(#[derivative(Debug = "ignore")] Vec<F32Attribute>),
-    U8(#[derivative(Debug = "ignore")] Vec<U8Attribute>),
-    Vec3F32(#[derivative(Debug = "ignore")] Vec<Vec3F32Attribute>),
+    F32(Vec<F32Attribute>),
+    U8(Vec<U8Attribute>),
+    Vec3F32(Vec<Vec3F32Attribute>),
     Vec3F32Transform {
         /// position = value * scale + offset
         /// value = (position - offset) / scale
-        #[derivative(Debug = "ignore")]
         values: Vec<Vec3F32Attribute>,
         offset: Vector3<f64>,
         scale: Vector3<f64>,
     },
+}
+
+impl Debug for VertexData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::F32(_) => f.debug_tuple("F32").finish(),
+            Self::U8(_) => f.debug_tuple("U8").finish(),
+            Self::Vec3F32(_) => f.debug_tuple("Vec3F32").finish(),
+            Self::Vec3F32Transform {
+                values: _,
+                offset,
+                scale,
+            } => f
+                .debug_struct("Vec3F32Transform")
+                .field("offset", offset)
+                .field("scale", scale)
+                .finish(),
+        }
+    }
 }
 
 impl std::fmt::Display for VertexDataType {

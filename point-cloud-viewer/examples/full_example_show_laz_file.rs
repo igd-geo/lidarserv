@@ -1,5 +1,5 @@
 use crate::mini_mno::GridCell;
-use las::{Read, Reader};
+use las::Reader;
 use pasture_core::containers::VectorBuffer;
 use pasture_core::layout::attributes;
 use pasture_core::math::AABB;
@@ -567,13 +567,12 @@ fn update_query(
 }
 
 fn main() {
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
     pretty_env_logger::init();
 
     let laz_file_path = std::env::var("INPUT_FILE").expect(
         "Please specify the las/laz file to load by setting the INPUT_FILE environment variable.",
     );
-    let mut reader = Reader::from_path(laz_file_path).unwrap();
 
     GliumRenderOptions::default().run(move |render_thread| {
         // open viewer window
@@ -597,6 +596,7 @@ fn main() {
             .unwrap();
 
         // move camera so the point cloud is visible
+        let mut reader = Reader::from_path(laz_file_path).unwrap();
         let bounds = reader.header().bounds();
         let aabb = AABB::from_min_max(
             Point3::new(bounds.min.x, bounds.min.y, bounds.min.z),

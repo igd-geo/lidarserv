@@ -8,8 +8,8 @@ use log::info;
 use nalgebra::min;
 use pasture_core::containers::{BorrowedBuffer, InterleavedBuffer, OwningBuffer, VectorBuffer};
 use pasture_io::base::PointReader;
+use rand::rng;
 use rand::seq::index::sample;
-use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -114,7 +114,7 @@ pub fn measure_latency(
             other_points_buffer.len(),
         );
         total_nr_sample_points += nr_sample_points;
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let indices = sample(&mut rng, other_points_buffer.len(), nr_sample_points);
         {
             let mut chosen = shared.lock().unwrap();

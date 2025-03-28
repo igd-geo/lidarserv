@@ -9,16 +9,15 @@ edition = "2021"
 [dependencies]
 pasture-core.workspace = true
 log = "0.4.14"
-ouroboros = "0.9.3"
-derivative = "2.2.0"
+ouroboros = "0.18.5"
 crossbeam-channel = "0.5.1"
 glium = "0.32"
 
 [dev-dependencies]
 pasture-io.workspace = true
 pasture-derive.workspace = true
-dotenv = "0.15.0"
+dotenvy = "0.15.0"
 pretty_env_logger = "0.5.0"
-las = "0.7.4"
-rand = "0.8.5"
+las = "0.9.3"
+rand = "0.9.0"
 bytemuck = "1.16.0"
