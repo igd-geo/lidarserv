@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use structopt::StructOpt;
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, Clone)]
 pub struct Args {
     /// Verbosity of the command line output.
     #[structopt(long, default_value="info", possible_values = &["trace", "debug", "info", "warn", "error"])]
@@ -127,7 +127,7 @@ pub struct Args {
     pub query: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum PointColorArg {
     Fixed,
     Intensity,

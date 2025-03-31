@@ -47,7 +47,13 @@ pub async fn handle_connection(
     }
 
     // send index information to client
-    debug!("Sending PointCloudInfo to client: {:?}, {:?}, {:?}, {:?}", index.coordinate_system(), index.point_layout(), index.current_aabb(), codec);
+    debug!(
+        "Sending PointCloudInfo to client: {:?}, {:?}, {:?}, {:?}",
+        index.coordinate_system(),
+        index.point_layout(),
+        index.current_aabb(),
+        codec
+    );
     con.write_message(
         &Header::PointCloudInfo {
             coordinate_system: index.coordinate_system(),
@@ -57,7 +63,7 @@ pub async fn handle_connection(
                 .map(|a| a.attribute_definition().clone())
                 .collect(),
             codec,
-            current_bounding_box: index.current_aabb()
+            current_bounding_box: index.current_aabb(),
         },
         &[],
     )

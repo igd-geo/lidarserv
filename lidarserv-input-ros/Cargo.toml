@@ -1,0 +1,23 @@
+[package]
+name = "lidarserv-input-ros"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+human-panic = "2.0"
+clap = {version = "4.5", features = ["derive"]}
+log = "0.4.14"
+simple_logger = "5.0"
+pasture-core.workspace = true
+pasture-io.workspace = true
+anyhow = "1.0"
+nalgebra.workspace = true
+tokio = { version = "1.28", features = ["full"] }
+lidarserv-server = { path = "../lidarserv-server" }
+lidarserv-common = { path = "../lidarserv-common" }
+bytemuck = "1.17"
+thiserror = "2.0"
+rosrust = "0.9.12"
+ctrlc = "3.4.5"
+byteorder = "1.5"
+console = "0.15"

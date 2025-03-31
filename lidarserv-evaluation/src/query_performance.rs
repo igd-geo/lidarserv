@@ -5,7 +5,11 @@ use pasture_core::containers::BorrowedBuffer;
 use serde_json::json;
 use std::time::Instant;
 
-pub fn measure_one_query(index: &mut Octree, query_str: &str, enable_point_filtering: bool) -> serde_json::value::Value {
+pub fn measure_one_query(
+    index: &mut Octree,
+    query_str: &str,
+    enable_point_filtering: bool,
+) -> serde_json::value::Value {
     debug!("Flushing index");
     index.flush().unwrap();
 

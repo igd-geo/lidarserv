@@ -10,6 +10,7 @@ use sfc_index::SfcIndex;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fs::File,
+    io::{BufReader, BufWriter},
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -120,8 +121,8 @@ where
     }
 
     pub fn load(index: Idx, path: PathBuf) -> Result<Self, AttributeIndexError> {
-        let read = File::open(&path)?;
-        let content: NodesFile<Node> = match ciborium::from_reader(&read) {
+        let mut read = BufReader::new(File::open(&path)?);
+        let content: NodesFile<Node> = match ciborium::from_reader(&mut read) {
             Ok(o) => o,
             Err(ciborium::de::Error::Io(io_err)) => return Err(AttributeIndexError::Io(io_err)),
             Err(_) => return Err(AttributeIndexError::Corrupt(path)),
@@ -258,12 +259,13 @@ where
             }
         };
         let write = File::create(&self.path)?;
-        match ciborium::into_writer(&contents, &write) {
+        let mut write = BufWriter::new(write);
+        match ciborium::into_writer(&contents, &mut write) {
             Ok(_) => (),
             Err(ciborium::ser::Error::Io(io_err)) => return Err(AttributeIndexError::Io(io_err)),
             Err(_) => return Err(AttributeIndexError::Corrupt(self.path.clone())),
         };
-        write.sync_all()?;
+        write.into_inner().map_err(|e| e.into_error())?.sync_all()?;
         Ok(())
     }
 }

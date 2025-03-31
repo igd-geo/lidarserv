@@ -1,3 +1,5 @@
+use crate::index::query::Query;
+use lidarserv_common::geometry::bounding_box::Aabb;
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::geometry::grid::LeveledGridCell;
 use lidarserv_common::io::pasture::{Compression, PastureIo};
@@ -5,8 +7,6 @@ use lidarserv_common::io::InMemoryPointCodec;
 use pasture_core::layout::PointAttributeDefinition;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use lidarserv_common::geometry::bounding_box::Aabb;
-use crate::index::query::Query;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Header {

@@ -1,6 +1,6 @@
 
 [workspace]
-members = ["lidarserv-server", "lidarserv-common", "lidarserv-input-file", "lidarserv-query", "lidarserv-viewer", "lidarserv-evaluation"]
+members = ["lidarserv-server", "lidarserv-common", "lidarserv-input-file", "lidarserv-query", "lidarserv-viewer", "lidarserv-evaluation", "lidarserv-input-ros"]
 resolver = "2"
 
 [workspace.dependencies]
