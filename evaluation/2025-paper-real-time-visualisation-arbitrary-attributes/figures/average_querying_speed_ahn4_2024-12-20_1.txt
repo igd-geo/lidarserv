@@ -1,0 +1,3 @@
+Dataset: AHN4
+Average querying speed without compression: 1751384.41 points/s
+Average querying speed with compression: 1840806.75 points/s

@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "make-evaluation-diagrams"
+version = "0.1.0"
+description = ""
+authors = ["Tobias Dorra <tobias.dorra@igd.fraunhofer.de>", "Paul Hermann <paul.hermann@stud.tu-darmstadt.de>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+matplotlib = "^3.10.1"
+scipy = "^1.15.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

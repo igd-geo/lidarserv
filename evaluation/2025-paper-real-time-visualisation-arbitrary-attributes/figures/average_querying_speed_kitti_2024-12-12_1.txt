@@ -1,0 +1,3 @@
+Dataset: KITTI
+Average querying speed without compression: 0.00 points/s
+Average querying speed with compression: 0.00 points/s
