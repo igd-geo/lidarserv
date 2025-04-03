@@ -7,13 +7,14 @@ use git_version::git_version;
 use indicatif::MultiProgress;
 use indicatif_log_bridge::LogWrapper;
 use insertion_rate::measure_insertion_rate;
+use itertools::Itertools;
 use latency::measure_latency;
 use lidarserv_common::{
     geometry::{
         coordinate_system::CoordinateSystem,
         grid::{GridHierarchy, LodLevel},
     },
-    index::{Octree, OctreeParams},
+    index::{Octree, OctreeParams, attribute_index::config::IndexKind},
 };
 use lidarserv_server::index::query::Query;
 use log::{debug, error, info, warn};
@@ -23,8 +24,11 @@ use pasture_io::{
     las::LASReader,
 };
 use query_performance::measure_one_query;
-use serde_json::{json, Value};
-use settings::{Base, EvaluationScript, EvaluationSettings, MultiIndex, SingleIndex};
+use serde_json::{Value, json};
+use settings::{
+    Base, ElevationRun, EnabledAttributeIndexes, EvaluationScript, EvaluationSettings, MultiIndex,
+    SingleIndex,
+};
 use simple_logger::SimpleLogger;
 use std::{
     collections::HashMap,
@@ -102,7 +106,17 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
             "Creating example config file at: {}",
             args.input_file.display()
         );
-        let default_config = EvaluationScript::default();
+        let mut default_config = EvaluationScript::default();
+        if !args.run.is_empty() {
+            let mut runs_from_preset = default_config.runs.into_values();
+            default_config.runs = HashMap::new();
+            for name in &args.run {
+                let run = runs_from_preset
+                    .next()
+                    .unwrap_or_else(ElevationRun::default);
+                default_config.runs.insert(name.clone(), run);
+            }
+        }
         let mut file = File::create_new(&args.input_file)?;
         file.write_all(toml::to_string_pretty(&default_config)?.as_bytes())?;
         return Ok(());
@@ -133,11 +147,26 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
     let out_file_name = get_output_filename(&config.base)?;
     let out_file = std::fs::File::create(&out_file_name)?;
 
+    // determine which runs to execute
+    let enabled_runs = if args.run.is_empty() {
+        config.runs.iter().collect_vec()
+    } else {
+        let mut enabled_runs = Vec::new();
+        for name in &args.run {
+            if let Some(entry) = config.runs.get_key_value(name) {
+                enabled_runs.push(entry)
+            } else {
+                return Err(anyhow!("The run '{name}' is not defined in the toml file."));
+            }
+        }
+        enabled_runs
+    };
+
     // run tests
     info!("Running tests");
     let started_at = Utc::now();
     let mut all_results = HashMap::new();
-    for (name, run) in &config.runs {
+    for (name, run) in enabled_runs {
         info!("=== {} ===", name);
         let mut run = run.clone();
         run.index.apply_defaults(&config.defaults.index);
@@ -219,7 +248,9 @@ pub fn processor_cooldown(base_config: &Base) {
     }
 }
 
-fn open_input_file(base_config: &Base) -> Result<impl PointReader + SeekToPoint + use<>, anyhow::Error> {
+fn open_input_file(
+    base_config: &Base,
+) -> Result<impl PointReader + SeekToPoint + use<>, anyhow::Error> {
     // open input file
     let raw_input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
     let trans = raw_input_file.header().transforms();
@@ -242,13 +273,31 @@ fn open_input_file(base_config: &Base) -> Result<impl PointReader + SeekToPoint 
 fn create_index(index_config: &SingleIndex, base_config: &Base) -> Result<Octree, anyhow::Error> {
     let point_layout = base_config.attributes.point_layout();
     let coordinate_system = base_config.coordinate_system;
-    let attribute_indexes = if index_config.enable_attribute_index {
-        base_config.attribute_indexes()
-    } else {
-        vec![]
+    let all_attribute_indexes = base_config.attribute_indexes();
+    let attribute_indexes = match index_config.enable_attribute_index {
+        EnabledAttributeIndexes::All => all_attribute_indexes,
+        EnabledAttributeIndexes::RangeIndexOnly => all_attribute_indexes
+            .into_iter()
+            .filter(|idx| idx.index == IndexKind::RangeIndex)
+            .collect(),
+        EnabledAttributeIndexes::SfcIndexOnly => all_attribute_indexes
+            .into_iter()
+            .filter(|idx| matches!(idx.index, IndexKind::SfcIndex(_)))
+            .collect(),
+        EnabledAttributeIndexes::None => vec![],
     };
-    if index_config.enable_attribute_index && attribute_indexes.is_empty() {
-        warn!("Attribute indexing is enabled, but no indexed attributes are configured.");
+    if attribute_indexes.is_empty() {
+        match index_config.enable_attribute_index {
+            EnabledAttributeIndexes::All => {
+                warn!("Attribute indexing is enabled, but no indexed attributes are configured.")
+            }
+            EnabledAttributeIndexes::RangeIndexOnly | EnabledAttributeIndexes::SfcIndexOnly => {
+                warn!(
+                    "Attribute indexing is enabled, but no indexed attributes are configured with the selected index type."
+                )
+            }
+            EnabledAttributeIndexes::None => (),
+        }
     }
 
     // Create index
@@ -391,15 +440,13 @@ fn evaluate(
 
     match unwind_result {
         Ok(o) => o,
-        Err(e) => {
-            match e.downcast_ref::<String>() { Some(e) => {
-                Err(anyhow!("Panick! ({e})"))
-            } _ => { match e.downcast_ref::<&str>() { Some(e) => {
-                Err(anyhow!("Panick! ({e})"))
-            } _ => {
-                Err(anyhow!("Panick!"))
-            }}}}
-        }
+        Err(e) => match e.downcast_ref::<String>() {
+            Some(e) => Err(anyhow!("Panick! ({e})")),
+            _ => match e.downcast_ref::<&str>() {
+                Some(e) => Err(anyhow!("Panick! ({e})")),
+                _ => Err(anyhow!("Panick!")),
+            },
+        },
     }
 }
 

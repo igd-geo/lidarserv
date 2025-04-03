@@ -8,9 +8,9 @@ use lidarserv_common::index::priority_function::TaskPriorityFunction;
 use log::warn;
 use nalgebra::vector;
 use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition, PointLayout};
-use pasture_io::las::{point_layout_from_las_point_format, ATTRIBUTE_LOCAL_LAS_POSITION};
+use pasture_io::las::{ATTRIBUTE_LOCAL_LAS_POSITION, point_layout_from_las_point_format};
 use pasture_io::las_rs::point::Format;
-use serde::de::DeserializeOwned;
+use serde::de::{DeserializeOwned, Visitor};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -353,6 +353,15 @@ pub struct EvaluationRunDefaults {
     pub index: SingleIndex,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+pub enum EnabledAttributeIndexes {
+    #[default]
+    All,
+    RangeIndexOnly,
+    SfcIndexOnly,
+    None,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SingleIndex {
@@ -364,7 +373,7 @@ pub struct SingleIndex {
     pub compression: bool,
     pub nr_bogus_points: (usize, usize),
     pub max_lod: u8,
-    pub enable_attribute_index: bool,
+    pub enable_attribute_index: EnabledAttributeIndexes,
     pub enable_point_filtering: bool,
 }
 
@@ -413,7 +422,7 @@ pub struct MultiIndex {
     pub compression: Option<Vec<bool>>,
     pub nr_bogus_points: Option<Vec<(usize, usize)>>,
     pub max_lod: Option<Vec<u8>>,
-    pub enable_attribute_index: Option<Vec<bool>>,
+    pub enable_attribute_index: Option<Vec<EnabledAttributeIndexes>>,
     pub enable_point_filtering: Option<Vec<bool>>,
 }
 
@@ -497,5 +506,71 @@ impl<'a> IntoIterator for &'a MultiIndex {
         );
 
         Box::new(iter)
+    }
+}
+
+impl Serialize for EnabledAttributeIndexes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            EnabledAttributeIndexes::All => serializer.serialize_str("All"),
+            EnabledAttributeIndexes::RangeIndexOnly => serializer.serialize_str("RangeIndexOnly"),
+            EnabledAttributeIndexes::SfcIndexOnly => serializer.serialize_str("SfcIndexOnly"),
+            EnabledAttributeIndexes::None => serializer.serialize_str("None"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for EnabledAttributeIndexes {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct AttrIndexVisitor;
+
+        impl Visitor<'_> for AttrIndexVisitor {
+            type Value = EnabledAttributeIndexes;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(
+                    formatter,
+                    "a boolean value, or one of the strings 'All', 'RangeIndexOnly', 'SfcIndexOnly', 'None'"
+                )
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if s.eq_ignore_ascii_case("All") {
+                    Ok(EnabledAttributeIndexes::All)
+                } else if s.eq_ignore_ascii_case("None") {
+                    Ok(EnabledAttributeIndexes::None)
+                } else if s.eq_ignore_ascii_case("RangeIndexOnly") {
+                    Ok(EnabledAttributeIndexes::RangeIndexOnly)
+                } else if s.eq_ignore_ascii_case("SfcIndexOnly") {
+                    Ok(EnabledAttributeIndexes::SfcIndexOnly)
+                } else {
+                    Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(s),
+                        &self,
+                    ))
+                }
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if v {
+                    Ok(EnabledAttributeIndexes::All)
+                } else {
+                    Ok(EnabledAttributeIndexes::None)
+                }
+            }
+        }
+        deserializer.deserialize_any(AttrIndexVisitor)
     }
 }
