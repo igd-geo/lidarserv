@@ -370,7 +370,7 @@ pub enum QueryFiltering {
     PointFiltering,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(default, deny_unknown_fields)]
 pub struct SingleIndex {
     pub node_hierarchy: i16,
@@ -416,6 +416,31 @@ impl Default for SingleIndex {
             enable_attribute_index: parse_key(&defaults, "enable_attribute_index"),
             enable_point_filtering: parse_key(&defaults, "enable_point_filtering"),
         }
+    }
+}
+
+impl SingleIndex {
+    pub fn needs_reindexing(&self, other: &Self) -> bool {
+        let defaults = SingleIndex::default();
+
+        // reset attributes, that dont influence the
+        // indexing result, so that the index is only recreated,
+        // when something changes that actually influences the indexing result
+        let me = SingleIndex {
+            priority_function: defaults.priority_function,
+            num_threads: defaults.num_threads,
+            cache_size: defaults.cache_size,
+            enable_point_filtering: defaults.enable_point_filtering,
+            ..*self
+        };
+        let other = SingleIndex {
+            priority_function: defaults.priority_function,
+            num_threads: defaults.num_threads,
+            cache_size: defaults.cache_size,
+            enable_point_filtering: defaults.enable_point_filtering,
+            ..*other
+        };
+        me != other
     }
 }
 
@@ -478,26 +503,26 @@ impl<'a> IntoIterator for &'a MultiIndex {
         let iter = iproduct!(
             expect(&self.node_hierarchy),
             expect(&self.point_hierarchy),
-            expect(&self.priority_function),
-            expect(&self.num_threads),
-            expect(&self.cache_size),
             expect(&self.compression),
             expect(&self.nr_bogus_points),
             expect(&self.max_lod),
             expect(&self.enable_attribute_index),
+            expect(&self.priority_function),
+            expect(&self.num_threads),
+            expect(&self.cache_size),
             expect(&self.enable_point_filtering),
         )
         .map(
             |(
                 &node_hierarchy,
                 &point_hierarchy,
-                &priority_function,
-                &num_threads,
-                &cache_size,
                 &compression,
                 &nr_bogus_points,
                 &max_lod,
                 &enable_attribute_index,
+                &priority_function,
+                &num_threads,
+                &cache_size,
                 &enable_point_filtering,
             )| SingleIndex {
                 node_hierarchy,

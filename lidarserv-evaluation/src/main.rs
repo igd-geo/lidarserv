@@ -165,6 +165,7 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
     // run tests
     info!("Running tests");
     let started_at = Utc::now();
+    let mut last_index = None;
     let mut all_results = HashMap::new();
     for (name, run) in enabled_runs {
         info!("=== {} ===", name);
@@ -177,7 +178,8 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
         for index in &run.index {
             info!("--- {name} run {current_run} ---");
             prettyprint_index_run(&run.index, &index);
-            let result = match evaluate(&index, &config.base, settings.clone()) {
+            let result = match evaluate(&index, &config.base, settings.clone(), last_index.as_ref())
+            {
                 Ok(o) => o,
                 Err(e) => {
                     error!("Evaluation run finished with an error: {e}");
@@ -192,6 +194,7 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
                 "index": index,
                 "results": result,
             }));
+            last_index = Some(index.clone());
             current_run += 1;
         }
         all_results.insert(name, run_results);
@@ -326,6 +329,7 @@ fn evaluate(
     index_config: &SingleIndex,
     base_config: &Base,
     settings: EvaluationSettings,
+    last_index_config: Option<&SingleIndex>,
 ) -> Result<Value, anyhow::Error> {
     let unwind_result = catch_unwind(|| {
         // measure insertion rate
@@ -385,32 +389,31 @@ fn evaluate(
         // measure query performance
         let mut result_query_perf = serde_json::Value::Null;
         if settings.measure_query_speed {
+            // (re) create the index if needed
             if !settings.measure_index_speed
                 && (!settings.measure_query_latency || base_config.queries.is_empty())
             {
-                let directory_file = base_config.index_folder_absolute().join("directory.bin");
-                if directory_file.exists() {
-                    warn!(
-                        "The query performance test is running with an already-existing index. \
-                        There is no guarantee that this index was created with the same settings \
-                        as specified in the toml file. This might lead to unexpected results, \
-                        or even crashes in some cases. If you want a new index to be \
-                        created automatically, set `measure_index_speed` to `true` in the toml file."
-                    )
+                if last_index_config.is_some_and(|l| !l.needs_reindexing(index_config)) {
+                    info!("Keeping last index without reindexing.");
                 } else {
-                    warn!(
-                        "The query performance test is running without creating an index first. \
-                        Make sure there is a valid index at `{}`. \
-                        If you want an index to be created automatically, set \
-                        `measure_index_speed` to `true` in the toml file.",
-                        base_config.index_folder_absolute().display()
-                    );
-                    return Err(anyhow!(
-                        "Missing index at `{}`.",
-                        base_config.index_folder_absolute().display()
-                    ));
+                    info!("Recreating index before querying.");
+                    reset_data_folder(base_config)?;
+                    let mut index = create_index(index_config, base_config)?;
+                    let mut input_file = open_input_file(base_config)?;
+                    input_file.seek_point(SeekFrom::Start(0))?;
+                    measure_insertion_rate(
+                        // measure_insertion_rate is the fastest way to create the index,
+                        // as it replays the data as fast as possible.
+                        &mut index,
+                        &mut input_file,
+                        1_000_000,
+                        None,
+                    )?;
+                    index.flush()?;
                 }
             }
+
+            // Here comes the actual query performance test
             let mut index = create_index(index_config, base_config)?;
             let mut query_perf_results = HashMap::new();
             for (query_name, query) in &base_config.queries {

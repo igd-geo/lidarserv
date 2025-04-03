@@ -1,5 +1,5 @@
 use std::{
-    cmp::{max, Ordering},
+    cmp::{Ordering, max},
     str::FromStr,
 };
 
@@ -10,7 +10,7 @@ use crate::geometry::grid::LeveledGridCell;
 
 use super::writer::InsertionTask;
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub enum TaskPriorityFunction {
     NrPoints,
     Lod,
@@ -26,7 +26,9 @@ pub enum TaskPriorityFunction {
 }
 
 #[derive(Debug, Copy, Clone, Error)]
-#[error("Invalid task priority function. Must be one of: 'NrPoints', 'Lod', 'OldestPoint', 'TaskAge', 'NrPointsTaskAge'")]
+#[error(
+    "Invalid task priority function. Must be one of: 'NrPoints', 'Lod', 'OldestPoint', 'TaskAge', 'NrPointsTaskAge'"
+)]
 pub struct TaskPriorityFunctionFromStrErr;
 
 impl FromStr for TaskPriorityFunction {
