@@ -18,6 +18,7 @@ from typing import List, Tuple
 from scipy import stats
 from math import ceil, floor
 from pprint import pprint
+from scipy.ndimage import gaussian_filter1d
 
 PROJECT_ROOT = dirname(__file__)
 OUTPUT_FOLDER = join(PROJECT_ROOT, "figures")
@@ -186,14 +187,14 @@ def main():
                 )
 
     # latency
-    for file in all_files:
-        with open(file.path, "r") as f:
-            data = json.load(f)
-        plot_latency_comparison_violin(
-            data, 
-            query="full-point-cloud",
-            filename=join(OUTPUT_FOLDER, f"latency_comparison_violin_{file.name}.pdf"), 
-        )
+    #for file in all_files:
+    #    with open(file.path, "r") as f:
+    #        data = json.load(f)
+    #    plot_latency_comparison_violin(
+    #        data, 
+    #        query="full-point-cloud",
+    #        filename=join(OUTPUT_FOLDER, f"latency_comparison_violin_{file.name}.pdf"), 
+    #    )
 
     # insertion rate over time
     for file in all_files:
@@ -852,16 +853,49 @@ def plot_insertion_rate_over_time(data, filename: str, title=None):
         fig, ax = plt.subplots()
         fig.set_size_inches(8, 4)
 
-        pps_insert = [0] + [
-            (y2 - y1) / (x2- x1)
-            for x1, x2, y1, y2 in zip(
-                elapsed_seconds[1:], 
-                elapsed_seconds[:-1], 
-                nr_points_done[1:], 
-                nr_points_done[:-1]
+        #pps_insert = [0] + [
+        #    (y2 - y1) / (x2- x1)
+        #    for x1, x2, y1, y2 in zip(
+        #        elapsed_seconds[1:], 
+        #        elapsed_seconds[:-1], 
+        #        nr_points_done[1:], 
+        #        nr_points_done[:-1]
+        #    )
+        #]
+        length = floor(elapsed_seconds[-1])
+        indexes = [
+            max(
+                (i for i,v in enumerate(elapsed_seconds) if v <= t),
+                default=0
+            ) 
+            for t in range(length)
+        ]
+        fs = [
+            (t - elapsed_seconds[i]) / (elapsed_seconds[i+1] - elapsed_seconds[i])
+            for t, i in enumerate(indexes)
+        ]
+        nr_points_done_resample = [
+            nr_points_done[i] * (1-f) + nr_points_done[i+1] * f
+            for i,f in zip(indexes, fs)
+        ]
+        if length > 100:
+            delta_t = floor(length / 100)
+        else:
+            delta_t = 1
+        pps_insert = [
+            (v2 - v1) / delta_t 
+            for v1, v2 in zip(
+                [0] * delta_t + nr_points_done_resample[:-delta_t],
+                nr_points_done_resample
             )
         ]
-        ax.plot(elapsed_seconds, pps_insert, label="Insertion Rate", color='#4285F4')
+        pprint(title)
+        pprint(elapsed_seconds[:10])
+        pprint(indexes[:10])
+        pprint(nr_points_done[:10])
+        pprint(nr_points_done_resample[:10])
+        pprint(pps_insert[:10])
+        ax.plot(range(length), pps_insert, label=f"Insertion Rate (moving average, Δt={delta_t}s)", color='#4285F4')
 
         if all(t is not None for t in gps_time):
             pps_sensor = [0] + [
@@ -873,7 +907,8 @@ def plot_insertion_rate_over_time(data, filename: str, title=None):
                     nr_points_read[:-1]
                 )
             ]
-            ax.plot(elapsed_seconds, pps_sensor, label="Scanner Speed", color='r', linestyle='--')
+            if any(pps > 10 for pps in pps_sensor):
+                ax.plot(elapsed_seconds, pps_sensor, label="Scanner Speed", color='r', linestyle='--')
         ax.set_xlabel("Time | s")
         ax.set_ylabel("Points/s")
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.1f}M"))
