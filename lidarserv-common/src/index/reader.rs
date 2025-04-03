@@ -4,6 +4,7 @@ use crate::{
         grid::{LeveledGridCell, LodLevel},
         position::PositionComponentType,
     },
+    index::attribute_index::AttributeIndex,
     lru_cache::pager::PageDirectory,
     query::{ExecutableQuery, LoadKind, NodeQueryResult, Query, QueryContext},
 };
@@ -34,6 +35,21 @@ pub struct OctreeReader {
 struct FrontierElement {
     matches_query: NodeQueryResult,
     exists: bool,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct QueryConfig {
+    pub enable_attribute_index: bool,
+    pub enable_point_filtering: bool,
+}
+
+impl Default for QueryConfig {
+    fn default() -> Self {
+        Self {
+            enable_attribute_index: true,
+            enable_point_filtering: true,
+        }
+    }
 }
 
 impl OctreeReader {
@@ -264,12 +280,22 @@ impl OctreeReader {
     }
 
     /// Sets the query
-    pub fn set_query<Q: Query>(&mut self, q: Q, point_filtering: bool) -> Result<(), Q::Error> {
+    pub fn set_query<Q: Query>(&mut self, q: Q, cfg: QueryConfig) -> Result<(), Q::Error> {
         let _span = span!("OctreeReader::set_query");
         debug!("Setting new query: {q:?}");
-        let query = q.prepare(&self.query_context)?;
+        let mut ctx_clone;
+        let query_context = if cfg.enable_attribute_index {
+            &self.query_context
+        } else {
+            // if the attribute index is disabled for this query,
+            // replace it with an empty AttributeIndex in the query context.
+            ctx_clone = self.query_context.clone();
+            ctx_clone.attribute_index = Arc::new(AttributeIndex::new());
+            &ctx_clone
+        };
+        let query = q.prepare(query_context)?;
         self.query = Box::new(query);
-        self.point_filtering = point_filtering;
+        self.point_filtering = cfg.enable_point_filtering;
         self.update_new_query();
         Ok(())
     }

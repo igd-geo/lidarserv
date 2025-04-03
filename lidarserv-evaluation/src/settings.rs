@@ -362,6 +362,14 @@ pub enum EnabledAttributeIndexes {
     None,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+pub enum QueryFiltering {
+    NodeFiltering,
+    NodeFilteringWithoutAttributeIndex,
+    #[default]
+    PointFiltering,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SingleIndex {
@@ -374,7 +382,7 @@ pub struct SingleIndex {
     pub nr_bogus_points: (usize, usize),
     pub max_lod: u8,
     pub enable_attribute_index: EnabledAttributeIndexes,
-    pub enable_point_filtering: bool,
+    pub enable_point_filtering: QueryFiltering,
 }
 
 impl Default for SingleIndex {
@@ -423,7 +431,7 @@ pub struct MultiIndex {
     pub nr_bogus_points: Option<Vec<(usize, usize)>>,
     pub max_lod: Option<Vec<u8>>,
     pub enable_attribute_index: Option<Vec<EnabledAttributeIndexes>>,
-    pub enable_point_filtering: Option<Vec<bool>>,
+    pub enable_point_filtering: Option<Vec<QueryFiltering>>,
 }
 
 macro_rules! apply_default_vec {
@@ -580,5 +588,74 @@ impl<'de> Deserialize<'de> for EnabledAttributeIndexes {
             }
         }
         deserializer.deserialize_any(AttrIndexVisitor)
+    }
+}
+
+const STR_NODE_FILTERING: &str = "NodeFiltering";
+const STR_POINT_FILTERING: &str = "PointFiltering";
+const STR_WITHOUT_ATTRIBUTE_INDEX: &str = "NodeFilteringWithoutAttributeIndex";
+
+impl Serialize for QueryFiltering {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let string = match self {
+            QueryFiltering::NodeFiltering => STR_NODE_FILTERING,
+            QueryFiltering::NodeFilteringWithoutAttributeIndex => STR_WITHOUT_ATTRIBUTE_INDEX,
+            QueryFiltering::PointFiltering => STR_POINT_FILTERING,
+        };
+        serializer.serialize_str(string)
+    }
+}
+
+impl<'a> Deserialize<'a> for QueryFiltering {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'a>,
+    {
+        struct QueryFilteringVisitor;
+
+        impl Visitor<'_> for QueryFilteringVisitor {
+            type Value = QueryFiltering;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(
+                    formatter,
+                    "a boolean value or one of the strings '{STR_NODE_FILTERING}', \
+                    '{STR_POINT_FILTERING}', '{STR_WITHOUT_ATTRIBUTE_INDEX}'"
+                )
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if s.eq_ignore_ascii_case(STR_POINT_FILTERING) {
+                    Ok(QueryFiltering::PointFiltering)
+                } else if s.eq_ignore_ascii_case(STR_NODE_FILTERING) {
+                    Ok(QueryFiltering::NodeFiltering)
+                } else if s.eq_ignore_ascii_case(STR_WITHOUT_ATTRIBUTE_INDEX) {
+                    Ok(QueryFiltering::NodeFilteringWithoutAttributeIndex)
+                } else {
+                    Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(s),
+                        &self,
+                    ))
+                }
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match v {
+                    true => Ok(QueryFiltering::PointFiltering),
+                    false => Ok(QueryFiltering::NodeFiltering),
+                }
+            }
+        }
+
+        deserializer.deserialize_any(QueryFilteringVisitor)
     }
 }

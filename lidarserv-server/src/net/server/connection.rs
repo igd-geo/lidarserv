@@ -4,6 +4,7 @@ use crate::net::protocol::messages::{DeviceType, PointDataCodec, QueryConfig};
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use crossbeam_channel::{RecvError, TryRecvError};
 use lidarserv_common::index::Octree;
+use lidarserv_common::index::reader::QueryConfig as ReaderQueryConfig;
 use lidarserv_common::query::empty::EmptyQuery;
 use log::{debug, info, warn};
 use std::net::SocketAddr;
@@ -199,13 +200,19 @@ async fn viewer_mode(
                     query_config = c;
                     reader.update();
                     let query_str = format!("{q:?}");
-                    let r = reader.set_query(q, query_config.point_filtering);
+                    let r = reader.set_query(
+                        q,
+                        ReaderQueryConfig {
+                            enable_attribute_index: true,
+                            enable_point_filtering: query_config.point_filtering,
+                        },
+                    );
                     match r {
                         Ok(()) => (),
                         Err(e) => {
                             return Err(LidarServerError::Client(format!(
                                 "Invalid query {query_str}: {e}"
-                            )))
+                            )));
                         }
                     }
                 }

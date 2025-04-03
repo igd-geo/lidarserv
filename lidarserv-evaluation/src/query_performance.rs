@@ -1,14 +1,16 @@
-use lidarserv_common::index::Octree;
+use lidarserv_common::index::{Octree, reader::QueryConfig};
 use lidarserv_server::index::query::Query;
 use log::debug;
 use pasture_core::containers::BorrowedBuffer;
 use serde_json::json;
 use std::time::Instant;
 
+use crate::settings::QueryFiltering;
+
 pub fn measure_one_query(
     index: &mut Octree,
     query_str: &str,
-    enable_point_filtering: bool,
+    filtering: QueryFiltering,
 ) -> serde_json::value::Value {
     debug!("Flushing index");
     index.flush().unwrap();
@@ -19,7 +21,7 @@ pub fn measure_one_query(
             return json!({
                 "error": format!("{e}"),
                 "detail": format!("{e:#?}")
-            })
+            });
         }
     };
 
@@ -31,15 +33,21 @@ pub fn measure_one_query(
         Err(e) => {
             return json!({
                 "error": format!("{e}")
-            })
+            });
         }
     };
-    match r.set_query(query, enable_point_filtering) {
+    match r.set_query(
+        query,
+        QueryConfig {
+            enable_attribute_index: filtering != QueryFiltering::NodeFilteringWithoutAttributeIndex,
+            enable_point_filtering: filtering == QueryFiltering::PointFiltering,
+        },
+    ) {
         Ok(_) => {}
         Err(e) => {
             return json!({
                 "error": format!("{e}")
-            })
+            });
         }
     }
 
