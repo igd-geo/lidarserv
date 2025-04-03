@@ -431,7 +431,10 @@ def plot_index_size_comparison(data, filename):
         ax.set_xticks(x)
         ax.set_xticklabels(tools)
 
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}GB"))
+        if input_size > 10:
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.0f}GB"))
+        else:
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.1f}GB"))
 
     axs[0].set_ylabel("Size of Index | Gigabytes")
 
