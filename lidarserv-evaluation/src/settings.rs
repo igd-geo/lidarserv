@@ -509,16 +509,23 @@ impl<'a> IntoIterator for &'a MultiIndex {
     }
 }
 
+const STR_ALL: &str = "All";
+const STR_RANGE_INDEX_ONLY: &str = "RangeIndexOnly";
+const STR_SFC_INDEX_ONLY: &str = "SfcIndexOnly";
+const STR_NONE: &str = "None";
+
 impl Serialize for EnabledAttributeIndexes {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         match self {
-            EnabledAttributeIndexes::All => serializer.serialize_str("All"),
-            EnabledAttributeIndexes::RangeIndexOnly => serializer.serialize_str("RangeIndexOnly"),
-            EnabledAttributeIndexes::SfcIndexOnly => serializer.serialize_str("SfcIndexOnly"),
-            EnabledAttributeIndexes::None => serializer.serialize_str("None"),
+            EnabledAttributeIndexes::All => serializer.serialize_str(STR_ALL),
+            EnabledAttributeIndexes::RangeIndexOnly => {
+                serializer.serialize_str(STR_RANGE_INDEX_ONLY)
+            }
+            EnabledAttributeIndexes::SfcIndexOnly => serializer.serialize_str(STR_SFC_INDEX_ONLY),
+            EnabledAttributeIndexes::None => serializer.serialize_str(STR_NONE),
         }
     }
 }
@@ -536,7 +543,8 @@ impl<'de> Deserialize<'de> for EnabledAttributeIndexes {
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 write!(
                     formatter,
-                    "a boolean value, or one of the strings 'All', 'RangeIndexOnly', 'SfcIndexOnly', 'None'"
+                    "a boolean value, or one of the strings '{STR_ALL}', \
+                    '{STR_RANGE_INDEX_ONLY}', '{STR_SFC_INDEX_ONLY}', '{STR_NONE}'"
                 )
             }
 
@@ -544,13 +552,13 @@ impl<'de> Deserialize<'de> for EnabledAttributeIndexes {
             where
                 E: serde::de::Error,
             {
-                if s.eq_ignore_ascii_case("All") {
+                if s.eq_ignore_ascii_case(STR_ALL) {
                     Ok(EnabledAttributeIndexes::All)
-                } else if s.eq_ignore_ascii_case("None") {
+                } else if s.eq_ignore_ascii_case(STR_NONE) {
                     Ok(EnabledAttributeIndexes::None)
-                } else if s.eq_ignore_ascii_case("RangeIndexOnly") {
+                } else if s.eq_ignore_ascii_case(STR_RANGE_INDEX_ONLY) {
                     Ok(EnabledAttributeIndexes::RangeIndexOnly)
-                } else if s.eq_ignore_ascii_case("SfcIndexOnly") {
+                } else if s.eq_ignore_ascii_case(STR_SFC_INDEX_ONLY) {
                     Ok(EnabledAttributeIndexes::SfcIndexOnly)
                 } else {
                     Err(serde::de::Error::invalid_value(

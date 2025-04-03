@@ -10,9 +10,6 @@ attributes = "LasPointFormat1Raw"
 
 [queries]
 full-point-cloud = "full"
-#lod0 = "lod(0)"
-#lod1 = "lod(1)"
-#lod2 = "lod(2)"
 intensity_high = "attr(Intensity > 128)"
 intensity_low = "attr(Intensity <= 2)"
 time_1 = "attr(GpsTime < 20000)"
@@ -21,7 +18,16 @@ pointsource1 = "attr(PointSourceID >= 10)"
 pointsource2 = "attr(PointSourceID >= 5)"
 scananglerank1 = "attr(ScanAngleRank <= 45)"
 scananglerank2 = "attr(ScanAngleRank <= 90)"
-view_frustum1 = "view_frustum( camera_pos: [-560.45, -584.87, 47.29], camera_dir: [0.75, 0.65, -0.12], camera_up: [0.0, 0.0, 1.0], fov_y: 0.78, z_near: 3.9, z_far: 3994169.6, window_size: [500.0, 500.0], max_distance: 10.0 )"
+view_frustum1 = """view_frustum( 
+    camera_pos: [-560.45, -584.87, 47.29], 
+    camera_dir: [0.75, 0.65, -0.12], 
+    camera_up: [0.0, 0.0, 1.0], 
+    fov_y: 0.78, 
+    z_near: 3.9, 
+    z_far: 3994169.6, 
+    window_size: [500.0, 500.0], 
+    max_distance: 10.0 
+)"""
 
 [coordinate_system]
 scale = [
@@ -36,8 +42,22 @@ offset = [
 ]
 
 [indexed_attributes]
-intensity = ["RangeIndex"]
-gpstime = ["RangeIndex"]
+intensity = [
+    "RangeIndex",
+    { SfcIndex = { nr_bins = 16 } },
+]
+gpstime = [
+    "RangeIndex",
+    { SfcIndex = { nr_bins = 16 } },
+]
+pointsourceid = [
+    "RangeIndex",
+    { SfcIndex = { nr_bins = 16 } },
+]
+scananglerank = [
+    "RangeIndex",
+    { SfcIndex = { nr_bins = 16 } },
+]
 
 [defaults]
 measure_index_speed = true
@@ -48,7 +68,7 @@ point_hierarchy = 11
 priority_function = "NrPointsWeightedByTaskAge"
 num_threads = 32
 cache_size = 500
-compression = true
+compression = false
 nr_bogus_points = [
     0,
     0,
@@ -60,3 +80,9 @@ enable_attribute_index = true
 compression = [true, false]
 enable_attribute_index = [true, false]
 enable_point_filtering = [true, false]
+
+[runs.attr-index]
+measure_index_speed = true
+measure_query_speed = true
+measure_query_latency = false
+enable_attribute_index = ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]
