@@ -1,6 +1,6 @@
 points_file = "../../../data/Lille_sorted.las"
 index_folder = "../../../data/lille-eval"
-output_file = "../results/lidarserv/lille_%d_%i.json"
+output_file = "../measurements/lidarserv/lille_%d_%i.json"
 cooldown_seconds = 0
 indexing_timeout_seconds = 50000
 target_point_pressure = 1000000
@@ -60,6 +60,9 @@ scananglerank = [
 ]
 
 [defaults]
+measure_index_speed = false
+measure_query_speed = false
+measure_query_latency = false
 node_hierarchy = 19
 point_hierarchy = 11
 priority_function = "NrPointsWeightedByTaskAge"
@@ -76,31 +79,16 @@ enable_point_filtering = true
 
 [runs.insertion-speed]
 measure_index_speed = true
-measure_query_speed = false
-measure_query_latency = false
 compression = [true, false]
-enable_attribute_index = [true]
 
 [runs.querying]
-measure_index_speed = false
 measure_query_speed = true
-measure_query_latency = false
 enable_point_filtering = ["NodeFilteringWithoutAttributeIndex", "NodeFiltering", "PointFiltering"]
-enable_attribute_index = [true]
-compression = [false]
 
 [runs.latency]
-measure_index_speed = false
-measure_query_speed = false
 measure_query_latency = true
-compression = [false]
-enable_attribute_index = [true]
-enable_point_filtering = [true]
 
 [runs.attr-index]
 measure_index_speed = true
 measure_query_speed = true
-measure_query_latency = false
-compression = [false]
 enable_attribute_index = ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]
-enable_point_filtering = [false]

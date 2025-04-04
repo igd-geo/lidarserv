@@ -5,6 +5,7 @@ from glob import glob
 from os.path import join, dirname
 import json
 from posixpath import basename
+from pprint import pprint
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
@@ -15,6 +16,110 @@ from math import floor
 
 PROJECT_ROOT = dirname(__file__)
 OUTPUT_FOLDER = join(PROJECT_ROOT, "figures")
+
+QUERIES_AND_LABELS = [
+    # ahn
+    (
+        # queries
+        [
+            "classification_bridges",
+            "classification_building",
+            "classification_ground",
+            "classification_vegetation",
+            "intensity_high",
+            "intensity_low",
+            "time_1",
+            "time_2",
+            "time_3"
+        ], 
+        
+        # labels
+        [
+            "Classification\nBridges",
+            "Classification\nBuildings",
+            "Classification\nGround",
+            "Classification\nVegetation",
+            "Intensity\nHigh",
+            "Intensity\nLow",
+            "Time\nBig Slice",
+            "Time\nSmall Slice",
+            "Time\nMedium Slice"
+        ], 
+
+        # figure title
+        "AHN4",
+
+        # file name prefix
+        "ahn4_"
+    ), 
+
+    # kitti
+    (
+        # queries
+        [
+            "classification_building",
+            "classification_ground",
+            "pointsource1",
+            "pointsource2",
+            "rgb",
+            "time1",
+            "time2"
+        ], 
+
+        # labels
+        [
+            "Classification\nBuildings",
+            "Classification\nGround",
+            "Pointsource1",
+            "Pointsource2",
+            "RGB",
+            "Time\nBig Slice",
+            "Time\nMedium Slice"
+        ],
+
+        # figure title
+        "KITTI",
+
+        # file name prefix
+        "kitti_"
+    ),
+
+    # lille
+    (
+        # queries
+        [
+            "intensity_high",
+            "intensity_low",
+            "time_1",
+            "time_2",
+            "pointsource1",
+            "pointsource2",
+            "scananglerank1",
+            "scananglerank2",
+            "view_frustum1",
+        ], 
+
+        # labels
+        [
+            "Intensity\nHigh",
+            "Intensity\nLow",
+            "Time\nBig Slice",
+            "Time\nSmall Slice",
+            "PointsourceID\n≥10",
+            "PointsourceID\n≥5",
+            "ScanAngleRank\n≤45°",
+            "ScanAngleRank\n≤90°",
+            "View Frustum",
+        ], 
+
+        # figure title
+        "Lille",
+
+        # file name prefix
+        "lille_"
+    )
+]
+
 
 @dataclass
 class InputFile:
@@ -61,132 +166,76 @@ def main():
         for path 
         in glob("measurements/lidarserv/*.json", root_dir=PROJECT_ROOT)
     ]
-    queries_and_labels = [
-        # ahn
-        (
-            [
-                "classification_bridges",
-                "classification_building",
-                "classification_ground",
-                "classification_vegetation",
-                "intensity_high",
-                "intensity_low",
-                "time_1",
-                "time_2",
-                "time_3"
-            ], [
-                "Classification\nBridges",
-                "Classification\nBuildings",
-                "Classification\nGround",
-                "Classification\nVegetation",
-                "Intensity\nHigh",
-                "Intensity\nLow",
-                "Time\nBig Slice",
-                "Time\nSmall Slice",
-                "Time\nMedium Slice"
-            ], 
-            "AHN4",
-            "ahn4_"
-        ), 
-
-        # kitti
-        (
-            [
-                "classification_building",
-                "classification_ground",
-                "pointsource1",
-                "pointsource2",
-                "rgb",
-                "time1",
-                "time2"
-            ], 
-            [
-                "Classification\nBuildings",
-                "Classification\nGround",
-                "Pointsource1",
-                "Pointsource2",
-                "RGB",
-                "Time\nBig Slice",
-                "Time\nMedium Slice"
-            ],
-            "KITTI",
-            "kitti_"
-        ),
-
-        # lille
-        (
-            [
-                "intensity_high",
-                "intensity_low",
-                "time_1",
-                "time_2",
-                "pointsource1",
-                "pointsource2",
-                "scananglerank1",
-                "scananglerank2",
-                "view_frustum1",
-            ], 
-            [
-                "Intensity\nHigh",
-                "Intensity\nLow",
-                "Time\nBig Slice",
-                "Time\nSmall Slice",
-                "PointsourceID\n≥10",
-                "PointsourceID\n≥5",
-                "ScanAngleRank\n≤45°",
-                "ScanAngleRank\n≤90°",
-                "View Frustum",
-            ], 
-            "Lille",
-            "lille_"
-        )
-    ]
     for file in all_files:
         with open(file.path, "r") as f:
             data = json.load(f)
+            if "querying" in data["runs"]:
+                run = "querying"
+            elif "main" in data["runs"]:
+                run = "main"
+            else:
+                continue
             print_querys(
-                data,
+                data, 
+                run,
                 filename=join(OUTPUT_FOLDER, f"queries_{file.name}.tex")
             )
-            for queries, labels, title, prefix in queries_and_labels:
-                if not file.name.startswith(prefix):
-                    continue
-                plot_query_by_time(
-                    data=data,
-                    queries=queries,
-                    labels=labels,
-                    filename=join(OUTPUT_FOLDER, f"query_by_time_{file.name}.pdf"),
-                    title=title
-                )
-                calculate_average_querying_speed(
-                    data=data,
-                    queries=queries,
-                    filename=join(OUTPUT_FOLDER, f"average_querying_speed_{file.name}.txt"),
-                    title=title
-                )
-                plot_query_by_num_points(
-                    data=data,
-                    queries=queries,
-                    labels=labels,
-                    filename=join(OUTPUT_FOLDER, f"query_by_points_{file.name}.pdf"),
-                    title=title
-                )
-                plot_query_by_num_nodes(
-                    data=data,
-                    queries=queries,
-                    labels=labels,
-                    filename=join(OUTPUT_FOLDER, f"query_by_nodes_{file.name}.pdf"),
-                    title=title
-                )
+            queries, labels, title = next((
+                    (queries, labels, title)
+                    for queries, labels, title, prefix in QUERIES_AND_LABELS
+                    if file.name.startswith(prefix)
+                ), 
+                (None, None, None)
+            )
+            if queries is None:
+                continue
+            plot_query_by_time(
+                data=data,
+                run=run,
+                queries=queries,
+                labels=labels,
+                filename=join(OUTPUT_FOLDER, f"query_by_time_{file.name}.pdf"),
+                title=title
+            )
+            calculate_average_querying_speed(
+                data=data,
+                run=run,
+                queries=queries,
+                filename=join(OUTPUT_FOLDER, f"average_querying_speed_{file.name}.txt"),
+                title=title
+            )
+            plot_query_by_num_points(
+                data=data,
+                run=run,
+                queries=queries,
+                labels=labels,
+                filename=join(OUTPUT_FOLDER, f"query_by_points_{file.name}.pdf"),
+                title=title
+            )
+            plot_query_by_num_nodes(
+                data=data,
+                run=run,
+                queries=queries,
+                labels=labels,
+                filename=join(OUTPUT_FOLDER, f"query_by_nodes_{file.name}.pdf"),
+                title=title
+            )
 
     # latency
     for file in all_files:
         with open(file.path, "r") as f:
             data = json.load(f)
+        if "latency" in data["runs"]:
+            run = "latency"
+        elif "main" in data["runs"]:
+            run = "main"
+        else:
+            continue
         filename=join(OUTPUT_FOLDER, f"latency_comparison_violin_{file.name}.pdf")
         if not exists(filename):    # only regenerate the latency plots, if they don't exist, because computing the viiolin shapes takes quite long.
             plot_latency_comparison_violin(
                 data, 
+                run=run,
                 query="full-point-cloud",
                 filename=filename, 
             )
@@ -195,6 +244,10 @@ def main():
     for file in all_files:
         with open(file.path, "r") as f:
             data = json.load(f)
+        if "insertion-speed" in data["runs"]:
+            run = "insertion-speed"
+        else:
+            continue
         title = None
         if file.name.startswith("kitti"):
             title = "KITTI"
@@ -205,23 +258,29 @@ def main():
         
         plot_insertion_rate_progression(
             data,
+            run=run,
             title=title,
             filename=join(OUTPUT_FOLDER, f"insertion_rate_progression_{file.name}.pdf"), 
         )
 
-def print_querys(data, filename):
-    if "main" not in data["runs"]:
-        return
-    if len(data["runs"]["main"]) == 0:
-        return
-    if "query_performance" not in data["runs"]["main"][0]["results"]:
-        return
-    if data["runs"]["main"][0]["results"]["query_performance"] is None:
-        return
+def print_querys(data, run, filename):
     points_file = data["settings"]["points_file"].split("/")[-1]
     total_points = data["env"]["nr_points"]
-    queries = data["runs"]["main"][0]["results"]["query_performance"]
     query_statements = data["settings"]["queries"]
+    data_run = data["runs"][run]
+    data_run = [
+        d for d in data_run 
+        if "enable_point_filtering" not in d["index"]
+        or d["index"]["enable_point_filtering"] in [True, "PointFiltering"]
+    ]
+    if len(data_run) == 0:
+        return
+    data_results = data_run[0]["results"]
+    if "query_performance" not in data_results:
+        return
+    if data_results["query_performance"] is None:
+        return
+    queries = data_results["query_performance"]
 
     with open(filename, "wt") as f:
         for query in queries:
@@ -286,18 +345,17 @@ def estimate_probability_density(
 
     }
 
-def plot_latency_comparison_violin(data, filename, query):
-    if "main" not in data["runs"]:
+def plot_latency_comparison_violin(data, run, filename, query):
+    data_run = data["runs"][run]
+    if len(data_run) == 0:
         return
-    if len(data["runs"]["main"]) == 0:
+    if "latency" not in data_run[0]["results"]:
         return
-    if "latency" not in data["runs"]["main"][0]["results"]:
+    if data_run[0]["results"]["latency"] is None:
         return
-    if data["runs"]["main"][0]["results"]["latency"] is None:
+    if query not in data_run[0]["results"]["latency"]:
         return
-    if query not in data["runs"]["main"][0]["results"]["latency"]:
-        return
-    latency_query = data["runs"]["main"][0]["results"]["latency"][query]
+    latency_query = data_run[0]["results"]["latency"][query]
     if "stats_by_lod" not in latency_query:
         return
     stats_by_lod = latency_query["stats_by_lod"]
@@ -340,6 +398,7 @@ def plot_latency_comparison_violin(data, filename, query):
     plt.ylabel("Latency | ms")
     plt.tight_layout()
     plt.savefig(filename, metadata={"CreationDate": None})
+    plt.close(fig)
 
 
 def plot_compression_rate_comparison(data, filename):
@@ -392,6 +451,7 @@ def plot_compression_rate_comparison(data, filename):
 
     plt.tight_layout()
     plt.savefig(filename, metadata={"CreationDate": None})
+    plt.close(fig)
 
 def plot_index_size_comparison(data, filename):
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
@@ -441,6 +501,7 @@ def plot_index_size_comparison(data, filename):
     ax.legend()
     fig.tight_layout()
     plt.savefig(filename, metadata={"CreationDate": None})
+    plt.close(fig)
 
 def plot_insertion_speed_comparison(data, filename):
     dataset_names = {
@@ -504,16 +565,10 @@ def plot_insertion_speed_comparison(data, filename):
     plt.legend()
     plt.tight_layout()
     plt.savefig(filename, metadata={"CreationDate": None})
+    plt.close(fig)
 
-def calculate_average_querying_speed(data, queries, filename, title=None):
-    test_runs = data["runs"]["main"]
-
-    times = {
-        "no_compression": [],
-        "compression": [],
-        "no_compression_attribute_index": [],
-        "compression_attribute_index": []
-    }
+def calculate_average_querying_speed(data, run, queries, filename, title=None):
+    test_runs = data["runs"][run]
 
     times_no_compression = []
     times_compression = []
@@ -526,10 +581,11 @@ def calculate_average_querying_speed(data, queries, filename, title=None):
         if test_run["results"]["query_performance"] is None:
             return
         compression = test_run["index"]["compression"]
-        attribute_index = test_run["index"]["enable_attribute_index"]
-        try:
-            point_filtering = test_run["index"]["enable_point_filtering"]
-        except:
+        if "enable_point_filtering" in test_run["index"]:
+            attribute_index = test_run["index"]["enable_attribute_index"] in [True, "All"] and test_run["index"]["enable_point_filtering"] != "NodeFilteringWithoutAttributeIndex"
+            point_filtering = test_run["index"]["enable_point_filtering"] in [True, "PointFiltering"]
+        else:
+            attribute_index = test_run["index"]["enable_attribute_index"]
             point_filtering = True
 
         for query in queries:
@@ -544,17 +600,19 @@ def calculate_average_querying_speed(data, queries, filename, title=None):
                 times_no_compression.append(query_time)
                 num_points_no_compression.append(num_points)
 
-    pps_no_compression = sum(num_points_no_compression) / sum(times_no_compression)
-    pps_compression = sum(num_points_compression) / sum(times_compression)
     with open(filename, "wt") as f:
         f.write(f"Dataset: {title}\n")
-        f.write(f"Average querying speed without compression: {pps_no_compression:.2f} points/s\n")
-        f.write(f"Average querying speed with compression: {pps_compression:.2f} points/s\n")
+        if sum(times_no_compression) > 0:
+            pps_no_compression = sum(num_points_no_compression) / sum(times_no_compression)
+            f.write(f"Average querying speed without compression: {pps_no_compression:.2f} points/s\n")
+        if sum(times_compression) > 0:
+            pps_compression = sum(num_points_compression) / sum(times_compression)
+            f.write(f"Average querying speed with compression: {pps_compression:.2f} points/s\n")
 
 
 
-def plot_query_by_time(data, filename, queries, labels, title=None):
-    test_runs = data["runs"]["main"]
+def plot_query_by_time(data, filename, run, queries, labels, title=None):
+    test_runs = data["runs"][run]
 
     times = {
         "no_compression": [],
@@ -564,16 +622,20 @@ def plot_query_by_time(data, filename, queries, labels, title=None):
     }
 
     for test_run in test_runs:
-        if "enable_point_filtering" not in test_run["index"]:
-            return
         compression = test_run["index"]["compression"]
-        attribute_index = test_run["index"]["enable_attribute_index"]
-        point_filtering = test_run["index"]["enable_point_filtering"]
+        if "enable_point_filtering" in test_run["index"]:
+            attribute_index = test_run["index"]["enable_attribute_index"] in [True, "All"] and test_run["index"]["enable_point_filtering"] != "NodeFilteringWithoutAttributeIndex"
+            point_filtering = test_run["index"]["enable_point_filtering"] in [True, "PointFiltering"]
+        else:
+            attribute_index = test_run["index"]["enable_attribute_index"]
+            point_filtering = True
         if not point_filtering:
             continue
 
         for query in queries:
             if "query_performance" not in test_run["results"]:
+                return
+            if test_run["results"]["query_performance"] is None:
                 return
             if query not in test_run["results"]["query_performance"]:
                 return
@@ -587,6 +649,9 @@ def plot_query_by_time(data, filename, queries, labels, title=None):
             else:
                 times["no_compression"].append(query_time)
 
+    if len(times["no_compression"]) != len(queries) \
+            or len(times["no_compression_attribute_index"]) != len(queries):
+        return
     fig, ax = plt.subplots(figsize=[10, 5.5])
     index = range(len(queries))
 
@@ -617,118 +682,107 @@ def plot_query_by_time(data, filename, queries, labels, title=None):
     plt.close(fig)
 
 
-def plot_insertion_rate_progression(data, filename: str, title=None):
-    test_runs = data["runs"]["main"]
+def plot_insertion_rate_progression(data, run:str, filename: str, title=None):
+    test_runs = data["runs"][run]
+    filter_by_compression = len(
+        set(test_run["index"]["compression"] for test_run in test_runs)
+    ) > 1
+    if filter_by_compression:
+        test_runs = [test_run for test_run in test_runs if not test_run["index"]["compression"]]
 
-    filter_run = {
-        "compression": False,
-        "enable_attribute_index": True,
-        "enable_point_filtering": False,
-    }
-    test_runs = [
-        run
-        for run in test_runs
-        if all(k in run["index"] and run["index"][k] == v for k, v in filter_run.items())
-    ]
+    test_runs = [run for run in test_runs if run["index"]["compression"] == False]
     
     if len(test_runs) == 1:
-        file_names = [filename]
+        run = test_runs[0] 
     else:
-        if filename.endswith(".pdf"):
-            base = filename[:-4]
-            suffix = ".pdf"
-        else:
-            base = filename
-            suffix = ""
-        file_names = [base + "-" + str(i) + suffix for i in range(len(test_runs))]
+        return
 
-    for filename, run in zip(file_names, test_runs):
-        if "progress_over_time" not in run["results"]["insertion_rate"]:
-            return
+    if "progress_over_time" not in run["results"]["insertion_rate"]:
+        return
 
-        data = run["results"]["insertion_rate"]["progress_over_time"]
-        elapsed_seconds = [it["elapsed_seconds"] for it in data]
-        nr_points_done = [it["nr_points_done"] for it in data]
-        gps_time = [it["gps_time"] for it in data]
-        nr_points_read = [it["nr_points_read"] for it in data]
-        #nr_pending_tasks = [it["nr_pending_tasks"] for it in data]
-        #nr_pending_points = [it["nr_pending_points"] for it in data]
-        #nr_cached_nodes = [it["nr_cached_nodes"] for it in data]
+    data = run["results"]["insertion_rate"]["progress_over_time"]
+    elapsed_seconds = [it["elapsed_seconds"] for it in data]
+    nr_points_done = [it["nr_points_done"] for it in data]
+    gps_time = [it["gps_time"] for it in data]
+    nr_points_read = [it["nr_points_read"] for it in data]
+    #nr_pending_tasks = [it["nr_pending_tasks"] for it in data]
+    #nr_pending_points = [it["nr_pending_points"] for it in data]
+    #nr_cached_nodes = [it["nr_cached_nodes"] for it in data]
 
-        fig, ax = plt.subplots()
-        fig.set_size_inches(8, 4)
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8, 4)
 
-        #pps_insert = [0] + [
-        #    (y2 - y1) / (x2- x1)
-        #    for x1, x2, y1, y2 in zip(
-        #        elapsed_seconds[1:], 
-        #        elapsed_seconds[:-1], 
-        #        nr_points_done[1:], 
-        #        nr_points_done[:-1]
-        #    )
-        #]
-        length = floor(elapsed_seconds[-1])
-        indexes = [
-            max(
-                (i for i,v in enumerate(elapsed_seconds) if v <= t),
-                default=0
-            ) 
-            for t in range(length)
-        ]
-        fs = [
-            (t - elapsed_seconds[i]) / (elapsed_seconds[i+1] - elapsed_seconds[i])
-            for t, i in enumerate(indexes)
-        ]
-        nr_points_done_resample = [
-            nr_points_done[i] * (1-f) + nr_points_done[i+1] * f
-            for i,f in zip(indexes, fs)
-        ]
-        nr_points_read_resample = [
-            nr_points_read[i] * (1-f) + nr_points_read[i+1] * f
-            for i,f in zip(indexes, fs)
-        ]
-        if length > 100:
-            delta_t = floor(length / 100)
-        else:
-            delta_t = 1
-        pps_insert = [
-            (v2 - v1) / delta_t 
-            for v1, v2 in zip(
-                [0] * delta_t + nr_points_done_resample[:-delta_t],
-                nr_points_done_resample
+    #pps_insert = [0] + [
+    #    (y2 - y1) / (x2- x1)
+    #    for x1, x2, y1, y2 in zip(
+    #        elapsed_seconds[1:], 
+    #        elapsed_seconds[:-1], 
+    #        nr_points_done[1:], 
+    #        nr_points_done[:-1]
+    #    )
+    #]
+    length = floor(elapsed_seconds[-1])
+    indexes = [
+        max(
+            (i for i,v in enumerate(elapsed_seconds) if v <= t),
+            default=0
+        ) 
+        for t in range(length)
+    ]
+    fs = [
+        (t - elapsed_seconds[i]) / (elapsed_seconds[i+1] - elapsed_seconds[i])
+        for t, i in enumerate(indexes)
+    ]
+    nr_points_done_resample = [
+        nr_points_done[i] * (1-f) + nr_points_done[i+1] * f
+        for i,f in zip(indexes, fs)
+    ]
+    nr_points_read_resample = [
+        nr_points_read[i] * (1-f) + nr_points_read[i+1] * f
+        for i,f in zip(indexes, fs)
+    ]
+    if length > 100:
+        delta_t = floor(length / 100)
+    else:
+        delta_t = 1
+    pps_insert = [
+        (v2 - v1) / delta_t 
+        for v1, v2 in zip(
+            [0] * delta_t + nr_points_done_resample[:-delta_t],
+            nr_points_done_resample
+        )
+    ]
+    ax.plot(
+        nr_points_read_resample, pps_insert, 
+        label=f"Insertion Rate (moving average, Δt={delta_t}s)", color='#4285F4'
+    )
+
+    if all(t is not None for t in gps_time):
+        pps_sensor = [0] + [
+            (y2 - y1) / (x2- x1)
+            for x1, x2, y1, y2 in zip(
+                gps_time[1:], 
+                gps_time[:-1], 
+                nr_points_read[1:], 
+                nr_points_read[:-1]
             )
         ]
-        ax.plot(
-            nr_points_read_resample, pps_insert, 
-            label=f"Insertion Rate (moving average, Δt={delta_t}s)", color='#4285F4'
-        )
-
-        if all(t is not None for t in gps_time):
-            pps_sensor = [0] + [
-                (y2 - y1) / (x2- x1)
-                for x1, x2, y1, y2 in zip(
-                    gps_time[1:], 
-                    gps_time[:-1], 
-                    nr_points_read[1:], 
-                    nr_points_read[:-1]
-                )
-            ]
-            if any(pps > 10 for pps in pps_sensor):
-                ax.plot(nr_points_read, pps_sensor, label="Scanner Speed", color='r', linestyle='--')
-        ax.set_xlabel("Read position | Points")
-        ax.set_ylabel("Points/s")
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.0f}M"))
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.1f}M"))
-        ax.legend()
-        #fig.tight_layout()
-        if title is not None:
-            ax.set_title(title)
-        fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
-        plt.close(fig)
+        if any(pps > 10 for pps in pps_sensor):
+            ax.plot(nr_points_read, pps_sensor, label="Scanner Speed", color='r', linestyle='--')
+    ax.set_xlabel("Read position | Points")
+    ax.set_ylabel("Points/s")
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.0f}M"))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.1f}M"))
+    ax.legend()
+    #fig.tight_layout()
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
 
 
-def plot_query_by_num_points(data, filename, queries, labels, title=None):
-    test_runs = data["runs"]["main"]
+def plot_query_by_num_points(data, run, filename, queries, labels, title=None):
+    test_runs = data["runs"][run]
 
     points = {
         "point_filtering_attribute_index": [],
@@ -736,15 +790,25 @@ def plot_query_by_num_points(data, filename, queries, labels, title=None):
         "point_filtering_no_attribute_index": [],
         "no_point_filtering_no_attribute_index": []
     }
+    
+    filter_by_compression = len(
+        set(test_run["index"]["compression"] for test_run in test_runs)
+    ) > 1
+    if filter_by_compression:
+        test_runs = [test_run for test_run in test_runs if not test_run["index"]["compression"]]
 
     for test_run in test_runs:
-        if "enable_point_filtering" not in test_run["index"]:
-            return
-        point_filtering = test_run["index"]["enable_point_filtering"]
-        attribute_index = test_run["index"]["enable_attribute_index"]
+        if "enable_point_filtering" in test_run["index"]:
+            attribute_index = test_run["index"]["enable_attribute_index"] in [True, "All"] and test_run["index"]["enable_point_filtering"] != "NodeFilteringWithoutAttributeIndex"
+            point_filtering = test_run["index"]["enable_point_filtering"] in [True, "PointFiltering"]
+        else:
+            attribute_index = test_run["index"]["enable_attribute_index"]
+            point_filtering = True
 
         for query in queries:
             if "query_performance" not in test_run["results"]:
+                return
+            if test_run["results"]["query_performance"] is None:
                 return
             if query not in test_run["results"]["query_performance"]:
                 return
@@ -757,6 +821,11 @@ def plot_query_by_num_points(data, filename, queries, labels, title=None):
                 points["no_point_filtering_attribute_index"].append(num_points)
             else:
                 points["no_point_filtering_no_attribute_index"].append(num_points)
+
+    if len(points["no_point_filtering_no_attribute_index"]) != len(queries) \
+            or len(points["no_point_filtering_attribute_index"]) != len(queries) \
+            or len(points["point_filtering_attribute_index"]) != len(queries):
+        return
 
     fig, ax = plt.subplots(figsize=[10, 5.5])
     index = range(len(queries))
@@ -792,8 +861,8 @@ def plot_query_by_num_points(data, filename, queries, labels, title=None):
     plt.close(fig)
 
 
-def plot_query_by_num_nodes(data, filename, queries, labels, title=None):
-    test_runs = data["runs"]["main"]
+def plot_query_by_num_nodes(data, run, filename, queries, labels, title=None):
+    test_runs = data["runs"][run]
 
     nodes = {
         "point_filtering_attribute_index": [],
@@ -801,15 +870,24 @@ def plot_query_by_num_nodes(data, filename, queries, labels, title=None):
         "point_filtering_no_attribute_index": [],
         "no_point_filtering_no_attribute_index": []
     }
+    filter_by_compression = len(
+        set(test_run["index"]["compression"] for test_run in test_runs)
+    ) > 1
+    if filter_by_compression:
+        test_runs = [test_run for test_run in test_runs if not test_run["index"]["compression"]]
 
     for test_run in test_runs:
-        if "enable_point_filtering" not in test_run["index"]:
-            return
-        point_filtering = test_run["index"]["enable_point_filtering"]
-        attribute_index = test_run["index"]["enable_attribute_index"]
+        if "enable_point_filtering" in test_run["index"]:
+            attribute_index = test_run["index"]["enable_attribute_index"] in [True, "All"] and test_run["index"]["enable_point_filtering"] != "NodeFilteringWithoutAttributeIndex"
+            point_filtering = test_run["index"]["enable_point_filtering"] in [True, "PointFiltering"]
+        else:
+            attribute_index = test_run["index"]["enable_attribute_index"]
+            point_filtering = True
 
         for query in queries:
             if "query_performance" not in test_run["results"]:
+                return
+            if test_run["results"]["query_performance"] is None:
                 return
             if query not in test_run["results"]["query_performance"]:
                 return
@@ -822,6 +900,10 @@ def plot_query_by_num_nodes(data, filename, queries, labels, title=None):
                 nodes["no_point_filtering_attribute_index"].append(num_nodes)
             else:
                 nodes["no_point_filtering_no_attribute_index"].append(num_nodes)
+
+    if len(nodes["no_point_filtering_no_attribute_index"]) != len(queries) \
+            or len(nodes["no_point_filtering_attribute_index"]) != len(queries):
+        return
 
     fig, ax = plt.subplots(figsize=[10, 5.5])
     index = range(len(queries))
