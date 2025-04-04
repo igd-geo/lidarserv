@@ -30,7 +30,7 @@ pub struct EvaluationScript {
     pub defaults: EvaluationRunDefaults,
 
     #[serde(default)]
-    pub runs: HashMap<String, ElevationRun>,
+    pub runs: IndexMap<String, ElevationRun>,
 }
 
 impl Default for EvaluationScript {

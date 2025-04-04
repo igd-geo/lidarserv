@@ -4,6 +4,7 @@ use clap::Parser;
 use cli::EvaluationOptions;
 use converter::{ConvertingPointReader, MissingAttributesStrategy};
 use git_version::git_version;
+use indexmap::IndexMap;
 use indicatif::MultiProgress;
 use indicatif_log_bridge::LogWrapper;
 use insertion_rate::measure_insertion_rate;
@@ -109,7 +110,7 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
         let mut default_config = EvaluationScript::default();
         if !args.run.is_empty() {
             let mut runs_from_preset = default_config.runs.into_values();
-            default_config.runs = HashMap::new();
+            default_config.runs = IndexMap::new();
             for name in &args.run {
                 let run = runs_from_preset
                     .next()
