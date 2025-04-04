@@ -164,6 +164,14 @@ impl Octree {
         &self.inner.point_layout
     }
 
+    pub fn node_hierarchy(&self) -> GridHierarchy {
+        self.inner.node_hierarchy
+    }
+
+    pub fn point_hierarchy(&self) -> GridHierarchy {
+        self.inner.point_hierarchy
+    }
+
     pub fn writer(&self) -> OctreeWriter {
         OctreeWriter::new(Arc::clone(&self.inner))
     }

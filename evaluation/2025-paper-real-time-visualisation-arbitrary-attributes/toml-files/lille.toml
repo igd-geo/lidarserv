@@ -60,9 +60,6 @@ scananglerank = [
 ]
 
 [defaults]
-measure_index_speed = true
-measure_query_speed = true
-measure_query_latency = false
 node_hierarchy = 19
 point_hierarchy = 11
 priority_function = "NrPointsWeightedByTaskAge"
@@ -75,16 +72,30 @@ nr_bogus_points = [
 ]
 max_lod = 8
 enable_attribute_index = true
+enable_point_filtering = true
 
 [runs.insertion-speed]
 measure_index_speed = true
 measure_query_speed = false
 measure_query_latency = false
 compression = [true, false]
+enable_attribute_index = [true]
 
 [runs.querying]
-enable_attribute_index = [true, false]
-enable_point_filtering = [true, false]
+measure_index_speed = false
+measure_query_speed = true
+measure_query_latency = false
+enable_point_filtering = ["NodeFilteringWithoutAttributeIndex", "NodeFiltering", "PointFiltering"]
+enable_attribute_index = [true]
+compression = [false]
+
+[runs.latency]
+measure_index_speed = false
+measure_query_speed = false
+measure_query_latency = true
+compression = [false]
+enable_attribute_index = [true]
+enable_point_filtering = [true]
 
 [runs.attr-index]
 measure_index_speed = true
@@ -92,12 +103,4 @@ measure_query_speed = true
 measure_query_latency = false
 compression = [false]
 enable_attribute_index = ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]
-enable_point_filtering = [true, false]
-
-[runs.latency]
-measure_index_speed = false
-measure_query_speed = false
-measure_query_latency = true
-compression = [true]
-enable_attribute_index = [true]
-enable_point_filtering = [true]
+enable_point_filtering = [false]

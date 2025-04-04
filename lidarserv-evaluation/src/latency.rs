@@ -1,15 +1,19 @@
 use crossbeam_channel::Receiver;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use itertools::Itertools;
 use lidarserv_common::geometry::grid::{LeveledGridCell, LodLevel};
-use lidarserv_common::index::reader::OctreeReader;
+use lidarserv_common::geometry::position::PositionComponentType;
 use lidarserv_common::index::Octree;
+use lidarserv_common::index::attribute_index::AttributeIndex;
+use lidarserv_common::index::reader::OctreeReader;
+use lidarserv_common::query::{Query as QueryTrait, QueryContext};
 use lidarserv_server::index::query::Query;
 use log::info;
 use nalgebra::min;
 use pasture_core::containers::{BorrowedBuffer, InterleavedBuffer, OwningBuffer, VectorBuffer};
 use pasture_io::base::PointReader;
 use rand::rng;
-use rand::seq::index::sample;
+use rand::seq::IndexedRandom;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -66,7 +70,7 @@ pub fn measure_latency(
     let shared = Arc::new(Mutex::new(HashMap::new()));
     let shared2 = Arc::clone(&shared);
     let (exit_tx, exit_rx) = crossbeam_channel::unbounded();
-    let reader = index.reader(query).unwrap();
+    let reader = index.reader(query.clone()).unwrap();
     let query_thread_handle = spawn(move || query_thread(reader, exit_rx, shared2));
 
     // Prepare insertion
@@ -75,6 +79,14 @@ pub fn measure_latency(
     let start_time = Instant::now();
     let mut last_update = Instant::now();
     let mut total_nr_sample_points = 0;
+    let prepared_query = query.prepare(&QueryContext {
+        node_hierarchy: index.node_hierarchy(),
+        point_hierarchy: index.point_hierarchy(),
+        coordinate_system: index.coordinate_system(),
+        component_type: PositionComponentType::from_layout(index.point_layout()),
+        attribute_index: Arc::new(AttributeIndex::new()),
+        point_layout: index.point_layout().clone(),
+    })?;
 
     // Insertion loop
     while read_pos < nr_points {
@@ -109,13 +121,19 @@ pub fn measure_latency(
         // choose sample points
         let next_total_nr_sample_points =
             ((now - start_time).as_secs_f64() * sample_points_per_second as f64) as usize;
-        let nr_sample_points = min(
-            next_total_nr_sample_points - total_nr_sample_points,
-            other_points_buffer.len(),
-        );
-        total_nr_sample_points += nr_sample_points;
+        let nr_sample_points = next_total_nr_sample_points - total_nr_sample_points;
+        total_nr_sample_points = next_total_nr_sample_points;
         let mut rng = rng();
-        let indices = sample(&mut rng, other_points_buffer.len(), nr_sample_points);
+        let query_matches = prepared_query.matches_points(LodLevel::base(), &other_points_buffer);
+        let indices = query_matches
+            .into_iter()
+            .enumerate()
+            .filter_map(|(idx, matches)| if matches { Some(idx) } else { None })
+            .collect_vec();
+        let indices = indices
+            .choose_multiple(&mut rng, nr_sample_points.min(indices.len()))
+            .copied()
+            .collect_vec();
         {
             let mut chosen = shared.lock().unwrap();
             let insert_time = Instant::now();
