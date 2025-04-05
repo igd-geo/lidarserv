@@ -248,13 +248,6 @@ def main():
             run = "insertion-speed"
         else:
             continue
-        title = None
-        if file.name.startswith("kitti"):
-            title = "KITTI"
-        if file.name.startswith("ahn"):
-            title = "AHN4"
-        if file.name.startswith("lille"):
-            title = "Lille"
         
         plot_insertion_rate_progression(
             data,
@@ -262,6 +255,52 @@ def main():
             title=title,
             filename=join(OUTPUT_FOLDER, f"insertion_rate_progression_{file.name}.pdf"), 
         )
+
+    # attribute index comparison
+    for file in all_files:
+        with open(file.path, "r") as f:
+            data = json.load(f)
+        if "attr-index" in data["runs"]:
+            run = "attr-index"
+        else:
+            continue
+        queries, labels, title = next((
+                (queries, labels, title)
+                for queries, labels, title, prefix in QUERIES_AND_LABELS
+                if file.name.startswith(prefix)
+            ), 
+            (None, None, None)
+        )
+        if queries is None:
+            continue
+        
+        plot_attribute_indexes_query_comparisson(
+            data,
+            run=run,
+            queries=queries,
+            labels=labels,
+            title=title,
+            filename=join(OUTPUT_FOLDER, f"attribute_indexes_query_time_{file.name}.pdf"),
+            y_label="Execution Time | Seconds",
+            plot_attribute="query_time_seconds" 
+        )
+        plot_attribute_indexes_query_comparisson(
+            data,
+            run=run,
+            queries=queries,
+            labels=labels,
+            title=title,
+            filename=join(OUTPUT_FOLDER, f"attribute_indexes_nodes_{file.name}.pdf"),
+            y_label="Number of Nodes",
+            plot_attribute="nr_nodes" 
+        )
+        plot_attribute_indexes_index_comparisson(
+            data,
+            run=run,
+            title=title,
+            filename=join(OUTPUT_FOLDER, f"attribute_indexes_point_rate_{file.name}.pdf"),
+        )
+    
 
 def print_querys(data, run, filename):
     points_file = data["settings"]["points_file"].split("/")[-1]
@@ -671,6 +710,121 @@ def plot_query_by_time(data, filename, run, queries, labels, title=None):
     custom_legend_handles = [Line2D([0], [0], color=color, label=label, linewidth=8) for color, label in
                                 zip(custom_legend_colors, custom_legend_labels)]
     ax.legend(handles=custom_legend_handles, loc='upper left', bbox_to_anchor=(0, -0.4), title='Subqueries')
+
+    plt.tight_layout()
+
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
+
+
+def plot_attribute_indexes_index_comparisson(data, filename, run, title):
+    test_runs = data["runs"][run]
+    values = dict()
+    for test_run in test_runs:
+        enable_attribute_index = test_run["index"]["enable_attribute_index"]
+        this_run_value = test_run["results"]["insertion_rate"]["insertion_rate_points_per_sec"]
+        if enable_attribute_index in values:
+            print(f"received multiple test results for {enable_attribute_index} (output file: {basename(filename)})")
+            return
+        values[enable_attribute_index] = this_run_value
+    
+    if any(key not in values for key in ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]):
+        print(f"incomplete data (output file: {basename(filename)})")
+        return
+
+    fig, ax = plt.subplots()
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
+    bar_width = 0.7
+    plt.bar(
+        range(4),
+        [
+            values["None"],
+            values["RangeIndexOnly"],
+            values["SfcIndexOnly"],
+            values["All"]
+        ],
+        bar_width,
+        color=colors[:4],
+    )
+    plt.ylabel("Insertion Speed | Points/s")
+    plt.xticks(range(4), [
+        "No Attribute\nIndex",
+        "Value Range Index",
+        "Bin List Index",
+        "Value Range Index\n+\nBin List Index"
+    ])
+    plt.tight_layout()
+    if title is not None:
+        ax.set_title(title)
+    fig.savefig(filename, format="pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    plt.close(fig)
+
+
+def plot_attribute_indexes_query_comparisson(data, filename, run, queries: List[str], labels, title, plot_attribute, y_label):
+    test_runs = data["runs"][run]
+
+    # exclude purely spatial queries, as they are not influenced by the attribute index
+    use_queries = [not q.startswith("view_frustum") for q in queries]
+    queries = [query for query, use in zip(queries, use_queries) if use]
+    labels = [label for label, use in zip(labels, use_queries) if use]
+
+    values = dict()
+
+    for test_run in test_runs:
+        enable_attribute_index = test_run["index"]["enable_attribute_index"]
+        this_run_values = [
+            test_run["results"]["query_performance"][query][plot_attribute] 
+            for query in queries
+        ]
+        if enable_attribute_index in values:
+            print(f"received multiple test results for {enable_attribute_index} (output file: {basename(filename)})")
+            return
+        values[enable_attribute_index] = this_run_values
+
+    if any(key not in values for key in ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]):
+        print(f"incomplete data (output file: {basename(filename)})")
+        return
+
+    fig, ax = plt.subplots(figsize=[10, 5.5])
+
+    colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
+
+    bar_width = 1.0 / 4.5
+    plt.bar(
+        range(len(queries)),
+        values["None"],
+        bar_width,
+        color=colors[0],
+        label="No Attribute Index"
+    )
+    plt.bar(
+        [x + bar_width for x in range(len(queries))],
+        values["RangeIndexOnly"],
+        bar_width,
+        color=colors[1],
+        label="Value Range Index"
+    )
+    plt.bar(
+        [x + 2 * bar_width for x in range(len(queries))],
+        values["SfcIndexOnly"],
+        bar_width,
+        color=colors[2],
+        label="Bin List Index"
+    )
+    plt.bar(
+        [x + 3 * bar_width for x in range(len(queries))],
+        values["All"],
+        bar_width,
+        color=colors[3],
+        label="Value Range Index + Bin List Index"
+    )
+    
+    plt.ylabel(y_label)
+    plt.xticks([x + 1.5 * bar_width for x in range(len(queries))], labels, rotation=90)
+
+    ax.legend()
 
     plt.tight_layout()
 
