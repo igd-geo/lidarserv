@@ -1,0 +1,2 @@
+Dataset: Lille
+Average querying speed without compression: 4209780.77 points/s
