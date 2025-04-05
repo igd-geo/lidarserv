@@ -623,14 +623,12 @@ def plot_query_by_time(data, filename, run, queries, labels, title=None):
 
     for test_run in test_runs:
         compression = test_run["index"]["compression"]
+        if "enable_point_filtering" in test_run["index"] and test_run["index"]["enable_point_filtering"] in [False, "NodeFiltering"]:
+            continue
         if "enable_point_filtering" in test_run["index"]:
             attribute_index = test_run["index"]["enable_attribute_index"] in [True, "All"] and test_run["index"]["enable_point_filtering"] != "NodeFilteringWithoutAttributeIndex"
-            point_filtering = test_run["index"]["enable_point_filtering"] in [True, "PointFiltering"]
         else:
-            attribute_index = test_run["index"]["enable_attribute_index"]
-            point_filtering = True
-        if not point_filtering:
-            continue
+            attribute_index = test_run["index"]["enable_attribute_index"] in [True, "All"]
 
         for query in queries:
             if "query_performance" not in test_run["results"]:
