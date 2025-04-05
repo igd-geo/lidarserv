@@ -5,7 +5,7 @@ use lidarserv_common::geometry::grid::{LeveledGridCell, LodLevel};
 use lidarserv_common::geometry::position::PositionComponentType;
 use lidarserv_common::index::Octree;
 use lidarserv_common::index::attribute_index::AttributeIndex;
-use lidarserv_common::index::reader::OctreeReader;
+use lidarserv_common::index::reader::{OctreeReader, QueryConfig};
 use lidarserv_common::query::{Query as QueryTrait, QueryContext};
 use lidarserv_server::index::query::Query;
 use log::info;
@@ -41,6 +41,7 @@ pub fn measure_latency(
     index: &mut Octree,
     points: &mut impl PointReader,
     query: Query,
+    query_config: QueryConfig,
     pps: usize,
     sample_points_per_second: usize,
 ) -> anyhow::Result<serde_json::value::Value> {
@@ -70,7 +71,8 @@ pub fn measure_latency(
     let shared = Arc::new(Mutex::new(HashMap::new()));
     let shared2 = Arc::clone(&shared);
     let (exit_tx, exit_rx) = crossbeam_channel::unbounded();
-    let reader = index.reader(query.clone()).unwrap();
+    let mut reader = index.reader(query.clone()).unwrap();
+    reader.set_query(query.clone(), query_config)?;
     let query_thread_handle = spawn(move || query_thread(reader, exit_rx, shared2));
 
     // Prepare insertion
@@ -207,19 +209,28 @@ fn query_thread(
     exit: Receiver<()>,
     shared: Arc<Mutex<HashMap<Vec<u8>, Sample>>>,
 ) {
+    let mut insert_done = false;
     loop {
-        let should_exit = reader.wait_update_or(&exit);
-        if should_exit.is_some() {
-            break;
+        if !insert_done {
+            let should_exit = reader.wait_update_or(&exit);
+            if should_exit.is_some() {
+                insert_done = true;
+            }
         }
+        let mut should_exit = insert_done;
         if let Some((cell, points)) = reader.load_one() {
+            should_exit = false;
             analyze_node(cell, points, &shared);
         }
         if let Some((cell, points)) = reader.reload_one() {
+            should_exit = false;
             analyze_node(cell, points, &shared);
         }
         if reader.remove_one().is_some() {
             unreachable!("The query is never changed, so nodes can just be added");
+        }
+        if should_exit {
+            break;
         }
     }
 }

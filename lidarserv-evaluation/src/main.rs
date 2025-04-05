@@ -15,7 +15,7 @@ use lidarserv_common::{
         coordinate_system::CoordinateSystem,
         grid::{GridHierarchy, LodLevel},
     },
-    index::{Octree, OctreeParams, attribute_index::config::IndexKind},
+    index::{Octree, OctreeParams, attribute_index::config::IndexKind, reader::QueryConfig},
 };
 use lidarserv_server::index::query::Query;
 use log::{debug, error, info, warn};
@@ -28,7 +28,7 @@ use query_performance::measure_one_query;
 use serde_json::{Value, json};
 use settings::{
     Base, ElevationRun, EnabledAttributeIndexes, EvaluationScript, EvaluationSettings, MultiIndex,
-    SingleIndex,
+    QueryFiltering, SingleIndex,
 };
 use simple_logger::SimpleLogger;
 use std::{
@@ -368,6 +368,12 @@ fn evaluate(
                 processor_cooldown(base_config);
                 info!("Measuring query latency... [{query_name}]");
                 let query = Query::parse(query_str)?;
+                let query_config = QueryConfig {
+                    enable_attribute_index: index_config.enable_point_filtering
+                        != QueryFiltering::NodeFilteringWithoutAttributeIndex,
+                    enable_point_filtering: index_config.enable_point_filtering
+                        == QueryFiltering::PointFiltering,
+                };
                 let mut index = create_index(index_config, base_config)?;
                 let mut input_file = open_input_file(base_config)?;
                 input_file.seek_point(SeekFrom::Start(0))?;
@@ -375,6 +381,7 @@ fn evaluate(
                     &mut index,
                     &mut input_file,
                     query,
+                    query_config,
                     base_config.latency_replay_pps,
                     base_config.latency_sample_pps,
                 )?;
