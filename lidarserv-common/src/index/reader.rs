@@ -165,8 +165,14 @@ impl OctreeReader {
         // Any elements that now both exist and match the query get scheduled for their initial load.
         for change in &changes {
             if let Some(elem) = self.frontier.get_mut(change) {
-                if !elem.exists {
-                    elem.exists = true;
+                let should_load_before = elem.exists
+                    && elem
+                        .matches_query
+                        .should_load(self.point_filtering)
+                        .is_some();
+                elem.exists = true;
+                elem.matches_query = self.query.matches_node(*change);
+                if !should_load_before {
                     if let Some(load_kind) = elem.matches_query.should_load(self.point_filtering) {
                         self.load_queue.insert(*change, load_kind);
                     }
