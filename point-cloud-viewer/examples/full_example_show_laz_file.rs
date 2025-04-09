@@ -21,7 +21,7 @@ type Point = LasPointFormat0;
 mod mini_mno {
     use super::Point;
     use pasture_core::math::AABB;
-    use pasture_core::nalgebra::{distance_squared, Point3, Vector3, Vector4};
+    use pasture_core::nalgebra::{Point3, Vector3, Vector4, distance_squared};
     use point_cloud_viewer::navigation::Matrices;
     use std::collections::hash_map::Entry;
     use std::collections::{HashMap, HashSet};

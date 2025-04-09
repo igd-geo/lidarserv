@@ -10,7 +10,7 @@ use tracy_client::span;
 use crate::{
     geometry::{
         grid::{GridHierarchy, LodLevel},
-        sampling::{create_sampling, create_sampling_from_points, Sampling},
+        sampling::{Sampling, create_sampling, create_sampling_from_points},
     },
     io::{InMemoryPointCodec, PointIoError},
 };

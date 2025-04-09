@@ -1,5 +1,5 @@
-use crate::renderer::backends::glium::windows::WindowManager;
 use crate::renderer::backends::glium::GliumRenderOptions;
+use crate::renderer::backends::glium::windows::WindowManager;
 use crate::renderer::renderer_command::RendererCommand;
 use glium::backend::glutin::glutin::event::Event;
 use glium::glutin::event::WindowEvent;

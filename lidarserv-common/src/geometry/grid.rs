@@ -252,11 +252,7 @@ impl LeveledGridCell {
     /// Returns the cell in the next coarser LOD level, that contains this cell.
     pub fn parent(&self) -> Option<LeveledGridCell> {
         fn div2(n: i32) -> i32 {
-            if n < 0 {
-                (n - 1) / 2
-            } else {
-                n / 2
-            }
+            if n < 0 { (n - 1) / 2 } else { n / 2 }
         }
         self.lod.coarser().map(|lod| LeveledGridCell {
             lod,
@@ -574,15 +570,17 @@ mod tests {
         // overlaps with parent(s)
         assert!(base_cell.overlaps_with(&base_cell.parent().unwrap()));
         assert!(base_cell.overlaps_with(&base_cell.parent().unwrap().parent().unwrap()));
-        assert!(base_cell.overlaps_with(
-            &base_cell
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-        ));
+        assert!(
+            base_cell.overlaps_with(
+                &base_cell
+                    .parent()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+            )
+        );
 
         // overlaps with children
         assert!(base_cell.overlaps_with(&LeveledGridCell {
@@ -668,15 +666,17 @@ mod tests {
         // overlaps with parent(s)
         assert!(base_cell.overlaps_with(&base_cell.parent().unwrap()));
         assert!(base_cell.overlaps_with(&base_cell.parent().unwrap().parent().unwrap()));
-        assert!(base_cell.overlaps_with(
-            &base_cell
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-        ));
+        assert!(
+            base_cell.overlaps_with(
+                &base_cell
+                    .parent()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+            )
+        );
 
         // overlaps with children
         assert!(base_cell.overlaps_with(&LeveledGridCell {

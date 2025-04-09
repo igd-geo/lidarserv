@@ -1,9 +1,9 @@
 use pasture_core::layout::{
+    PointAttributeDataType, PointAttributeMember, PointLayout,
     attributes::{
         CLASSIFICATION_FLAGS, EDGE_OF_FLIGHT_LINE, NUMBER_OF_RETURNS, RETURN_NUMBER,
-        SCANNER_CHANNEL, SCAN_DIRECTION_FLAG,
+        SCAN_DIRECTION_FLAG, SCANNER_CHANNEL,
     },
-    PointAttributeDataType, PointAttributeMember, PointLayout,
 };
 use pasture_io::las::ATTRIBUTE_EXTENDED_FLAGS;
 
@@ -147,21 +147,20 @@ impl AttributeExtractor for LasExtendedFlagsExtractor {
 #[cfg(test)]
 mod test {
     use pasture_core::layout::{
+        PointLayout,
         attributes::{
             CLASSIFICATION_FLAGS, EDGE_OF_FLIGHT_LINE, NUMBER_OF_RETURNS, RETURN_NUMBER,
-            SCANNER_CHANNEL, SCAN_DIRECTION_FLAG,
+            SCAN_DIRECTION_FLAG, SCANNER_CHANNEL,
         },
-        PointLayout,
     };
     use pasture_io::las::ATTRIBUTE_EXTENDED_FLAGS;
 
     use crate::extractors::{
-        classification_flags::ClassificationFlagsExtractor,
+        AttributeExtractor, classification_flags::ClassificationFlagsExtractor,
         edge_of_flight_line::EdgeOfFlightLineExtractor, extended_flags::LasExtendedFlagsExtractor,
         number_of_returns_4bit::NumberOfReturns4BitExtractor,
         return_number_4bit::ReturnNumber4BitExtractor,
         scan_direction_flag::ScanDirectionFlagExtractor, scanner_channel::ScannerChannelExtractor,
-        AttributeExtractor,
     };
 
     #[derive(Debug)]

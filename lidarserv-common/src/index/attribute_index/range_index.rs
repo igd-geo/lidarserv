@@ -1,4 +1,4 @@
-use super::{boolvec::BoolVec, cmp::ComponentwiseCmp, IndexFunction};
+use super::{IndexFunction, boolvec::BoolVec, cmp::ComponentwiseCmp};
 use crate::query::NodeQueryResult;
 use nalgebra::{ArrayStorage, SVector, Scalar};
 use serde::{Deserialize, Serialize};
@@ -208,10 +208,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use nalgebra::{vector, Vector3};
+    use nalgebra::{Vector3, vector};
 
     use crate::{
-        index::attribute_index::{range_index::ValueRange, IndexFunction},
+        index::attribute_index::{IndexFunction, range_index::ValueRange},
         query::NodeQueryResult,
     };
 

@@ -71,8 +71,8 @@ use pasture_core::{
         BorrowedBuffer, InterleavedBuffer, InterleavedBufferMut, OwningBuffer, VectorBuffer,
     },
     layout::{
-        conversion::BufferLayoutConverter, PointAttributeDataType, PointAttributeDefinition,
-        PointLayout,
+        PointAttributeDataType, PointAttributeDefinition, PointLayout,
+        conversion::BufferLayoutConverter,
     },
 };
 use std::borrow::Cow;
@@ -150,7 +150,7 @@ impl AttributeHeader {
             _ => {
                 return Err(PointIoError::DataFormat(
                     "Invalid point attribute datatype in header.".to_string(),
-                ))
+                ));
             }
         };
         if datatype.size() != len {
@@ -237,7 +237,7 @@ impl Header {
             _ => {
                 return Err(PointIoError::DataFormat(
                     "Invalid endianess in header.".to_string(),
-                ))
+                ));
             }
         };
 
@@ -248,7 +248,7 @@ impl Header {
             _ => {
                 return Err(PointIoError::DataFormat(
                     "Invalid compression in header.".to_string(),
-                ))
+                ));
             }
         };
 
@@ -725,12 +725,12 @@ mod tests {
     use pasture_core::{
         containers::{BorrowedBuffer, VectorBuffer},
         layout::{
-            attributes::{CLASSIFICATION, COLOR_RGB, INTENSITY, POSITION_3D},
             PointAttributeDataType,
+            attributes::{CLASSIFICATION, COLOR_RGB, INTENSITY, POSITION_3D},
         },
     };
 
-    use super::{read_points, write_points, AttributeHeader, Compression, Endianess, Header};
+    use super::{AttributeHeader, Compression, Endianess, Header, read_points, write_points};
 
     #[test]
     fn test_attribute_header_rw() {

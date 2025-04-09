@@ -2,12 +2,12 @@ use std::slice;
 
 use lidarserv_common::geometry::{
     coordinate_system::CoordinateSystem,
-    position::{Component, PositionComponentType, POSITION_ATTRIBUTE_NAME},
+    position::{Component, POSITION_ATTRIBUTE_NAME, PositionComponentType},
 };
 use log::warn;
 use pasture_core::{
     layout::{PointAttributeDataType, PointAttributeMember, PointLayout},
-    nalgebra::{vector, Vector3},
+    nalgebra::{Vector3, vector},
 };
 use pasture_io::las::ATTRIBUTE_LOCAL_LAS_POSITION;
 

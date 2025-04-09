@@ -21,7 +21,7 @@ use glium::glutin::event::{
 };
 use glium::glutin::event_loop::EventLoopWindowTarget;
 use glium::glutin::window::WindowId as OsWindowId;
-use glium::{glutin, Display, Surface};
+use glium::{Display, Surface, glutin};
 use log::debug;
 use pasture_core::math::AABB;
 use std::collections::HashMap;

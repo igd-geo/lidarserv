@@ -1,8 +1,8 @@
 use std::slice;
 
 use pasture_core::layout::{
-    attributes::{SCAN_ANGLE, SCAN_ANGLE_RANK},
     PointAttributeDataType, PointAttributeMember, PointLayout,
+    attributes::{SCAN_ANGLE, SCAN_ANGLE_RANK},
 };
 
 use super::AttributeExtractor;

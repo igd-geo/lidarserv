@@ -1,5 +1,5 @@
 use pasture_core::layout::{
-    attributes::CLASSIFICATION_FLAGS, PointAttributeDataType, PointAttributeMember, PointLayout,
+    PointAttributeDataType, PointAttributeMember, PointLayout, attributes::CLASSIFICATION_FLAGS,
 };
 use pasture_io::las::ATTRIBUTE_EXTENDED_FLAGS;
 

@@ -1,6 +1,6 @@
+use crate::net::LidarServerError;
 use crate::net::protocol::messages::PointDataCodec;
 use crate::net::server::connection::handle_connection;
-use crate::net::LidarServerError;
 use lidarserv_common::index::Octree;
 use log::{error, info};
 use std::sync::Arc;

@@ -1,15 +1,16 @@
+use crate::renderer::backends::glium::BACKEND_NAME;
 use crate::renderer::backends::glium::draw_point_cloud::shaders::{ProgramManager, ShaderConfig};
 use crate::renderer::backends::glium::dynamic_drawing::{
     DynamicMultiVerticesSource, DynamicUniforms, ModifyVertexFormat,
 };
 use crate::renderer::backends::glium::util::matrix_to_gl;
-use crate::renderer::backends::glium::BACKEND_NAME;
 use crate::renderer::error::{AttributeMismatchType, RendererError, RendererResult};
 use crate::renderer::renderer_command::{PointAttribute, PointCloudId};
 use crate::renderer::settings::{PointCloudRenderSettings, PointColor, PointSize};
 use crate::renderer::vertex_data::{
     F32Attribute, U8Attribute, Vec3F32Attribute, VertexData, VertexDataType,
 };
+use glium::BlendingFunction;
 use glium::framebuffer::SimpleFrameBuffer;
 use glium::implement_vertex;
 use glium::index::NoIndices;
@@ -18,7 +19,6 @@ use glium::texture::{DepthTexture2d, DepthTexture2dMultisample, Texture2d, Textu
 use glium::uniform;
 use glium::uniforms::{MagnifySamplerFilter, UniformValue};
 use glium::vertex::VertexBufferAny;
-use glium::BlendingFunction;
 use glium::{
     Blend, BlitMask, BlitTarget, DepthTest, Display, DrawParameters, Frame, LinearBlendingFactor,
     Program, Rect, Surface, Vertex, VertexBuffer,
@@ -230,7 +230,7 @@ mod shaders {
                 Err(e) => {
                     return Err(RendererError::Graphics {
                         source: Box::new(e),
-                    })
+                    });
                 }
                 Ok(p) => p,
             };

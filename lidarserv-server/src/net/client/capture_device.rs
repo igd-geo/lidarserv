@@ -53,7 +53,7 @@ impl CaptureDeviceClient {
             _ => {
                 return Err(LidarServerError::Protocol(
                     "Expected a `Hello` as the first message.".to_string(),
-                ))
+                ));
             }
         };
 

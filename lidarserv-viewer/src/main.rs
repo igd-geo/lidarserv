@@ -11,9 +11,9 @@ use nalgebra::{point, vector};
 use pasture_core::containers::{
     BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, VectorBuffer,
 };
+use pasture_core::layout::PointType;
 use pasture_core::layout::attributes::{COLOR_RGB, INTENSITY, POSITION_3D};
 use pasture_core::layout::conversion::BufferLayoutConverter;
-use pasture_core::layout::PointType;
 use pasture_core::math::AABB as PastureAABB;
 use pasture_core::nalgebra::Vector3;
 use pasture_derive::PointType;

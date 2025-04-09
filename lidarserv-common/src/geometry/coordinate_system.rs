@@ -1,5 +1,5 @@
 use core::f64;
-use nalgebra::{vector, Vector3};
+use nalgebra::{Vector3, vector};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, mem, ops::RangeInclusive};
 use thiserror::Error;
@@ -14,7 +14,9 @@ use super::{
 /// Error type for [CoordinateSystem::encode_position].
 #[derive(Debug, Error)]
 pub enum CoordinateSystemError {
-    #[error("The coordinate cannot be represented in this coordinate system, because it is out of its bounds.")]
+    #[error(
+        "The coordinate cannot be represented in this coordinate system, because it is out of its bounds."
+    )]
     OutOfBounds,
 }
 

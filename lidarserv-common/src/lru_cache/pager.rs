@@ -404,17 +404,18 @@ where
         // write to disk
         // if the data just indicated a loading error, all we need to do is to remove the
         // entry from the cache.
-        let write_result = match &data { Ok(data) => {
-            let mut file_lock = file.lock().unwrap();
-            if version_number > file_lock.version_number {
-                file_lock.version_number = version_number;
-                self.loader.store(&key, data.as_ref())
-            } else {
-                Ok(())
+        let write_result = match &data {
+            Ok(data) => {
+                let mut file_lock = file.lock().unwrap();
+                if version_number > file_lock.version_number {
+                    file_lock.version_number = version_number;
+                    self.loader.store(&key, data.as_ref())
+                } else {
+                    Ok(())
+                }
             }
-        } _ => {
-            Ok(())
-        }};
+            _ => Ok(()),
+        };
 
         // acquire the lock again
         cache_lock = self.inner.lock().unwrap();

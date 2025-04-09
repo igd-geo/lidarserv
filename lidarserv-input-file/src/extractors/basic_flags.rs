@@ -1,6 +1,6 @@
 use pasture_core::layout::{
-    attributes::{EDGE_OF_FLIGHT_LINE, NUMBER_OF_RETURNS, RETURN_NUMBER, SCAN_DIRECTION_FLAG},
     PointAttributeDataType, PointAttributeMember, PointLayout,
+    attributes::{EDGE_OF_FLIGHT_LINE, NUMBER_OF_RETURNS, RETURN_NUMBER, SCAN_DIRECTION_FLAG},
 };
 use pasture_io::las::ATTRIBUTE_BASIC_FLAGS;
 
@@ -117,16 +117,16 @@ mod test {
     use std::slice;
 
     use pasture_core::layout::{
-        attributes::{EDGE_OF_FLIGHT_LINE, NUMBER_OF_RETURNS, RETURN_NUMBER, SCAN_DIRECTION_FLAG},
         PointLayout,
+        attributes::{EDGE_OF_FLIGHT_LINE, NUMBER_OF_RETURNS, RETURN_NUMBER, SCAN_DIRECTION_FLAG},
     };
     use pasture_io::las::ATTRIBUTE_BASIC_FLAGS;
 
     use crate::extractors::{
-        edge_of_flight_line::EdgeOfFlightLineExtractor,
+        AttributeExtractor, edge_of_flight_line::EdgeOfFlightLineExtractor,
         number_of_returns_3bit::NumberOfReturns3BitExtractor,
         return_number_3bit::ReturnNumber3BitExtractor,
-        scan_direction_flag::ScanDirectionFlagExtractor, AttributeExtractor,
+        scan_direction_flag::ScanDirectionFlagExtractor,
     };
 
     use super::LasBasicFlagsExtractor;

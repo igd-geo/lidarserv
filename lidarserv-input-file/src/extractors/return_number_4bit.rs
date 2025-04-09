@@ -1,5 +1,5 @@
 use pasture_core::layout::{
-    attributes::RETURN_NUMBER, PointAttributeDataType, PointAttributeMember, PointLayout,
+    PointAttributeDataType, PointAttributeMember, PointLayout, attributes::RETURN_NUMBER,
 };
 use pasture_io::las::ATTRIBUTE_EXTENDED_FLAGS;
 
@@ -57,7 +57,7 @@ impl AttributeExtractor for ReturnNumber4BitExtractor {
 
 #[cfg(test)]
 mod test {
-    use crate::extractors::{return_number_4bit::ReturnNumber4BitExtractor, AttributeExtractor};
+    use crate::extractors::{AttributeExtractor, return_number_4bit::ReturnNumber4BitExtractor};
 
     #[test]
     pub fn test_return_number_extractor() {

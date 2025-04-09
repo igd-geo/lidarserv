@@ -1,5 +1,5 @@
 use pasture_core::layout::{
-    attributes::EDGE_OF_FLIGHT_LINE, PointAttributeDataType, PointAttributeMember, PointLayout,
+    PointAttributeDataType, PointAttributeMember, PointLayout, attributes::EDGE_OF_FLIGHT_LINE,
 };
 use pasture_io::las::{ATTRIBUTE_BASIC_FLAGS, ATTRIBUTE_EXTENDED_FLAGS};
 
@@ -67,7 +67,7 @@ impl AttributeExtractor for EdgeOfFlightLineExtractor {
 
 #[cfg(test)]
 mod test {
-    use crate::extractors::{edge_of_flight_line::EdgeOfFlightLineExtractor, AttributeExtractor};
+    use crate::extractors::{AttributeExtractor, edge_of_flight_line::EdgeOfFlightLineExtractor};
 
     #[test]
     pub fn test_edge_of_flightline_extractor() {

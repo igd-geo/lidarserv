@@ -1,6 +1,6 @@
 //! Settings for how the point clouds should look.
 
-use pasture_core::layout::{attributes, PointAttributeDefinition};
+use pasture_core::layout::{PointAttributeDefinition, attributes};
 use std::time::Duration;
 
 /// Settings for controlling the look of one point cloud viewer window.

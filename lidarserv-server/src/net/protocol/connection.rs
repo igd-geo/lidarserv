@@ -6,12 +6,12 @@ use lidarserv_common::tracy_client::span;
 use log::trace;
 use thiserror::Error;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::broadcast::Receiver;
 
-use crate::net::protocol::messages::Header;
 use crate::net::LidarServerError;
+use crate::net::protocol::messages::Header;
 
 use super::messages::Message;
 
@@ -110,11 +110,10 @@ where
 
         // treat any message of type [Message::Error] as an error.
         trace!("{}: Receive message: {:?}", &self.peer_addr, &message);
-        match message { Ok(Header::Error { message }) => {
-            Some(Err(LidarServerError::PeerError(message)))
-        } _ => {
-            Some(message.map(|m| Message { header: m, payload }))
-        }}
+        match message {
+            Ok(Header::Error { message }) => Some(Err(LidarServerError::PeerError(message))),
+            _ => Some(message.map(|m| Message { header: m, payload })),
+        }
     }
 
     /// cancel safe
@@ -152,14 +151,13 @@ where
         &mut self,
         shutdown: &mut Receiver<()>,
     ) -> Result<Message, LidarServerError> {
-        match self.read_message_or_eof(shutdown).await? { Some(msg) => {
-            Ok(msg)
-        } _ => {
-            Err(LidarServerError::Protocol(format!(
+        match self.read_message_or_eof(shutdown).await? {
+            Some(msg) => Ok(msg),
+            _ => Err(LidarServerError::Protocol(format!(
                 "{}",
                 ConnectionClosedError
-            )))
-        }}
+            ))),
+        }
     }
 }
 

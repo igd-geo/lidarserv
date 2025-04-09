@@ -1,14 +1,14 @@
 use crate::cli::InitOptions;
 use anyhow::Result;
 use dialoguer::{
-    theme::{ColorfulTheme, Theme},
     Confirm, Input, MultiSelect, Select,
+    theme::{ColorfulTheme, Theme},
 };
 use lidarserv_common::{
     geometry::{
         coordinate_system::CoordinateSystem,
         grid::{GridHierarchy, LodLevel},
-        position::{PositionComponentType, WithComponentTypeOnce, POSITION_ATTRIBUTE_NAME},
+        position::{POSITION_ATTRIBUTE_NAME, PositionComponentType, WithComponentTypeOnce},
     },
     index::{
         attribute_index::config::{AttributeIndexConfig, IndexKind, SfcIndexOptions},
@@ -18,19 +18,19 @@ use lidarserv_common::{
 use lidarserv_server::index::settings::IndexSettings;
 use nalgebra::vector;
 use pasture_core::layout::{
+    PointAttributeDataType, PointAttributeDefinition, PointLayout,
     attributes::{
         CLASSIFICATION, CLASSIFICATION_FLAGS, COLOR_RGB, EDGE_OF_FLIGHT_LINE, GPS_TIME, INTENSITY,
         NIR, NORMAL, NUMBER_OF_RETURNS, POINT_ID, POINT_SOURCE_ID, RETURN_NUMBER,
-        RETURN_POINT_WAVEFORM_LOCATION, SCANNER_CHANNEL, SCAN_ANGLE, SCAN_ANGLE_RANK,
-        SCAN_DIRECTION_FLAG, WAVEFORM_DATA_OFFSET, WAVEFORM_PACKET_SIZE, WAVEFORM_PARAMETERS,
-        WAVE_PACKET_DESCRIPTOR_INDEX,
+        RETURN_POINT_WAVEFORM_LOCATION, SCAN_ANGLE, SCAN_ANGLE_RANK, SCAN_DIRECTION_FLAG,
+        SCANNER_CHANNEL, WAVE_PACKET_DESCRIPTOR_INDEX, WAVEFORM_DATA_OFFSET, WAVEFORM_PACKET_SIZE,
+        WAVEFORM_PARAMETERS,
     },
-    PointAttributeDataType, PointAttributeDefinition, PointLayout,
 };
 use pasture_io::{
     las::{
-        point_layout_from_las_point_format, ATTRIBUTE_BASIC_FLAGS, ATTRIBUTE_EXTENDED_FLAGS,
-        ATTRIBUTE_LOCAL_LAS_POSITION,
+        ATTRIBUTE_BASIC_FLAGS, ATTRIBUTE_EXTENDED_FLAGS, ATTRIBUTE_LOCAL_LAS_POSITION,
+        point_layout_from_las_point_format,
     },
     las_rs::point::Format,
 };
@@ -471,7 +471,9 @@ fn octree_interactive(
             } else {
                 1_u32 << max_shift
             };
-            return Err(format!("The 'Sampling grid size' value is too large. \nReduce 'Sampling grid size' to {max_sampling_grid_size} or less."));
+            return Err(format!(
+                "The 'Sampling grid size' value is too large. \nReduce 'Sampling grid size' to {max_sampling_grid_size} or less."
+            ));
         }
 
         // node level
@@ -479,7 +481,10 @@ fn octree_interactive(
             return Err("The 'Largest node size' value must be larger than 0.".to_string());
         }
         if !allowed_dist.contains(&root_size_global) {
-            return Err(format!("The 'Largest node size' value is larger than the size of the coordinate system. Reduce it to {} or less.", allowed_dist.end()));
+            return Err(format!(
+                "The 'Largest node size' value is larger than the size of the coordinate system. Reduce it to {} or less.",
+                allowed_dist.end()
+            ));
         }
         let root_size: f64 = coordinate_system.encode_distance(root_size_global).unwrap();
         let node_level = root_size.log2().floor() as i16;
@@ -487,13 +492,17 @@ fn octree_interactive(
             let min_node_level = *allowed_node_levels.start();
             let min_root_node_size_local = 2.0_f64.powi(min_node_level as i32);
             let min_root_node_size = coordinate_system.decode_distance(min_root_node_size_local);
-            return Err(format!("The 'Largest node size' value is too small.\nYou need to increase the 'Largest node size' and/or decrease the 'Sampling grid size'.\nIf you want to keep the current 'Sampling grid size' of {sampling_grid_size}, then 'Largest node size' must be increased to {min_root_node_size} or above."));
+            return Err(format!(
+                "The 'Largest node size' value is too small.\nYou need to increase the 'Largest node size' and/or decrease the 'Sampling grid size'.\nIf you want to keep the current 'Sampling grid size' of {sampling_grid_size}, then 'Largest node size' must be increased to {min_root_node_size} or above."
+            ));
         }
         if node_level > *allowed_node_levels.end() {
             let max_node_level = *allowed_node_levels.end();
             let max_root_node_size_local = 2.0_f64.powi(max_node_level as i32);
             let max_root_node_size = coordinate_system.decode_distance(max_root_node_size_local);
-            return Err(format!("The 'Largest node size' value is too large.\nYou need to decrease the 'Largest node size' to {max_root_node_size} or below."));
+            return Err(format!(
+                "The 'Largest node size' value is too large.\nYou need to decrease the 'Largest node size' to {max_root_node_size} or below."
+            ));
         }
         assert!(allowed_levels.contains(&node_level));
 
@@ -506,7 +515,10 @@ fn octree_interactive(
             return Err("The 'Finest point spacing' value must be larger than 0.".to_string());
         }
         if !allowed_dist.contains(&finest_grid_spacing_global) {
-            return Err(format!("The 'Finest point spacing' value is larger than the size of the coordinate system. Reduce it to {} or less.", allowed_dist.end()));
+            return Err(format!(
+                "The 'Finest point spacing' value is larger than the size of the coordinate system. Reduce it to {} or less.",
+                allowed_dist.end()
+            ));
         }
         let finest_grid_spacing: f64 = coordinate_system
             .encode_distance(finest_grid_spacing_global)
@@ -519,7 +531,9 @@ fn octree_interactive(
             let max_finest_grid_spacing_local = 2.0_f64.powi(max_point_level_finest as i32);
             let max_finest_point_spacing =
                 coordinate_system.decode_distance(max_finest_grid_spacing_local);
-            return Err(format!("The 'Finest point spacing' value is too large. \nPlease reduce 'Finest point spacing', and/or increase 'Largest node size', and/or reduce 'Sampling grid size'. \nIf you want to keep the current 'Largest node size' of {root_size_global} and 'Sampling grid size' of {sampling_grid_size}, then 'Finest point spacing' must be {max_finest_point_spacing} or smaller."));
+            return Err(format!(
+                "The 'Finest point spacing' value is too large. \nPlease reduce 'Finest point spacing', and/or increase 'Largest node size', and/or reduce 'Sampling grid size'. \nIf you want to keep the current 'Largest node size' of {root_size_global} and 'Sampling grid size' of {sampling_grid_size}, then 'Finest point spacing' must be {max_finest_point_spacing} or smaller."
+            ));
         };
 
         Ok(OctreeParams {

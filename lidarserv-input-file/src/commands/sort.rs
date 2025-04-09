@@ -1,18 +1,18 @@
 use crate::cli::SortOptions;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use log::info;
 use pasture_core::{
     containers::{
         BorrowedBuffer, BorrowedBufferExt, InterleavedBuffer, InterleavedBufferMut,
         MakeBufferFromLayout, OwningBuffer, OwningBufferExt, VectorBuffer,
     },
-    layout::{attributes::GPS_TIME, PointLayout},
+    layout::{PointLayout, attributes::GPS_TIME},
     nalgebra::Point3,
 };
 use pasture_io::{
     base::PointReader,
     las::{
-        LASReader, ATTRIBUTE_BASIC_FLAGS, ATTRIBUTE_EXTENDED_FLAGS, ATTRIBUTE_LOCAL_LAS_POSITION,
+        ATTRIBUTE_BASIC_FLAGS, ATTRIBUTE_EXTENDED_FLAGS, ATTRIBUTE_LOCAL_LAS_POSITION, LASReader,
     },
     las_rs::{Header, Point, Vlr},
 };

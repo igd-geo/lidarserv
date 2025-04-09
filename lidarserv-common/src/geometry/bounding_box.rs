@@ -1,5 +1,5 @@
 use super::position::{Component, Position};
-use nalgebra::{point, Vector3};
+use nalgebra::{Vector3, point};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 

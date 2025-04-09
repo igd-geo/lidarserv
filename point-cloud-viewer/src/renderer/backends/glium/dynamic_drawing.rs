@@ -6,9 +6,9 @@
 //! Since the render settings are only known at runtime, we cannot define these things at compile
 //! time, as "vanilla glium" would expect us to do.
 
+use glium::VertexFormat;
 use glium::uniforms::{AsUniformValue, UniformValue, Uniforms};
 use glium::vertex::{MultiVerticesSource, VerticesSource};
-use glium::VertexFormat;
 use std::borrow::Cow;
 
 /// Allows passing uniforms to glium, that are built dynamically at runtime.

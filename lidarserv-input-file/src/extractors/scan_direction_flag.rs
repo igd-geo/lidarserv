@@ -1,5 +1,5 @@
 use pasture_core::layout::{
-    attributes::SCAN_DIRECTION_FLAG, PointAttributeDataType, PointAttributeMember, PointLayout,
+    PointAttributeDataType, PointAttributeMember, PointLayout, attributes::SCAN_DIRECTION_FLAG,
 };
 use pasture_io::las::{ATTRIBUTE_BASIC_FLAGS, ATTRIBUTE_EXTENDED_FLAGS};
 
@@ -67,7 +67,7 @@ impl AttributeExtractor for ScanDirectionFlagExtractor {
 
 #[cfg(test)]
 mod test {
-    use crate::extractors::{scan_direction_flag::ScanDirectionFlagExtractor, AttributeExtractor};
+    use crate::extractors::{AttributeExtractor, scan_direction_flag::ScanDirectionFlagExtractor};
 
     #[test]
     pub fn test_scan_direction_flag_extractor() {

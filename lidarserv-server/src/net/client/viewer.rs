@@ -7,7 +7,7 @@ use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::Aabb;
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::geometry::grid::LeveledGridCell;
-use lidarserv_common::geometry::position::{WithComponentTypeOnce, POSITION_ATTRIBUTE_NAME};
+use lidarserv_common::geometry::position::{POSITION_ATTRIBUTE_NAME, WithComponentTypeOnce};
 use nalgebra::Vector3;
 use pasture_core::containers::{
     BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, InterleavedBuffer,
@@ -19,8 +19,8 @@ use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpStream, ToSocketAddrs};
-use tokio::sync::broadcast::Receiver;
 use tokio::sync::Mutex;
+use tokio::sync::broadcast::Receiver;
 
 struct Inner {
     connection: Connection<OwnedWriteHalf>,
@@ -166,7 +166,7 @@ impl ViewerClient {
             _ => {
                 return Err(LidarServerError::Protocol(
                     "Expected a `Hello` as the first message.".to_string(),
-                ))
+                ));
             }
         };
 

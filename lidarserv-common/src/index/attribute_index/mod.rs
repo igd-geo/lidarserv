@@ -5,24 +5,24 @@ use pasture_core::{
     layout::{PointAttributeDataType, PointAttributeDefinition, PrimitiveType},
 };
 use range_index::RangeIndex;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use sfc_index::SfcIndex;
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{HashMap, hash_map::Entry},
     fs::File,
     io::{BufReader, BufWriter},
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Mutex, RwLock,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
 use crate::{
     geometry::grid::LeveledGridCell,
     query::{
-        attribute::{AttributeQuery, TestFunction, TestFunctionDyn},
         NodeQueryResult,
+        attribute::{AttributeQuery, TestFunction, TestFunctionDyn},
     },
 };
 
@@ -38,7 +38,7 @@ pub trait IndexFunction {
 
     /// Creates a node "containing" the given attribute values.
     fn index(&self, attribute_values: impl Iterator<Item = Self::AttributeValue>)
-        -> Self::NodeType;
+    -> Self::NodeType;
 
     /// Merges two nodes into one.
     /// The resulting node should "contain" all attribute values of both input nodes.
@@ -212,36 +212,37 @@ where
         let test = test.convert_to::<Idx::AttributeValue>();
 
         let nodes = self.nodes.read().unwrap();
-        match nodes.get(cell) { Some(node) => {
-            let node_lock = node.lock().unwrap();
+        match nodes.get(cell) {
+            Some(node) => {
+                let node_lock = node.lock().unwrap();
 
-            match test {
-                TestFunction::Eq(o) => self.index.test_eq(&node_lock, o),
-                TestFunction::Neq(o) => self.index.test_neq(&node_lock, o),
-                TestFunction::Less(o) => self.index.test_less(&node_lock, o),
-                TestFunction::LessEq(o) => self.index.test_less_eq(&node_lock, o),
-                TestFunction::Greater(o) => self.index.test_greater(&node_lock, o),
-                TestFunction::GreaterEq(o) => self.index.test_greater_eq(&node_lock, o),
-                TestFunction::RangeExclusive(o, p) => self
-                    .index
-                    .test_greater(&node_lock, o)
-                    .and(self.index.test_less(&node_lock, p)),
-                TestFunction::RangeLeftInclusive(o, p) => self
-                    .index
-                    .test_greater_eq(&node_lock, o)
-                    .and(self.index.test_less(&node_lock, p)),
-                TestFunction::RangeRightInclusive(o, p) => self
-                    .index
-                    .test_greater(&node_lock, o)
-                    .and(self.index.test_less_eq(&node_lock, p)),
-                TestFunction::RangeAllInclusive(o, p) => self
-                    .index
-                    .test_greater_eq(&node_lock, o)
-                    .and(self.index.test_less_eq(&node_lock, p)),
+                match test {
+                    TestFunction::Eq(o) => self.index.test_eq(&node_lock, o),
+                    TestFunction::Neq(o) => self.index.test_neq(&node_lock, o),
+                    TestFunction::Less(o) => self.index.test_less(&node_lock, o),
+                    TestFunction::LessEq(o) => self.index.test_less_eq(&node_lock, o),
+                    TestFunction::Greater(o) => self.index.test_greater(&node_lock, o),
+                    TestFunction::GreaterEq(o) => self.index.test_greater_eq(&node_lock, o),
+                    TestFunction::RangeExclusive(o, p) => self
+                        .index
+                        .test_greater(&node_lock, o)
+                        .and(self.index.test_less(&node_lock, p)),
+                    TestFunction::RangeLeftInclusive(o, p) => self
+                        .index
+                        .test_greater_eq(&node_lock, o)
+                        .and(self.index.test_less(&node_lock, p)),
+                    TestFunction::RangeRightInclusive(o, p) => self
+                        .index
+                        .test_greater(&node_lock, o)
+                        .and(self.index.test_less_eq(&node_lock, p)),
+                    TestFunction::RangeAllInclusive(o, p) => self
+                        .index
+                        .test_greater_eq(&node_lock, o)
+                        .and(self.index.test_less_eq(&node_lock, p)),
+                }
             }
-        } _ => {
-            NodeQueryResult::Negative
-        }}
+            _ => NodeQueryResult::Negative,
+        }
     }
 
     fn flush(&self) -> Result<(), AttributeIndexError> {

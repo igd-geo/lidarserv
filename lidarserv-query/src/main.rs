@@ -1,12 +1,12 @@
 use std::{
     fs::File,
-    io::{stdout, BufWriter, Read, Seek, SeekFrom, Write},
+    io::{BufWriter, Read, Seek, SeekFrom, Write, stdout},
     path::PathBuf,
     process::ExitCode,
     sync::{
+        Arc,
         atomic::{AtomicU64, Ordering},
         mpsc::RecvTimeoutError,
-        Arc,
     },
     thread::{self},
     time::Duration,
@@ -24,7 +24,7 @@ use log::{debug, error, info, warn};
 use pasture_core::containers::{BorrowedBuffer, VectorBuffer};
 use pasture_io::{
     base::PointWriter,
-    las::{path_is_compressed_las_file, LASWriter},
+    las::{LASWriter, path_is_compressed_las_file},
 };
 use tokio::sync::{
     broadcast,

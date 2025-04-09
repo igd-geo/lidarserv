@@ -23,11 +23,12 @@ async fn main() -> ExitCode {
         Command::Replay(options) => replay(options).await,
         Command::Sort(options) => sort(options).await,
     };
-    match result { Err(e) => {
-        error!("{e}");
-        debug!("{e:?}");
-        ExitCode::FAILURE
-    } _ => {
-        ExitCode::SUCCESS
-    }}
+    match result {
+        Err(e) => {
+            error!("{e}");
+            debug!("{e:?}");
+            ExitCode::FAILURE
+        }
+        _ => ExitCode::SUCCESS,
+    }
 }

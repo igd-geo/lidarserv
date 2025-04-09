@@ -8,7 +8,7 @@ use crate::renderer::renderer_command::{FocusTarget, PointAttribute, RendererCom
 use crate::renderer::settings::{AnimationSettings, BaseRenderSettings, PointCloudRenderSettings};
 use crate::renderer::vertex_data::point_attribute_to_vertex_data;
 use pasture_core::containers::BorrowedBuffer;
-use pasture_core::layout::{attributes, PointAttributeDefinition};
+use pasture_core::layout::{PointAttributeDefinition, attributes};
 use pasture_core::math::AABB;
 use std::thread;
 

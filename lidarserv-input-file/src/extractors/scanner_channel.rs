@@ -1,5 +1,5 @@
 use pasture_core::layout::{
-    attributes::SCANNER_CHANNEL, PointAttributeDataType, PointAttributeMember, PointLayout,
+    PointAttributeDataType, PointAttributeMember, PointLayout, attributes::SCANNER_CHANNEL,
 };
 use pasture_io::las::ATTRIBUTE_EXTENDED_FLAGS;
 

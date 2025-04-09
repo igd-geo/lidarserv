@@ -3,6 +3,7 @@ use std::{convert::Infallible, str::FromStr};
 use lidarserv_common::{
     geometry::{bounding_box::Aabb, grid::LodLevel},
     query::{
+        ExecutableQuery, Query as QueryTrait, QueryContext,
         aabb::AabbQuery,
         and::AndQuery,
         attribute::{AttributeQuery, AttriuteQueryError, FilterableAttributeType, TestFunction},
@@ -12,12 +13,11 @@ use lidarserv_common::{
         not::NotQuery,
         or::OrQuery,
         view_frustum::ViewFrustumQuery,
-        ExecutableQuery, Query as QueryTrait, QueryContext,
     },
 };
-use nalgebra::{vector, Vector3, Vector4};
+use nalgebra::{Vector3, Vector4, vector};
 use pasture_core::layout::{PointAttributeDataType, PointAttributeDefinition};
-use serde::{de::Visitor, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::Visitor};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum Query {
@@ -249,7 +249,9 @@ where
 
 #[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 pub enum QueryError {
-    #[error("The attribute {0} does not exist in this point cloud. (Attribute names are case sensitive.)")]
+    #[error(
+        "The attribute {0} does not exist in this point cloud. (Attribute names are case sensitive.)"
+    )]
     AttributeNotFound(String),
 
     #[error("Invalid type for attribute {0}: {1}")]
@@ -320,13 +322,13 @@ impl QueryTrait for Query {
                         return Err(QueryError::TypeError(
                             attr,
                             "byte array attributes can't be queried",
-                        ))
+                        ));
                     }
                     PointAttributeDataType::Custom { .. } => {
                         return Err(QueryError::TypeError(
                             attr,
                             "custom datatypes can't be queried",
-                        ))
+                        ));
                     }
                 }
             }
@@ -375,13 +377,13 @@ impl FromStr for Query {
 
 mod query_language {
     use crate::index::query::Query;
-    use anyhow::{anyhow, Result};
+    use anyhow::{Result, anyhow};
     use lidarserv_common::{
         geometry::{bounding_box::Aabb, grid::LodLevel},
         query::{attribute::TestFunction, view_frustum::ViewFrustumQuery},
     };
     use nalgebra::{Point3, Vector2, Vector3, Vector4};
-    use pest::{iterators::Pair, Parser};
+    use pest::{Parser, iterators::Pair};
     use pest_derive::Parser;
 
     use super::{AttributeValue, AttributeValueScalar};
@@ -732,7 +734,7 @@ mod test {
         geometry::{bounding_box::Aabb, grid::LodLevel},
         query::{attribute::TestFunction, view_frustum::ViewFrustumQuery},
     };
-    use nalgebra::{point, vector, Vector3, Vector4};
+    use nalgebra::{Vector3, Vector4, point, vector};
     use serde_json::json;
 
     fn query_test_json(q: Query, expected_json: serde_json::Value) {

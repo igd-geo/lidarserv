@@ -1,13 +1,13 @@
 use crate::cli::ReplayOptions;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::tracy_client::{plot, span};
+use lidarserv_input_file::extractors::AttributeExtractor;
 use lidarserv_input_file::extractors::basic_flags::LasBasicFlagsExtractor;
 use lidarserv_input_file::extractors::copy::CopyExtractor;
 use lidarserv_input_file::extractors::extended_flags::LasExtendedFlagsExtractor;
 use lidarserv_input_file::extractors::position::PositionExtractor;
 use lidarserv_input_file::extractors::scan_angle_rank::ScanAngleRankExtractor;
-use lidarserv_input_file::extractors::AttributeExtractor;
 use lidarserv_input_file::splitters::fixed::FixedPointRateSplitter;
 use lidarserv_input_file::splitters::gpstime::GpsTimeSplitter;
 use lidarserv_input_file::splitters::{PointSplitter, PointSplitterChunk};
@@ -24,9 +24,9 @@ use pasture_core::{
 use pasture_io::{base::PointReader, las::LASReader};
 use std::convert::Infallible;
 use std::mem;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::RecvTimeoutError;
-use std::sync::Arc;
 use std::{thread, time::Duration};
 use tokio::time::Instant;
 use tokio::{sync::broadcast, sync::mpsc, time::sleep};
@@ -78,7 +78,9 @@ pub async fn replay(options: ReplayOptions) -> Result<()> {
         } else {
             let has_gps_time = src_layout.has_attribute(&GPS_TIME);
             if !has_gps_time {
-                return Err(anyhow!("Missing {GPS_TIME} point attribute. (Note: You could specify the '--points-per-second' option to replay the file at a fixed point rate.)"));
+                return Err(anyhow!(
+                    "Missing {GPS_TIME} point attribute. (Note: You could specify the '--points-per-second' option to replay the file at a fixed point rate.)"
+                ));
             }
             let splitter = GpsTimeSplitter::init(options.fps, options.autoskip, options.accelerate);
             thread::spawn(move || {
@@ -423,7 +425,9 @@ fn report_thread(shutdown_rx: std::sync::mpsc::Receiver<Infallible>, state: Arc<
             )
         };
 
-        println!("[fps: {frames_per_second:2} pps: {points_per_second:7}][buffer: {buffer_percentage:3}%][{progress_bar}| {points_sent}/{points_total} points sent]{behind_str}");
+        println!(
+            "[fps: {frames_per_second:2} pps: {points_per_second:7}][buffer: {buffer_percentage:3}%][{progress_bar}| {points_sent}/{points_total} points sent]{behind_str}"
+        );
         plot!("fps", frames_per_second as f64);
         plot!("pps", points_per_second as f64);
         plot!("buffered frames", buffered_frames as f64);
