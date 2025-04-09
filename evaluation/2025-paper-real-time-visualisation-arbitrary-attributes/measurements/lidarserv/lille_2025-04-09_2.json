@@ -1,0 +1,1366 @@
+{
+  "env": {
+    "config_file": "/home/localadmin/lidarserv/evaluation/2025-paper-real-time-visualisation-arbitrary-attributes/toml-files/lille.toml",
+    "duration:": 329,
+    "finished_at": "2025-04-09T15:29:49.216339346+00:00",
+    "hostname": "lidarserv-evaluation",
+    "nr_bytes": 3360000227,
+    "nr_points": 120000000,
+    "started_at": "2025-04-09T15:24:20.002830207+00:00",
+    "version": "git:d876484"
+  },
+  "runs": {
+    "attr-index": [
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": "All",
+          "enable_point_filtering": "PointFiltering",
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 3376507233,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.236580715,
+            "duration_seconds": 26.585131844,
+            "insertion_rate_points_per_sec": 4473987.249547722,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0,
+            "progress_over_time": [
+              {
+                "elapsed_seconds": 0.252189381,
+                "gps_time": 19060.189453125,
+                "nr_cached_nodes": 0,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 0,
+                "nr_points_done": 0,
+                "nr_points_read": 1000000
+              },
+              {
+                "elapsed_seconds": 1.25647413,
+                "gps_time": 19061.869140625,
+                "nr_cached_nodes": 316,
+                "nr_pending_points": 919047,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 905201,
+                "nr_points_read": 1824248
+              },
+              {
+                "elapsed_seconds": 2.2971483839999998,
+                "gps_time": 19070.4765625,
+                "nr_cached_nodes": 502,
+                "nr_pending_points": 715673,
+                "nr_pending_tasks": 22,
+                "nr_points_done": 5150379,
+                "nr_points_read": 5866052
+              },
+              {
+                "elapsed_seconds": 3.306998047,
+                "gps_time": 19081.884765625,
+                "nr_cached_nodes": 496,
+                "nr_pending_points": 960768,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 10068064,
+                "nr_points_read": 11028832
+              },
+              {
+                "elapsed_seconds": 4.319004176,
+                "gps_time": 19091.99609375,
+                "nr_cached_nodes": 495,
+                "nr_pending_points": 982957,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 14441657,
+                "nr_points_read": 15424614
+              },
+              {
+                "elapsed_seconds": 5.336698881,
+                "gps_time": 19104.658203125,
+                "nr_cached_nodes": 482,
+                "nr_pending_points": 849875,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 19880891,
+                "nr_points_read": 20730766
+              },
+              {
+                "elapsed_seconds": 6.340501139,
+                "gps_time": 19115.232421875,
+                "nr_cached_nodes": 488,
+                "nr_pending_points": 981961,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 24141688,
+                "nr_points_read": 25123649
+              },
+              {
+                "elapsed_seconds": 7.345700942,
+                "gps_time": 19125.16796875,
+                "nr_cached_nodes": 483,
+                "nr_pending_points": 979613,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 28954014,
+                "nr_points_read": 29933627
+              },
+              {
+                "elapsed_seconds": 8.367012465,
+                "gps_time": 19135.861328125,
+                "nr_cached_nodes": 501,
+                "nr_pending_points": 964756,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 33998333,
+                "nr_points_read": 34963089
+              },
+              {
+                "elapsed_seconds": 9.368708712,
+                "gps_time": 19147.048828125,
+                "nr_cached_nodes": 497,
+                "nr_pending_points": 914606,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 38972605,
+                "nr_points_read": 39887211
+              },
+              {
+                "elapsed_seconds": 10.385014219,
+                "gps_time": 19158.28515625,
+                "nr_cached_nodes": 480,
+                "nr_pending_points": 828582,
+                "nr_pending_tasks": 0,
+                "nr_points_done": 44120955,
+                "nr_points_read": 44949537
+              },
+              {
+                "elapsed_seconds": 11.395850358,
+                "gps_time": 19169.53515625,
+                "nr_cached_nodes": 490,
+                "nr_pending_points": 890009,
+                "nr_pending_tasks": 23,
+                "nr_points_done": 49198943,
+                "nr_points_read": 50088952
+              },
+              {
+                "elapsed_seconds": 12.421304262,
+                "gps_time": 19180.40625,
+                "nr_cached_nodes": 488,
+                "nr_pending_points": 841439,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 54001102,
+                "nr_points_read": 54842541
+              },
+              {
+                "elapsed_seconds": 13.424706333,
+                "gps_time": 19189.974609375,
+                "nr_cached_nodes": 507,
+                "nr_pending_points": 860015,
+                "nr_pending_tasks": 13,
+                "nr_points_done": 58488340,
+                "nr_points_read": 59348355
+              },
+              {
+                "elapsed_seconds": 14.464862324,
+                "gps_time": 19200.978515625,
+                "nr_cached_nodes": 489,
+                "nr_pending_points": 659655,
+                "nr_pending_tasks": 0,
+                "nr_points_done": 63849869,
+                "nr_points_read": 64509524
+              },
+              {
+                "elapsed_seconds": 15.472140527,
+                "gps_time": 19210.546875,
+                "nr_cached_nodes": 496,
+                "nr_pending_points": 995016,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 67971353,
+                "nr_points_read": 68966369
+              },
+              {
+                "elapsed_seconds": 16.480896105,
+                "gps_time": 19222.666015625,
+                "nr_cached_nodes": 501,
+                "nr_pending_points": 856233,
+                "nr_pending_tasks": 27,
+                "nr_points_done": 73082982,
+                "nr_points_read": 73939215
+              },
+              {
+                "elapsed_seconds": 17.490072266,
+                "gps_time": 19235.08203125,
+                "nr_cached_nodes": 502,
+                "nr_pending_points": 970967,
+                "nr_pending_tasks": 7,
+                "nr_points_done": 78166056,
+                "nr_points_read": 79137023
+              },
+              {
+                "elapsed_seconds": 18.493863587,
+                "gps_time": 19323.65234375,
+                "nr_cached_nodes": 483,
+                "nr_pending_points": 967961,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 82339513,
+                "nr_points_read": 83307474
+              },
+              {
+                "elapsed_seconds": 19.494781614,
+                "gps_time": 19333.82421875,
+                "nr_cached_nodes": 498,
+                "nr_pending_points": 999067,
+                "nr_pending_tasks": 6,
+                "nr_points_done": 86596879,
+                "nr_points_read": 87595946
+              },
+              {
+                "elapsed_seconds": 20.502131585,
+                "gps_time": 19343.72265625,
+                "nr_cached_nodes": 499,
+                "nr_pending_points": 980988,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 91237068,
+                "nr_points_read": 92218056
+              },
+              {
+                "elapsed_seconds": 21.519559075,
+                "gps_time": 19357.0546875,
+                "nr_cached_nodes": 491,
+                "nr_pending_points": 840330,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 96995527,
+                "nr_points_read": 97835857
+              },
+              {
+                "elapsed_seconds": 22.547167327,
+                "gps_time": 19367.689453125,
+                "nr_cached_nodes": 507,
+                "nr_pending_points": 667469,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 102147824,
+                "nr_points_read": 102815293
+              },
+              {
+                "elapsed_seconds": 23.553071083,
+                "gps_time": 19375.7109375,
+                "nr_cached_nodes": 488,
+                "nr_pending_points": 956757,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 105974364,
+                "nr_points_read": 106931121
+              },
+              {
+                "elapsed_seconds": 24.556922381,
+                "gps_time": 19386.57421875,
+                "nr_cached_nodes": 506,
+                "nr_pending_points": 987719,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 110614004,
+                "nr_points_read": 111601723
+              },
+              {
+                "elapsed_seconds": 25.557358087,
+                "gps_time": 19396.78515625,
+                "nr_cached_nodes": 487,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 114423483,
+                "nr_points_read": 115423483
+              },
+              {
+                "elapsed_seconds": 26.571865581,
+                "gps_time": 25151.119140625,
+                "nr_cached_nodes": 480,
+                "nr_pending_points": 697690,
+                "nr_pending_tasks": 4,
+                "nr_points_done": 119276361,
+                "nr_points_read": 119974051
+              }
+            ]
+          },
+          "latency": null,
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 0.000027071,
+              "nr_nodes": 27001,
+              "nr_non_empty_nodes": 27001,
+              "nr_points": 120000000,
+              "query_time_seconds": 7.122428124
+            },
+            "intensity_high": {
+              "load_time_seconds": 2.373e-6,
+              "nr_nodes": 1092,
+              "nr_non_empty_nodes": 1022,
+              "nr_points": 131345,
+              "query_time_seconds": 2.607703505
+            },
+            "intensity_low": {
+              "load_time_seconds": 0.000014526,
+              "nr_nodes": 14698,
+              "nr_non_empty_nodes": 14682,
+              "nr_points": 6702129,
+              "query_time_seconds": 7.617356409
+            },
+            "pointsource1": {
+              "load_time_seconds": 0.000018055,
+              "nr_nodes": 16633,
+              "nr_non_empty_nodes": 16626,
+              "nr_points": 3404478,
+              "query_time_seconds": 7.990526397
+            },
+            "pointsource2": {
+              "load_time_seconds": 0.000021051,
+              "nr_nodes": 21314,
+              "nr_non_empty_nodes": 21309,
+              "nr_points": 17414734,
+              "query_time_seconds": 8.353272912
+            },
+            "scananglerank1": {
+              "load_time_seconds": 4.04e-6,
+              "nr_nodes": 3073,
+              "nr_non_empty_nodes": 3069,
+              "nr_points": 2321714,
+              "query_time_seconds": 1.806348413
+            },
+            "scananglerank2": {
+              "load_time_seconds": 0.00001254,
+              "nr_nodes": 9685,
+              "nr_non_empty_nodes": 9677,
+              "nr_points": 15638173,
+              "query_time_seconds": 3.465965917
+            },
+            "time_1": {
+              "load_time_seconds": 0.0000294,
+              "nr_nodes": 26888,
+              "nr_non_empty_nodes": 26888,
+              "nr_points": 115872130,
+              "query_time_seconds": 7.081488753
+            },
+            "time_2": {
+              "load_time_seconds": 7.73e-7,
+              "nr_nodes": 555,
+              "nr_non_empty_nodes": 555,
+              "nr_points": 4127870,
+              "query_time_seconds": 0.457342047
+            },
+            "view_frustum1": {
+              "load_time_seconds": 1.36e-7,
+              "nr_nodes": 23,
+              "nr_non_empty_nodes": 15,
+              "nr_points": 51959,
+              "query_time_seconds": 0.063070609
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": "RangeIndexOnly",
+          "enable_point_filtering": "PointFiltering",
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 3369823324,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.121304078,
+            "duration_seconds": 23.373590968,
+            "insertion_rate_points_per_sec": 5107492.489966664,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0,
+            "progress_over_time": [
+              {
+                "elapsed_seconds": 0.204712713,
+                "gps_time": 19060.189453125,
+                "nr_cached_nodes": 0,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 0,
+                "nr_points_read": 1000000
+              },
+              {
+                "elapsed_seconds": 1.209646365,
+                "gps_time": 19063.03515625,
+                "nr_cached_nodes": 431,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 1394530,
+                "nr_points_read": 2394530
+              },
+              {
+                "elapsed_seconds": 2.21362951,
+                "gps_time": 19075.2890625,
+                "nr_cached_nodes": 497,
+                "nr_pending_points": 798849,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 7114591,
+                "nr_points_read": 7913440
+              },
+              {
+                "elapsed_seconds": 3.221233865,
+                "gps_time": 19086.7578125,
+                "nr_cached_nodes": 485,
+                "nr_pending_points": 623575,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 12634665,
+                "nr_points_read": 13258240
+              },
+              {
+                "elapsed_seconds": 4.221476397,
+                "gps_time": 19098.40234375,
+                "nr_cached_nodes": 514,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 11,
+                "nr_points_done": 17073088,
+                "nr_points_read": 18073088
+              },
+              {
+                "elapsed_seconds": 5.2272106130000004,
+                "gps_time": 19111.236328125,
+                "nr_cached_nodes": 490,
+                "nr_pending_points": 967562,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 22530967,
+                "nr_points_read": 23498529
+              },
+              {
+                "elapsed_seconds": 6.246186997,
+                "gps_time": 19122.9375,
+                "nr_cached_nodes": 506,
+                "nr_pending_points": 659980,
+                "nr_pending_tasks": 32,
+                "nr_points_done": 28100153,
+                "nr_points_read": 28760133
+              },
+              {
+                "elapsed_seconds": 7.270560723,
+                "gps_time": 19135.0703125,
+                "nr_cached_nodes": 501,
+                "nr_pending_points": 717154,
+                "nr_pending_tasks": 22,
+                "nr_points_done": 33897666,
+                "nr_points_read": 34614820
+              },
+              {
+                "elapsed_seconds": 8.273571414,
+                "gps_time": 19146.859375,
+                "nr_cached_nodes": 475,
+                "nr_pending_points": 986217,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 38811888,
+                "nr_points_read": 39798105
+              },
+              {
+                "elapsed_seconds": 9.305762889,
+                "gps_time": 19158.6171875,
+                "nr_cached_nodes": 502,
+                "nr_pending_points": 699188,
+                "nr_pending_tasks": 31,
+                "nr_points_done": 44423940,
+                "nr_points_read": 45123128
+              },
+              {
+                "elapsed_seconds": 10.337732644,
+                "gps_time": 19172.306640625,
+                "nr_cached_nodes": 486,
+                "nr_pending_points": 866181,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 50304623,
+                "nr_points_read": 51170804
+              },
+              {
+                "elapsed_seconds": 11.339926023,
+                "gps_time": 19184.38671875,
+                "nr_cached_nodes": 513,
+                "nr_pending_points": 924891,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 55729772,
+                "nr_points_read": 56654663
+              },
+              {
+                "elapsed_seconds": 12.346756605,
+                "gps_time": 19197.087890625,
+                "nr_cached_nodes": 502,
+                "nr_pending_points": 954166,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 61663900,
+                "nr_points_read": 62618066
+              },
+              {
+                "elapsed_seconds": 13.373196572,
+                "gps_time": 19210.154296875,
+                "nr_cached_nodes": 494,
+                "nr_pending_points": 878086,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 67896123,
+                "nr_points_read": 68774209
+              },
+              {
+                "elapsed_seconds": 14.375580673,
+                "gps_time": 19221.849609375,
+                "nr_cached_nodes": 502,
+                "nr_pending_points": 827598,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 72772482,
+                "nr_points_read": 73600080
+              },
+              {
+                "elapsed_seconds": 15.395373366,
+                "gps_time": 19234.677734375,
+                "nr_cached_nodes": 499,
+                "nr_pending_points": 822292,
+                "nr_pending_tasks": 4,
+                "nr_points_done": 78127788,
+                "nr_points_read": 78950080
+              },
+              {
+                "elapsed_seconds": 16.414734101,
+                "gps_time": 19324.978515625,
+                "nr_cached_nodes": 484,
+                "nr_pending_points": 966418,
+                "nr_pending_tasks": 0,
+                "nr_points_done": 82898886,
+                "nr_points_read": 83865304
+              },
+              {
+                "elapsed_seconds": 17.421347322,
+                "gps_time": 19338.03515625,
+                "nr_cached_nodes": 499,
+                "nr_pending_points": 907830,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 88517807,
+                "nr_points_read": 89425637
+              },
+              {
+                "elapsed_seconds": 18.435031068,
+                "gps_time": 19348.271484375,
+                "nr_cached_nodes": 488,
+                "nr_pending_points": 871737,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 93672584,
+                "nr_points_read": 94544321
+              },
+              {
+                "elapsed_seconds": 19.448823336,
+                "gps_time": 19362.564453125,
+                "nr_cached_nodes": 491,
+                "nr_pending_points": 939069,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 99327440,
+                "nr_points_read": 100266509
+              },
+              {
+                "elapsed_seconds": 20.476108514,
+                "gps_time": 19374.05859375,
+                "nr_cached_nodes": 506,
+                "nr_pending_points": 897380,
+                "nr_pending_tasks": 17,
+                "nr_points_done": 105178070,
+                "nr_points_read": 106075450
+              },
+              {
+                "elapsed_seconds": 21.543235855,
+                "gps_time": 19386.015625,
+                "nr_cached_nodes": 510,
+                "nr_pending_points": 674046,
+                "nr_pending_tasks": 6,
+                "nr_points_done": 110697208,
+                "nr_points_read": 111371254
+              },
+              {
+                "elapsed_seconds": 22.546289216,
+                "gps_time": 25141.275390625,
+                "nr_cached_nodes": 501,
+                "nr_pending_points": 999700,
+                "nr_pending_tasks": 17,
+                "nr_points_done": 115081855,
+                "nr_points_read": 116081555
+              }
+            ]
+          },
+          "latency": null,
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 0.000028671,
+              "nr_nodes": 27001,
+              "nr_non_empty_nodes": 27001,
+              "nr_points": 120000000,
+              "query_time_seconds": 7.023551488
+            },
+            "intensity_high": {
+              "load_time_seconds": 1.167e-6,
+              "nr_nodes": 1092,
+              "nr_non_empty_nodes": 1022,
+              "nr_points": 131345,
+              "query_time_seconds": 2.483297266
+            },
+            "intensity_low": {
+              "load_time_seconds": 0.000017941,
+              "nr_nodes": 14700,
+              "nr_non_empty_nodes": 14684,
+              "nr_points": 6702129,
+              "query_time_seconds": 7.62671951
+            },
+            "pointsource1": {
+              "load_time_seconds": 0.000018753,
+              "nr_nodes": 16631,
+              "nr_non_empty_nodes": 16624,
+              "nr_points": 3404478,
+              "query_time_seconds": 7.9410088089999995
+            },
+            "pointsource2": {
+              "load_time_seconds": 0.000027555,
+              "nr_nodes": 21311,
+              "nr_non_empty_nodes": 21306,
+              "nr_points": 17414734,
+              "query_time_seconds": 8.435728517
+            },
+            "scananglerank1": {
+              "load_time_seconds": 4.258e-6,
+              "nr_nodes": 3076,
+              "nr_non_empty_nodes": 3072,
+              "nr_points": 2321714,
+              "query_time_seconds": 1.821173154
+            },
+            "scananglerank2": {
+              "load_time_seconds": 0.000011674,
+              "nr_nodes": 9687,
+              "nr_non_empty_nodes": 9679,
+              "nr_points": 15638173,
+              "query_time_seconds": 3.487534509
+            },
+            "time_1": {
+              "load_time_seconds": 0.000029049,
+              "nr_nodes": 26888,
+              "nr_non_empty_nodes": 26888,
+              "nr_points": 115872130,
+              "query_time_seconds": 7.072845891
+            },
+            "time_2": {
+              "load_time_seconds": 1.025e-6,
+              "nr_nodes": 555,
+              "nr_non_empty_nodes": 555,
+              "nr_points": 4127870,
+              "query_time_seconds": 0.447812162
+            },
+            "view_frustum1": {
+              "load_time_seconds": 1.77e-7,
+              "nr_nodes": 23,
+              "nr_non_empty_nodes": 15,
+              "nr_points": 51959,
+              "query_time_seconds": 0.06409755
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": "SfcIndexOnly",
+          "enable_point_filtering": "PointFiltering",
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 3372499523,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.158337112,
+            "duration_seconds": 25.009039965,
+            "insertion_rate_points_per_sec": 4768077.326169431,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0,
+            "progress_over_time": [
+              {
+                "elapsed_seconds": 0.176553147,
+                "gps_time": 19060.189453125,
+                "nr_cached_nodes": 0,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 0,
+                "nr_points_read": 1000000
+              },
+              {
+                "elapsed_seconds": 1.180873995,
+                "gps_time": 19060.232421875,
+                "nr_cached_nodes": 24,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 29675,
+                "nr_points_read": 1029675
+              },
+              {
+                "elapsed_seconds": 2.182576886,
+                "gps_time": 19068.666015625,
+                "nr_cached_nodes": 506,
+                "nr_pending_points": 915444,
+                "nr_pending_tasks": 4,
+                "nr_points_done": 4093125,
+                "nr_points_read": 5008569
+              },
+              {
+                "elapsed_seconds": 3.183023682,
+                "gps_time": 19080.1484375,
+                "nr_cached_nodes": 495,
+                "nr_pending_points": 996514,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 9209093,
+                "nr_points_read": 10205607
+              },
+              {
+                "elapsed_seconds": 4.184474819,
+                "gps_time": 19092.17578125,
+                "nr_cached_nodes": 483,
+                "nr_pending_points": 995416,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 14495503,
+                "nr_points_read": 15490919
+              },
+              {
+                "elapsed_seconds": 5.230594227,
+                "gps_time": 19103.40234375,
+                "nr_cached_nodes": 485,
+                "nr_pending_points": 809983,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 19388058,
+                "nr_points_read": 20198041
+              },
+              {
+                "elapsed_seconds": 6.23209252,
+                "gps_time": 19114.5703125,
+                "nr_cached_nodes": 493,
+                "nr_pending_points": 842797,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 24004078,
+                "nr_points_read": 24846875
+              },
+              {
+                "elapsed_seconds": 7.240142705,
+                "gps_time": 19126.041015625,
+                "nr_cached_nodes": 480,
+                "nr_pending_points": 970025,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 29412446,
+                "nr_points_read": 30382471
+              },
+              {
+                "elapsed_seconds": 8.250086721,
+                "gps_time": 19137.509765625,
+                "nr_cached_nodes": 512,
+                "nr_pending_points": 952066,
+                "nr_pending_tasks": 0,
+                "nr_points_done": 34651461,
+                "nr_points_read": 35603527
+              },
+              {
+                "elapsed_seconds": 9.272736275,
+                "gps_time": 19149.625,
+                "nr_cached_nodes": 497,
+                "nr_pending_points": 766439,
+                "nr_pending_tasks": 0,
+                "nr_points_done": 40310304,
+                "nr_points_read": 41076743
+              },
+              {
+                "elapsed_seconds": 10.27571369,
+                "gps_time": 19161.083984375,
+                "nr_cached_nodes": 500,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 45340343,
+                "nr_points_read": 46340343
+              },
+              {
+                "elapsed_seconds": 11.293490392,
+                "gps_time": 19173.53515625,
+                "nr_cached_nodes": 480,
+                "nr_pending_points": 940557,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 50745234,
+                "nr_points_read": 51685791
+              },
+              {
+                "elapsed_seconds": 12.30092975,
+                "gps_time": 19184.3984375,
+                "nr_cached_nodes": 476,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 55663466,
+                "nr_points_read": 56663466
+              },
+              {
+                "elapsed_seconds": 13.333061453,
+                "gps_time": 19196.451171875,
+                "nr_cached_nodes": 488,
+                "nr_pending_points": 907862,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 61386960,
+                "nr_points_read": 62294822
+              },
+              {
+                "elapsed_seconds": 14.356731758,
+                "gps_time": 19205.890625,
+                "nr_cached_nodes": 493,
+                "nr_pending_points": 915150,
+                "nr_pending_tasks": 4,
+                "nr_points_done": 65847884,
+                "nr_points_read": 66763034
+              },
+              {
+                "elapsed_seconds": 15.377747803,
+                "gps_time": 19217.16796875,
+                "nr_cached_nodes": 503,
+                "nr_pending_points": 790140,
+                "nr_pending_tasks": 24,
+                "nr_points_done": 70976427,
+                "nr_points_read": 71766567
+              },
+              {
+                "elapsed_seconds": 16.392747642,
+                "gps_time": 19229.75,
+                "nr_cached_nodes": 506,
+                "nr_pending_points": 772844,
+                "nr_pending_tasks": 27,
+                "nr_points_done": 76056038,
+                "nr_points_read": 76828882
+              },
+              {
+                "elapsed_seconds": 17.401895753,
+                "gps_time": 19320.05078125,
+                "nr_cached_nodes": 485,
+                "nr_pending_points": 983357,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 80712684,
+                "nr_points_read": 81696041
+              },
+              {
+                "elapsed_seconds": 18.404262768,
+                "gps_time": 19330.748046875,
+                "nr_cached_nodes": 506,
+                "nr_pending_points": 960484,
+                "nr_pending_tasks": 74,
+                "nr_points_done": 85390016,
+                "nr_points_read": 86350500
+              },
+              {
+                "elapsed_seconds": 19.40769856,
+                "gps_time": 19341.53125,
+                "nr_cached_nodes": 487,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 90121268,
+                "nr_points_read": 91121268
+              },
+              {
+                "elapsed_seconds": 20.425609499,
+                "gps_time": 19354.515625,
+                "nr_cached_nodes": 497,
+                "nr_pending_points": 838882,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 95818378,
+                "nr_points_read": 96657260
+              },
+              {
+                "elapsed_seconds": 21.426918986,
+                "gps_time": 19364.802734375,
+                "nr_cached_nodes": 509,
+                "nr_pending_points": 942869,
+                "nr_pending_tasks": 39,
+                "nr_points_done": 100456921,
+                "nr_points_read": 101399790
+              },
+              {
+                "elapsed_seconds": 22.432308223,
+                "gps_time": 19375.53125,
+                "nr_cached_nodes": 497,
+                "nr_pending_points": 984464,
+                "nr_pending_tasks": 0,
+                "nr_points_done": 105860032,
+                "nr_points_read": 106844496
+              },
+              {
+                "elapsed_seconds": 23.448520928,
+                "gps_time": 19388.875,
+                "nr_cached_nodes": 503,
+                "nr_pending_points": 920371,
+                "nr_pending_tasks": 3,
+                "nr_points_done": 111615446,
+                "nr_points_read": 112535817
+              },
+              {
+                "elapsed_seconds": 24.450278483,
+                "gps_time": 25144.40625,
+                "nr_cached_nodes": 502,
+                "nr_pending_points": 999991,
+                "nr_pending_tasks": 30,
+                "nr_points_done": 116361791,
+                "nr_points_read": 117361782
+              }
+            ]
+          },
+          "latency": null,
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 0.000028365,
+              "nr_nodes": 27000,
+              "nr_non_empty_nodes": 27000,
+              "nr_points": 120000000,
+              "query_time_seconds": 7.14625975
+            },
+            "intensity_high": {
+              "load_time_seconds": 1.729e-6,
+              "nr_nodes": 1112,
+              "nr_non_empty_nodes": 1022,
+              "nr_points": 131345,
+              "query_time_seconds": 2.6128213860000002
+            },
+            "intensity_low": {
+              "load_time_seconds": 0.000020495,
+              "nr_nodes": 17289,
+              "nr_non_empty_nodes": 14682,
+              "nr_points": 6702129,
+              "query_time_seconds": 7.979621862
+            },
+            "pointsource1": {
+              "load_time_seconds": 0.000019063,
+              "nr_nodes": 16631,
+              "nr_non_empty_nodes": 16624,
+              "nr_points": 3404478,
+              "query_time_seconds": 7.911914254
+            },
+            "pointsource2": {
+              "load_time_seconds": 0.000024385,
+              "nr_nodes": 21311,
+              "nr_non_empty_nodes": 21306,
+              "nr_points": 17414734,
+              "query_time_seconds": 8.32765432
+            },
+            "scananglerank1": {
+              "load_time_seconds": 4.296e-6,
+              "nr_nodes": 3123,
+              "nr_non_empty_nodes": 3070,
+              "nr_points": 2321714,
+              "query_time_seconds": 1.77543764
+            },
+            "scananglerank2": {
+              "load_time_seconds": 0.000011694,
+              "nr_nodes": 9762,
+              "nr_non_empty_nodes": 9679,
+              "nr_points": 15638173,
+              "query_time_seconds": 3.505311486
+            },
+            "time_1": {
+              "load_time_seconds": 0.000022982,
+              "nr_nodes": 26887,
+              "nr_non_empty_nodes": 26887,
+              "nr_points": 115872130,
+              "query_time_seconds": 7.089489329
+            },
+            "time_2": {
+              "load_time_seconds": 1.255e-6,
+              "nr_nodes": 555,
+              "nr_non_empty_nodes": 555,
+              "nr_points": 4127870,
+              "query_time_seconds": 0.448418016
+            },
+            "view_frustum1": {
+              "load_time_seconds": 1.57e-7,
+              "nr_nodes": 23,
+              "nr_non_empty_nodes": 15,
+              "nr_points": 51959,
+              "query_time_seconds": 0.063377368
+            }
+          }
+        }
+      },
+      {
+        "index": {
+          "cache_size": 500,
+          "compression": false,
+          "enable_attribute_index": "None",
+          "enable_point_filtering": "PointFiltering",
+          "max_lod": 8,
+          "node_hierarchy": 19,
+          "nr_bogus_points": [
+            0,
+            0
+          ],
+          "num_threads": 32,
+          "point_hierarchy": 11,
+          "priority_function": "NrPointsWeightedByTaskAge"
+        },
+        "results": {
+          "index_folder_size": 3365816588,
+          "insertion_rate": {
+            "duration_cleanup_seconds": 0.08430908,
+            "duration_seconds": 21.566051947,
+            "insertion_rate_points_per_sec": 5542632.746416973,
+            "nr_points": 120000000,
+            "nr_times_to_slow": 0,
+            "progress_over_time": [
+              {
+                "elapsed_seconds": 0.123107184,
+                "gps_time": 19060.189453125,
+                "nr_cached_nodes": 0,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 0,
+                "nr_points_read": 1000000
+              },
+              {
+                "elapsed_seconds": 1.126309394,
+                "gps_time": 19066.03125,
+                "nr_cached_nodes": 488,
+                "nr_pending_points": 946637,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 2848682,
+                "nr_points_read": 3795319
+              },
+              {
+                "elapsed_seconds": 2.174246064,
+                "gps_time": 19078.697265625,
+                "nr_cached_nodes": 492,
+                "nr_pending_points": 679699,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 8825533,
+                "nr_points_read": 9505232
+              },
+              {
+                "elapsed_seconds": 3.178074226,
+                "gps_time": 19091.482421875,
+                "nr_cached_nodes": 516,
+                "nr_pending_points": 790608,
+                "nr_pending_tasks": 20,
+                "nr_points_done": 14422607,
+                "nr_points_read": 15213215
+              },
+              {
+                "elapsed_seconds": 4.179489085,
+                "gps_time": 19104.982421875,
+                "nr_cached_nodes": 477,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 19868961,
+                "nr_points_read": 20868961
+              },
+              {
+                "elapsed_seconds": 5.17991157,
+                "gps_time": 19118.26171875,
+                "nr_cached_nodes": 506,
+                "nr_pending_points": 963049,
+                "nr_pending_tasks": 17,
+                "nr_points_done": 25541584,
+                "nr_points_read": 26504633
+              },
+              {
+                "elapsed_seconds": 6.190702831,
+                "gps_time": 19130.037109375,
+                "nr_cached_nodes": 503,
+                "nr_pending_points": 645796,
+                "nr_pending_tasks": 12,
+                "nr_points_done": 31617006,
+                "nr_points_read": 32262802
+              },
+              {
+                "elapsed_seconds": 7.21325207,
+                "gps_time": 19143.509765625,
+                "nr_cached_nodes": 484,
+                "nr_pending_points": 729512,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 37483719,
+                "nr_points_read": 38213231
+              },
+              {
+                "elapsed_seconds": 8.224057486,
+                "gps_time": 19154.201171875,
+                "nr_cached_nodes": 501,
+                "nr_pending_points": 950555,
+                "nr_pending_tasks": 64,
+                "nr_points_done": 42035487,
+                "nr_points_read": 42986042
+              },
+              {
+                "elapsed_seconds": 9.246195249,
+                "gps_time": 19166.0,
+                "nr_cached_nodes": 502,
+                "nr_pending_points": 503066,
+                "nr_pending_tasks": 51,
+                "nr_points_done": 48158497,
+                "nr_points_read": 48661563
+              },
+              {
+                "elapsed_seconds": 10.252553629,
+                "gps_time": 19179.666015625,
+                "nr_cached_nodes": 502,
+                "nr_pending_points": 942183,
+                "nr_pending_tasks": 19,
+                "nr_points_done": 53547328,
+                "nr_points_read": 54489511
+              },
+              {
+                "elapsed_seconds": 11.253818836,
+                "gps_time": 19191.671875,
+                "nr_cached_nodes": 506,
+                "nr_pending_points": 890756,
+                "nr_pending_tasks": 23,
+                "nr_points_done": 59237294,
+                "nr_points_read": 60128050
+              },
+              {
+                "elapsed_seconds": 12.273173849,
+                "gps_time": 19204.1875,
+                "nr_cached_nodes": 504,
+                "nr_pending_points": 901988,
+                "nr_pending_tasks": 83,
+                "nr_points_done": 65113662,
+                "nr_points_read": 66015650
+              },
+              {
+                "elapsed_seconds": 13.277177738,
+                "gps_time": 19218.34375,
+                "nr_cached_nodes": 488,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 71173358,
+                "nr_points_read": 72173358
+              },
+              {
+                "elapsed_seconds": 14.296276714,
+                "gps_time": 19232.669921875,
+                "nr_cached_nodes": 501,
+                "nr_pending_points": 616859,
+                "nr_pending_tasks": 8,
+                "nr_points_done": 77435176,
+                "nr_points_read": 78052035
+              },
+              {
+                "elapsed_seconds": 15.320092267,
+                "gps_time": 19325.255859375,
+                "nr_cached_nodes": 503,
+                "nr_pending_points": 751066,
+                "nr_pending_tasks": 5,
+                "nr_points_done": 83213426,
+                "nr_points_read": 83964492
+              },
+              {
+                "elapsed_seconds": 16.337684641,
+                "gps_time": 19337.7265625,
+                "nr_cached_nodes": 507,
+                "nr_pending_points": 700145,
+                "nr_pending_tasks": 13,
+                "nr_points_done": 88580196,
+                "nr_points_read": 89280341
+              },
+              {
+                "elapsed_seconds": 17.348324648,
+                "gps_time": 19348.927734375,
+                "nr_cached_nodes": 501,
+                "nr_pending_points": 796353,
+                "nr_pending_tasks": 20,
+                "nr_points_done": 94076826,
+                "nr_points_read": 94873179
+              },
+              {
+                "elapsed_seconds": 18.353734383,
+                "gps_time": 19363.416015625,
+                "nr_cached_nodes": 480,
+                "nr_pending_points": 1000000,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 99698095,
+                "nr_points_read": 100698095
+              },
+              {
+                "elapsed_seconds": 19.36623979,
+                "gps_time": 19375.451171875,
+                "nr_cached_nodes": 487,
+                "nr_pending_points": 955733,
+                "nr_pending_tasks": 1,
+                "nr_points_done": 105850843,
+                "nr_points_read": 106806576
+              },
+              {
+                "elapsed_seconds": 20.391279339,
+                "gps_time": 19389.9765625,
+                "nr_cached_nodes": 504,
+                "nr_pending_points": 911243,
+                "nr_pending_tasks": 12,
+                "nr_points_done": 112021049,
+                "nr_points_read": 112932292
+              },
+              {
+                "elapsed_seconds": 21.421497433,
+                "gps_time": 25149.26171875,
+                "nr_cached_nodes": 494,
+                "nr_pending_points": 798975,
+                "nr_pending_tasks": 2,
+                "nr_points_done": 118399068,
+                "nr_points_read": 119198043
+              }
+            ]
+          },
+          "latency": null,
+          "query_performance": {
+            "full-point-cloud": {
+              "load_time_seconds": 0.000029784,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 27004,
+              "nr_points": 120000000,
+              "query_time_seconds": 7.116804915
+            },
+            "intensity_high": {
+              "load_time_seconds": 0.000029916,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 1023,
+              "nr_points": 131345,
+              "query_time_seconds": 8.216335073
+            },
+            "intensity_low": {
+              "load_time_seconds": 0.000027735,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 14682,
+              "nr_points": 6702129,
+              "query_time_seconds": 8.233179518
+            },
+            "pointsource1": {
+              "load_time_seconds": 0.000045609,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 16630,
+              "nr_points": 3404478,
+              "query_time_seconds": 8.29285036
+            },
+            "pointsource2": {
+              "load_time_seconds": 0.000029013,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 21308,
+              "nr_points": 17414734,
+              "query_time_seconds": 8.559001596
+            },
+            "scananglerank1": {
+              "load_time_seconds": 0.000031029,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 3070,
+              "nr_points": 2321714,
+              "query_time_seconds": 7.756433069
+            },
+            "scananglerank2": {
+              "load_time_seconds": 0.00003027,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 9679,
+              "nr_points": 15638173,
+              "query_time_seconds": 7.958399471
+            },
+            "time_1": {
+              "load_time_seconds": 0.000038189,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 26891,
+              "nr_points": 115872130,
+              "query_time_seconds": 8.59175455
+            },
+            "time_2": {
+              "load_time_seconds": 0.000029193,
+              "nr_nodes": 27004,
+              "nr_non_empty_nodes": 555,
+              "nr_points": 4127870,
+              "query_time_seconds": 7.69781313
+            },
+            "view_frustum1": {
+              "load_time_seconds": 1.75e-7,
+              "nr_nodes": 23,
+              "nr_non_empty_nodes": 15,
+              "nr_points": 51959,
+              "query_time_seconds": 0.062914404
+            }
+          }
+        }
+      }
+    ]
+  },
+  "settings": {
+    "attributes": "LasPointFormat1Raw",
+    "cooldown_seconds": 0,
+    "coordinate_system": {
+      "offset": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    "index_folder": "../../../data/lille-eval",
+    "indexed_attributes": {
+      "gpstime": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "intensity": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "pointsourceid": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ],
+      "scananglerank": [
+        "RangeIndex",
+        {
+          "SfcIndex": {
+            "nr_bins": 16
+          }
+        }
+      ]
+    },
+    "indexing_timeout_seconds": 50000,
+    "latency_replay_pps": 1000000,
+    "latency_sample_pps": 1000,
+    "output_file": "../measurements/lidarserv/lille_%d_%i.json",
+    "points_file": "../../../data/Lille_sorted.las",
+    "queries": {
+      "full-point-cloud": "full",
+      "intensity_high": "attr(Intensity > 128)",
+      "intensity_low": "attr(Intensity <= 2)",
+      "pointsource1": "attr(PointSourceID >= 10)",
+      "pointsource2": "attr(PointSourceID >= 5)",
+      "scananglerank1": "attr(ScanAngleRank <= 45)",
+      "scananglerank2": "attr(ScanAngleRank <= 90)",
+      "time_1": "attr(GpsTime < 20000)",
+      "time_2": "attr(GpsTime > 23000)",
+      "view_frustum1": "view_frustum( \n    camera_pos: [-560.45, -584.87, 47.29], \n    camera_dir: [0.75, 0.65, -0.12], \n    camera_up: [0.0, 0.0, 1.0], \n    fov_y: 0.78, \n    z_near: 3.9, \n    z_far: 3994169.6, \n    window_size: [500.0, 500.0], \n    max_distance: 10.0 \n)"
+    },
+    "target_point_pressure": 1000000
+  }
+}
