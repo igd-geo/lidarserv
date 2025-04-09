@@ -1,7 +1,7 @@
 use super::{IndexFunction, boolvec::BoolVec, cmp::ComponentwiseCmp};
 use crate::query::NodeQueryResult;
 use nalgebra::{SVector, Scalar};
-use num_traits::PrimInt;
+use num_traits::{CheckedShr, PrimInt};
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::{Ordering, max},
@@ -105,7 +105,7 @@ impl SfcAttribute for f32 {
 impl<T, const D: usize> SfcAttribute for SVector<T, D>
 where
     T: SfcAttribute + Scalar,
-    T::Sfc: Scalar + PrimInt,
+    T::Sfc: Scalar + PrimInt + CheckedShr,
 {
     type Sfc = SVector<T::Sfc, D>;
 
@@ -147,7 +147,9 @@ macro_rules! impl_sfc_int {
         impl Sfc for $t {
             #[inline]
             fn shift(&self, bits: u8) -> Self {
-                (*self) >> bits
+                // todo use unbounded_shr() once the unbounded_shifts feature is stable.
+                // https://github.com/rust-lang/rust/issues/129375
+                self.checked_shr(bits as u32).unwrap_or(0)
             }
 
             #[inline]
@@ -169,13 +171,13 @@ impl_sfc_int!(i64);
 
 impl<T, const D: usize> Sfc for SVector<T, D>
 where
-    T: Scalar + PrimInt,
+    T: Scalar + PrimInt + CheckedShr,
 {
     #[inline]
     fn shift(&self, bits: u8) -> Self {
         self.map(
             #[inline]
-            |c| c >> bits as usize,
+            |c| c.checked_shr(bits as u32).unwrap_or_else(T::zero),
         )
     }
 
@@ -190,7 +192,7 @@ where
 }
 
 /// Used as the node type by the histogram attribute index to accelerate queries.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SfcIndexNode<R> {
     /// By how many bits have the values in bins been shifted.
     shift: u8,
@@ -310,12 +312,14 @@ where
                     head2.shift(node2_addshift)
                 }
                 (Some((head1, tail1)), Some((head2, tail2))) => {
-                    if head1.interleaved_cmp(head2).is_lt() {
+                    let head1_shifted = head1.shift(node1_addshift);
+                    let head2_shifted = head2.shift(node2_addshift);
+                    if head1_shifted.interleaved_cmp(&head2_shifted).is_lt() {
                         buf1 = tail1;
-                        head1.shift(node1_addshift)
+                        head1_shifted
                     } else {
                         buf2 = tail2;
-                        head2.shift(node2_addshift)
+                        head2_shifted
                     }
                 }
             };
