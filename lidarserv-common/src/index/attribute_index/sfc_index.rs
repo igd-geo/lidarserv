@@ -1,10 +1,10 @@
-use super::{boolvec::BoolVec, cmp::ComponentwiseCmp, IndexFunction};
+use super::{IndexFunction, boolvec::BoolVec, cmp::ComponentwiseCmp};
 use crate::query::NodeQueryResult;
 use nalgebra::{SVector, Scalar};
 use num_traits::PrimInt;
 use serde::{Deserialize, Serialize};
 use std::{
-    cmp::{max, Ordering},
+    cmp::{Ordering, max},
     marker::PhantomData,
 };
 
@@ -363,6 +363,7 @@ where
             neg = true;
             if bin.is_eq(&op_bin).all() {
                 pos = true;
+                break;
             }
         }
         query_result(pos, neg)
@@ -379,7 +380,8 @@ where
         for bin in &node.bins {
             pos = true;
             if bin.is_eq(&op_bin).any() {
-                neg = true
+                neg = true;
+                break;
             }
         }
         query_result(pos, neg)
@@ -399,6 +401,9 @@ where
             }
             if bin.is_greater_eq(&op_bin).any() {
                 neg = true;
+            }
+            if pos && neg {
+                break;
             }
         }
         query_result(pos, neg)
@@ -426,6 +431,9 @@ where
             }
             if bin.is_less_eq(&op_bin).any() {
                 neg = true;
+            }
+            if pos && neg {
+                break;
             }
         }
         query_result(pos, neg)
