@@ -1,0 +1,105 @@
+points_file = "../../../data/kitti_sorted.las"
+index_folder = "../../../data/kitti-eval"
+output_file = "../measurements/lidarserv/kitti_%d_%i.json"
+cooldown_seconds = 0
+indexing_timeout_seconds = 50000
+target_point_pressure = 1000000
+
+[attributes]
+Position3D = "Vec3i32"
+Intensity = "U16"
+LASBasicFlags = "U8"
+Classification = "U8"
+ScanAngleRank = "I8"
+UserData = "U8"
+PointSourceID = "U16"
+GpsTime = "F64"
+ColorRGB = "Vec3u16"
+semantic = "U16"
+instance = "U16"
+visible = "U8"
+confidence = "U16"
+# min x y z:                  -2990.515 -3741.836 110.728
+# max x y z:                  4090.455 4076.017 290.353
+
+[queries]
+semantic_6 = "attr(semantic == 6)"
+semantic_7 = "attr(semantic == 7)"
+semantic_8 = "attr(semantic == 8)"
+semantic_9 = "attr(semantic == 9)"
+semantic_10 = "attr(semantic == 10)"
+semantic_11 = "attr(semantic == 11)"
+semantic_12 = "attr(semantic == 12)"
+semantic_13 = "attr(semantic == 13)"
+semantic_14 = "attr(semantic == 14)"
+semantic_15 = "attr(semantic == 15)"
+semantic_16 = "attr(semantic == 16)"
+semantic_17 = "attr(semantic == 17)"
+semantic_18 = "attr(semantic == 18)"
+semantic_19 = "attr(semantic == 19)"
+semantic_20 = "attr(semantic == 20)"
+semantic_21 = "attr(semantic == 21)"
+semantic_22 = "attr(semantic == 22)"
+semantic_23 = "attr(semantic == 23)"
+semantic_24 = "attr(semantic == 24)"
+semantic_25 = "attr(semantic == 25)"
+semantic_26 = "attr(semantic == 26)"
+semantic_27 = "attr(semantic == 27)"
+semantic_28 = "attr(semantic == 28)"
+semantic_29 = "attr(semantic == 29)"
+semantic_30 = "attr(semantic == 30)"
+semantic_31 = "attr(semantic == 31)"
+semantic_32 = "attr(semantic == 32)"
+semantic_33 = "attr(semantic == 33)"
+semantic_34 = "attr(semantic == 34)"
+semantic_35 = "attr(semantic == 35)"
+semantic_36 = "attr(semantic == 36)"
+semantic_37 = "attr(semantic == 37)"
+semantic_38 = "attr(semantic == 38)"
+semantic_39 = "attr(semantic == 39)"
+semantic_40 = "attr(semantic == 40)"
+semantic_41 = "attr(semantic == 41)"
+semantic_42 = "attr(semantic == 42)"
+semantic_43 = "attr(semantic == 43)"
+semantic_44 = "attr(semantic == 44)"
+
+[coordinate_system]
+scale = [
+    0.001,
+    0.001,
+    0.001,
+]
+offset = [
+    0.0,
+    0.0,
+    0.0,
+]
+
+[indexed_attributes]
+semantic = [
+    "RangeIndex",
+    { SfcIndex = { nr_bins = 16 } },
+]
+
+[defaults]
+measure_index_speed = false
+measure_query_speed = false
+measure_query_latency = false
+node_hierarchy = 19
+point_hierarchy = 11
+priority_function = "NrPointsWeightedByTaskAge"
+num_threads = 32
+cache_size = 500
+nr_bogus_points = [
+    0,
+    0,
+]
+max_lod = 11
+compression = false
+enable_attribute_index = true
+enable_point_filtering = true
+
+[runs.attr-index]
+measure_index_speed = true
+measure_query_speed = true
+enable_attribute_index = ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]
