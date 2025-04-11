@@ -117,7 +117,24 @@ QUERIES_AND_LABELS = [
 
         # file name prefix
         "lille_"
-    )
+    ),
+
+
+    # kitti - attribute index tests
+    (
+        # queries
+        [f"semantic_{i}" for i in range(6, 45)], 
+
+        # labels
+        [f"Class {i}" for i in range(6, 45)], 
+
+        # figure title
+        "KITTI",
+
+        # file name prefix
+        "kitti-attr-idx_"
+    ),
+
 ]
 
 
