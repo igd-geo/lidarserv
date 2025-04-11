@@ -37,6 +37,8 @@ struct Stats {
     percentiles: Vec<(i32, f64)>,
 }
 
+const NR_WAITING_POINTS_ABORT_THRESHOLD: usize = 191739611;
+
 pub fn measure_latency(
     index: &mut Octree,
     points: &mut impl PointReader,
@@ -98,12 +100,28 @@ pub fn measure_latency(
         let nr_points_left = nr_points - read_pos;
         let nr_points_insert = min(read_until - read_pos, nr_points_left);
         if nr_points_insert > pps * 5 {
+            // For an accurate measurement, we should be able to replay the points
+            // with the configured point rate. If we fall behind more than 5 seconds with
+            // reading the points: Abort the measurement.
             info!("Too slow to replay points at {pps} points per second. Aborting.");
             break;
         }
         let points_waiting = writer.nr_points_waiting();
-        if points_waiting > pps * 5 {
-            info!("Too slow to index points at {pps} points per second. Aborting.");
+        if points_waiting > NR_WAITING_POINTS_ABORT_THRESHOLD {
+            // In general, we don't care about too many points waiting in some inboxes.
+            // It will lead to bad latencies, but that is just how it is in that case.
+            // However: If the indexer REALLY can't keep up over a longer period of time
+            // and the waiting points just keep building up,
+            // we will eventually run out of memory. To prevent
+            // this from happening, we will eventually abort the measurement, but the threshold
+            // for that is really high. The chosen threshold is roughly equivalent to
+            // 5GiB of point data for a typical point layout
+            // (assuming 28 bytes per point, just like las point format 1).
+            // (todo - maybe choose threshold based on available free memory
+            // and the actual point size, instead of hardcoding it)
+            info!(
+                "Too slow to index points at {pps} points per second. There are too many points waiting in inboxes. Aborting."
+            );
             break;
         }
 
