@@ -41,12 +41,10 @@ classification = [
     { SfcIndex = { nr_bins = 16 } },
 ]
 intensity = [
-    "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
+    "RangeIndex"
 ]
 gpstime = [
-    "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
+    "RangeIndex"
 ]
 
 [defaults]

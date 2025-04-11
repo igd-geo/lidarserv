@@ -44,19 +44,15 @@ offset = [
 [indexed_attributes]
 intensity = [
     "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
 ]
 gpstime = [
     "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
 ]
 pointsourceid = [
     "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
 ]
 scananglerank = [
     "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
 ]
 
 [defaults]

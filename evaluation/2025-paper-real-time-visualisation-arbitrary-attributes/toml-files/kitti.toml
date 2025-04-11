@@ -51,15 +51,13 @@ semantic = [
 ]
 pointsourceid = [
     "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
 ]
 colorrgb = [
     "RangeIndex",
     { SfcIndex = { nr_bins = 16 } },
 ]
-gpstime = [
+gpstime = [     # todo should probably use attr index for gps time too (and probably more so than for colorrgb???)
     "RangeIndex",
-    { SfcIndex = { nr_bins = 16 } },
 ]
 
 [defaults]
