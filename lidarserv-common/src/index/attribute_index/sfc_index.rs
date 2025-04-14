@@ -450,4 +450,113 @@ where
     ) -> crate::query::NodeQueryResult {
         self.test_greater(node, op)
     }
+
+    fn test_range_inclusive(
+        &self,
+        node: &Self::NodeType,
+        op1: &Self::AttributeValue,
+        op2: &Self::AttributeValue,
+    ) -> NodeQueryResult {
+        let op1_bin = op1.sfc().shift(node.shift);
+        let op2_bin = op2.sfc().shift(node.shift);
+        let mut pos = false;
+        let mut neg = false;
+        for bin in &node.bins {
+            if bin
+                .is_greater_eq(&op1_bin)
+                .and(&bin.is_less_eq(&op2_bin))
+                .all()
+            {
+                pos = true;
+            }
+            if bin
+                .is_less_eq(&op1_bin)
+                .or(&bin.is_greater_eq(&op2_bin))
+                .any()
+            {
+                neg = true;
+            }
+            if pos && neg {
+                break;
+            }
+        }
+        query_result(pos, neg)
+    }
+
+    #[inline]
+    fn test_range_left_inclusive(
+        &self,
+        node: &Self::NodeType,
+        op1: &Self::AttributeValue,
+        op2: &Self::AttributeValue,
+    ) -> NodeQueryResult {
+        self.test_range_inclusive(node, op1, op2)
+    }
+
+    #[inline]
+    fn test_range_right_inclusive(
+        &self,
+        node: &Self::NodeType,
+        op1: &Self::AttributeValue,
+        op2: &Self::AttributeValue,
+    ) -> NodeQueryResult {
+        self.test_range_inclusive(node, op1, op2)
+    }
+
+    #[inline]
+    fn test_range_exclusive(
+        &self,
+        node: &Self::NodeType,
+        op1: &Self::AttributeValue,
+        op2: &Self::AttributeValue,
+    ) -> NodeQueryResult {
+        self.test_range_inclusive(node, op1, op2)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::SfcAttribute;
+
+    #[test]
+    fn test_f32_sfc() {
+        let test_values: &[f32] = &[
+            987654.0,
+            32.123,
+            f32::INFINITY,
+            f32::NEG_INFINITY,
+            0.0,
+            -10.123,
+            -1.23,
+            -0.123,
+        ];
+        for v1 in test_values {
+            for v2 in test_values {
+                let expected_result = v1.total_cmp(v2);
+                let actual_result = v1.sfc().cmp(&v2.sfc());
+                assert_eq!(actual_result, expected_result);
+            }
+        }
+    }
+
+    #[test]
+    fn test_f64_sfc() {
+        let test_values: &[f64] = &[
+            987654.0,
+            32.123,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            0.0,
+            -10.123,
+            -1.23,
+            -0.123,
+        ];
+        for v1 in test_values {
+            for v2 in test_values {
+                let expected_result = v1.total_cmp(v2);
+                let actual_result = v1.sfc().cmp(&v2.sfc());
+                assert_eq!(actual_result, expected_result);
+            }
+        }
+    }
 }

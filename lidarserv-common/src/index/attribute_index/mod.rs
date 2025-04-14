@@ -80,6 +80,61 @@ pub trait IndexFunction {
     /// For non-scalar attributes, ALL components need to be larger or equal to the operand components.
     /// Note that this is different from not(test_less), which would match if ANY of the components are larger or equal.
     fn test_greater_eq(&self, node: &Self::NodeType, op: &Self::AttributeValue) -> NodeQueryResult;
+
+    /// Tests, if points in the node are within the given range. (inclusive version)
+    ///
+    /// For non-scalar attributes, ALL components need to be in the given range.
+    #[inline]
+    fn test_range_inclusive(
+        &self,
+        node: &Self::NodeType,
+        op1: &Self::AttributeValue,
+        op2: &Self::AttributeValue,
+    ) -> NodeQueryResult {
+        self.test_greater_eq(node, op1)
+            .and(self.test_less_eq(node, op2))
+    }
+
+    /// Tests, if points in the node are within the given range. (left-inclusive, right-exclusive version)
+    ///
+    /// For non-scalar attributes, ALL components need to be in the given range.
+    #[inline]
+    fn test_range_left_inclusive(
+        &self,
+        node: &Self::NodeType,
+        op1: &Self::AttributeValue,
+        op2: &Self::AttributeValue,
+    ) -> NodeQueryResult {
+        self.test_greater_eq(node, op1)
+            .and(self.test_less(node, op2))
+    }
+
+    /// Tests, if points in the node are within the given range. (left-exclusive, right-inclusive inclusive version)
+    ///
+    /// For non-scalar attributes, ALL components need to be in the given range.
+    #[inline]
+    fn test_range_right_inclusive(
+        &self,
+        node: &Self::NodeType,
+        op1: &Self::AttributeValue,
+        op2: &Self::AttributeValue,
+    ) -> NodeQueryResult {
+        self.test_greater(node, op1)
+            .and(self.test_less_eq(node, op2))
+    }
+
+    /// Tests, if points in the node are within the given range. (exclusive version)
+    ///
+    /// For non-scalar attributes, ALL components need to be in the given range.
+    #[inline]
+    fn test_range_exclusive(
+        &self,
+        node: &Self::NodeType,
+        op1: &Self::AttributeValue,
+        op2: &Self::AttributeValue,
+    ) -> NodeQueryResult {
+        self.test_greater(node, op1).and(self.test_less(node, op2))
+    }
 }
 
 struct NodeManager<Idx, Node> {
@@ -223,22 +278,18 @@ where
                     TestFunction::LessEq(o) => self.index.test_less_eq(&node_lock, o),
                     TestFunction::Greater(o) => self.index.test_greater(&node_lock, o),
                     TestFunction::GreaterEq(o) => self.index.test_greater_eq(&node_lock, o),
-                    TestFunction::RangeExclusive(o, p) => self
-                        .index
-                        .test_greater(&node_lock, o)
-                        .and(self.index.test_less(&node_lock, p)),
-                    TestFunction::RangeLeftInclusive(o, p) => self
-                        .index
-                        .test_greater_eq(&node_lock, o)
-                        .and(self.index.test_less(&node_lock, p)),
-                    TestFunction::RangeRightInclusive(o, p) => self
-                        .index
-                        .test_greater(&node_lock, o)
-                        .and(self.index.test_less_eq(&node_lock, p)),
-                    TestFunction::RangeAllInclusive(o, p) => self
-                        .index
-                        .test_greater_eq(&node_lock, o)
-                        .and(self.index.test_less_eq(&node_lock, p)),
+                    TestFunction::RangeExclusive(o, p) => {
+                        self.index.test_range_exclusive(&node_lock, o, p)
+                    }
+                    TestFunction::RangeLeftInclusive(o, p) => {
+                        self.index.test_range_left_inclusive(&node_lock, o, p)
+                    }
+                    TestFunction::RangeRightInclusive(o, p) => {
+                        self.index.test_range_right_inclusive(&node_lock, o, p)
+                    }
+                    TestFunction::RangeAllInclusive(o, p) => {
+                        self.index.test_range_inclusive(&node_lock, o, p)
+                    }
                 }
             }
             _ => NodeQueryResult::Negative,
