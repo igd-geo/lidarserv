@@ -248,12 +248,31 @@ def main():
             run = "main"
         else:
             continue
-        filename=join(OUTPUT_FOLDER, f"latency_comparison_violin_{file.name}.pdf")
+        filename=join(OUTPUT_FOLDER, f"latency_comparison_violin_lod_{file.name}.pdf")
         if not exists(filename):    # only regenerate the latency plots, if they don't exist, because computing the viiolin shapes takes quite long.
-            plot_latency_comparison_violin(
+            plot_latency_comparison_violin_lod(
                 data, 
                 run=run,
                 query="full-point-cloud",
+                filename=filename, 
+            )
+
+        queries, labels, title = next((
+                (queries, labels, title)
+                for queries, labels, title, prefix in QUERIES_AND_LABELS
+                if file.name.startswith(prefix)
+            ), 
+            (None, None, None)
+        )
+        if queries is None:
+            continue
+        filename=join(OUTPUT_FOLDER, f"latency_comparison_violin_queries_{file.name}.pdf")
+        if not exists(filename):
+            plot_latency_comparison_violin_queries(
+                data, 
+                run=run,
+                queries=queries,
+                labels=labels,
                 filename=filename, 
             )
 
@@ -401,7 +420,7 @@ def estimate_probability_density(
 
     }
 
-def plot_latency_comparison_violin(data, run, filename, query):
+def plot_latency_comparison_violin_lod(data, run, filename, query):
     data_run = data["runs"][run]
     if len(data_run) == 0:
         return
@@ -451,6 +470,53 @@ def plot_latency_comparison_violin(data, run, filename, query):
 
     lods.append("All LODs")
     plt.xticks(xs, lods)
+    plt.ylabel("Latency | ms")
+    plt.tight_layout()
+    plt.savefig(filename, metadata={"CreationDate": None})
+    plt.close(fig)
+
+def plot_latency_comparison_violin_queries(data, run, queries, labels, filename):
+    data_run = data["runs"][run]
+    if len(data_run) == 0:
+        return
+    
+    # Prepare data for plotting
+    quantiles = {query: [] for query in queries}
+
+    if data_run[0]["results"] is None:
+        return
+    if "latency" not in data_run[0]["results"]:
+        return
+    if data_run[0]["results"]["latency"] is None:
+        return
+
+    for query in queries:
+        if query not in data_run[0]["results"]["latency"]:
+            return
+        latency_query = data_run[0]["results"]["latency"][query]
+        if "stats_by_lod" not in latency_query:
+            return
+        stats_full = latency_query["stats"]
+        if stats_full is None:
+            return
+        if "percentiles" not in stats_full:
+            return
+
+        quantiles[query] = [(percentile[0], percentile[1] * 1000) for percentile in stats_full["percentiles"]]
+
+    if len(quantiles) == 0:
+        return
+    
+    xs = range(len(quantiles))
+    vpstats = [estimate_probability_density(quantiles[key]) for key in quantiles.keys()]
+
+    fig, ax = plt.subplots(figsize=[12, 6])
+    violin_parts = ax.violin(vpstats, xs, widths=0.8, showmedians=False)
+
+    # for i, vpstat in enumerate(vpstats):
+    #     ax.text(i, vpstat["median"], f'{vpstat["median"]:.2f}', ha='center', va='bottom')
+
+    plt.xticks(xs, labels)
     plt.ylabel("Latency | ms")
     plt.tight_layout()
     plt.savefig(filename, metadata={"CreationDate": None})
