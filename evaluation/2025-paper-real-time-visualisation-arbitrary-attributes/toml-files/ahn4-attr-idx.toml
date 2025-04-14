@@ -1,0 +1,68 @@
+points_file = "../../../data/AHN4.las"
+index_folder = "../../../data/ahn4-eval"
+output_file = "../measurements/lidarserv/ahn4_%d_%i.json"
+cooldown_seconds = 0
+indexing_timeout_seconds = 50000
+target_point_pressure = 1000000
+attributes = "LasPointFormat1Raw"
+# record length 34
+#min x y z:                  96750.700 493750.000 -7.079
+#max x y z:                  134999.999 512499.999 135.977
+# Min GPS Time: 269521185.6002241
+#Max GPS Time: 270204590.1666351
+
+[queries]
+classification_1 = "attr(Classification == 1)"
+classification_2 = "attr(Classification == 2)"
+classification_6 = "attr(Classification == 6)"
+classification_9 = "attr(Classification == 9)"
+classification_14 = "attr(Classification == 14)"
+classification_26 = "attr(Classification == 26)"
+time_slice_1 = "attr(269525400 < GpsTime < 269525460)"  # one minute
+time_slice_2 = "attr(269525280 < GpsTime < 269525600)"  # one flight line
+time_slice_3 = "attr(269522254 < GpsTime < 269529969)"  # many flight lines
+
+[coordinate_system]
+scale = [
+    0.001,
+    0.001,
+    0.001,
+]
+offset = [
+    0.0,
+    0.0,
+    0.0,
+]
+
+[indexed_attributes]
+classification = [
+    "RangeIndex",
+    { SfcIndex = { nr_bins = 16 } },
+]
+gpstime = [
+    "RangeIndex",
+    { SfcIndex = { nr_bins = 16 } },
+]
+
+[defaults]
+measure_index_speed = false
+measure_query_speed = false
+measure_query_latency = false
+node_hierarchy = 25
+point_hierarchy = 17
+max_lod = 14
+priority_function = "NrPointsWeightedByTaskAge"
+num_threads = 32
+cache_size = 10000
+nr_bogus_points = [
+    0,
+    0,
+]
+compression = false
+enable_attribute_index = true
+enable_point_filtering = true
+
+[runs.attr-index]
+measure_index_speed = true
+measure_query_speed = true
+enable_attribute_index = ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]
