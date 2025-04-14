@@ -254,7 +254,7 @@ pub fn processor_cooldown(base_config: &Base) {
 
 fn open_input_file(
     base_config: &Base,
-) -> Result<impl PointReader + SeekToPoint + use<>, anyhow::Error> {
+) -> Result<impl PointReader + SeekToPoint + Send + use<>, anyhow::Error> {
     // open input file
     let raw_input_file = LASReader::from_path(base_config.points_file_absolute(), true)?;
     let trans = raw_input_file.header().transforms();

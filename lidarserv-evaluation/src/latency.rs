@@ -1,34 +1,25 @@
+use chrono::Utc;
 use crossbeam_channel::Receiver;
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use itertools::Itertools;
 use lidarserv_common::geometry::grid::{LeveledGridCell, LodLevel};
 use lidarserv_common::geometry::position::PositionComponentType;
 use lidarserv_common::index::Octree;
 use lidarserv_common::index::attribute_index::AttributeIndex;
 use lidarserv_common::index::reader::{OctreeReader, QueryConfig};
-use lidarserv_common::query::{Query as QueryTrait, QueryContext};
+use lidarserv_common::query::{ExecutableQuery, Query as QueryTrait, QueryContext};
 use lidarserv_server::index::query::Query;
 use log::info;
-use nalgebra::min;
 use pasture_core::containers::{BorrowedBuffer, InterleavedBuffer, OwningBuffer, VectorBuffer};
+use pasture_core::layout::PointLayout;
 use pasture_io::base::PointReader;
 use rand::rng;
 use rand::seq::IndexedRandom;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
-use std::fmt::Write;
-use std::sync::{Arc, Mutex};
-use std::thread::{self, spawn};
+use std::sync::{Arc, Mutex, mpsc};
+use std::thread::{self};
 use std::time::{Duration, Instant};
-
-use crate::MULTI_PROGRESS;
-
-#[derive(Debug)]
-struct Sample {
-    insert: Instant,
-    query: Option<(Instant, LodLevel)>,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Stats {
@@ -41,191 +32,241 @@ const NR_WAITING_POINTS_ABORT_THRESHOLD: usize = 191739611;
 
 pub fn measure_latency(
     index: &mut Octree,
-    points: &mut impl PointReader,
+    points: &mut (impl PointReader + Send),
     query: Query,
     query_config: QueryConfig,
     pps: usize,
     sample_points_per_second: usize,
 ) -> anyhow::Result<serde_json::value::Value> {
-    // Init
-    let nr_points = points
-        .get_metadata()
-        .number_of_points()
-        .expect("unknown number of points");
+    thread::scope(|scope| -> Result<serde_json::Value, anyhow::Error> {
+        let points_per_frame = pps / 10;
+        let samples_per_frame = sample_points_per_second / 10;
 
-    // Progress bar
-    let multi = MULTI_PROGRESS
-        .get()
-        .expect("MULTI_PROGRESS not initialized");
-    let pb = multi.add(ProgressBar::new(nr_points as u64));
-    pb.set_style(
-        ProgressStyle::with_template(
-            "{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>7}/{len:7} ({eta})",
-        )
-        .unwrap()
-        .with_key("eta", |state: &ProgressState, w: &mut dyn Write| {
-            write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap()
-        })
-        .progress_chars("#>-"),
-    );
+        // predict index time
+        if let Some(total_nr_points) = points.get_metadata().number_of_points() {
+            let index_time_seconds = (total_nr_points as f64 / pps as f64) as u64;
 
-    // query thread
-    let shared = Arc::new(Mutex::new(HashMap::new()));
-    let shared2 = Arc::clone(&shared);
-    let (exit_tx, exit_rx) = crossbeam_channel::unbounded();
-    let mut reader = index.reader(query.clone()).unwrap();
-    reader.set_query(query.clone(), query_config)?;
-    let query_thread_handle = spawn(move || query_thread(reader, exit_rx, shared2));
+            let hours = index_time_seconds / 3600;
+            let minutes = (index_time_seconds % 3600) / 60;
+            let seconds = index_time_seconds % 60;
 
-    // Prepare insertion
-    let mut writer = index.writer();
-    let mut read_pos = 0;
-    let start_time = Instant::now();
-    let mut last_update = Instant::now();
-    let mut total_nr_sample_points = 0;
-    let prepared_query = query.prepare(&QueryContext {
-        node_hierarchy: index.node_hierarchy(),
-        point_hierarchy: index.point_hierarchy(),
-        coordinate_system: index.coordinate_system(),
-        component_type: PositionComponentType::from_layout(index.point_layout()),
-        attribute_index: Arc::new(AttributeIndex::new()),
-        point_layout: index.point_layout().clone(),
-    })?;
-
-    // Insertion loop
-    while read_pos < nr_points {
-        // how many points to read?
-        let now = Instant::now();
-        let read_until = ((now - start_time).as_secs_f64() * pps as f64) as usize;
-        let nr_points_left = nr_points - read_pos;
-        let nr_points_insert = min(read_until - read_pos, nr_points_left);
-        if nr_points_insert > pps * 5 {
-            // For an accurate measurement, we should be able to replay the points
-            // with the configured point rate. If we fall behind more than 5 seconds with
-            // reading the points: Abort the measurement.
-            info!("Too slow to replay points at {pps} points per second. Aborting.");
-            break;
-        }
-        let points_waiting = writer.nr_points_waiting();
-        if points_waiting > NR_WAITING_POINTS_ABORT_THRESHOLD {
-            // In general, we don't care about too many points waiting in some inboxes.
-            // It will lead to bad latencies, but that is just how it is in that case.
-            // However: If the indexer REALLY can't keep up over a longer period of time
-            // and the waiting points just keep building up,
-            // we will eventually run out of memory. To prevent
-            // this from happening, we will eventually abort the measurement, but the threshold
-            // for that is really high. The chosen threshold is roughly equivalent to
-            // 5GiB of point data for a typical point layout
-            // (assuming 28 bytes per point, just like las point format 1).
-            // (todo - maybe choose threshold based on available free memory
-            // and the actual point size, instead of hardcoding it)
-            info!(
-                "Too slow to index points at {pps} points per second. There are too many points waiting in inboxes. Aborting."
-            );
-            break;
+            let time_now = Utc::now();
+            let time_done = time_now + Duration::from_secs(index_time_seconds);
+            info!("Input file contains {total_nr_points} points.");
+            info!("At {pps} points/s, this will take {hours}h {minutes}m {seconds}s to index.");
+            info!("The current time is {time_now}. We will be done at {time_done}.");
         }
 
-        // read correct number of points
-        let points_buffer = points.read::<VectorBuffer>(nr_points_insert)?;
-        let mut other_points_buffer =
-            VectorBuffer::with_capacity(points_buffer.len(), index.point_layout().clone());
+        // start read thread
+        let (points_tx, points_rx) = mpsc::sync_channel(100);
+        let read_thread_handle = {
+            let point_layout = index.point_layout().clone();
+            scope.spawn(move || read_thread(points_tx, points_per_frame, points, point_layout))
+        };
+
+        // start sampling thread
+        let (frames_tx, frames_rx) = mpsc::sync_channel(100);
+        let shared_samples = Arc::new(Mutex::new(Default::default()));
+        let sample_thread_handle = {
+            let prepared_query = query.clone().prepare(&QueryContext {
+                node_hierarchy: index.node_hierarchy(),
+                point_hierarchy: index.point_hierarchy(),
+                coordinate_system: index.coordinate_system(),
+                component_type: PositionComponentType::from_layout(index.point_layout()),
+                attribute_index: Arc::new(AttributeIndex::new()),
+                point_layout: index.point_layout().clone(),
+            })?;
+            let shared = Arc::clone(&shared_samples);
+            scope.spawn(move || {
+                sample_thread(
+                    points_rx,
+                    frames_tx,
+                    prepared_query,
+                    samples_per_frame,
+                    shared,
+                );
+            })
+        };
+
+        // start query thread
+        let (exit_tx, exit_rx) = crossbeam_channel::unbounded();
+        let query_thread_handle = {
+            let mut query_reader = index.reader(query.clone()).unwrap();
+            query_reader.set_query(query.clone(), query_config)?;
+            let shared_samples = Arc::clone(&shared_samples);
+            scope.spawn(move || query_thread(query_reader, exit_rx, shared_samples))
+        };
+
+        // wait for the buffers to fill up
+        thread::sleep(Duration::from_secs(10));
+
+        // insert points
+        let mut nr_points_inserted = 0;
+        let start_time = Instant::now();
+        let mut insertion_times = HashMap::new();
+        let mut writer = index.writer();
+        for (frame_idx, points) in frames_rx {
+            // wait for next frame
+            {
+                let next_frame_time =
+                    start_time + Duration::from_secs_f64(nr_points_inserted as f64 / pps as f64);
+                let now = Instant::now();
+                if next_frame_time > now {
+                    let wait_time = next_frame_time - now;
+                    thread::sleep(wait_time);
+                } else if now - next_frame_time > Duration::from_secs(5) {
+                    info!("Too slow to replay points at {pps} points per second. Aborting.");
+                    exit_tx.send(()).ok();
+                    return Ok(json!({
+                        "error": "Too slow to replay points.",
+                    }));
+                }
+                nr_points_inserted += points.len();
+            }
+
+            // security abort to avoit running out of memory
+            if writer.nr_points_waiting() > NR_WAITING_POINTS_ABORT_THRESHOLD {
+                info!("Too slow to index points at {pps} points per second. Aborting.");
+                exit_tx.send(()).ok();
+                return Ok(json!({
+                    "error": "Too slow to index points.",
+                }));
+            }
+
+            // record insertion time
+            let now = Instant::now();
+            insertion_times.insert(frame_idx, now);
+
+            // insert points
+            writer.insert(&points);
+        }
+
+        // stop indexer
+        drop(writer);
+
+        // stop threads
+        exit_tx.send(()).ok();
+        query_thread_handle.join().unwrap();
+        sample_thread_handle.join().unwrap();
+        read_thread_handle.join().unwrap()?;
+
+        // analyze result
+        let mut durations_any_lod = vec![];
+        let mut durations_by_lod: HashMap<LodLevel, Vec<Duration>> = HashMap::new();
+        let shared = shared_samples.lock().unwrap();
+        for sample in shared.values() {
+            if let Some((read_time, lod_level)) = sample.query {
+                let insertion_time = *insertion_times
+                    .get(&sample.frame_idx)
+                    .expect("missing insertion time");
+                let duration = read_time - insertion_time;
+                durations_any_lod.push(duration);
+                durations_by_lod
+                    .entry(lod_level)
+                    .or_default()
+                    .push(duration);
+            }
+        }
+
+        Ok(json!({
+            "nr_samples": shared.len(),
+            "nr_samples_positive": durations_any_lod.len(),
+            "stats": calculate_stats(durations_any_lod),
+            "stats_by_lod": durations_by_lod.into_iter().map(|(lod, durations)| (lod.to_string(), calculate_stats(durations))).collect::<HashMap<_, _>>(),
+        }))
+    })
+}
+
+fn read_thread(
+    points_tx: mpsc::SyncSender<VectorBuffer>,
+    buf_size: usize,
+    points: &mut impl PointReader,
+    point_layout: PointLayout,
+) -> Result<(), anyhow::Error> {
+    loop {
+        // read points
+        let frame: VectorBuffer = points.read(buf_size)?;
+        if frame.is_empty() {
+            return Ok(());
+        }
+
+        // copy to buffer of correct layout
+        // (This is a hack, that is needed because we are always calling
+        // the position attribute "Position3d", while pasture calls it differently
+        // depending on its point attribute data type.)
+        let mut other_frame = VectorBuffer::with_capacity(frame.len(), point_layout.clone());
         assert_eq!(
-            points_buffer.point_layout().size_of_point_entry(),
-            other_points_buffer.point_layout().size_of_point_entry()
+            frame.point_layout().size_of_point_entry(),
+            other_frame.point_layout().size_of_point_entry()
         );
         unsafe {
             // safety: index was crated so that its layout matches the file layout.
-            other_points_buffer.push_points(points_buffer.get_point_range_ref(0..nr_points_insert))
+            other_frame.push_points(frame.get_point_range_ref(0..frame.len()))
         };
 
-        // choose sample points
-        let next_total_nr_sample_points =
-            ((now - start_time).as_secs_f64() * sample_points_per_second as f64) as usize;
-        let nr_sample_points = next_total_nr_sample_points - total_nr_sample_points;
-        total_nr_sample_points = next_total_nr_sample_points;
-        let mut rng = rng();
-        let query_matches = prepared_query.matches_points(LodLevel::base(), &other_points_buffer);
-        let indices = query_matches
+        // send
+        match points_tx.send(other_frame) {
+            Ok(_) => (),
+            Err(_) => return Ok(()),
+        }
+    }
+}
+
+struct PointSample {
+    frame_idx: usize,
+    query: Option<(Instant, LodLevel)>,
+}
+
+fn sample_thread(
+    points_rx: mpsc::Receiver<VectorBuffer>,
+    points_tx: mpsc::SyncSender<(usize, VectorBuffer)>,
+    query: Box<dyn ExecutableQuery>,
+    samples_per_frame: usize,
+    shared: Arc<Mutex<HashMap<Vec<u8>, PointSample>>>,
+) {
+    let mut rng = rng();
+    for (frame_idx, frame) in points_rx.into_iter().enumerate() {
+        // evaluate the query against each point
+        let query_matches = query.matches_points(LodLevel::base(), &frame);
+        let positive_indices = query_matches
             .into_iter()
             .enumerate()
             .filter_map(|(idx, matches)| if matches { Some(idx) } else { None })
             .collect_vec();
-        let indices = indices
-            .choose_multiple(&mut rng, nr_sample_points.min(indices.len()))
+
+        // select random sample points from positive points
+        let entries = positive_indices
+            .choose_multiple(&mut rng, samples_per_frame.min(positive_indices.len()))
             .copied()
-            .collect_vec();
-        {
-            let mut chosen = shared.lock().unwrap();
-            let insert_time = Instant::now();
-            for i in indices {
-                let mut data =
-                    vec![0; other_points_buffer.point_layout().size_of_point_entry() as usize];
-                other_points_buffer.get_point(i, &mut data);
-                chosen.insert(
-                    data,
-                    Sample {
-                        insert: insert_time,
+            .map(|idx| {
+                (
+                    frame.get_point_ref(idx).to_owned(),
+                    PointSample {
+                        frame_idx,
                         query: None,
                     },
-                );
-            }
+                )
+            })
+            .collect_vec();
+
+        // insert samples into shared storage
+        {
+            let mut shared_lock = shared.lock().unwrap();
+            shared_lock.extend(entries);
         }
 
-        // insert
-        writer.insert(&other_points_buffer);
-
-        // update state
-        read_pos += nr_points_insert;
-
-        thread::sleep(Duration::from_secs_f64(0.01));
-
-        // Update progress bar and check timeout
-        if (now - last_update) > Duration::from_secs_f64(0.1) {
-            last_update = now;
-            pb.set_position(read_pos as u64);
+        // send to indexer
+        match points_tx.send((frame_idx, frame)) {
+            Ok(_) => (),
+            Err(_) => return,
         }
     }
-    drop(pb);
-
-    // Finalize
-    drop(writer);
-
-    // stop querying
-    exit_tx.send(()).ok();
-    query_thread_handle.join().unwrap();
-
-    // analyze result
-    if read_pos != nr_points {
-        return Ok(json!({
-            "error": "Too slow.",
-        }));
-    }
-    let mut durations_any_lod = vec![];
-    let mut durations_by_lod: HashMap<LodLevel, Vec<Duration>> = HashMap::new();
-    let shared = shared.lock().unwrap();
-    for sample in shared.values() {
-        if let Some((read_time, lod_level)) = sample.query {
-            let duration = read_time - sample.insert;
-            durations_any_lod.push(duration);
-            durations_by_lod
-                .entry(lod_level)
-                .or_default()
-                .push(duration);
-        }
-    }
-
-    Ok(json!({
-        "nr_samples": shared.len(),
-        "nr_samples_positive": durations_any_lod.len(),
-        "stats": calculate_stats(durations_any_lod),
-        "stats_by_lod": durations_by_lod.into_iter().map(|(lod, durations)| (lod.to_string(), calculate_stats(durations))).collect::<HashMap<_, _>>(),
-    }))
 }
 
 fn query_thread(
     mut reader: OctreeReader,
     exit: Receiver<()>,
-    shared: Arc<Mutex<HashMap<Vec<u8>, Sample>>>,
+    shared: Arc<Mutex<HashMap<Vec<u8>, PointSample>>>,
 ) {
     let mut insert_done = false;
     loop {
@@ -256,7 +297,7 @@ fn query_thread(
 fn analyze_node(
     cell: LeveledGridCell,
     points: VectorBuffer,
-    shared: &Mutex<HashMap<Vec<u8>, Sample>>,
+    shared: &Mutex<HashMap<Vec<u8>, PointSample>>,
 ) {
     let mut lock = shared.lock().unwrap();
     let now = Instant::now();

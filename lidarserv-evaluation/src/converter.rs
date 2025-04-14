@@ -31,7 +31,7 @@ pub enum MissingAttributesStrategy {
 }
 
 pub struct Converter {
-    extractors: Vec<Box<dyn AttributeExtractor>>,
+    extractors: Vec<Box<dyn AttributeExtractor + Send>>,
 }
 
 impl Converter {
@@ -42,7 +42,7 @@ impl Converter {
         dst_coordinate_system: CoordinateSystem,
         missing_attributes: MissingAttributesStrategy,
     ) -> Result<Self, anyhow::Error> {
-        let mut extractors: Vec<Box<dyn AttributeExtractor>> = Vec::new();
+        let mut extractors: Vec<Box<dyn AttributeExtractor + Send>> = Vec::new();
         let dst_point_size = dst_layout.size_of_point_entry() as usize;
 
         for dst_attribute in dst_layout.attributes() {
