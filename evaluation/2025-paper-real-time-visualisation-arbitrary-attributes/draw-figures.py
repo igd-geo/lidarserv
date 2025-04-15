@@ -994,7 +994,7 @@ def plot_insertion_rate_progression(data, run:str, filename: str, title=None):
 
     if all(t is not None for t in gps_time):
         pps_sensor = [0] + [
-            (y2 - y1) / (x2- x1)
+            (y2 - y1) / (x2 - x1) if (x2 - x1) != 0 else 0
             for x1, x2, y1, y2 in zip(
                 gps_time[1:], 
                 gps_time[:-1], 
