@@ -13,6 +13,7 @@ from matplotlib.lines import Line2D
 from typing import List, Tuple
 from scipy import stats
 from math import floor
+from collections import deque
 
 PROJECT_ROOT = dirname(__file__)
 OUTPUT_FOLDER = join(PROJECT_ROOT, "figures")
@@ -284,6 +285,14 @@ def main():
             run = "insertion-speed"
         else:
             continue
+
+        queries, labels, title = next((
+                    (queries, labels, title)
+                    for queries, labels, title, prefix in QUERIES_AND_LABELS
+                    if file.name.startswith(prefix)
+                ), 
+                (None, None, None)
+            )
         
         plot_insertion_rate_progression(
             data,
@@ -994,7 +1003,7 @@ def plot_insertion_rate_progression(data, run:str, filename: str, title=None):
 
     if all(t is not None for t in gps_time):
         pps_sensor = [0] + [
-            (y2 - y1) / (x2- x1)
+            (y2 - y1) / (x2 - x1) if (x2 - x1) != 0 else 0
             for x1, x2, y1, y2 in zip(
                 gps_time[1:], 
                 gps_time[:-1], 
@@ -1002,8 +1011,18 @@ def plot_insertion_rate_progression(data, run:str, filename: str, title=None):
                 nr_points_read[:-1]
             )
         ]
+
+        # Moving average calculation for pps_sensor
+        window = deque(maxlen=delta_t)
+        pps_sensor_smoothed = []
+        for value in pps_sensor:
+            window.append(value)
+            moving_avg = sum(window) / len(window)
+            pps_sensor_smoothed.append(moving_avg)
+        pps_sensor = pps_sensor_smoothed
+
         if any(pps > 10 for pps in pps_sensor):
-            ax.plot(nr_points_read, pps_sensor, label="Scanner Speed", color='r', linestyle='--')
+            ax.plot(nr_points_read, pps_sensor, label=f"Scanner Speed (moving average, Δt={delta_t}s)", color='r', linestyle='--')
     ax.set_xlabel("Read position | Points")
     ax.set_ylabel("Points/s")
     ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.0f}M"))
