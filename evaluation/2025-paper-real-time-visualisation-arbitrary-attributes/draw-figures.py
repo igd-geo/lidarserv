@@ -124,10 +124,10 @@ QUERIES_AND_LABELS = [
     # kitti - attribute index tests
     (
         # queries
-        [f"semantic_{i}" for i in range(6, 45)], 
+        [f"semantic_{i}" for i in range(6, 45) if i not in [18, 23]],  # classes 18 and 23 are empty (do not exist in our dataset)
 
         # labels
-        [f"Class {i}" for i in range(6, 45)], 
+        [f"Class {i}" for i in range(6, 45) if i not in [18, 23]], 
 
         # figure title
         "KITTI",
@@ -822,31 +822,31 @@ def plot_attribute_indexes_index_comparisson(data, filename, run, title):
             return
         values[enable_attribute_index] = this_run_value
     
-    if any(key not in values for key in ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]):
+    if any(key not in values for key in ["RangeIndexOnly", "SfcIndexOnly", "None"]):
         print(f"incomplete data (output file: {basename(filename)})")
         return
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(3.5, 4))
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
     bar_width = 0.7
     plt.bar(
-        range(4),
+        range(3),
         [
             values["None"],
             values["RangeIndexOnly"],
             values["SfcIndexOnly"],
-            values["All"]
         ],
         bar_width,
-        color=colors[:4],
+        color=colors[:3],
     )
     plt.ylabel("Insertion Speed | Points/s")
-    plt.xticks(range(4), [
-        "No Attribute\nIndex",
+    plt.xticks(range(3), [
+        "No Attribute Index",
         "Value Range Index",
         "Bin List Index",
-        "Value Range Index\n+\nBin List Index"
-    ])
+    ], rotation=90)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.1f}M"))
+
     plt.tight_layout()
     if title is not None:
         ax.set_title(title)
@@ -875,15 +875,15 @@ def plot_attribute_indexes_query_comparisson(data, filename, run, queries: List[
             return
         values[enable_attribute_index] = this_run_values
 
-    if any(key not in values for key in ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]):
+    if any(key not in values for key in ["RangeIndexOnly", "SfcIndexOnly", "None"]):
         print(f"incomplete data (output file: {basename(filename)})")
         return
 
-    fig, ax = plt.subplots(figsize=[10, 5.5])
+    fig, ax = plt.subplots(figsize=[9, 4])
 
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
 
-    bar_width = 1.0 / 4.5
+    bar_width = 1.0 / 3.5
     plt.bar(
         range(len(queries)),
         values["None"],
@@ -905,16 +905,9 @@ def plot_attribute_indexes_query_comparisson(data, filename, run, queries: List[
         color=colors[2],
         label="Bin List Index"
     )
-    plt.bar(
-        [x + 3 * bar_width for x in range(len(queries))],
-        values["All"],
-        bar_width,
-        color=colors[3],
-        label="Value Range Index + Bin List Index"
-    )
     
     plt.ylabel(y_label)
-    plt.xticks([x + 1.5 * bar_width for x in range(len(queries))], labels, rotation=90)
+    plt.xticks([x + 1.0 * bar_width for x in range(len(queries))], labels, rotation=90)
 
     ax.legend()
 
