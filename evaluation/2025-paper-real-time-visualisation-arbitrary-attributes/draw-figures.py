@@ -136,6 +136,33 @@ QUERIES_AND_LABELS = [
         "kitti-attr-idx_"
     ),
 
+    # ahn - attribute index tests
+    (
+        [
+            "classification_1",
+            "classification_2",
+            "classification_6",
+            "classification_9",
+            "classification_14",
+            "classification_26",
+            "time_slice_1",
+            "time_slice_2",
+            "time_slice_3",
+        ],
+        [
+            "Classification 1",
+            "Classification 2",
+            "Classification 6",
+            "Classification 9",
+            "Classification 14",
+            "Classification 26",
+            "GpsTime 60s slice",
+            "GpsTime 5m slice\n(1 flight line)",
+            "GpsTime 2h slice",
+        ],
+        "AHN4",
+        "ahn4-attr-idx_",
+    )
 ]
 
 
@@ -822,31 +849,31 @@ def plot_attribute_indexes_index_comparisson(data, filename, run, title):
             return
         values[enable_attribute_index] = this_run_value
     
-    if any(key not in values for key in ["RangeIndexOnly", "SfcIndexOnly", "None"]):
+    if any(key not in values for key in ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]):
         print(f"incomplete data (output file: {basename(filename)})")
         return
 
-    fig, ax = plt.subplots(figsize=(3.5, 4))
+    fig, ax = plt.subplots()
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
     bar_width = 0.7
     plt.bar(
-        range(3),
+        range(4),
         [
             values["None"],
             values["RangeIndexOnly"],
             values["SfcIndexOnly"],
+            values["All"],
         ],
         bar_width,
-        color=colors[:3],
+        color=colors[:4],
     )
     plt.ylabel("Insertion Speed | Points/s")
-    plt.xticks(range(3), [
+    plt.xticks(range(4), [
         "No Attribute Index",
         "Value Range Index",
         "Bin List Index",
-    ], rotation=90)
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y / 1e6:.1f}M"))
-
+        "Value Range Index\n+\nBin List Index"
+    ])
     plt.tight_layout()
     if title is not None:
         ax.set_title(title)
@@ -875,7 +902,7 @@ def plot_attribute_indexes_query_comparisson(data, filename, run, queries: List[
             return
         values[enable_attribute_index] = this_run_values
 
-    if any(key not in values for key in ["RangeIndexOnly", "SfcIndexOnly", "None"]):
+    if any(key not in values for key in ["All", "RangeIndexOnly", "SfcIndexOnly", "None"]):
         print(f"incomplete data (output file: {basename(filename)})")
         return
 
@@ -883,7 +910,7 @@ def plot_attribute_indexes_query_comparisson(data, filename, run, queries: List[
 
     colors = ['#DB4437', '#F4B400', '#0F9D58', '#4285F4', '#bb0089']
 
-    bar_width = 1.0 / 3.5
+    bar_width = 1.0 / 4.5
     plt.bar(
         range(len(queries)),
         values["None"],
@@ -905,9 +932,16 @@ def plot_attribute_indexes_query_comparisson(data, filename, run, queries: List[
         color=colors[2],
         label="Bin List Index"
     )
+    plt.bar(
+        [x + 3 * bar_width for x in range(len(queries))],
+        values["All"],
+        bar_width,
+        color=colors[3],
+        label="Value Range Index + Bin List Index"
+    )
     
     plt.ylabel(y_label)
-    plt.xticks([x + 1.0 * bar_width for x in range(len(queries))], labels, rotation=90)
+    plt.xticks([x + 1.5 * bar_width for x in range(len(queries))], labels, rotation=90)
 
     ax.legend()
 
