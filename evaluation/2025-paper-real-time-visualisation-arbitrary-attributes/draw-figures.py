@@ -8,6 +8,7 @@ from posixpath import basename
 from pprint import pprint
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib.ticker import ScalarFormatter
 import numpy as np
 from matplotlib.lines import Line2D
 from typing import List, Tuple
@@ -423,7 +424,10 @@ def estimate_probability_density(
             bucket_min = value_min + bucket * bucket_size
             bucket_max = value_min + (bucket + 1) * bucket_size
             if r1 < bucket_max and r2 > bucket_min:
-                factor = (min(bucket_max, r2) - max(bucket_min, r1)) / (r2 - r1)
+                if r2 == r1:
+                    factor = 1
+                else:
+                    factor = (min(bucket_max, r2) - max(bucket_min, r1)) / (r2 - r1)
                 buckets[bucket] += (l2 - l1) / 100 * factor
 
     nr_coords = 500
@@ -471,18 +475,37 @@ def plot_latency_comparison_violin_lod(data, run, filename, query):
         return
     stats_by_lod = latency_query["stats_by_lod"]
     stats_full = latency_query["stats"]
-    lods = list(stats_by_lod.keys())
+
+    # order lods
+    lod_order = [f"LOD{i}" for i in range(0, 50)]
+    lods = [lod for lod in lod_order if lod in stats_by_lod.keys()]
 
     # Prepare data for plotting
     quantiles = {query: [] for query in lods}
 
+    ymax1 = max(percentile[1] for percentile in stats_full["percentiles"])
+    ymax2 = max(percentile[1] for stats_lod in stats_by_lod.values() for percentile in stats_lod["percentiles"])
+    ymax = max(ymax1, ymax2)
+    if ymax < 10:
+        unit = "ms"
+        unit_factor = 1_000
+    elif ymax < 10 * 60:
+        unit = "s"
+        unit_factor = 1
+    elif ymax < 10 * 60 * 60:
+        unit = "min"
+        unit_factor = 1/60
+    else:
+        unit = "h"
+        unit_factor = 1/60/60
+
     # add full point cloud stats
-    quantiles["full-point-cloud"] = [(percentile[0], percentile[1] * 1000) for percentile in stats_full["percentiles"]]
+    quantiles["full-point-cloud"] = [(percentile[0], percentile[1] * unit_factor) for percentile in stats_full["percentiles"]]
 
     # add lod stats
     for lod in lods:
         percentiles = stats_by_lod[lod]["percentiles"]
-        percentiles = [(percentile[0], percentile[1] * 1000) for percentile in percentiles]
+        percentiles = [(percentile[0], percentile[1] * unit_factor) for percentile in percentiles]
         for percentile in percentiles:
             quantiles[lod].append(percentile)
 
@@ -505,10 +528,14 @@ def plot_latency_comparison_violin_lod(data, run, filename, query):
     #     ax.text(i, vpstat["median"], f'{vpstat["median"]:.2f}', ha='center', va='bottom')
 
     lods.append("All LODs")
-    plt.xticks(xs, lods)
-    plt.ylabel("Latency | ms")
-    plt.tight_layout()
-    plt.savefig(filename, metadata={"CreationDate": None})
+    ax.set_xticks(xs)
+    ax.set_xticklabels(lods)
+    ax.set_ylabel(f"Latency | {unit}")
+    formatter = ScalarFormatter()
+    formatter.set_scientific(False)
+    ax.yaxis.set_major_formatter(formatter)
+    fig.tight_layout()
+    fig.savefig(filename, metadata={"CreationDate": None})
     plt.close(fig)
 
 def plot_latency_comparison_violin_queries(data, run, queries, labels, filename):
@@ -538,10 +565,32 @@ def plot_latency_comparison_violin_queries(data, run, queries, labels, filename)
         if "percentiles" not in stats_full:
             return
 
-        quantiles[query] = [(percentile[0], percentile[1] * 1000) for percentile in stats_full["percentiles"]]
+        quantiles[query] = [(percentile[0], percentile[1]) for percentile in stats_full["percentiles"]]
 
     if len(quantiles) == 0:
         return
+    
+    ymax = max(percentile[1] for stats_query in quantiles.values() for percentile in stats_query)
+    if ymax < 10:
+        unit = "ms"
+        unit_factor = 1_000
+    elif ymax < 10 * 60:
+        unit = "s"
+        unit_factor = 1
+    elif ymax < 10 * 60 * 60:
+        unit = "min"
+        unit_factor = 1/60
+    else:
+        unit = "h"
+        unit_factor = 1/60/60
+    quantiles = {
+        query: [
+            (percent, latency * unit_factor) 
+            for percent, latency in percentiles
+        ] 
+        for query, percentiles in quantiles.items()
+    }
+
     
     xs = range(len(quantiles))
     vpstats = [estimate_probability_density(quantiles[key]) for key in quantiles.keys()]
@@ -552,10 +601,14 @@ def plot_latency_comparison_violin_queries(data, run, queries, labels, filename)
     # for i, vpstat in enumerate(vpstats):
     #     ax.text(i, vpstat["median"], f'{vpstat["median"]:.2f}', ha='center', va='bottom')
 
-    plt.xticks(xs, labels)
-    plt.ylabel("Latency | ms")
-    plt.tight_layout()
-    plt.savefig(filename, metadata={"CreationDate": None})
+    ax.set_xticks(xs)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel(f"Latency | {unit}")
+    formatter = ScalarFormatter()
+    formatter.set_scientific(False)
+    ax.yaxis.set_major_formatter(formatter)
+    fig.tight_layout()
+    fig.savefig(filename, metadata={"CreationDate": None})
     plt.close(fig)
 
 
