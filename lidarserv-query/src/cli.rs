@@ -1,6 +1,5 @@
-use std::path::PathBuf;
-
 use clap::Parser;
+use std::path::PathBuf;
 
 /// Run queries on the lidarserv server and store the result as las file.
 #[derive(Debug, Parser)]
@@ -16,6 +15,12 @@ pub struct AppOptions {
     /// Port of the lidarserv server
     #[clap(long, default_value = "4567")]
     pub port: u16,
+
+    /// The file format of the output file. If this is omitted,
+    /// then the file format is inferred from the extension of the
+    /// given output file name.
+    #[clap(long)]
+    pub format: Option<FileFormat>,
 
     /// Output file that the query result will be written to. If absent, the query result will be written to stdout.
     #[clap(long)]
@@ -113,4 +118,10 @@ pub struct AppOptions {
     /// Disable the pointwise filtering and only filter out nodes
     #[clap(long)]
     pub disable_point_filtering: bool,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, clap::ValueEnum)]
+pub enum FileFormat {
+    Las,
+    Laz,
 }

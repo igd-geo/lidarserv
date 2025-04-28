@@ -14,7 +14,7 @@ use std::{
 
 use anyhow::Result;
 use clap::Parser;
-use cli::AppOptions;
+use cli::{AppOptions, FileFormat};
 use human_panic::setup_panic;
 use lidarserv_server::{
     index::query::Query,
@@ -55,7 +55,8 @@ async fn main() -> ExitCode {
     let (points_tx, points_rx) = mpsc::channel(100);
     let writer_thread_handle = {
         let file_name = args.outfile.clone();
-        thread::spawn(move || write_thread(points_rx, file_name))
+        let file_format = args.format;
+        thread::spawn(move || write_thread(points_rx, file_name, file_format))
     };
 
     let exit_code = match query_thread(points_tx, &args, status).await {
@@ -130,7 +131,11 @@ fn create_unlinked_file() -> Result<File> {
     Ok(file)
 }
 
-fn write_thread(mut points_rx: Receiver<VectorBuffer>, file_name: Option<PathBuf>) -> Result<()> {
+fn write_thread(
+    mut points_rx: Receiver<VectorBuffer>,
+    file_name: Option<PathBuf>,
+    file_format: Option<FileFormat>,
+) -> Result<()> {
     // todo the las writer will not always write all attributes.
     //  - LasBasicFlags and LasExtendedFlags attributes are ignored. instead
     //    these flags are always hand-built from its parts.
@@ -144,13 +149,18 @@ fn write_thread(mut points_rx: Receiver<VectorBuffer>, file_name: Option<PathBuf
     while let Some(chunk) = points_rx.blocking_recv() {
         if writer.is_none() {
             let file = match &file_name {
-                Some(s) => File::create_new(s)?,
+                Some(s) => File::create(s)?,
                 None => create_unlinked_file()?,
             };
             let buf_file = BufWriter::new(file);
-            let is_compressed = match &file_name {
-                Some(s) => path_is_compressed_las_file(s)?,
-                None => false,
+
+            let is_compressed = match file_format {
+                Some(FileFormat::Las) => false,
+                Some(FileFormat::Laz) => true,
+                None => match &file_name {
+                    Some(s) => path_is_compressed_las_file(s)?,
+                    None => false,
+                },
             };
             let w = LASWriter::from_writer_and_point_layout(
                 buf_file,
