@@ -1,7 +1,8 @@
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::{hash_map::Entry},
     slice,
 };
+use rustc_hash::FxHashMap as HashMap;
 
 use log::warn;
 use nalgebra::{Point3, Vector3};
@@ -82,7 +83,7 @@ impl<C: Component> GridCenterSampling<C> {
             "Incompatible point layout."
         );
         let points = VectorBuffer::new_from_layout(layout);
-        let occupation = HashMap::new();
+        let occupation = HashMap::default();
         GridCenterSampling {
             grid,
             occupation,
@@ -361,7 +362,7 @@ impl<C: Component> GridCenterSampling<C> {
 
         let mut result = GridCenterSampling {
             grid,
-            occupation: HashMap::with_capacity(nr_accepted),
+            occupation: HashMap::with_capacity_and_hasher(nr_accepted, Default::default()),
             points,
             dirty: false,
         };

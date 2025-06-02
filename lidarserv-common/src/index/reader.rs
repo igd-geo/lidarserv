@@ -11,10 +11,11 @@ use crate::{
 use log::{debug, trace};
 use pasture_core::containers::{BorrowedBuffer, InterleavedBuffer, OwningBuffer, VectorBuffer};
 use std::{
-    collections::{HashMap, HashSet},
     sync::Arc,
 };
 use tracy_client::span;
+use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::FxHashSet as HashSet;
 
 pub struct OctreeReader {
     inner: Arc<Inner>,
@@ -81,11 +82,11 @@ impl OctreeReader {
             query_context: ctx,
             frontier: HashMap::default(),
             changed_nodes_receiver,
-            remove_queue: HashSet::new(),
-            known_root_nodes: HashSet::new(),
-            load_queue: HashMap::new(),
-            reload_queue: HashMap::new(),
-            loaded: HashMap::new(),
+            remove_queue: HashSet::default(),
+            known_root_nodes: HashSet::default(),
+            load_queue: HashMap::default(),
+            reload_queue: HashMap::default(),
+            loaded: HashMap::default(),
             generation: 0,
             point_filtering: true,
         };
@@ -211,7 +212,7 @@ impl OctreeReader {
             .collect();
 
         // search for removable nodes
-        let mut removable_cnt = HashMap::new();
+        let mut removable_cnt = HashMap::default();
         for (cell, elem) in &self.frontier {
             if elem.matches_query == NodeQueryResult::Negative {
                 if let Some(parent) = cell.parent() {
@@ -250,14 +251,14 @@ impl OctreeReader {
     /// (In case the query is running at the same time as the indexer)
     /// (Call this regularily!)
     pub fn update(&mut self) {
-        let changes = HashSet::new();
+        let changes = HashSet::default();
         self.process_changes(changes);
     }
 
     /// Like [Self::update], but blocks until at least one update is received.
     pub fn wait_update(&mut self) {
         let _span = span!("OctreeReader waiting...");
-        let mut changes = HashSet::new();
+        let mut changes = HashSet::default();
         if let Ok(update) = self.changed_nodes_receiver.recv() {
             changes.insert(update);
         }
@@ -274,7 +275,7 @@ impl OctreeReader {
         crossbeam_channel::select! {
             recv(other) -> result => Some(result),
             recv(self.changed_nodes_receiver) -> u => {
-                let mut changes = HashSet::new();
+                let mut changes = HashSet::default();
                 if let Ok(update) = u {
                     changes.insert(update);
                 }

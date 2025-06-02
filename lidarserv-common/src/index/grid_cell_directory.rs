@@ -1,7 +1,7 @@
 use crate::geometry::grid::{GridCell, LeveledGridCell, LodLevel};
 use crate::lru_cache::pager::PageDirectory;
 use serde_json::json;
-use std::collections::HashSet;
+use rustc_hash::FxHashSet as HashSet;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -66,12 +66,12 @@ impl GridCellDirectory {
         nr_levels: usize,
     ) -> Result<Vec<HashSet<GridCell>>, GridCellIoError> {
         if !file_name.exists() {
-            return Ok(vec![HashSet::new(); nr_levels]);
+            return Ok(vec![HashSet::default(); nr_levels]);
         }
         let f = File::open(file_name)?;
         let mut cells: Vec<HashSet<GridCell>> = ciborium::de::from_reader(f)?;
         while nr_levels > cells.len() {
-            cells.push(HashSet::new());
+            cells.push(HashSet::default());
         }
         Ok(cells)
     }

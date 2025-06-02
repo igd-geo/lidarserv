@@ -16,7 +16,7 @@ use rand::rng;
 use rand::seq::IndexedRandom;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap as HashMap;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread::{self};
 use std::time::{Duration, Instant};
@@ -103,7 +103,7 @@ pub fn measure_latency(
         // insert points
         let mut nr_points_inserted = 0;
         let start_time = Instant::now();
-        let mut insertion_times = HashMap::new();
+        let mut insertion_times = HashMap::default();
         let mut writer = index.writer();
         for (frame_idx, points) in frames_rx {
             // wait for next frame
@@ -152,7 +152,7 @@ pub fn measure_latency(
 
         // analyze result
         let mut durations_any_lod = vec![];
-        let mut durations_by_lod: HashMap<LodLevel, Vec<Duration>> = HashMap::new();
+        let mut durations_by_lod: HashMap<LodLevel, Vec<Duration>> = HashMap::default();
         let shared = shared_samples.lock().unwrap();
         for sample in shared.values() {
             if let Some((read_time, lod_level)) = sample.query {

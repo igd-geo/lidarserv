@@ -1,6 +1,7 @@
-use std::collections::{HashMap, hash_map};
+use std::collections::{hash_map};
 use std::hash::Hash;
 use std::{mem, ptr};
+use rustc_hash::FxHashMap as HashMap;
 
 /// A map with last recently used ordering
 pub struct Lru<K, V> {
@@ -18,7 +19,7 @@ pub struct Entry<K, V> {
 impl<K, V> Default for Lru<K, V> {
     fn default() -> Self {
         Lru {
-            entries: HashMap::new(),
+            entries: HashMap::default(),
             first: None,
             last: None,
         }

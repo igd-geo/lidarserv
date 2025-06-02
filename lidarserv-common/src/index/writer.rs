@@ -18,13 +18,14 @@ use pasture_core::containers::{
     BorrowedBuffer, BorrowedBufferExt, InterleavedBuffer, OwningBuffer, VectorBuffer,
 };
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::{hash_map::Entry},
     sync::{Arc, Condvar, Mutex},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 use thiserror::Error;
 use tracy_client::{plot, secondary_frame_mark, span};
+use rustc_hash::FxHashMap as HashMap;
 
 pub(super) struct InsertionTask {
     /// Points to insert in the node
@@ -526,7 +527,7 @@ impl OctreeWriter {
                     node_hierarchy,
                 } = self;
 
-                let mut points_by_cell: HashMap<LeveledGridCell, VectorBuffer> = HashMap::new();
+                let mut points_by_cell: HashMap<LeveledGridCell, VectorBuffer> = HashMap::default();
 
                 let grid = node_hierarchy.level::<C>(LodLevel::base());
 

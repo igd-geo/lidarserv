@@ -32,7 +32,6 @@ use settings::{
 };
 use simple_logger::SimpleLogger;
 use std::{
-    collections::HashMap,
     fs::File,
     io::{Read, SeekFrom, Write},
     panic::catch_unwind,
@@ -42,6 +41,7 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+use rustc_hash::FxHashMap as HashMap;
 extern crate fs_extra;
 use fs_extra::dir::get_size;
 
@@ -167,7 +167,7 @@ fn main_result(args: EvaluationOptions) -> Result<(), anyhow::Error> {
     info!("Running tests");
     let started_at = Utc::now();
     let mut last_index = None;
-    let mut all_results = HashMap::new();
+    let mut all_results = HashMap::default();
     for (name, run) in enabled_runs {
         info!("=== {} ===", name);
         let mut run = run.clone();
@@ -362,7 +362,7 @@ fn evaluate(
             if base_config.queries.is_empty() {
                 warn!("Query latency measurements are enabled, but no queries are defined.");
             }
-            let mut result_latency_inner = HashMap::new();
+            let mut result_latency_inner = HashMap::default();
             for (query_name, query_str) in &base_config.queries {
                 reset_data_folder(base_config)?;
                 processor_cooldown(base_config);
@@ -423,7 +423,7 @@ fn evaluate(
 
             // Here comes the actual query performance test
             let mut index = create_index(index_config, base_config)?;
-            let mut query_perf_results = HashMap::new();
+            let mut query_perf_results = HashMap::default();
             for (query_name, query) in &base_config.queries {
                 processor_cooldown(base_config);
                 info!("Measuring query perf: {query_name}: {query}");

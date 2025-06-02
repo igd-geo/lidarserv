@@ -8,7 +8,7 @@ use range_index::RangeIndex;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use sfc_index::SfcIndex;
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::{hash_map::Entry},
     fs::File,
     io::{BufReader, BufWriter},
     path::PathBuf,
@@ -17,6 +17,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
     geometry::grid::LeveledGridCell,
@@ -169,7 +170,7 @@ where
     pub fn create(index: Idx, path: PathBuf) -> Self {
         NodeManager {
             index,
-            nodes: RwLock::new(HashMap::new()),
+            nodes: RwLock::new(HashMap::default()),
             dirty: AtomicBool::new(true),
             path,
         }
@@ -329,7 +330,7 @@ pub struct AttributeIndex {
 impl AttributeIndex {
     pub fn new() -> Self {
         AttributeIndex {
-            by_attribute: HashMap::new(),
+            by_attribute: HashMap::default(),
         }
     }
 
