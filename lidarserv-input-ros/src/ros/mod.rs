@@ -1,7 +1,7 @@
 use anyhow::Result;
-use nalgebra::{matrix, Matrix4, UnitQuaternion, Vector3};
+use nalgebra::{Matrix4, UnitQuaternion, Vector3, matrix};
 use std::{
-    sync::{mpsc, Arc},
+    sync::{Arc, mpsc},
     time::Duration,
 };
 
@@ -243,7 +243,7 @@ mod tests {
         time::Duration,
     };
 
-    use nalgebra::{point, vector, UnitQuaternion, UnitVector3, Vector3};
+    use nalgebra::{UnitQuaternion, UnitVector3, Vector3, point, vector};
 
     use super::Transform;
 
@@ -311,17 +311,21 @@ mod tests {
         let transformed = transform.matrix().transform_point(&point);
         let transformed_expected = point![2.0, 1.0, 10.0];
         dbg!(transformed, transformed_expected);
-        assert!((transformed - transformed_expected)
-            .iter()
-            .all(|c| c.abs() < 1e-10));
+        assert!(
+            (transformed - transformed_expected)
+                .iter()
+                .all(|c| c.abs() < 1e-10)
+        );
 
         // transform back
         let original = transform.inverse_matrix().transform_point(&transformed);
         let original_expected = point;
         dbg!(original, original_expected);
-        assert!((original - original_expected)
-            .iter()
-            .all(|c| c.abs() < 1e-10));
+        assert!(
+            (original - original_expected)
+                .iter()
+                .all(|c| c.abs() < 1e-10)
+        );
     }
 
     /// Test for [Transform::interpolate]

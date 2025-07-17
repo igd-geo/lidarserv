@@ -5,16 +5,16 @@ use human_panic::setup_panic;
 use lidarserv::lidarserv_thread;
 use log::{debug, error, info};
 use processing::processing_thread;
-use ros::{ros_thread, Command};
+use ros::{Command, ros_thread};
 use rosrust::api::resolve::get_unused_args;
-use status::{status_thread, Status};
+use status::{Status, status_thread};
 use std::{
     fmt::{Debug, Display},
     process::ExitCode,
     sync::{
+        Arc,
         atomic::Ordering,
         mpsc::{self, channel},
-        Arc,
     },
     thread,
 };

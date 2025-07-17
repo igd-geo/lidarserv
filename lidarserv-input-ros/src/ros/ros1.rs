@@ -1,10 +1,10 @@
 use super::{Command, Endianess, Field, PointCloudMessage, Transform, Type};
 use crate::{cli::AppOptions, status::Status};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use log::{info, trace, warn};
-use nalgebra::{vector, Quaternion, UnitQuaternion};
+use nalgebra::{Quaternion, UnitQuaternion, vector};
 use std::{
-    sync::{atomic::Ordering, mpsc, Arc},
+    sync::{Arc, atomic::Ordering, mpsc},
     thread,
     time::Duration,
 };
@@ -51,7 +51,7 @@ pub fn ros_thread(
             return Err(anyhow!(
                 "Failed to subscribe to transform tree topic `{}`.",
                 args.tf_topic
-            ))
+            ));
         }
     };
     let _tf_static_subscriber =
@@ -61,7 +61,7 @@ pub fn ros_thread(
                 return Err(anyhow!(
                     "Failed to subscribe to transform tree topic `{}`.",
                     args.tf_static_topic
-                ))
+                ));
             }
         };
     info!("Subscribed to transform tree topics.");
@@ -90,7 +90,7 @@ pub fn ros_thread(
                 return Err(anyhow!(
                     "Failed to subscribe to point cloud topic `{}`.",
                     args.pointcloud_topic
-                ))
+                ));
             }
         };
     info!("Subscribed to point cloud topic.");

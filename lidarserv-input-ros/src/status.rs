@@ -1,14 +1,14 @@
 use std::{
     sync::{
+        Arc,
         atomic::{AtomicBool, AtomicU64, Ordering},
         mpsc::{self, RecvTimeoutError},
-        Arc,
     },
     thread,
     time::Duration,
 };
 
-use console::{style, Key};
+use console::{Key, style};
 use log::info;
 
 /// Holds status information, that is printed regularily.

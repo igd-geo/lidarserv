@@ -3,7 +3,7 @@ use lidarserv_server::net::{
     client::capture_device::CaptureDeviceClient, protocol::messages::PointDataCodec,
 };
 use pasture_core::layout::PointAttributeDefinition;
-use std::sync::{atomic::Ordering, mpsc, Arc};
+use std::sync::{Arc, atomic::Ordering, mpsc};
 use tokio::select;
 
 use crate::{cli::AppOptions, status::Status};

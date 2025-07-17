@@ -18,16 +18,16 @@ use pasture_core::{
         InterleavedBufferMut, OwningBuffer, VectorBuffer,
     },
     layout::{
-        attributes::{COLOR_RGB, POSITION_3D},
         PointAttributeDefinition, PointAttributeMember, PointLayout,
+        attributes::{COLOR_RGB, POSITION_3D},
     },
 };
 use std::{
     collections::{HashMap, HashSet},
     sync::{
+        Arc,
         atomic::Ordering,
         mpsc::{self, RecvTimeoutError},
-        Arc,
     },
     thread,
     time::{Duration, Instant},
@@ -234,7 +234,9 @@ pub fn processing_thread(
                             dst_positions.set_at(pid, C::position_to_pasture(position_lidarserv));
                         }
                         if error_count > 0 {
-                            warn!("Received {error_count} point(s) outside the coordinate system. These points were set to zero.");
+                            warn!(
+                                "Received {error_count} point(s) outside the coordinate system. These points were set to zero."
+                            );
                         }
                     }
                 }
@@ -321,11 +323,17 @@ fn initialize(
     let lossy: HashSet<_> = conversions::LOSSY_CONVERSIONS.iter().copied().collect();
     for mapping in &field_map {
         if mapping.src_fields.is_empty() {
-            warn!("Attribute {} has no corresponding field(s) in the ROS PointCloud2 message and will be filled with zeros.", mapping.dst_attribute);
+            warn!(
+                "Attribute {} has no corresponding field(s) in the ROS PointCloud2 message and will be filled with zeros.",
+                mapping.dst_attribute
+            );
         }
         for ros_field in &mapping.src_fields {
             if lossy.contains(&(ros_field.typ, mapping.dst_type)) {
-                warn!("Attribute {} uses a lossy conversion ({:?} to {:?}) when reading values from the field {} in the ROS PointCloud2 message.", mapping.dst_attribute, ros_field.typ, mapping.dst_type, ros_field.name);
+                warn!(
+                    "Attribute {} uses a lossy conversion ({:?} to {:?}) when reading values from the field {} in the ROS PointCloud2 message.",
+                    mapping.dst_attribute, ros_field.typ, mapping.dst_type, ros_field.name
+                );
             }
         }
     }
@@ -610,7 +618,7 @@ mod conversions {
         dst_typ: DstType,
     ) -> Box<dyn ConverterDyn> {
         macro_rules! case {
-            ($fun:expr) => {
+            ($fun:expr_2021) => {
                 Box::new(Converter {
                     src_start: src_range.start,
                     src_end: src_range.end,

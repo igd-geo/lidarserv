@@ -253,7 +253,7 @@ impl TransformTree {
 mod test {
     use std::{f64::consts::PI, time::Duration};
 
-    use nalgebra::{vector, Matrix4, UnitQuaternion, Vector3};
+    use nalgebra::{Matrix4, UnitQuaternion, Vector3, vector};
 
     use crate::{ros::Transform, transform_tree::LookupError};
 
@@ -447,23 +447,26 @@ mod test {
         });
 
         tree.cleanup_before(Duration::from_secs_f64(5.0));
-        assert!(tree
-            .get_transform_at("frame", Duration::from_secs_f64(5.0))
-            .is_ok());
+        assert!(
+            tree.get_transform_at("frame", Duration::from_secs_f64(5.0))
+                .is_ok()
+        );
 
         tree.cleanup_before(Duration::from_secs_f64(6.0));
         assert_eq!(
             tree.get_transform_at("frame", Duration::from_secs_f64(5.0)),
             Err(LookupError::NotFound)
         );
-        assert!(tree
-            .get_transform_at("frame", Duration::from_secs_f64(6.0))
-            .is_ok());
+        assert!(
+            tree.get_transform_at("frame", Duration::from_secs_f64(6.0))
+                .is_ok()
+        );
 
         tree.cleanup_before(Duration::from_secs_f64(6.5));
-        assert!(tree
-            .get_transform_at("frame", Duration::from_secs_f64(6.5))
-            .is_ok());
+        assert!(
+            tree.get_transform_at("frame", Duration::from_secs_f64(6.5))
+                .is_ok()
+        );
     }
 
     #[test]
