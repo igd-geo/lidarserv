@@ -1,7 +1,8 @@
-use std::str::FromStr;
-
 use anyhow::anyhow;
 use clap::Parser;
+use std::str::FromStr;
+
+use crate::transform_tree::TransformPath;
 
 /// Connector that forwards point clouds from ROS into lidarserv.
 ///
@@ -44,6 +45,40 @@ pub struct AppOptions {
     // note: The default should probably be "map" according to REP-105 https://www.ros.org/reps/rep-0105.html
     #[clap(long, default_value = "camera_init")]
     pub world_frame: String,
+
+    /// Optional: Path through the transform tree that can be used .
+    ///
+    /// Example:
+    ///
+    /// ```
+    /// --tf-path "imu > sensor_base = SensorBase > world init"
+    /// ```
+    ///
+    /// The path is the list of transforms to apply to get from
+    /// the sensor frame to a global base frame.
+    ///
+    /// The first tf frame in the path is the local frame of the lidar sensor.
+    /// The actual frame specified in the PointCloud2 messages will be ignored.
+    /// The last tf frame in the path is the fixed base frame, that the points
+    /// will be transformed to. The actual frame in the `--world_frame` argument
+    /// will be ignored.
+    ///
+    /// Between two consecutive frames, there can be a '<', '>', '=' operator or a space.
+    ///
+    /// The '<' and '>' operators disambiguate if this is a
+    /// 'child > parent' or a 'parent < child' connection.
+    ///
+    /// If there is just a space between two frames, then the direction is chosen
+    /// automatically based on which of the two possible transforms exist in the tf tree
+    /// (if both exist, one is chosen arbitrarily).
+    ///
+    /// Between two consecutive frames, there can be a '=' operator.
+    /// It is used to fix cases, where multiple slightly different names are
+    /// used for the same frame (different upper/lower case, leading slash, ...).
+    /// Both frames will be assumed to be the same, no transformation will be
+    /// applied to get from the left to the right frame.
+    #[clap(long)]
+    pub tf_path: Option<TransformPath>,
 
     /// If set, the coordinates are flipped along the given axis.
     #[clap(long)]

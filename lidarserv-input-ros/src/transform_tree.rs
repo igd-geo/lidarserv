@@ -1,14 +1,18 @@
+use anyhow::anyhow;
+use log::{info, warn};
+use nalgebra::Matrix4;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
+    fmt::Display,
+    mem,
+    str::FromStr,
     time::Duration,
 };
-
-use log::warn;
-use nalgebra::Matrix4;
 
 use crate::ros::Transform;
 
 pub struct TransformTree {
+    force_tf_path: Option<TransformPath>,
     nodes: HashMap<String, TreeNode>,
 }
 
@@ -27,15 +31,79 @@ pub enum LookupError {
     Wait,
 }
 
+#[derive(Debug, Eq, PartialEq, Default, Clone)]
+pub struct TransformPath(Vec<TransformPathSegment>);
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct TransformPathSegment {
+    pub from: String,
+    pub to: String,
+    pub direction: TransformDirection,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum TransformDirection {
+    Auto,
+    ParentToChild,
+    ChildToParent,
+}
+
 impl TransformTree {
-    pub fn new() -> Self {
+    pub fn new(force_tf_path: Option<TransformPath>) -> Self {
         TransformTree {
+            force_tf_path,
             nodes: HashMap::new(),
         }
     }
 
+    /// Checks, if a transform should be inserted into the tree
+    /// or if it can be discarded. If a `force_tf_path` was given,
+    /// then only the transformations that are part of that
+    /// path need to be stored.
+    fn filter_tf(&self, new_transform: &Transform) -> bool {
+        let Some(path) = &self.force_tf_path else {
+            return true;
+        };
+        for segment in path.segments() {
+            match segment.direction {
+                TransformDirection::ParentToChild => {
+                    if new_transform.parent_frame == segment.from
+                        && new_transform.frame == segment.to
+                    {
+                        return true;
+                    }
+                }
+                TransformDirection::ChildToParent => {
+                    if new_transform.parent_frame == segment.to
+                        && new_transform.frame == segment.from
+                    {
+                        return true;
+                    }
+                }
+                TransformDirection::Auto => {
+                    if (new_transform.parent_frame == segment.from
+                        && new_transform.frame == segment.to)
+                        || (new_transform.parent_frame == segment.to
+                            && new_transform.frame == segment.from)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     /// Add a transform to the tree.
     pub fn add(&mut self, new_transform: Transform) {
+        // ignore transformations that are not part of the path,
+        // if a tf path is given
+        if !self.filter_tf(&new_transform) {
+            return;
+        }
+
+        // add
         let key = new_transform.frame.clone();
         if new_transform.is_static {
             self.nodes.insert(key, TreeNode::IsStatic(new_transform));
@@ -43,7 +111,7 @@ impl TransformTree {
             // get node for this frame
             let node = self
                 .nodes
-                .entry(new_transform.frame.clone())
+                .entry(key)
                 .or_insert_with(|| TreeNode::IsDynamic(VecDeque::new()));
 
             // ensure it is a dynamic route and return the buffered transforms
@@ -56,9 +124,8 @@ impl TransformTree {
 
             // Check that messages arrived in ascending order.
             // Drop otherwise.
-            if queue
-                .back()
-                .is_some_and(|b| b.time_stamp > new_transform.time_stamp)
+            if let Some(back) = queue.back()
+                && back.time_stamp > new_transform.time_stamp
             {
                 warn!("Out-of-order tf message");
                 return;
@@ -70,8 +137,12 @@ impl TransformTree {
     }
 
     /// Gets a transform from a specific frame to its direct parent frame at a
-    /// given time stamp. If there no transform exists at this exact time stamp,
+    /// given time stamp. If no transform exists at this exact time stamp,
     /// the ones before and after are interpolated.
+    ///
+    /// If a transform has multiple parents (should not be the case in a valid
+    /// tf tree, but real-world datasets oh well...), the optional `parent` parameter
+    /// can be used to disambiguate between the parents.
     ///
     /// Errors:
     ///
@@ -84,6 +155,7 @@ impl TransformTree {
         &self,
         frame: &str,
         time_stamp: Duration,
+        parent: Option<&str>,
     ) -> Result<Transform, LookupError> {
         // Get node. Otherwise request to wait for the first message
         let Some(node) = self.nodes.get(frame) else {
@@ -103,25 +175,23 @@ impl TransformTree {
                 }
 
                 // find the first element that is newer than the time stamp
-                let Some((index2, transform2)) = queue
-                    .iter()
-                    .enumerate()
-                    .find(|(_, t)| time_stamp <= t.time_stamp)
-                else {
+                let Some((index2, transform2)) = queue.iter().enumerate().find(|(_, t)| {
+                    time_stamp <= t.time_stamp && parent.is_none_or(|p| t.parent_frame == p)
+                }) else {
                     return Err(LookupError::Wait);
                 };
 
-                // from above we know that
-                //  - queue[0].time_stamp <= time_stamp
-                //  - queue[index2].time_stamp >= time_stamp
-                // therefore, if index2==0, we must have queue[index2].time_stamp == time_stamp
-                if index2 == 0 {
-                    return Ok(transform2.clone());
-                }
-
                 // interpolate with the element before.
-                let index1 = index2 - 1; // we know that index2 > 0, so this won't underflow.
-                let transform1 = &queue[index1];
+                let Some((index1, transform1)) = queue
+                    .iter()
+                    .enumerate()
+                    .take(index2)
+                    .rev()
+                    .find(|(_, transform)| transform.parent_frame == transform2.parent_frame)
+                else {
+                    return Err(LookupError::NotFound);
+                };
+                info!("index1 {index1} index2 {index2}");
                 let mut frac = (time_stamp.as_secs_f64() - transform1.time_stamp.as_secs_f64())
                     / (transform2.time_stamp.as_secs_f64() - transform1.time_stamp.as_secs_f64());
                 if !frac.is_finite() {
@@ -174,7 +244,7 @@ impl TransformTree {
                 .last()
                 .map(|c| c.parent_frame.as_str())
                 .unwrap_or(frame);
-            match self.get_transform_at(frame, time_stamp) {
+            match self.get_transform_at(frame, time_stamp, None) {
                 Ok(t) => {
                     chain.push(t);
                 }
@@ -186,6 +256,55 @@ impl TransformTree {
         (vec![], LookupError::NotFound)
     }
 
+    /// Create the transformation matrix for a given path through the transform tree.
+    fn transform_path(
+        &self,
+        time_stamp: Duration,
+        path: &TransformPath,
+    ) -> Result<Matrix4<f64>, LookupError> {
+        let mut matrix = Matrix4::identity();
+        for segment in path.segments() {
+            match segment.direction {
+                TransformDirection::ParentToChild => {
+                    let transform =
+                        self.get_transform_at(&segment.to, time_stamp, Some(&segment.from))?;
+                    matrix = transform.inverse_matrix() * matrix;
+                }
+                TransformDirection::ChildToParent => {
+                    let transform =
+                        self.get_transform_at(&segment.from, time_stamp, Some(&segment.to))?;
+                    info!("transform {transform:#?}");
+                    matrix = transform.matrix() * matrix;
+                }
+                TransformDirection::Auto => {
+                    let transform1 =
+                        self.get_transform_at(&segment.to, time_stamp, Some(&segment.from));
+                    let transform2 =
+                        self.get_transform_at(&segment.from, time_stamp, Some(&segment.to));
+                    match (transform1, transform2) {
+                        (Ok(_), Ok(transform)) => {
+                            warn!("Ambiguous tf-path at '{} {}'", segment.from, segment.to);
+                            matrix = transform.matrix() * matrix;
+                        }
+                        (Err(_), Ok(transform)) => {
+                            matrix = transform.matrix() * matrix;
+                        }
+                        (Ok(transform), Err(_)) => {
+                            matrix = transform.inverse_matrix() * matrix;
+                        }
+                        (Err(LookupError::NotFound), Err(LookupError::NotFound)) => {
+                            return Err(LookupError::NotFound);
+                        }
+                        (Err(LookupError::Wait), Err(_)) | (Err(_), Err(LookupError::Wait)) => {
+                            return Err(LookupError::Wait);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(matrix)
+    }
+
     /// Calculates a transformation matrix from one frame into another at the given point in time.
     pub fn transform(
         &self,
@@ -193,10 +312,19 @@ impl TransformTree {
         src_frame: &str,
         dst_frame: &str,
     ) -> Result<Matrix4<f64>, LookupError> {
+        // If a transform path is forcedd, just follow that.
+        // Ignore the src_frame and dst_frame.
+        if let Some(path) = &self.force_tf_path {
+            return self.transform_path(time_stamp, path);
+        }
+
+        // Simple case if the coordinates are already in the
+        // correct frame.
         if src_frame == dst_frame {
             return Ok(Matrix4::identity());
         }
 
+        // Find path from src and dst frames to their tree root.
         let (mut src_chain, src_e) = self.chain(src_frame, time_stamp);
         let (mut dst_chain, dst_e) = self.chain(dst_frame, time_stamp);
 
@@ -249,20 +377,187 @@ impl TransformTree {
     }
 }
 
+impl FromStr for TransformPath {
+    type Err = anyhow::Error;
+
+    fn from_str(mut s: &str) -> Result<Self, Self::Err> {
+        enum Token<'a> {
+            Equals,
+            GreaterThan,
+            SmallerThan,
+            Frame(&'a str),
+        }
+        impl<'a> Display for Token<'a> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let slice = match self {
+                    Token::Equals => "=",
+                    Token::GreaterThan => ">",
+                    Token::SmallerThan => "<",
+                    Token::Frame(s) => *s,
+                };
+                slice.fmt(f)
+            }
+        }
+
+        let mut next_token = || {
+            s = s.trim_ascii_start();
+            let first_char = s.chars().next()?;
+            match first_char {
+                '<' => {
+                    s = &s[1..];
+                    return Some(Token::SmallerThan);
+                }
+                '>' => {
+                    s = &s[1..];
+                    return Some(Token::GreaterThan);
+                }
+                '=' => {
+                    s = &s[1..];
+                    return Some(Token::Equals);
+                }
+                _ => (),
+            };
+
+            let end_pos = s.find(|c: char| c.is_whitespace() || ['<', '>', '='].contains(&c));
+            match end_pos {
+                None => {
+                    let frame = mem::take(&mut s);
+                    Some(Token::Frame(frame))
+                }
+                Some(i) => {
+                    let (frame, rest) = s.split_at(i);
+                    s = rest;
+                    Some(Token::Frame(frame))
+                }
+            }
+        };
+
+        enum State {
+            Start,
+            AfterFrame,
+            AfterOperator,
+        }
+        let mut state = State::Start;
+        let mut from = "";
+        let mut direction = TransformDirection::Auto;
+
+        let mut path = Vec::new();
+        while let Some(token) = next_token() {
+            match (state, token) {
+                (State::Start, Token::Frame(frame)) => {
+                    from = frame;
+                    state = State::AfterFrame;
+                }
+                (State::Start, operator) => {
+                    return Err(anyhow!("Expected frame, got {operator}"));
+                }
+                (State::AfterFrame, Token::Frame(frame)) => {
+                    path.push(TransformPathSegment {
+                        from: from.to_string(),
+                        to: frame.to_string(),
+                        direction: TransformDirection::Auto,
+                    });
+                    from = frame;
+                    state = State::AfterFrame;
+                }
+                (State::AfterFrame, Token::Equals) => {
+                    state = State::Start;
+                }
+                (State::AfterFrame, Token::GreaterThan) => {
+                    direction = TransformDirection::ChildToParent;
+                    state = State::AfterOperator;
+                }
+                (State::AfterFrame, Token::SmallerThan) => {
+                    direction = TransformDirection::ParentToChild;
+                    state = State::AfterOperator;
+                }
+                (State::AfterOperator, Token::Frame(frame)) => {
+                    path.push(TransformPathSegment {
+                        from: from.to_string(),
+                        direction,
+                        to: frame.to_string(),
+                    });
+                    from = frame;
+                    state = State::AfterFrame;
+                }
+                (State::AfterOperator, operator) => {
+                    return Err(anyhow!("Expected frame, got {operator}"));
+                }
+            }
+        }
+
+        match state {
+            State::Start => {
+                if !path.is_empty() {
+                    return Err(anyhow!("Expected frame, got EOF."));
+                }
+            }
+            State::AfterFrame => (),
+            State::AfterOperator => {
+                return Err(anyhow!("Expected frame, got EOF."));
+            }
+        }
+
+        Ok(TransformPath(path))
+    }
+}
+
+impl TransformPath {
+    fn segments(&self) -> &[TransformPathSegment] {
+        &self.0
+    }
+}
+
+/// Display transform tree (for debugging)
+impl Display for TransformTree {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut parent_to_child: HashMap<&str, HashSet<&str>> = HashMap::new();
+
+        for node in self.nodes.values() {
+            let (s1, s2) = match node {
+                TreeNode::IsDynamic(transforms) => transforms.as_slices(),
+                TreeNode::IsStatic(transform) => {
+                    (std::slice::from_ref(transform), &[] as &[Transform])
+                }
+            };
+            for transform in s1.iter().chain(s2) {
+                parent_to_child
+                    .entry(&transform.parent_frame)
+                    .or_default()
+                    .insert(&transform.frame);
+            }
+        }
+        let mut parents = parent_to_child.keys().copied().collect::<Vec<_>>();
+        parents.sort_unstable();
+        for parent in parents {
+            writeln!(f, " - {parent}")?;
+            let mut children = Vec::from_iter(parent_to_child[parent].iter().copied());
+            children.sort_unstable();
+            for child in children {
+                writeln!(f, "   --> {child}")?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use std::{f64::consts::PI, time::Duration};
+    use std::{f64::consts::PI, str::FromStr, time::Duration};
 
     use nalgebra::{Matrix4, UnitQuaternion, Vector3, vector};
 
-    use crate::{ros::Transform, transform_tree::LookupError};
+    use crate::{
+        ros::Transform,
+        transform_tree::{LookupError, TransformDirection, TransformPath, TransformPathSegment},
+    };
 
     use super::TransformTree;
 
     #[test]
     fn test_transformtree_get() {
         // create tree
-        let mut tree = TransformTree::new();
+        let mut tree = TransformTree::new(None);
 
         // fill with test data
         tree.add(Transform {
@@ -311,13 +606,13 @@ mod test {
 
         // test unknown topic
         assert_eq!(
-            tree.get_transform_at("unknown", Duration::from_secs(5)),
+            tree.get_transform_at("unknown", Duration::from_secs(5), None),
             Err(LookupError::Wait)
         );
 
         // test static topic
         assert_eq!(
-            tree.get_transform_at("static_frame", Duration::from_secs(5),),
+            tree.get_transform_at("static_frame", Duration::from_secs(5), None),
             Ok(Transform {
                 frame: "static_frame".to_string(),
                 parent_frame: "world".to_string(),
@@ -330,11 +625,11 @@ mod test {
 
         // test dynamic topic
         assert_eq!(
-            tree.get_transform_at("dynamic_frame", Duration::from_secs(4),),
+            tree.get_transform_at("dynamic_frame", Duration::from_secs(4), None),
             Err(LookupError::NotFound)
         );
         assert_eq!(
-            tree.get_transform_at("dynamic_frame", Duration::from_secs(5),),
+            tree.get_transform_at("dynamic_frame", Duration::from_secs(5), None),
             Ok(Transform {
                 frame: "dynamic_frame".to_string(),
                 parent_frame: "world".to_string(),
@@ -345,7 +640,7 @@ mod test {
             })
         );
         assert_eq!(
-            tree.get_transform_at("dynamic_frame", Duration::from_secs_f64(5.5),),
+            tree.get_transform_at("dynamic_frame", Duration::from_secs_f64(5.5), None),
             Ok(Transform {
                 frame: "dynamic_frame".to_string(),
                 parent_frame: "world".to_string(),
@@ -356,7 +651,7 @@ mod test {
             })
         );
         assert_eq!(
-            tree.get_transform_at("dynamic_frame", Duration::from_secs_f64(6.0),),
+            tree.get_transform_at("dynamic_frame", Duration::from_secs_f64(6.0), None),
             Ok(Transform {
                 frame: "dynamic_frame".to_string(),
                 parent_frame: "world".to_string(),
@@ -367,7 +662,7 @@ mod test {
             })
         );
         assert_eq!(
-            tree.get_transform_at("dynamic_frame", Duration::from_secs_f64(6.5),),
+            tree.get_transform_at("dynamic_frame", Duration::from_secs_f64(6.5), None),
             Ok(Transform {
                 frame: "dynamic_frame".to_string(),
                 parent_frame: "world".to_string(),
@@ -378,7 +673,7 @@ mod test {
             })
         );
         assert_eq!(
-            tree.get_transform_at("dynamic_frame", Duration::from_secs(7),),
+            tree.get_transform_at("dynamic_frame", Duration::from_secs(7), None),
             Ok(Transform {
                 frame: "dynamic_frame".to_string(),
                 parent_frame: "world".to_string(),
@@ -389,17 +684,17 @@ mod test {
             })
         );
         assert_eq!(
-            tree.get_transform_at("dynamic_frame", Duration::from_secs(8),),
+            tree.get_transform_at("dynamic_frame", Duration::from_secs(8), None),
             Err(LookupError::Wait)
         );
 
         // if exacly one transform has arrived yet
         assert_eq!(
-            tree.get_transform_at("dynamic_frame_single", Duration::from_secs(9),),
+            tree.get_transform_at("dynamic_frame_single", Duration::from_secs(9), None),
             Err(LookupError::NotFound)
         );
         assert_eq!(
-            tree.get_transform_at("dynamic_frame_single", Duration::from_secs(10),),
+            tree.get_transform_at("dynamic_frame_single", Duration::from_secs(10), None),
             Ok(Transform {
                 frame: "dynamic_frame_single".to_string(),
                 parent_frame: "world".to_string(),
@@ -410,7 +705,7 @@ mod test {
             })
         );
         assert_eq!(
-            tree.get_transform_at("dynamic_frame_single", Duration::from_secs(11),),
+            tree.get_transform_at("dynamic_frame_single", Duration::from_secs(11), None),
             Err(LookupError::Wait)
         );
     }
@@ -418,7 +713,7 @@ mod test {
     #[test]
     fn test_transformtree_cleanup() {
         // create tree
-        let mut tree = TransformTree::new();
+        let mut tree = TransformTree::new(None);
 
         // fill with test data
         tree.add(Transform {
@@ -448,23 +743,23 @@ mod test {
 
         tree.cleanup_before(Duration::from_secs_f64(5.0));
         assert!(
-            tree.get_transform_at("frame", Duration::from_secs_f64(5.0))
+            tree.get_transform_at("frame", Duration::from_secs_f64(5.0), None)
                 .is_ok()
         );
 
         tree.cleanup_before(Duration::from_secs_f64(6.0));
         assert_eq!(
-            tree.get_transform_at("frame", Duration::from_secs_f64(5.0)),
+            tree.get_transform_at("frame", Duration::from_secs_f64(5.0), None),
             Err(LookupError::NotFound)
         );
         assert!(
-            tree.get_transform_at("frame", Duration::from_secs_f64(6.0))
+            tree.get_transform_at("frame", Duration::from_secs_f64(6.0), None)
                 .is_ok()
         );
 
         tree.cleanup_before(Duration::from_secs_f64(6.5));
         assert!(
-            tree.get_transform_at("frame", Duration::from_secs_f64(6.5))
+            tree.get_transform_at("frame", Duration::from_secs_f64(6.5), None)
                 .is_ok()
         );
     }
@@ -472,7 +767,7 @@ mod test {
     #[test]
     fn test_transformtree_transform() {
         // create tree
-        let mut tree = TransformTree::new();
+        let mut tree = TransformTree::new(None);
 
         // fill with test data
         /*
@@ -596,5 +891,91 @@ mod test {
             tree.transform(Duration::ZERO, "a3", "c3").unwrap(),
             c3_to_a2.inverse_matrix() * a3_to_a2.matrix()
         );
+    }
+
+    #[test]
+    fn test_parse_transform_path() {
+        // empty path
+        assert_eq!(TransformPath::from_str("").unwrap(), TransformPath(vec![]));
+
+        // test child to parent operator
+        assert_eq!(
+            TransformPath::from_str("foo>bar").unwrap(),
+            TransformPath(vec![TransformPathSegment {
+                from: "foo".to_string(),
+                to: "bar".to_string(),
+                direction: TransformDirection::ChildToParent
+            }])
+        );
+
+        // test whitespaces are ignored
+        assert_eq!(
+            TransformPath::from_str("  foo  >  bar  ").unwrap(),
+            TransformPath(vec![TransformPathSegment {
+                from: "foo".to_string(),
+                to: "bar".to_string(),
+                direction: TransformDirection::ChildToParent
+            }])
+        );
+
+        // test parent to child operator
+        assert_eq!(
+            TransformPath::from_str("foo < bar").unwrap(),
+            TransformPath(vec![TransformPathSegment {
+                from: "foo".to_string(),
+                to: "bar".to_string(),
+                direction: TransformDirection::ParentToChild
+            }])
+        );
+
+        // test auto operator
+        assert_eq!(
+            TransformPath::from_str("foo bar").unwrap(),
+            TransformPath(vec![TransformPathSegment {
+                from: "foo".to_string(),
+                to: "bar".to_string(),
+                direction: TransformDirection::Auto
+            }])
+        );
+
+        // test longer path
+        assert_eq!(
+            TransformPath::from_str("foo bar baz").unwrap(),
+            TransformPath(vec![
+                TransformPathSegment {
+                    from: "foo".to_string(),
+                    to: "bar".to_string(),
+                    direction: TransformDirection::Auto
+                },
+                TransformPathSegment {
+                    from: "bar".to_string(),
+                    to: "baz".to_string(),
+                    direction: TransformDirection::Auto
+                }
+            ])
+        );
+
+        // test longer path with renamed frame
+        assert_eq!(
+            TransformPath::from_str("foo bar=BAR BAZ").unwrap(),
+            TransformPath(vec![
+                TransformPathSegment {
+                    from: "foo".to_string(),
+                    to: "bar".to_string(),
+                    direction: TransformDirection::Auto
+                },
+                TransformPathSegment {
+                    from: "BAR".to_string(),
+                    to: "BAZ".to_string(),
+                    direction: TransformDirection::Auto
+                }
+            ])
+        );
+
+        // test two adjacent operators are an error
+        assert!(TransformPath::from_str("foo < > bar").is_err());
+
+        // test unexpected EOF is an error
+        assert!(TransformPath::from_str("foo < ").is_err());
     }
 }

@@ -92,9 +92,9 @@ pub fn processing_thread(
     let mut converters = None;
 
     // transform tree for transforming coordinates into the world frame
-    let mut transform_tree = TransformTree::new();
+    let mut transform_tree = TransformTree::new(args.tf_path);
 
-    loop {
+    'main_loop: loop {
         // keep maintaining the transform tree to avoid the
         // transforms_rx channel to fill up too much.
         let mut clean_before = None;
@@ -165,11 +165,11 @@ pub fn processing_thread(
                 }
                 Err(LookupError::NotFound) => {}
             }
-            return Err(anyhow!(
-                "There is no viable transform from frame `{}` to frame `{}`.",
-                msg.frame,
-                args.world_frame
-            ));
+            warn!(
+                "There is no viable transform from frame `{}` to frame `{}`. (Dropping point cloud message.)",
+                msg.frame, &args.world_frame
+            );
+            continue 'main_loop;
         };
 
         // transform to world frame
