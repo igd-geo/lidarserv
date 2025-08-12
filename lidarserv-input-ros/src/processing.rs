@@ -92,7 +92,7 @@ pub fn processing_thread(
     let mut converters = None;
 
     // transform tree for transforming coordinates into the world frame
-    let mut transform_tree = TransformTree::new(args.tf_path);
+    let mut transform_tree = TransformTree::new(args.tf_path, args.raw_tf_frames);
 
     'main_loop: loop {
         // keep maintaining the transform tree to avoid the

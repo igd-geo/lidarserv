@@ -14,6 +14,7 @@ use crate::ros::Transform;
 pub struct TransformTree {
     force_tf_path: Option<TransformPath>,
     nodes: HashMap<String, TreeNode>,
+    use_raw_frames: bool,
 }
 
 #[derive(Debug)]
@@ -49,10 +50,11 @@ pub enum TransformDirection {
 }
 
 impl TransformTree {
-    pub fn new(force_tf_path: Option<TransformPath>) -> Self {
+    pub fn new(force_tf_path: Option<TransformPath>, use_raw_frames: bool) -> Self {
         TransformTree {
             force_tf_path,
             nodes: HashMap::new(),
+            use_raw_frames,
         }
     }
 
@@ -96,7 +98,11 @@ impl TransformTree {
     }
 
     /// Add a transform to the tree.
-    pub fn add(&mut self, new_transform: Transform) {
+    pub fn add(&mut self, mut new_transform: Transform) {
+        // canonicalize
+        self.canonicalize_frame_mut(&mut new_transform.frame);
+        self.canonicalize_frame_mut(&mut new_transform.parent_frame);
+
         // ignore transformations that are not part of the path,
         // if a tf path is given
         if !self.filter_tf(&new_transform) {
@@ -180,6 +186,12 @@ impl TransformTree {
                 }) else {
                     return Err(LookupError::Wait);
                 };
+
+                // exact match: directly return transform,
+                // without interpolating
+                if transform2.time_stamp == time_stamp {
+                    return Ok(transform2.clone());
+                }
 
                 // interpolate with the element before.
                 let Some((index1, transform1)) = queue
@@ -305,6 +317,28 @@ impl TransformTree {
         Ok(matrix)
     }
 
+    /// Returns a canonical representation of the frame.
+    /// This removes any leading slashes, because the ros
+    /// tf2 library ignores all leading slashes for backwards
+    /// compatibility reasons.
+    fn canonicalize_frame<'a>(&self, frame: &'a str) -> &'a str {
+        if self.use_raw_frames {
+            frame
+        } else {
+            frame.trim_start_matches('/')
+        }
+    }
+
+    /// Utility that calls canonicalize_frame on a String and updates
+    /// it accordingly.
+    fn canonicalize_frame_mut(&self, frame: &mut String) {
+        let canonical = self.canonicalize_frame(frame);
+        if !std::ptr::eq(canonical, frame.as_str()) {
+            // only make a copy of the string, if the canonicalisation changed anything...
+            *frame = canonical.to_string()
+        }
+    }
+
     /// Calculates a transformation matrix from one frame into another at the given point in time.
     pub fn transform(
         &self,
@@ -312,6 +346,10 @@ impl TransformTree {
         src_frame: &str,
         dst_frame: &str,
     ) -> Result<Matrix4<f64>, LookupError> {
+        // canonicalize input frames
+        let src_frame = self.canonicalize_frame(src_frame);
+        let dst_frame = self.canonicalize_frame(dst_frame);
+
         // If a transform path is forcedd, just follow that.
         // Ignore the src_frame and dst_frame.
         if let Some(path) = &self.force_tf_path {
@@ -557,7 +595,7 @@ mod test {
     #[test]
     fn test_transformtree_get() {
         // create tree
-        let mut tree = TransformTree::new(None);
+        let mut tree = TransformTree::new(None, false);
 
         // fill with test data
         tree.add(Transform {
@@ -713,7 +751,7 @@ mod test {
     #[test]
     fn test_transformtree_cleanup() {
         // create tree
-        let mut tree = TransformTree::new(None);
+        let mut tree = TransformTree::new(None, false);
 
         // fill with test data
         tree.add(Transform {
@@ -767,7 +805,7 @@ mod test {
     #[test]
     fn test_transformtree_transform() {
         // create tree
-        let mut tree = TransformTree::new(None);
+        let mut tree = TransformTree::new(None, false);
 
         // fill with test data
         /*

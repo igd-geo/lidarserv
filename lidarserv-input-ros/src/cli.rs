@@ -80,6 +80,9 @@ pub struct AppOptions {
     #[clap(long)]
     pub tf_path: Option<TransformPath>,
 
+    #[clap(long)]
+    pub raw_tf_frames: bool,
+
     /// If set, the coordinates are flipped along the given axis.
     #[clap(long)]
     pub transform_flip: Option<Axis>,
