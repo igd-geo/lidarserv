@@ -210,9 +210,7 @@ async fn viewer_mode(
                     match r {
                         Ok(()) => (),
                         Err(e) => {
-                            return Err(LidarServerError::Client(format!(
-                                "Invalid query {query_str}: {e}"
-                            )));
+                            break 'update_loop format!("Invalid query {query_str}: {e}");
                         }
                     }
                 }
