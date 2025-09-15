@@ -108,7 +108,7 @@ pub enum AttributeValue {
     Vec4(Vector4<AttributeValueScalar>),
 }
 
-trait ConvertAttributeScalar: Sized {
+pub trait ConvertAttributeScalar: Sized {
     fn from_int(v: i128) -> Result<Self, &'static str>;
     fn from_float(v: f64) -> Result<Self, &'static str>;
 
@@ -119,7 +119,7 @@ trait ConvertAttributeScalar: Sized {
         }
     }
 }
-trait ConvertAttributeValue: Sized {
+pub trait ConvertAttributeValue: Sized {
     fn from_scalar(v: AttributeValueScalar) -> Result<Self, &'static str>;
     fn from_vec3(v: Vector3<AttributeValueScalar>) -> Result<Self, &'static str>;
     fn from_vec4(v: Vector4<AttributeValueScalar>) -> Result<Self, &'static str>;
