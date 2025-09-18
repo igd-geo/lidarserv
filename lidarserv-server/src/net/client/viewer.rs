@@ -316,6 +316,12 @@ impl ReadViewerClient {
         self.component_type
     }
 
+    /// Returns the point layout of the point buffers returned by the
+    /// [Self::receive_update_local_coordinates] method.
+    pub fn point_layout(&self) -> &PointLayout {
+        &self.point_layout
+    }
+
     pub async fn receive_update_raw(
         &mut self,
         shutdown: &mut Receiver<()>,
