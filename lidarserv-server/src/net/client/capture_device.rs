@@ -71,13 +71,13 @@ impl CaptureDeviceClient {
         // We need that first, before we can start inserting points,
         // because it tells us how to encode the points (E.g. the las transformation (scale+offset))
         let pc_info = connection.read_message(shutdown).await?;
-        let (coordinate_system, attributes, codec, _) = match pc_info.header {
+        let (coordinate_system, attributes, codec) = match pc_info.header {
             Header::PointCloudInfo {
                 coordinate_system,
                 attributes,
                 codec,
-                current_bounding_box,
-            } => (coordinate_system, attributes, codec, current_bounding_box),
+                ..
+            } => (coordinate_system, attributes, codec),
             _ => {
                 return Err(LidarServerError::Protocol(
                     "Expected a `PointCloudInfo` message.".to_string(),

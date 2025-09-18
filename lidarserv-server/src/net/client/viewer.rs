@@ -6,8 +6,10 @@ use crate::net::protocol::messages::{
 use crate::net::{LidarServerError, PROTOCOL_VERSION};
 use lidarserv_common::geometry::bounding_box::Aabb;
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
-use lidarserv_common::geometry::grid::LeveledGridCell;
-use lidarserv_common::geometry::position::{POSITION_ATTRIBUTE_NAME, WithComponentTypeOnce};
+use lidarserv_common::geometry::grid::{GridHierarchy, LeveledGridCell};
+use lidarserv_common::geometry::position::{
+    POSITION_ATTRIBUTE_NAME, PositionComponentType, WithComponentTypeOnce,
+};
 use nalgebra::Vector3;
 use pasture_core::containers::{
     BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, InterleavedBuffer,
@@ -37,6 +39,9 @@ pub struct ReadViewerClient {
     attributes: Vec<PointAttributeDefinition>,
     point_layout: PointLayout,
     initial_bounding_box: Aabb<f64>,
+    node_hierarchy: GridHierarchy,
+    point_hierarchy: GridHierarchy,
+    component_type: PositionComponentType,
 }
 
 #[derive(Clone)]
@@ -183,13 +188,29 @@ impl ViewerClient {
         // wait for the point cloud info.
         // (we don't need that info at the moment, so all we do with it is ignoring it...)
         let pc_info = connection.read_message(shutdown).await?;
-        let (coordinate_system, codec, attributes, current_bounding_box) = match pc_info.header {
+        let (
+            coordinate_system,
+            codec,
+            attributes,
+            current_bounding_box,
+            node_hierarchy,
+            point_hierarchy,
+        ) = match pc_info.header {
             Header::PointCloudInfo {
                 coordinate_system,
                 codec,
                 attributes,
                 current_bounding_box,
-            } => (coordinate_system, codec, attributes, current_bounding_box),
+                node_hierarchy,
+                point_hierarchy,
+            } => (
+                coordinate_system,
+                codec,
+                attributes,
+                current_bounding_box,
+                node_hierarchy,
+                point_hierarchy,
+            ),
             _ => {
                 return Err(LidarServerError::Protocol(
                     "Expected a `PointCloudInfo` message.".to_string(),
@@ -197,6 +218,7 @@ impl ViewerClient {
             }
         };
         let point_layout = PointLayout::from_attributes(&attributes);
+        let component_type = PositionComponentType::from_layout(&point_layout);
 
         let (con_read, con_write) = connection.into_split();
         let inner = Inner {
@@ -216,6 +238,9 @@ impl ViewerClient {
             attributes,
             point_layout,
             initial_bounding_box: current_bounding_box,
+            node_hierarchy,
+            point_hierarchy,
+            component_type,
         };
 
         Ok(ViewerClient { read, write })
@@ -277,6 +302,18 @@ impl ReadViewerClient {
 
     pub fn initial_bounding_box(&self) -> Aabb<f64> {
         self.initial_bounding_box
+    }
+
+    pub fn point_hierarchy(&self) -> GridHierarchy {
+        self.point_hierarchy
+    }
+
+    pub fn node_hierarchy(&self) -> GridHierarchy {
+        self.node_hierarchy
+    }
+
+    pub fn component_type(&self) -> PositionComponentType {
+        self.component_type
     }
 
     pub async fn receive_update_raw(

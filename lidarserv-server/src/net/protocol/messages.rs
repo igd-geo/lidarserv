@@ -1,7 +1,7 @@
 use crate::index::query::Query;
 use lidarserv_common::geometry::bounding_box::Aabb;
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
-use lidarserv_common::geometry::grid::LeveledGridCell;
+use lidarserv_common::geometry::grid::{GridHierarchy, LeveledGridCell};
 use lidarserv_common::io::InMemoryPointCodec;
 use lidarserv_common::io::pasture::{Compression, PastureIo};
 use pasture_core::layout::PointAttributeDefinition;
@@ -22,6 +22,8 @@ pub enum Header {
         attributes: Vec<PointAttributeDefinition>,
         codec: PointDataCodec,
         current_bounding_box: Aabb<f64>,
+        node_hierarchy: GridHierarchy,
+        point_hierarchy: GridHierarchy,
     },
 
     /// First command sent from the client to the server after exchanging the hello message.

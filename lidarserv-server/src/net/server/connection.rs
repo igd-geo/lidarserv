@@ -65,6 +65,8 @@ pub async fn handle_connection(
                 .collect(),
             codec,
             current_bounding_box: index.current_aabb(),
+            node_hierarchy: index.node_hierarchy(),
+            point_hierarchy: index.point_hierarchy(),
         },
         &[],
     )
