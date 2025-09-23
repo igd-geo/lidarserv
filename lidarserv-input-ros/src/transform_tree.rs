@@ -203,7 +203,6 @@ impl TransformTree {
                 else {
                     return Err(LookupError::NotFound);
                 };
-                info!("index1 {index1} index2 {index2}");
                 let mut frac = (time_stamp.as_secs_f64() - transform1.time_stamp.as_secs_f64())
                     / (transform2.time_stamp.as_secs_f64() - transform1.time_stamp.as_secs_f64());
                 if !frac.is_finite() {
