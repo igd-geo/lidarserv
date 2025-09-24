@@ -10,6 +10,7 @@ use log::{debug, info, warn};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Receiver;
 
@@ -168,136 +169,162 @@ async fn viewer_mode(
     });
 
     // query
-    let query_thread = thread::spawn(move || -> Result<(), LidarServerError> {
-        let codec = codec.instance();
-        let mut sent_updates = 0;
-        let mut ackd_updates = 0;
+    let query_thread = {
+        let index = Arc::clone(&index);
+        let updates_sender = updates_sender.clone();
+        thread::spawn(move || -> Result<(), LidarServerError> {
+            let codec = codec.instance();
+            let mut sent_updates = 0;
+            let mut ackd_updates = 0;
 
-        let mut query_config = QueryConfig {
-            one_shot: true,
-            point_filtering: true,
-        };
-        let mut query_done = true;
-
-        let Ok(mut reader) = index.reader(EmptyQuery);
-        let queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
-        let mut at_least_one_update = true;
-
-        let error_msg = 'update_loop: loop {
-            // update
-            let maybe_new_query = if query_done {
-                Some(queries_receiver.recv())
-            } else if !query_config.one_shot && !at_least_one_update {
-                reader.wait_update_or(&queries_receiver)
-            } else {
-                match queries_receiver.try_recv() {
-                    Ok(ok) => Some(Ok(ok)),
-                    Err(TryRecvError::Disconnected) => Some(Err(RecvError)),
-                    Err(TryRecvError::Empty) => None,
-                }
+            let mut query_config = QueryConfig {
+                one_shot: true,
+                point_filtering: true,
             };
-            match maybe_new_query {
-                Some(Ok((q, c))) => {
-                    query_done = false;
-                    query_config = c;
-                    reader.update();
-                    let query_str = format!("{q:?}");
-                    let r = reader.set_query(
-                        q,
-                        ReaderQueryConfig {
-                            enable_attribute_index: true,
-                            enable_point_filtering: query_config.point_filtering,
-                        },
-                    );
-                    match r {
-                        Ok(()) => (),
-                        Err(e) => {
-                            break 'update_loop format!("Invalid query {query_str}: {e}");
+            let mut query_done = true;
+
+            let Ok(mut reader) = index.reader(EmptyQuery);
+            let queries_receiver = queries_receiver; // just to move it into the thread and make it mutable in here
+            let mut at_least_one_update = true;
+
+            let error_msg = 'update_loop: loop {
+                // update
+                let maybe_new_query = if query_done {
+                    Some(queries_receiver.recv())
+                } else if !query_config.one_shot && !at_least_one_update {
+                    reader.wait_update_or(&queries_receiver)
+                } else {
+                    match queries_receiver.try_recv() {
+                        Ok(ok) => Some(Ok(ok)),
+                        Err(TryRecvError::Disconnected) => Some(Err(RecvError)),
+                        Err(TryRecvError::Empty) => None,
+                    }
+                };
+                match maybe_new_query {
+                    Some(Ok((q, c))) => {
+                        query_done = false;
+                        query_config = c;
+                        reader.update();
+                        let query_str = format!("{q:?}");
+                        let r = reader.set_query(
+                            q,
+                            ReaderQueryConfig {
+                                enable_attribute_index: true,
+                                enable_point_filtering: query_config.point_filtering,
+                            },
+                        );
+                        match r {
+                            Ok(()) => (),
+                            Err(e) => {
+                                break 'update_loop format!("Invalid query {query_str}: {e}");
+                            }
                         }
                     }
-                }
-                Some(Err(RecvError)) => return Ok(()),
-                None => (),
-            };
-
-            at_least_one_update = false;
-
-            // check for new nodes to load
-            if let Some((node_id, points)) = reader.load_one() {
-                at_least_one_update = true;
-                sent_updates += 1;
-                let mut data = Vec::new();
-                if let Err(e) = codec.write_points(&points, &mut data) {
-                    break 'update_loop format!("{e}");
-                }
-                if let Err(e) = updates_sender.blocking_send((
-                    Node {
-                        node: node_id,
-                        update_number: sent_updates,
-                    },
-                    data,
-                )) {
-                    break 'update_loop format!("{e}");
-                }
-            }
-
-            // check for new nodes to remove
-            if let Some(node_id) = reader.remove_one() {
-                at_least_one_update = true;
-                sent_updates += 1;
-                if let Err(e) = updates_sender.blocking_send((
-                    Node {
-                        node: node_id,
-                        update_number: sent_updates,
-                    },
-                    vec![],
-                )) {
-                    break 'update_loop format!("{e}");
-                }
-            }
-
-            // check for new nodes to update
-            if let Some((node_id, points)) = reader.reload_one() {
-                at_least_one_update = true;
-                sent_updates += 1;
-                let mut data = Vec::new();
-                if let Err(e) = codec.write_points(&points, &mut data) {
-                    break 'update_loop format!("{e}");
-                }
-                if let Err(e) = updates_sender.blocking_send((
-                    Node {
-                        node: node_id,
-                        update_number: sent_updates,
-                    },
-                    data,
-                )) {
-                    break 'update_loop format!("{e}");
-                }
-            }
-
-            // notify client of EOF
-            if query_config.one_shot && !at_least_one_update {
-                query_done = true;
-                if let Err(e) = updates_sender.blocking_send((ResultComplete, vec![])) {
-                    break 'update_loop format!("{e}");
-                }
-            }
-
-            // wait for acks
-            let max_nr_inflight_updates = if query_config.one_shot { 100 } else { 10 };
-            while ackd_updates + max_nr_inflight_updates < sent_updates {
-                ackd_updates = match query_ack_receiver.recv() {
-                    Ok(v) => v,
-                    Err(RecvError) => return Ok(()),
+                    Some(Err(RecvError)) => return Ok(()),
+                    None => (),
                 };
+
+                at_least_one_update = false;
+
+                // check for new nodes to load
+                if let Some((node_id, points)) = reader.load_one() {
+                    at_least_one_update = true;
+                    sent_updates += 1;
+                    let mut data = Vec::new();
+                    if let Err(e) = codec.write_points(&points, &mut data) {
+                        break 'update_loop format!("{e}");
+                    }
+                    if let Err(e) = updates_sender.blocking_send((
+                        Node {
+                            node: node_id,
+                            update_number: sent_updates,
+                        },
+                        data,
+                    )) {
+                        break 'update_loop format!("{e}");
+                    }
+                }
+
+                // check for new nodes to remove
+                if let Some(node_id) = reader.remove_one() {
+                    at_least_one_update = true;
+                    sent_updates += 1;
+                    if let Err(e) = updates_sender.blocking_send((
+                        Node {
+                            node: node_id,
+                            update_number: sent_updates,
+                        },
+                        vec![],
+                    )) {
+                        break 'update_loop format!("{e}");
+                    }
+                }
+
+                // check for new nodes to update
+                if let Some((node_id, points)) = reader.reload_one() {
+                    at_least_one_update = true;
+                    sent_updates += 1;
+                    let mut data = Vec::new();
+                    if let Err(e) = codec.write_points(&points, &mut data) {
+                        break 'update_loop format!("{e}");
+                    }
+                    if let Err(e) = updates_sender.blocking_send((
+                        Node {
+                            node: node_id,
+                            update_number: sent_updates,
+                        },
+                        data,
+                    )) {
+                        break 'update_loop format!("{e}");
+                    }
+                }
+
+                // notify client of EOF
+                if query_config.one_shot && !at_least_one_update {
+                    query_done = true;
+                    if let Err(e) = updates_sender.blocking_send((ResultComplete, vec![])) {
+                        break 'update_loop format!("{e}");
+                    }
+                }
+
+                // wait for acks
+                let max_nr_inflight_updates = if query_config.one_shot { 100 } else { 10 };
+                while ackd_updates + max_nr_inflight_updates < sent_updates {
+                    ackd_updates = match query_ack_receiver.recv() {
+                        Ok(v) => v,
+                        Err(RecvError) => return Ok(()),
+                    };
+                }
+            };
+            warn!("{addr}: Query thread finished unexpectedly: {error_msg}");
+            updates_sender
+                .blocking_send((Header::Error { message: error_msg }, vec![]))
+                .ok();
+            Ok(())
+        })
+    };
+
+    // metrics
+    let metrics_thread = {
+        let mut shutdown = shutdown.resubscribe();
+        thread::spawn(move || {
+            loop {
+                thread::sleep(Duration::from_secs_f64(0.1));
+                let metrics = index.metrics();
+                if updates_sender
+                    .blocking_send((Header::Metrics(metrics), Vec::new()))
+                    .is_err()
+                {
+                    // exit thread if channel was closed.
+                    return;
+                }
+                match shutdown.try_recv() {
+                    Err(tokio::sync::broadcast::error::TryRecvError::Empty) => (),
+                    _ => return,
+                }
             }
-        };
-        warn!("{addr}: Query thread finished unexpectedly: {error_msg}");
-        updates_sender
-            .blocking_send((Header::Error { message: error_msg }, vec![]))
-            .ok();
-        Ok(())
-    });
+        })
+    };
 
     // read incoming messages and send to queries to query thread
     let receive_queries = async move {
@@ -328,5 +355,9 @@ async fn viewer_mode(
         .unwrap()
         .unwrap()?;
     send_task.await.unwrap()?;
+    tokio::task::spawn_blocking(move || metrics_thread.join())
+        .await
+        .unwrap()
+        .unwrap();
     result
 }

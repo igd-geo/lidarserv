@@ -10,6 +10,7 @@ use lidarserv_common::geometry::grid::{GridHierarchy, LeveledGridCell};
 use lidarserv_common::geometry::position::{
     POSITION_ATTRIBUTE_NAME, PositionComponentType, WithComponentTypeOnce,
 };
+use lidarserv_common::index::live_metrics_collector::MetricsSnapshot;
 use nalgebra::Vector3;
 use pasture_core::containers::{
     BorrowedBuffer, BorrowedBufferExt, BorrowedMutBufferExt, InterleavedBuffer,
@@ -42,6 +43,7 @@ pub struct ReadViewerClient {
     node_hierarchy: GridHierarchy,
     point_hierarchy: GridHierarchy,
     component_type: PositionComponentType,
+    metrics_callback: Box<dyn FnMut(MetricsSnapshot) + Send>,
 }
 
 #[derive(Clone)]
@@ -241,6 +243,7 @@ impl ViewerClient {
             node_hierarchy,
             point_hierarchy,
             component_type,
+            metrics_callback: Box::new(|_| {}),
         };
 
         Ok(ViewerClient { read, write })
@@ -316,6 +319,10 @@ impl ReadViewerClient {
         self.component_type
     }
 
+    pub fn on_metrics(&mut self, fun: impl FnMut(MetricsSnapshot) + Send + 'static) {
+        self.metrics_callback = Box::new(fun)
+    }
+
     /// Returns the point layout of the point buffers returned by the
     /// [Self::receive_update_local_coordinates] method.
     pub fn point_layout(&self) -> &PointLayout {
@@ -326,37 +333,41 @@ impl ReadViewerClient {
         &mut self,
         shutdown: &mut Receiver<()>,
     ) -> Result<PartialResult<Vec<u8>>, LidarServerError> {
-        let message = self.connection.read_message(shutdown).await?;
-        match message.header {
-            Header::Node {
-                node,
-                update_number,
-            } => {
-                // send ack
-                {
-                    let mut lock = self.inner.lock().await;
-                    if update_number >= lock.last_ack + lock.ack_after {
-                        lock.connection
-                            .write_message(&Header::ResultAck { update_number }, &[])
-                            .await?;
-                        lock.last_ack = update_number;
+        loop {
+            let message = self.connection.read_message(shutdown).await?;
+            match message.header {
+                Header::Node {
+                    node,
+                    update_number,
+                } => {
+                    // send ack
+                    {
+                        let mut lock = self.inner.lock().await;
+                        if update_number >= lock.last_ack + lock.ack_after {
+                            lock.connection
+                                .write_message(&Header::ResultAck { update_number }, &[])
+                                .await?;
+                            lock.last_ack = update_number;
+                        }
+                    }
+
+                    // result
+                    if message.payload.is_empty() {
+                        return Ok(PartialResult::DeleteNode(node));
+                    } else {
+                        return Ok(PartialResult::UpdateNode(NodeUpdate {
+                            node_id: node,
+                            points: message.payload,
+                        }));
                     }
                 }
-
-                // result
-                if message.payload.is_empty() {
-                    Ok(PartialResult::DeleteNode(node))
-                } else {
-                    Ok(PartialResult::UpdateNode(NodeUpdate {
-                        node_id: node,
-                        points: message.payload,
-                    }))
-                }
+                Header::ResultComplete => return Ok(PartialResult::Complete),
+                Header::Metrics(metrics) => (self.metrics_callback)(metrics),
+                _ => return Err(LidarServerError::Protocol(
+                    "Expected an `IncrementalResult`, `ResultComplete` or an `Metrics` message."
+                        .to_string(),
+                )),
             }
-            Header::ResultComplete => Ok(PartialResult::Complete),
-            _ => Err(LidarServerError::Protocol(
-                "Expected an `IncrementalResult` or an `ResultComplete` message.".to_string(),
-            )),
         }
     }
 

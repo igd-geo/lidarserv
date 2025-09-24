@@ -1,3 +1,4 @@
+use crate::index::live_metrics_collector::{LiveMetricsCollector, MetricName};
 use crate::lru_cache::later::{Later, LaterSender};
 use crate::lru_cache::lru::Lru;
 use std::error::Error;
@@ -86,6 +87,7 @@ struct PageManagerInner<K, V, E, D> {
     directory: D,
     max_size: usize,
     next_page_number: u32,
+    metrics: Arc<LiveMetricsCollector>,
 }
 
 /// Responsible for loading pages to/from disk.
@@ -141,7 +143,12 @@ where
 {
     /// Creates a new PageManager.
     /// Only needed when server/evaluation is started.
-    pub fn new(page_loader: P, page_directory: D, max_size: usize) -> Self {
+    pub fn new(
+        page_loader: P,
+        page_directory: D,
+        max_size: usize,
+        metrics: Arc<LiveMetricsCollector>,
+    ) -> Self {
         PageManager {
             loader: page_loader,
             inner: Mutex::new(PageManagerInner {
@@ -149,6 +156,7 @@ where
                 directory: page_directory,
                 max_size,
                 next_page_number: 0,
+                metrics,
             }),
             wakeup: Condvar::new(),
         }
@@ -535,7 +543,8 @@ where
 impl<K, V, F, D> PageManagerInner<K, V, F, D> {
     #[inline]
     fn plot_cache_size(&self) {
-        plot!("Page LRU Cache size", self.cache.len() as f64)
+        self.metrics
+            .metric(MetricName::NrNodesCached, self.cache.len());
     }
 
     /// Plots the number of pages that were used in the defined time interval.
@@ -550,7 +559,8 @@ impl<K, V, F, D> PageManagerInner<K, V, F, D> {
                 count += 1;
             }
         }
-        plot!("Page LRU Cache recently used", count as f64);
+        self.metrics
+            .metric(MetricName::NrNodesRecentlyAccessed, count);
     }
 }
 

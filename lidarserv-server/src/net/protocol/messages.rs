@@ -2,6 +2,7 @@ use crate::index::query::Query;
 use lidarserv_common::geometry::bounding_box::Aabb;
 use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::geometry::grid::{GridHierarchy, LeveledGridCell};
+use lidarserv_common::index::live_metrics_collector::MetricsSnapshot;
 use lidarserv_common::io::InMemoryPointCodec;
 use lidarserv_common::io::pasture::{Compression, PastureIo};
 use pasture_core::layout::PointAttributeDefinition;
@@ -48,6 +49,11 @@ pub enum Header {
         node: LeveledGridCell,
         update_number: u64,
     },
+
+    /// Sent from the server in a regular interval to report metrics to the client.
+    /// Currently only used in viewer mode, but there is no reason to not also send
+    /// it in capture device mode in the future.
+    Metrics(MetricsSnapshot),
 
     /// Sent from the server to the client, to indicate that the current query result is complete.
     /// This message is sent after the last IncrementalResult message.

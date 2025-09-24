@@ -17,15 +17,15 @@ use nalgebra::Point3;
 use pasture_core::containers::{
     BorrowedBuffer, BorrowedBufferExt, InterleavedBuffer, OwningBuffer, VectorBuffer,
 };
+use rustc_hash::FxHashMap as HashMap;
 use std::{
-    collections::{hash_map::Entry},
+    collections::hash_map::Entry,
     sync::{Arc, Condvar, Mutex},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 use thiserror::Error;
 use tracy_client::{plot, secondary_frame_mark, span};
-use rustc_hash::FxHashMap as HashMap;
 
 pub(super) struct InsertionTask {
     /// Points to insert in the node
@@ -52,7 +52,6 @@ struct Inboxes {
     waiter: Arc<Condvar>,
     current_gen: u32,
     current_gen_started: Instant,
-    current_gen_points: u32,
     priority_function: TaskPriorityFunction,
     metrics: Arc<LiveMetricsCollector>,
 }
@@ -93,7 +92,6 @@ impl Inboxes {
             waiter,
             current_gen: 0,
             current_gen_started: Instant::now(),
-            current_gen_points: 0,
             priority_function,
             metrics,
         }
@@ -106,9 +104,6 @@ impl Inboxes {
         min_generation: u32,
         max_generation: u32,
     ) {
-        if node.lod == LodLevel::base() {
-            self.current_gen_points += add_points.len() as u32
-        }
         match self.tasks.entry(node) {
             Entry::Occupied(mut entry) => {
                 entry.get_mut().points.push(add_points);
@@ -171,12 +166,7 @@ impl Inboxes {
         let now = Instant::now();
         let generation_duration: Duration = Duration::from_secs_f64(0.1);
         while now.duration_since(self.current_gen_started) > generation_duration {
-            plot!(
-                "Incoming points per generation",
-                self.current_gen_points as f64
-            );
             self.current_gen += 1;
-            self.current_gen_points = 0;
             self.current_gen_started += generation_duration;
             secondary_frame_mark!("mno generation");
         }
@@ -184,16 +174,14 @@ impl Inboxes {
 
     #[inline]
     fn plot_tasks_len(&self) {
-        let val = self.tasks.len() as f64;
+        let val = self.tasks.len();
         self.metrics.metric(MetricName::NrIncomingTasks, val);
-        plot!("Task queue length", val);
     }
 
     #[inline]
     fn plot_nr_of_points(&self) {
-        let val = self.nr_of_points() as f64;
+        let val = self.nr_of_points();
         self.metrics.metric(MetricName::NrIncomingPoints, val);
-        plot!("Task queue length in points", val);
     }
 }
 
@@ -511,7 +499,7 @@ impl OctreeWriter {
     }
 
     pub fn insert(&mut self, points: &VectorBuffer) {
-        let nr_points = points.len() as f64;
+        let nr_points = points.len();
 
         struct Wct<'a> {
             points: &'a VectorBuffer,

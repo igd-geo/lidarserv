@@ -6,6 +6,7 @@ use crate::{
         grid::{GridHierarchy, LeveledGridCell, LodLevel},
         position::WithComponentTypeOnce,
     },
+    index::live_metrics_collector::MetricsSnapshot,
     io::{
         InMemoryPointCodec, PointIoError,
         pasture::{Compression, PastureIo},
@@ -90,6 +91,12 @@ struct Inner {
 
 impl Octree {
     pub fn new(config: OctreeParams) -> anyhow::Result<Self> {
+        let metrics = match config.metrics_file {
+            Some(file) => LiveMetricsCollector::new_file_backed_collector(&file)?,
+            None => LiveMetricsCollector::new_discarding_collector(),
+        };
+        metrics.set_path(config.point_data_folder.clone());
+        let metrics = Arc::new(metrics);
         let page_directory = GridCellDirectory::new(config.max_lod, config.directory_file.clone())?;
         let codec = PastureIo::new(if config.enable_compression {
             Compression::Lz4
@@ -98,12 +105,12 @@ impl Octree {
         });
         let codec: Arc<dyn InMemoryPointCodec + Send + Sync> = Arc::new(codec);
         let page_loader = OctreeLoader::new(config.point_data_folder.clone(), Arc::clone(&codec));
-        let page_cache = OctreeNodeCache::new(page_loader, page_directory, config.max_cache_size);
-        let metrics = match config.metrics_file {
-            Some(file) => LiveMetricsCollector::new_file_backed_collector(&file)?,
-            None => LiveMetricsCollector::new_discarding_collector(),
-        };
-        let metrics = Arc::new(metrics);
+        let page_cache = OctreeNodeCache::new(
+            page_loader,
+            page_directory,
+            config.max_cache_size,
+            Arc::clone(&metrics),
+        );
 
         let mut attribute_index = AttributeIndex::new();
         for attribute_index_cfg in config.attribute_indexes {
@@ -209,6 +216,10 @@ impl Octree {
 
     pub fn cache_size(&self) -> usize {
         self.inner.page_cache.size().1
+    }
+
+    pub fn metrics(&self) -> MetricsSnapshot {
+        self.inner.metrics.snapshot()
     }
 }
 
