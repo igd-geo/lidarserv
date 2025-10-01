@@ -11,6 +11,3 @@ pasture-io = {git = "https://github.com/igd-geo/pasture.git", rev = "83704b589f6
 
 [profile.dev]
 opt-level = 3
-
-[profile.release]
-opt-level = 3
