@@ -21,3 +21,11 @@ rosrust = "0.9.12"
 ctrlc = "3.4.5"
 byteorder = "1.5"
 console = "0.15"
+r2r ={ version = "0.9.5", optional = true }
+futures = { version = "*", optional = true }
+
+[features]
+
+# Add support for ros2 via the r2r crate.
+# You must source your ros environment when enabling this feature.
+ros2 = ["r2r", "futures"]

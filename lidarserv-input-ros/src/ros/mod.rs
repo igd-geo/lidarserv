@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::warn;
 use nalgebra::{Matrix4, UnitQuaternion, Vector3, matrix};
 use std::{
     sync::{Arc, mpsc},
@@ -6,8 +7,11 @@ use std::{
 };
 
 use crate::{cli::AppOptions, status::Status};
-
+use anyhow::anyhow;
 mod ros1;
+
+#[cfg(feature = "ros2")]
+mod ros2;
 
 pub fn ros_thread(
     args: AppOptions,
@@ -18,7 +22,42 @@ pub fn ros_thread(
 ) -> Result<()> {
     // in the future this could call either ros1 or ros2
     // (once we add support for ros2)
-    ros1::ros_thread(args, commands_rx, transforms_tx, points_tx, status)
+
+    enum RosVersion {
+        Ros1,
+        Ros2,
+    }
+
+    let ros_version = if let Ok(version) = std::env::var("ROS_VERSION") {
+        match version.trim() {
+            "1" => RosVersion::Ros1,
+            "2" => RosVersion::Ros2,
+            _ => return Err(anyhow!("Unsupported ROS_VERSION: {version}")),
+        }
+    } else {
+        warn!(
+            "Environment variable ROS_VERSION is not set. Did you forget to source your ros environment?"
+        );
+        if cfg!(feature = "ros2") {
+            warn!("Assuming ROS_VERSION=2.");
+            RosVersion::Ros2
+        } else {
+            warn!("Assuming ROS_VERSION=1.");
+            RosVersion::Ros1
+        }
+    };
+
+    match ros_version {
+        RosVersion::Ros1 => ros1::ros_thread(args, commands_rx, transforms_tx, points_tx, status),
+
+        #[cfg(feature = "ros2")]
+        RosVersion::Ros2 => ros2::ros_thread(args, commands_rx, transforms_tx, points_tx, status),
+
+        #[cfg(not(feature = "ros2"))]
+        RosVersion::Ros2 => Err(anyhow!(
+            "Ros 2 support is not enabled. (Source ros environment, then compile with '--features ros2')"
+        )),
+    }
 }
 
 pub enum Command {
