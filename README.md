@@ -1,8 +1,13 @@
 # LidarServ
 
-LidarServ is a real time indexer for LiDAR point clouds. It can index, query and visualize point clouds live while it is being recorded. [Video](img/mno.mp4)
+LidarServ is a real time indexer for LiDAR point clouds. It can index, query and visualize point clouds live while it is being recorded.
 
-<img width="1024" height="1024" alt="lidarserv-logo" src="https://github.com/user-attachments/assets/b51dff3c-93ba-4256-9626-00c5fe3c5c02" />
+<img width="100" height="100" alt="lidarserv-logo" src="https://github.com/user-attachments/assets/b51dff3c-93ba-4256-9626-00c5fe3c5c02" />
+
+<div align="center">
+  <video src='https://github.com/user-attachments/assets/7db93f06-e0d2-456e-a8e3-3b0c8e5cdc5c' width="200" muted loop/></video>
+  <strong>Source:</strong> <a href="https://ars.els-cdn.com/content/image/1-s2.0-S0097849325000950-mmc1.mp4">Elsevier Supplementary Material</a>
+</div>
 
 ## Building
 
