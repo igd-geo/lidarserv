@@ -9,6 +9,13 @@ LidarServ is a real time indexer for LiDAR point clouds. It can index, query and
   <strong>Source:</strong> <a href="https://ars.els-cdn.com/content/image/1-s2.0-S0097849325000950-mmc1.mp4">Elsevier Supplementary Material</a>
 </div>
 
+## Table of Contents
+- [Building](#building)
+- [Tutorial](#tutorial)
+- [Query Language](#query-language)
+- [Publications](#publications)
+- [Contact](#contact)
+
 ## Building
 
 LidarServ uses the rust programming language. To install rust, please refer to the [official installation guide](https://www.rust-lang.org/tools/install).
@@ -296,7 +303,7 @@ Get an overview of the entire point cloud at a lower resolution:
 lod(2)
 ```
 
-Get a part of the point cloude in a small bounding box:
+Get a part of the point cloud in a small bounding box:
 
 ```
 aabb(
@@ -355,3 +362,7 @@ view_frustum(
  - Hermann, Paul. “Real-Time Indexing of Arbitrarily Attributed Point Clouds,” 2023. https://publica.fraunhofer.de/handle/publica/458643. https://github.com/Pahegi/bachelor-thesis.
  - Bormann, Pascal, Tobias, Dorra, Bastian, Stahl, and Dieter W., Fellner. "Real-time Indexing of Point Cloud Data During LiDAR Capture." . In Computer Graphics and Visual Computing (CGVC). The Eurographics Association, 2022. https://doi.org/10.2312/cgvc.20221173.
  - Dorra, Tobias. “Indexing of LiDAR Point Clouds during Capture,” 2022. https://publica.fraunhofer.de/handle/publica/416643. https://github.com/tobias93/master-thesis.
+
+## Contact
+
+For inquiries related to LidarServ, visit: [Fraunhofer IGD](https://www.igd.fraunhofer.de/en/industries/information-technology/infrastructure/processing-large-data-volumes.html)
