@@ -1,4 +1,5 @@
 use std::{
+    panic::resume_unwind,
     sync::{
         Arc,
         atomic::Ordering,
@@ -10,7 +11,7 @@ use std::{
 use log::warn;
 use nalgebra::{Quaternion, UnitQuaternion, vector};
 use r2r::{QosProfile, sensor_msgs::msg::PointCloud2, tf2_msgs::msg::TFMessage};
-use tokio::spawn;
+use tokio::{spawn, task::spawn_blocking};
 
 use crate::{
     cli::AppOptions,
@@ -77,17 +78,28 @@ pub async fn ros_thread(
             .await;
     });
 
-    loop {
-        node.spin_once(Duration::from_secs_f64(0.1));
+    let r = spawn_blocking(move || {
+        loop {
+            node.spin_once(Duration::from_secs_f64(0.1));
 
-        // check for exit command every 0.1 seconds.
-        // not ideal, but works for now.
-        match commands_rx.try_recv() {
-            Ok(Command::Exit) => break,
-            Err(TryRecvError::Disconnected) => break,
-            Err(TryRecvError::Empty) => (),
+            // check for exit command every 0.1 seconds.
+            // not ideal, but works for now.
+            match commands_rx.try_recv() {
+                Ok(Command::Exit) => break,
+                Err(TryRecvError::Disconnected) => break,
+                Err(TryRecvError::Empty) => (),
+            }
+        }
+    })
+    .await;
+    if let Err(e) = r {
+        if e.is_panic() {
+            resume_unwind(e.into_panic());
+        } else {
+            return Err(e.into());
         }
     }
+
     Ok(())
 }
 
