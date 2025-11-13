@@ -4,6 +4,7 @@ use lidarserv_common::geometry::coordinate_system::CoordinateSystem;
 use lidarserv_common::tracy_client::{plot, span};
 use lidarserv_input_file::extractors::AttributeExtractor;
 use lidarserv_input_file::extractors::basic_flags::LasBasicFlagsExtractor;
+use lidarserv_input_file::extractors::color::ColorExtractor;
 use lidarserv_input_file::extractors::copy::CopyExtractor;
 use lidarserv_input_file::extractors::extended_flags::LasExtendedFlagsExtractor;
 use lidarserv_input_file::extractors::position::PositionExtractor;
@@ -234,6 +235,14 @@ impl FrameManager {
                 src_layout,
                 None,
             ) {
+                extractors.push(Box::new(extractor));
+                continue;
+            }
+
+            // color
+            if let Some(extractor) =
+                ColorExtractor::check(dst_attribute, dst_point_size, src_layout)
+            {
                 extractors.push(Box::new(extractor));
                 continue;
             }

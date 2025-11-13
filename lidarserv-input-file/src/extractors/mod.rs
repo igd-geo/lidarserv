@@ -15,6 +15,7 @@ pub mod scan_angle;
 pub mod scan_angle_rank;
 pub mod scan_direction_flag;
 pub mod scanner_channel;
+pub mod color;
 
 pub trait AttributeExtractor {
     fn extract(&self, src: &[u8], dst: &mut [u8]);
