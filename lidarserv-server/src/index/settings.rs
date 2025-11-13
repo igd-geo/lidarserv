@@ -43,7 +43,17 @@ fn get_data_folder_settings_file(path: &Path) -> PathBuf {
 impl IndexSettings {
     pub fn load_from_file(file_name: &Path) -> Result<Self, IndexSettingIoError> {
         let file = File::open(file_name)?;
-        let settings = serde_json::from_reader(file)?;
+        let mut settings: IndexSettings = serde_json::from_reader(file)?;
+
+        // Rebuild the point layout from the attribute definitions to eliminate
+        // stale offset/size metadata lingering in older settings files.
+        let attributes: Vec<_> = settings
+            .point_layout
+            .attributes()
+            .map(|member| member.attribute_definition().clone())
+            .collect();
+        settings.point_layout = PointLayout::from_attributes(&attributes);
+
         Ok(settings)
     }
 
